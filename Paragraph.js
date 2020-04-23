@@ -6,6 +6,7 @@ class Selection {
     )
   }
 
+  // Shortcut for this.start.offset for single selections
   get caret() {
     // TODO: Test me
     if (!this.single) {
@@ -18,6 +19,10 @@ class Selection {
     this.start = start
     this.end = end || start
     this.backwards = backwards
+
+    if (this.start === this.end && this.start.offset > this.end.offset) {
+      throw new Error("Error initializing Selection: end offset cannot precede start offset.")
+    }
   }
 
   // Returns new single selection at the start of this selection.
@@ -67,10 +72,8 @@ class Run {
     })
 
     if (selection.single) {
-      const { offset } = selection.start
-
-      const before = this.text.slice(0, offset)
-      const after = this.text.slice(offset)
+      const before = this.text.slice(0, selection.caret)
+      const after = this.text.slice(selection.caret)
       const modifiedText = before + text + after
 
       return [
@@ -98,9 +101,19 @@ class Run {
    * @return [new run, new selection]
    */
   remove(selection) {
+    [selection.start.offset, selection.end.offset].forEach(offset => {
+      if (offset < 0 || offset > this.length) {
+        throw new Error("Illegal offset " + offset);
+      }
+    })
+
     if (selection.single) {
-      const before = this.text.slice(0, selection.start.offset - 1)
-      const after = this.text.slice(selection.end.offset)
+      if (selection.caret === 0) {
+        throw new Error('Cannot call remove() on a single selection at position 0')
+      }
+
+      const before = this.text.slice(0, selection.caret - 1)
+      const after = this.text.slice(selection.caret)
       const modifiedText = before + after
 
       return [
@@ -118,12 +131,20 @@ class Run {
         selection.collapse()
       ]
     }
-
-    // TODO: edge cases
   }
 
-  // TODO: applyFormats
-  // TODO: removeFormats
+  // Returns a new Run with `formats` added
+  applyFormats(formats) {
+    const intersection = new Set([...formats, ...this.formats])
+    return new Run(this.id, this.text, [...intersection])
+  }
+
+  // Returns a new Run with `formats` removed
+  removeFormats(formats) {
+    return new Run(this.id, this.text, this.formats.filter(f => !formats.includes(f)))
+  }
+
+  // TODO: helper methods before(offset) and after(offset)
 }
 
 class Paragraph {
@@ -144,12 +165,22 @@ class Paragraph {
     this.runs = runs
   }
 
-  insert(selection, text) {
-    if (!selection.range) {
-
+  insert(selection, text, formats) {
+    if (selection.single) {
+      // TODO
+    }
+    else {
+      // TODO
     }
   }
+
+  // TODO: remove
+  // TODO: applyFormats
+  // TODO: removeFormats
 }
+
+run1 = new Run(1, 'Foobar')
+run2 = new Run(1, 'Foo')
 
 const testTemplate = {
   selection: {

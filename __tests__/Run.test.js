@@ -96,6 +96,13 @@ describe('remove', () => {
 
   // TODO: remove() at start
 
+  // 'Foobar'.remove(0) -> Error
+  test('Backspace at start', () => {
+    expect(() => {
+      run1.remove(new Selection({ offset: 0, elem: 1}))
+    }).toThrow()
+  })
+
   // 'Foobar'.remove(5) -> 'Foobr', sel(4)
   test('Backspace in middle of selection', () => {
     const [r, s] = run1.remove(new Selection({ offset: 5, elem: 1 }))
@@ -104,7 +111,35 @@ describe('remove', () => {
     expect(s.caret).toBe(4)
   })
 
-  // TODO: remove at end
+  // 'Foobar'.remove(6) -> 'Fooba', sel(5)
+  test('Backspace at end', () => {
+    const [r, s] = run1.remove(new Selection({ offset: 6, elem: 1 }))
 
-  // TODO: test remove() edge cases and errors
+    expect(r.text).toBe('Fooba')
+    expect(s.caret).toBe(5)
+  })
+
+  test('Backspace off end of range and before beginning', () => {
+    expect(() => {
+      run1.remove(new Selection({ offset: 7, elem: 1}))
+    }).toThrow()
+
+    expect(() => {
+      run1.remove(new Selection({ offset: -1, elem: 1}))
+    }).toThrow()
+
+    expect(() => {
+      run1.remove(new Selection({ offset: -1, elem: 1 }, { offset: 100, elem: 1 }))
+    }).toThrow()
+  })
+})
+
+test('applyFormats', () => {
+  const newRun = run1.applyFormats(['bold', 'italic']).applyFormats(['bold', 'underline'])
+  expect(newRun.formats.sort()).toEqual(['bold', 'italic', 'underline'].sort())
+})
+
+test('removeFormats', () => {
+  const newRun = run1.applyFormats(['bold', 'italic']).removeFormats(['italic', 'bold'])
+  expect(newRun.formats).toEqual([])
 })
