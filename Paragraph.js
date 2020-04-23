@@ -6,6 +6,14 @@ class Selection {
     )
   }
 
+  get caret() {
+    // TODO: Test me
+    if (!this.single) {
+      throw new Error("Cannot call caret on range selection")
+    }
+    return this.start.offset
+  }
+
   constructor(start, end, backwards = false) {
     this.start = start
     this.end = end || start
@@ -110,52 +118,19 @@ class Run {
         selection.collapse()
       ]
     }
+
+    // TODO: edge cases
   }
 
   // TODO: applyFormats
   // TODO: removeFormats
 }
 
-const run1 = new Run(1, "Foobar")
-const run2 = new Run(1, "Foo")
-
-// "Foobar".insert(1, 3, 'a') -> "Fabar", sel(1)
-console.log(run1.insert(new Selection({ offset: 1, elem: 1 }, { offset: 3, elem: 1 }), 'a'))
-
-// "Foobar".insert(0, 6, 'Fizzbuz') -> "Fizzbuzz", sel(8)
-console.log(run1.insert(new Selection({ offset: 0, elem: 1 }, { offset: 6, elem: 1 }), 'Fizzbuzz'))
-
-// "Foo".insert(1, 'h') -> "Fhoo", sel(2)
-console.log(run2.insert(new Selection({ offset: 1, elem: 1 }), 'h'))
-
-// "Foo".insert(0, 'h') -> "hFoo", sel(1)
-console.log(run2.insert(new Selection({ offset: 0, elem: 1 }), 'h'))
-
-// "Foobar".insert(6, 'a') -> "Foobara", sel(7)
-console.log(run1.insert(new Selection({ offset: 6, elem: 1 }), 'a'))
-
-// "Foobar".insert(7, 'a') -> Error
-// console.log(run1.insert(new Selection({ offset: 7, elem: 1 }), 'a'))
-
-// "Foobar".insert(-1, 7, 'whatever') -> Error
-// console.log(run1.insert(new Selection({ offset: -1, elem: 1 }, { offset: 7, elem: 1 }), 'whatever'))
-
-// "Foobar".remove(0, 1) -> "oobar", sel(0)
-console.log(run1.remove(new Selection({ offset: 0, elem: 1 }, { offset: 1, elem: 1 })))
-
-// "Foobar".remove(1, 3) -> "Fbar", sel(1)
-console.log(run1.remove(new Selection({ offset: 1, elem: 1 }, { offset: 3, elem: 1 })))
-
-// "Foobar".remove(0, 6) -> "", sel(0)
-console.log(run1.remove(new Selection({ offset: 0, elem: 1 }, { offset: 6, elem: 1 })))
-
-// "Foobar".remove(5) -> Foobr, sel(4)
-console.log(run1.remove(new Selection({ offset: 5, elem: 1 })))
-
 class Paragraph {
   static fromTemplate(obj) {
     return [
       new Selection(
+
         obj.selection.start,
         obj.selection.end,
       ),
@@ -202,3 +177,5 @@ const testState = Paragraph.fromTemplate(testTemplate)
 
 // console.log(testState)
 // console.log(testState[0].end)
+
+module.exports =  { Selection, Run, Paragraph }
