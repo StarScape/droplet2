@@ -46,10 +46,12 @@ class Selection {
 
 class Run {
   get length() {
+    // TODO: memoize
     return this.text.length
   }
 
   constructor(id, text, formats = []) {
+    // TODO: remove id
     this.id = id
     this.text = text
     this.formats = formats
@@ -67,7 +69,7 @@ class Run {
   insert(selection, text) {
     [selection.start.offset, selection.end.offset].forEach(offset => {
       if (offset < 0 || offset > this.length) {
-        throw new Error("Illegal offset " + offset);
+        throw new Error("Illegal offset Run " + offset);
       }
     })
 
@@ -103,7 +105,7 @@ class Run {
   remove(selection) {
     [selection.start.offset, selection.end.offset].forEach(offset => {
       if (offset < 0 || offset > this.length) {
-        throw new Error("Illegal offset " + offset);
+        throw new Error("Illegal offset into Run " + offset);
       }
     })
 
@@ -161,13 +163,37 @@ class Paragraph {
     ]
   }
 
+  // Returns the sum of the lengths of the paragraph's runs
+  get length() {
+    // TODO: memoize
+    return this.runs.reduce((r1, r2) => r1.length + r2.length, 0)
+  }
+
   constructor(runs) {
     this.runs = runs
   }
 
+  // Returns the run at `offset` into the paragraph
+  runAtOffset(offset) {
+    if (offset < 0 || offset > this.length) {
+      throw new Error("Illegal offset into Paragraph " + offset)
+    }
+
+    // length: 9, 10, 10
+    let runIdx = -1;
+    let sumOfPreviousOffsets = 0; //this.runs[runIdx].length; // 9
+
+    while (sumOfPreviousOffsets <= offset) {
+      runIdx += 1
+      sumOfPreviousOffsets += this.runs[runIdx].length
+    }
+
+    return this.runs[runIdx]
+  }
+
   insert(selection, text, formats) {
     if (selection.single) {
-      // TODO
+      const run = this.runAtOffset(selection.caret)
     }
     else {
       // TODO
@@ -179,8 +205,29 @@ class Paragraph {
   // TODO: removeFormats
 }
 
-run1 = new Run(1, 'Foobar')
-run2 = new Run(1, 'Foo')
+const run1 = new Run(1, 'Foobar 1.', ["bold"])
+const run2 = new Run(2, ' Foobar 2.')
+const run3 = new Run(3, ' Foobar 3.', ["italic"])
+const paragraph = new Paragraph([run1, run2, run3])
+
+// [b:"Foobar 1."][" Foobar 2."][i:" Foobar 3."]
+//   .insert(8, " Foobar 1.5.", "i")
+//     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
+//     -> selection: 18
+const paragraph2 = paragraph.insert(new Selection({ elem: 1, offset: 8 }), new Run(4, " Foobar x.", ["italic"]))
+
+// console.log(paragraph.runAtOffset(0)) // 1
+// console.log(paragraph.runAtOffset(8)) // 1
+// console.log(paragraph.runAtOffset(9)) // 2
+// console.log(paragraph.runAtOffset(11)) // 2
+// console.log(paragraph.runAtOffset(18)) // 2
+// console.log(paragraph.runAtOffset(25)) // 3
+// console.log(paragraph.runAtOffset(28)) // 3
+
+
+// [b:"Foobar 1."][" Foobar 2."][i:" Foobar 3."].insert(8, " Foobar 1.5.", "i")
+//   -> paragraph: [b:"Foobar 1."][i:" Foobar 1.5."][" Foobar 2."][i:" Foobar 3."]
+//   -> selection: 20
 
 const testTemplate = {
   selection: {
