@@ -14,15 +14,31 @@ beforeAll(() => {
 })
 
 test('runAtOffset', () => {
-  expect(paragraph.runAtOffset(0).text).toBe('Foobar 1.')   // beginning of 1
-  expect(paragraph.runAtOffset(5).text).toBe('Foobar 1.')   // middle of 1
-  expect(paragraph.runAtOffset(8).text).toBe('Foobar 1.')   // end of 1
+  const match = (p, offset, expectedText, expectedOffset) => {
+    const [receivedRun, receivedRunOffset] = p.runAtOffset(offset)
+    expect(receivedRun.text).toBe(expectedText)
+    expect(receivedRunOffset).toBe(expectedOffset)
+  }
 
-  expect(paragraph.runAtOffset(9).text).toBe(' Foobar 2.')  // beginning of 2
-  expect(paragraph.runAtOffset(11).text).toBe(' Foobar 2.') // middle of 2
-  expect(paragraph.runAtOffset(18).text).toBe(' Foobar 2.') // end of 2
+  // 'Foobar 1. Foobar 2. Foobar 3.'
+  match(paragraph, 0, 'Foobar 1.', 0)
+  match(paragraph, 5, 'Foobar 1.', 5)
+  match(paragraph, 8, 'Foobar 1.', 8)
+  match(paragraph, 9, 'Foobar 1.', 9)
+  match(paragraph, 10, ' Foobar 2.', 1)
+  match(paragraph, 11, ' Foobar 2.', 2)
+  match(paragraph, 18, ' Foobar 2.', 9)
+  match(paragraph, 19, ' Foobar 2.', 10)
+  match(paragraph, 20, ' Foobar 3.', 1)
+  match(paragraph, 25, ' Foobar 3.', 6)
+  match(paragraph, 28, ' Foobar 3.', 9)
 
-  expect(paragraph.runAtOffset(19).text).toBe(' Foobar 3.') // beginning of 3
-  expect(paragraph.runAtOffset(25).text).toBe(' Foobar 3.') // middle of 3
-  expect(paragraph.runAtOffset(28).text).toBe(' Foobar 3.') // end of 3
+  expect(() => paragraph.runAtOffset(35)[0]).toThrow()
+  expect(() => paragraph.runAtOffset(-1)[0]).toThrow()
+})
+
+describe('insert', () => {
+  test('single-selection insert at end of run with different formats', () => {
+
+  })
 })

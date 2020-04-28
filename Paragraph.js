@@ -173,27 +173,34 @@ class Paragraph {
     this.runs = runs
   }
 
-  // Returns the run at `offset` into the paragraph
+  // Returns the run at `offset`, and `offset` translated to an offset into that run.
+  // Returned as a pair, [run, runOffset].
   runAtOffset(offset) {
     if (offset < 0 || offset > this.length) {
       throw new Error("Illegal offset into Paragraph " + offset)
     }
 
-    // length: 9, 10, 10
-    let runIdx = -1;
-    let sumOfPreviousOffsets = 0; //this.runs[runIdx].length; // 9
+    if (offset === 0) {
+      return [this.runs[0], 0]
+    }
 
-    while (sumOfPreviousOffsets <= offset) {
+    let runIdx = -1;
+    let offsetIntoRun = 0;
+    let sumOfPreviousOffsets = 0;
+
+    while (sumOfPreviousOffsets < offset) {
       runIdx += 1
+      offsetIntoRun = offset - sumOfPreviousOffsets
       sumOfPreviousOffsets += this.runs[runIdx].length
     }
 
-    return this.runs[runIdx]
+    return [this.runs[runIdx], offsetIntoRun]
   }
 
   insert(selection, text, formats) {
     if (selection.single) {
-      const run = this.runAtOffset(selection.caret)
+      const runAtOffset = this.runAtOffset(selection.caret)
+
     }
     else {
       // TODO
@@ -210,11 +217,11 @@ const run2 = new Run(2, ' Foobar 2.')
 const run3 = new Run(3, ' Foobar 3.', ["italic"])
 const paragraph = new Paragraph([run1, run2, run3])
 
-// [b:"Foobar 1."][" Foobar 2."][i:" Foobar 3."]
+// [b:"Foobar 1.|"][" Foobar 2."][i:" Foobar 3."]
 //   .insert(8, " Foobar 1.5.", "i")
 //     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
 //     -> selection: 18
-const paragraph2 = paragraph.insert(new Selection({ elem: 1, offset: 8 }), new Run(4, " Foobar x.", ["italic"]))
+const paragraph2 = paragraph.insert(new Selection({ elem: 1, offset: 9 }), new Run(4, " Foobar x.", ["italic"]))
 
 // console.log(paragraph.runAtOffset(0)) // 1
 // console.log(paragraph.runAtOffset(8)) // 1
