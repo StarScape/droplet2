@@ -15,8 +15,8 @@ beforeAll(() => {
 
 test('runAtOffset', () => {
   const match = (p, offset, expectedText, expectedOffset) => {
-    const [receivedRun, receivedRunOffset] = p.runAtOffset(offset)
-    expect(receivedRun.text).toBe(expectedText)
+    const [receivedRunIdx, receivedRunOffset] = p.runAtOffset(offset)
+    expect(p.runs[receivedRunIdx].text).toBe(expectedText)
     expect(receivedRunOffset).toBe(expectedOffset)
   }
 

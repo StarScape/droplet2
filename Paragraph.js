@@ -1,3 +1,8 @@
+const _ = require('./lodash')
+
+const formatsEqual = (f1, f2) =>
+  _.isEqual(f1.slice().sort(), f2.slice().sort())
+
 class Selection {
   get single() {
     return (
@@ -56,6 +61,13 @@ class Run {
     this.text = text
     this.formats = formats
   }
+
+  // TODO: we can do away with Selections at a Run level (oops...).
+  // Selection start and end is defined as a paragraph id and an offset into
+  // that paragraph anyway, so there's really no need to go through the rigamaroll
+  // of get paragraph level selection -> call modification on Run -> receive new Selection
+  // relative to Run -> translate back up to paragraph-level selection. We can just strip out
+  // the two intermediate steps. Just be careful and commit before you do it, you baboon.
 
   /**
    * Returns resulting [new run, new selection] pair
@@ -146,6 +158,12 @@ class Run {
     return new Run(this.id, this.text, this.formats.filter(f => !formats.includes(f)))
   }
 
+  render() {
+    // TODO: this should maybe be changed to use CSS or something
+    const stringifyFormats = (stringifier) => this.formats.map(f => stringifier(f)).join('')
+    return stringifyFormats(f => `<${f}>`) + this.text + stringifyFormats(f => `</${f}>`)
+  }
+
   // TODO: helper methods before(offset) and after(offset)
 }
 
@@ -181,7 +199,7 @@ class Paragraph {
     }
 
     if (offset === 0) {
-      return [this.runs[0], 0]
+      return [0, 0]
     }
 
     let runIdx = -1;
@@ -194,22 +212,62 @@ class Paragraph {
       sumOfPreviousOffsets += this.runs[runIdx].length
     }
 
-    return [this.runs[runIdx], offsetIntoRun]
+    return [runIdx, offsetIntoRun]
   }
 
-  insert(selection, text, formats) {
+  // TODO: description
+  insert(selection, content) {
     if (selection.single) {
-      const runAtOffset = this.runAtOffset(selection.caret)
-
+      return this.insertSingle(selection, content)
     }
     else {
-      // TODO
+      // TODO: multiple selection
+    }
+  }
+
+  // Insert for single selection
+  insertSingle(selection, content) {
+    // Get runs on either side of text caret
+    // TODO: change to something better than run1/run2
+    const [run1Idx, run1Offset] = this.runAtOffset(selection.caret)
+    const [run2Idx, run2Offset] = this.runAtOffset(selection.caret + 1)
+    const run1 = this.runs[run1Idx]
+    const run2 = this.runs[run2Idx]
+
+    if (formatsEqual(run1.formats, content.formats)) {
+      const [newRun, newSelection] = run1.insert(
+        new Selection({ elem: selection.elem, offset: run1Offset }),
+        content.text
+      )
+
+      const newRuns = Object.assign([], this.runs, { [run1Idx]: newRun });
+      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+    }
+    else if (formatsEqual(run2.formats, content.formats)) {
+      const [newRun, newSelection] = run2.insert(
+        new Selection({ elem: selection.elem, offset: 0 }),
+        content.text
+      )
+
+      const newRuns = Object.assign([], this.runs, { [run2Idx]: newRun });
+      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+    }
+    else {
+      const [runAfterCaretIdx, runAfterCaretOffset] = this.runAtOffset(selection.caret + 1)
+
+      const newRuns = this.runs.slice();
+      newRuns.splice(run1Idx + 1, 0, content)
+      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
     }
   }
 
   // TODO: remove
   // TODO: applyFormats
   // TODO: removeFormats
+
+  render() {
+    return this.runs.map(r => r.render()).join('')
+  }
 }
 
 const run1 = new Run(1, 'Foobar 1.', ["bold"])
@@ -218,10 +276,31 @@ const run3 = new Run(3, ' Foobar 3.', ["italic"])
 const paragraph = new Paragraph([run1, run2, run3])
 
 // [b:"Foobar 1.|"][" Foobar 2."][i:" Foobar 3."]
-//   .insert(8, " Foobar 1.5.", "i")
+//   .insert(9, " Foobar 1.5.", ["b"])
 //     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
 //     -> selection: 18
-const paragraph2 = paragraph.insert(new Selection({ elem: 1, offset: 9 }), new Run(4, " Foobar x.", ["italic"]))
+
+const [paragraph2, selection] = paragraph.insert(
+  new Selection({ elem: 1, offset: 9 }),
+  new Run(4, " Foobar x.", ['bold']),
+)
+
+console.log(paragraph2.render());
+console.log(paragraph2.runs.length);
+
+// [b:"Foobar 1.|"][" Foobar 2."][i:" Foobar 3."]
+//   .insert(9, " Foobar 1.5.", [])
+//     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
+//     -> selection: 18
+
+const [p, s] = paragraph.insert(
+  new Selection({ elem: 1, offset: 9 }),
+  new Run(4, " Foobar x.", [])
+)
+
+console.log(p.render())
+console.log(p.runs.length)
+console.log(p.runs[1].render())
 
 // console.log(paragraph.runAtOffset(0)) // 1
 // console.log(paragraph.runAtOffset(8)) // 1
