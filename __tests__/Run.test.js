@@ -9,59 +9,48 @@ beforeAll(() => {
 
 describe('insert', () => {
 
-  // 'Foobar'.insert(1, 3, 'a') -> ['Fabar', 2]
+  // 'Foobar'.insert(1, 3, 'a') -> 'Fabar'
   test('insert with range selection', () => {
-    const [r, s] = run1.insert(new Selection({ offset: 1, elem: 1 }, { offset: 3, elem: 1 }), 'a')
-
+    const r = run1.insert('a', 1, 3)
     expect(r.text).toBe('Fabar')
-    expect(s.start.offset).toBe(2)
-    expect(s.single).toBe(true)
   })
 
 
-  // 'Foobar'.insert(0, 6, 'Fizzbuz') -> 'Fizzbuzz', sel(8)
+  // 'Foobar'.insert(0, 6, 'Fizzbuz') -> 'Fizzbuzz'
   test('insert when range is whole run', () => {
-    const [r, s] = run1.insert(new Selection({ offset: 0, elem: 1 }, { offset: 6, elem: 1 }), 'Fizzbuzz')
-
+    const r = run1.insert('Fizzbuzz', 0, 6)
     expect(r.text).toBe('Fizzbuzz')
-    expect(s.start.offset).toBe(8)
   })
 
-  // 'Foo'.insert(0, 'h') -> 'hFoo', sel(1)
+  // 'Foo'.insert(0, 'h') -> 'hFoo'
   test ('single-selection insert at start of run', () => {
-    const [r, s] = run2.insert(new Selection({ offset: 0, elem: 1 }), 'h')
-
+    const r = run2.insert('h', 0)
     expect(r.text).toBe('hFoo')
-    expect(s.start.offset).toBe(1)
   })
 
-  // 'Foo'.insert(1, 'h') -> 'Fhoo', sel(2)
+  // 'Foo'.insert(1, 'h') -> 'Fhoo'
   test('single-selection insert in middle of run', () => {
-    const [r, s] = run2.insert(new Selection({ offset: 1, elem: 1 }), 'h')
-
+    const r = run2.insert('h', 1)
     expect(r.text).toBe('Fhoo')
-    expect(s.start.offset).toBe(2)
   })
 
-  // 'Foobar'.insert(6, 'a') -> 'Foobara', sel(7)
+  // 'Foobar'.insert(6, 'a') -> 'Foobara'
   test('single-selection insert at end of run', () => {
-   const [r, s] = run1.insert(new Selection({ offset: 6, elem: 1 }), 'a')
-
+   const r = run1.insert('a', 6)
    expect(r.text).toBe('Foobara')
-   expect(s.start.offset).toBe(7)
   })
 
   // 'Foobar'.insert(7, 'a') -> Error
   test('Illegal insert out of range of run', () => {
     expect(() => {
-      run1.insert(new Selection({ offset: 7, elem: 1 }), 'whatever')
+      run1.insert('whatever', 7)
     }).toThrow()
   })
 
   // 'Foobar'.insert(-1, 7, 'whatever') -> Error
   test('Illegal insert both before and after run', () => {
     expect(() => {
-      run1.insert(new Selection({ offset: -1, elem: 1 }, { offset: 7, elem: 1 }), 'whatever')
+      run1.insert('whatever', -1, 7)
     }).toThrow()
   })
 
@@ -69,67 +58,54 @@ describe('insert', () => {
 
 describe('remove', () => {
 
-  // 'Foobar'.remove(0, 1) -> 'oobar', sel(0)
+  // 'Foobar'.remove(0, 1) -> 'oobar'
   test('Range remove starting at beginning', () => {
-    const [r, s] = run1.remove(new Selection({ offset: 0, elem: 1 }, { offset: 1, elem: 1 }))
-
+    const r = run1.remove(0, 1)
     expect(r.text).toBe('oobar')
-    expect(s.start.offset).toBe(0)
-    expect(s.single).toBe(true)
   })
 
-  // 'Foobar'.remove(1, 3) -> 'Fbar', sel(1)
+  // 'Foobar'.remove(1, 3) -> 'Fbar'
   test('Range remove starting from middle', () => {
-    const [r, s] = run1.remove(new Selection({ offset: 1, elem: 1 }, { offset: 3, elem: 1 }))
-
+    const r = run1.remove(1, 3)
     expect(r.text).toBe('Fbar')
-    expect(s.caret).toBe(1)
   })
 
-  // // 'Foobar'.remove(0, 6) -> '', sel(0)
+  // // 'Foobar'.remove(0, 6) -> ''
   test('Remove entire run', () => {
-    const [r, s] = run1.remove(new Selection({ offset: 0, elem: 1 }, { offset: 6, elem: 1 }))
-
+    const r = run1.remove(0, 6)
     expect(r.text).toBe('')
-    expect(s.caret).toBe(0)
   })
-
-  // TODO: remove() at start
 
   // 'Foobar'.remove(0) -> Error
   test('Backspace at start', () => {
     expect(() => {
-      run1.remove(new Selection({ offset: 0, elem: 1}))
+      run1.remove(0)
     }).toThrow()
   })
 
-  // 'Foobar'.remove(5) -> 'Foobr', sel(4)
+  // 'Foobar'.remove(5) -> 'Foobr'
   test('Backspace in middle of selection', () => {
-    const [r, s] = run1.remove(new Selection({ offset: 5, elem: 1 }))
-
+    const r = run1.remove(5)
     expect(r.text).toBe('Foobr')
-    expect(s.caret).toBe(4)
   })
 
-  // 'Foobar'.remove(6) -> 'Fooba', sel(5)
+  // 'Foobar'.remove(6) -> 'Fooba'
   test('Backspace at end', () => {
-    const [r, s] = run1.remove(new Selection({ offset: 6, elem: 1 }))
-
+    const r = run1.remove(6)
     expect(r.text).toBe('Fooba')
-    expect(s.caret).toBe(5)
   })
 
   test('Backspace off end of range and before beginning', () => {
     expect(() => {
-      run1.remove(new Selection({ offset: 7, elem: 1}))
+      run1.remove(7)
     }).toThrow()
 
     expect(() => {
-      run1.remove(new Selection({ offset: -1, elem: 1}))
+      run1.remove(-1)
     }).toThrow()
 
     expect(() => {
-      run1.remove(new Selection({ offset: -1, elem: 1 }, { offset: 100, elem: 1 }))
+      run1.remove(-1, 100)
     }).toThrow()
   })
 })

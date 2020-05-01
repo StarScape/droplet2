@@ -62,6 +62,13 @@ class Run {
     this.formats = formats
   }
 
+  // TODO: we can do away with Selections at a Run level (oops...).
+  // Selection start and end is defined as a paragraph id and an offset into
+  // that paragraph anyway, so there's really no need to go through the rigamaroll
+  // of get paragraph level selection -> call modification on Run -> receive new Selection
+  // relative to Run -> translate back up to paragraph-level selection. We can just strip out
+  // the two intermediate steps. Just be careful and commit before you do it, you baboon.
+
   /**
    * Returns resulting [new run, new selection] pair
    * from inserting the `text` at `selection`.
@@ -69,29 +76,34 @@ class Run {
    * @param selection Selection object
    * @param text String to insert
    *
-   * @return resulting run
+   * @return [resulting run, resulting selection]
    */
-  insert(text, start, end) {
-    [start, (end || 0)].forEach(offset => {
+  insert(selection, text) {
+    [selection.start.offset, selection.end.offset].forEach(offset => {
       if (offset < 0 || offset > this.length) {
         throw new Error("Illegal offset Run " + offset);
       }
     })
 
-    // Single selection
-    if (end === undefined) {
-      const before = this.text.slice(0, start)
-      const after = this.text.slice(start)
+    if (selection.single) {
+      const before = this.text.slice(0, selection.caret)
+      const after = this.text.slice(selection.caret)
       const modifiedText = before + text + after
 
-      return new Run(this.id, modifiedText, this.formats)
+      return [
+        new Run(this.id, modifiedText, this.formats),
+        selection.incrementSingle(text.length)
+      ]
     }
     else {
-      const before = this.text.slice(0, start)
-      const after = this.text.slice(end)
+      const before = this.text.slice(0, selection.start.offset)
+      const after = this.text.slice(selection.end.offset)
       const modifiedText = before + text + after
 
-      return new Run(this.id, modifiedText, this.formats)
+      return [
+        new Run(this.id, modifiedText, this.formats),
+        selection.collapse().incrementSingle(text.length)
+      ]
     }
   }
 
@@ -102,31 +114,36 @@ class Run {
    *
    * @return [new run, new selection]
    */
-  remove(start, end) {
-    [start, (end || 0)].forEach(offset => {
+  remove(selection) {
+    [selection.start.offset, selection.end.offset].forEach(offset => {
       if (offset < 0 || offset > this.length) {
         throw new Error("Illegal offset into Run " + offset);
       }
     })
 
-    // Single-selection
-    if (end === undefined) {
-      if (start === 0) {
-        throw new Error('Cannot call remove() on a single selection at position 0.')
+    if (selection.single) {
+      if (selection.caret === 0) {
+        throw new Error('Cannot call remove() on a single selection at position 0')
       }
 
-      const before = this.text.slice(0, start - 1)
-      const after = this.text.slice(start)
+      const before = this.text.slice(0, selection.caret - 1)
+      const after = this.text.slice(selection.caret)
       const modifiedText = before + after
 
-      return new Run(this.id, modifiedText, this.formats)
+      return [
+        new Run(this.id, modifiedText, this.formats),
+        selection.incrementSingle(-1)
+      ]
     }
     else {
-      const before = this.text.slice(0, start)
-      const after = this.text.slice(end)
+      const before = this.text.slice(0, selection.start.offset)
+      const after = this.text.slice(selection.end.offset)
       const modifiedText = before + after
 
-      return new Run(this.id, modifiedText, this.formats)
+      return [
+        new Run(this.id, modifiedText, this.formats),
+        selection.collapse()
+      ]
     }
   }
 
@@ -205,7 +222,7 @@ class Paragraph {
     }
     else {
       // TODO: multiple selection
-      // return this.remove(selection).insertRange(selection, content)
+      return this.insertRange(selection, content)
     }
   }
 
@@ -213,50 +230,49 @@ class Paragraph {
     if (content instanceof Run) {
       
     }
+    else if (content instanceof Array && content[0] instanceof Paragraph) {
+
+    }
     else {
       throw new Error("Unrecognized form of content passed to insertRange " + content)
     }
   }
 
-  insertSingle(content, selection) {
-
-  }
-
   // Insert for single selection
-  // insertSingle(selection, content) {
-  //   // Get runs on either side of text caret
-  //   // TODO: change to something better than run1/run2
-  //   const [run1Idx, run1Offset] = this.runAtOffset(selection.caret)
-  //   const [run2Idx, run2Offset] = this.runAtOffset(selection.caret + 1)
-  //   const run1 = this.runs[run1Idx]
-  //   const run2 = this.runs[run2Idx]
+  insertSingle(selection, content) {
+    // Get runs on either side of text caret
+    // TODO: change to something better than run1/run2
+    const [run1Idx, run1Offset] = this.runAtOffset(selection.caret)
+    const [run2Idx, run2Offset] = this.runAtOffset(selection.caret + 1)
+    const run1 = this.runs[run1Idx]
+    const run2 = this.runs[run2Idx]
 
-  //   if (formatsEqual(run1.formats, content.formats)) {
-  //     const [newRun, newSelection] = run1.insert(
-  //       new Selection({ elem: selection.elem, offset: run1Offset }),
-  //       content.text
-  //     )
+    if (formatsEqual(run1.formats, content.formats)) {
+      const [newRun, newSelection] = run1.insert(
+        new Selection({ elem: selection.elem, offset: run1Offset }),
+        content.text
+      )
 
-  //     const newRuns = Object.assign([], this.runs, { [run1Idx]: newRun });
-  //     return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
-  //   }
-  //   else if (formatsEqual(run2.formats, content.formats)) {
-  //     const [newRun, newSelection] = run2.insert(
-  //       new Selection({ elem: selection.elem, offset: 0 }),
-  //       content.text
-  //     )
+      const newRuns = Object.assign([], this.runs, { [run1Idx]: newRun });
+      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+    }
+    else if (formatsEqual(run2.formats, content.formats)) {
+      const [newRun, newSelection] = run2.insert(
+        new Selection({ elem: selection.elem, offset: 0 }),
+        content.text
+      )
 
-  //     const newRuns = Object.assign([], this.runs, { [run2Idx]: newRun });
-  //     return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
-  //   }
-  //   else {
-  //     const [runAfterCaretIdx, runAfterCaretOffset] = this.runAtOffset(selection.caret + 1)
+      const newRuns = Object.assign([], this.runs, { [run2Idx]: newRun });
+      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+    }
+    else {
+      const [runAfterCaretIdx, runAfterCaretOffset] = this.runAtOffset(selection.caret + 1)
 
-  //     const newRuns = this.runs.slice();
-  //     newRuns.splice(run1Idx + 1, 0, content)
-  //     return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
-  //   }
-  // }
+      const newRuns = this.runs.slice();
+      newRuns.splice(run1Idx + 1, 0, content)
+      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+    }
+  }
 
   // TODO: remove
   // TODO: applyFormats
@@ -277,27 +293,27 @@ const paragraph = new Paragraph([run1, run2, run3])
 //     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
 //     -> selection: 18
 
-// const [paragraph2, selection] = paragraph.insert(
-//   new Selection({ elem: 1, offset: 9 }),
-//   new Run(4, " Foobar x.", ['bold']),
-// )
+const [paragraph2, selection] = paragraph.insert(
+  new Selection({ elem: 1, offset: 9 }),
+  new Run(4, " Foobar x.", ['bold']),
+)
 
-// console.log(paragraph2.render());
-// console.log(paragraph2.runs.length);
+console.log(paragraph2.render());
+console.log(paragraph2.runs.length);
 
 // [b:"Foobar 1.|"][" Foobar 2."][i:" Foobar 3."]
 //   .insert(9, " Foobar 1.5.", [])
 //     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
 //     -> selection: 18
 
-// const [p, s] = paragraph.insert(
-//   new Selection({ elem: 1, offset: 9 }),
-//   new Run(4, " Foobar x.", [])
-// )
+const [p, s] = paragraph.insert(
+  new Selection({ elem: 1, offset: 9 }),
+  new Run(4, " Foobar x.", [])
+)
 
-// console.log(p.render())
-// console.log(p.runs.length)
-// console.log(p.runs[1].render())
+console.log(p.render())
+console.log(p.runs.length)
+console.log(p.runs[1].render())
 
 // console.log(paragraph.runAtOffset(0)) // 1
 // console.log(paragraph.runAtOffset(8)) // 1
