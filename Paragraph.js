@@ -90,10 +90,20 @@ class Run {
       const before = this.text.slice(0, start)
       const after = this.text.slice(end)
       const modifiedText = before + text + after
-
       return new Run(this.id, modifiedText, this.formats)
     }
   }
+
+  // Alias for inserting at start of run
+  insertStart(text) {
+    this.insert(text, 0)
+  }
+
+  // Alias for inserting at end of run
+  insertEnd(text) {
+    this.insert(text, this.length)
+  }
+
 
   /**
    * Returns the [new run, new selection] pair from removing at `selection`.
@@ -167,7 +177,7 @@ class Paragraph {
   // Returns the sum of the lengths of the paragraph's runs
   get length() {
     // TODO: memoize
-    return this.runs.reduce((r1, r2) => r1.length + r2.length, 0)
+    return this.runs.reduce((acc, run) => acc + run.length, 0)
   }
 
   constructor(runs) {
@@ -198,10 +208,51 @@ class Paragraph {
     return [runIdx, offsetIntoRun]
   }
 
-  // TODO: description
-  insert(selection, content) {
+  // Returns [run index, run offset] at `offset` into paragraph
+  atOffset(offset) {
+    if (offset < 0 || offset > this.length) {
+      throw new Error("Illegal offset into Paragraph " + offset)
+    }
+
+    if (offset === this.length) {
+      const lastRunIdx = this.runs.length - 1
+      return [lastRunIdx, this.runs[lastRunIdx].length]
+    }
+
+    let runIdx = -1;
+    let offsetIntoRun = 0;
+    let sumOfPreviousOffsets = 0;
+
+    while (sumOfPreviousOffsets <= offset) {
+      runIdx += 1
+      offsetIntoRun = offset - sumOfPreviousOffsets
+      sumOfPreviousOffsets += this.runs[runIdx].length
+    }
+
+    return [runIdx, offsetIntoRun]
+  }
+
+  // runs: array of Runs
+  // selection: Selection
+  insert(runs, selection) {
     if (selection.single) {
-      return this.insertSingle(selection, content)
+      const [targetRunIdx, targetRunOffset] = this.runAtOffset(selection.caret)
+      const targetRun = this.runs[targetRunIdx]
+
+      if (formatsEqual(beforeCaret.formats, content[0].formats)) {
+        content[0] = beforeCaret.insertStart(content[0].text)
+      }
+      else {
+        content.splice(0, 0, beforeCaret)
+      }
+
+      const lastRun = content[content.length-1]
+      if (formatsEqual(afterCaret.formats, lastRun.formats)) {
+        content[content.length-1] = lastRun.insertEnd(afterCaret.text)
+      }
+      else {
+        content.push(afterCaret)
+      }
     }
     else {
       // TODO: multiple selection
@@ -209,7 +260,7 @@ class Paragraph {
     }
   }
 
-  insertRange(selection, content) {
+  insertRange(content, selection) {
     if (content instanceof Run) {
       
     }
@@ -217,50 +268,6 @@ class Paragraph {
       throw new Error("Unrecognized form of content passed to insertRange " + content)
     }
   }
-
-  insertSingle(content, selection) {
-
-  }
-
-  // Insert for single selection
-  // insertSingle(selection, content) {
-  //   // Get runs on either side of text caret
-  //   // TODO: change to something better than run1/run2
-  //   const [run1Idx, run1Offset] = this.runAtOffset(selection.caret)
-  //   const [run2Idx, run2Offset] = this.runAtOffset(selection.caret + 1)
-  //   const run1 = this.runs[run1Idx]
-  //   const run2 = this.runs[run2Idx]
-
-  //   if (formatsEqual(run1.formats, content.formats)) {
-  //     const [newRun, newSelection] = run1.insert(
-  //       new Selection({ elem: selection.elem, offset: run1Offset }),
-  //       content.text
-  //     )
-
-  //     const newRuns = Object.assign([], this.runs, { [run1Idx]: newRun });
-  //     return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
-  //   }
-  //   else if (formatsEqual(run2.formats, content.formats)) {
-  //     const [newRun, newSelection] = run2.insert(
-  //       new Selection({ elem: selection.elem, offset: 0 }),
-  //       content.text
-  //     )
-
-  //     const newRuns = Object.assign([], this.runs, { [run2Idx]: newRun });
-  //     return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
-  //   }
-  //   else {
-  //     const [runAfterCaretIdx, runAfterCaretOffset] = this.runAtOffset(selection.caret + 1)
-
-  //     const newRuns = this.runs.slice();
-  //     newRuns.splice(run1Idx + 1, 0, content)
-  //     return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
-  //   }
-  // }
-
-  // TODO: remove
-  // TODO: applyFormats
-  // TODO: removeFormats
 
   render() {
     return this.runs.map(r => r.render()).join('')

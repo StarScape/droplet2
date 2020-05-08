@@ -42,3 +42,31 @@ describe('insert', () => {
 
   })
 })
+
+
+test('atOffset', () => {
+  // 'Foobar 1. Foobar 2. Foobar 3.'
+  expect(paragraph.atOffset(0)).toEqual([0, 0])
+  expect(paragraph.atOffset(5)).toEqual([0, 5])
+  expect(paragraph.atOffset(8)).toEqual([0, 8])
+  expect(paragraph.atOffset(9)).toEqual([1, 0])
+  
+  expect(paragraph.atOffset(10)).toEqual([1, 1])
+  expect(paragraph.atOffset(11)).toEqual([1, 2])
+  expect(paragraph.atOffset(18)).toEqual([1, 9])
+
+  expect(paragraph.atOffset(19)).toEqual([2, 0])
+  expect(paragraph.atOffset(20)).toEqual([2, 1])
+  expect(paragraph.atOffset(25)).toEqual([2, 6])
+  expect(paragraph.atOffset(28)).toEqual([2, 9])
+  expect(paragraph.atOffset(29)).toEqual([2, 10])
+
+  expect(() => paragraph.atOffset(35)[0]).toThrow()
+  expect(() => paragraph.atOffset(-1)[0]).toThrow()
+})
+
+describe('insert', () => {
+  test('single-selection insert at end of run with different formats', () => {
+
+  })
+})
