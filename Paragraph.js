@@ -62,6 +62,20 @@ class Run {
     this.formats = formats
   }
 
+  // Splits run into two separate runs at offset
+  split(offset) {
+    if (offset === 0 || offset === this.length) {
+      throw new Error("Cannot split at beginning or end run. Offset: " + offset)
+    }
+
+    const textBefore = this.text.slice(0, offset)
+    const textAfter = this.text.slice(offset, this.length)
+    return [
+      new Run(this.id, textBefore, this.formats),
+      new Run(this.id, textAfter, this.formats)
+    ]
+  }
+
   /**
    * Returns resulting [new run, new selection] pair
    * from inserting the `text` at `selection`.
@@ -96,14 +110,13 @@ class Run {
 
   // Alias for inserting at start of run
   insertStart(text) {
-    this.insert(text, 0)
+    return this.insert(text, 0)
   }
 
   // Alias for inserting at end of run
   insertEnd(text) {
-    this.insert(text, this.length)
+    return this.insert(text, this.length)
   }
-
 
   /**
    * Returns the [new run, new selection] pair from removing at `selection`.
@@ -156,15 +169,12 @@ class Run {
     const stringifyFormats = (stringifier) => this.formats.map(f => stringifier(f)).join('')
     return stringifyFormats(f => `<${f}>`) + this.text + stringifyFormats(f => `</${f}>`)
   }
-
-  // TODO: helper methods before(offset) and after(offset)
 }
 
 class Paragraph {
   static fromTemplate(obj) {
     return [
       new Selection(
-
         obj.selection.start,
         obj.selection.end,
       ),
@@ -172,6 +182,24 @@ class Paragraph {
         obj.runs.map(r => new Run(r.id, r.text, r.formats))
       ),
     ]
+  }
+
+  // Given a list of runs, will merge any two adjacent runs with the same formatting
+  static optimizeRuns(runs) {
+    let optimized = [runs[0]]
+
+    // SHE WORK WOOOHOOO
+    // TODO: test more. Write tests in Jest
+    for (let i = 1; i < runs.length; i++) {
+      if (formatsEqual(optimized[optimized.length - 1].formats, runs[i].formats)) {
+        optimized[optimized.length - 1] = optimized[optimized.length - 1].insertEnd(runs[i].text)
+      }
+      else {
+        optimized.push(runs[i])
+      }
+    }
+
+    return optimized
   }
 
   // Returns the sum of the lengths of the paragraph's runs
@@ -234,25 +262,46 @@ class Paragraph {
 
   // runs: array of Runs
   // selection: Selection
+  // TODO: this was implemented before optimizeRuns was done and needs testing
   insert(runs, selection) {
     if (selection.single) {
-      const [targetRunIdx, targetRunOffset] = this.runAtOffset(selection.caret)
+      // Get run under text caret
+      const [targetRunIdx, targetRunOffset] = this.atOffset(selection.caret)
       const targetRun = this.runs[targetRunIdx]
 
-      if (formatsEqual(beforeCaret.formats, content[0].formats)) {
-        content[0] = beforeCaret.insertStart(content[0].text)
+      const runsBeforeTarget = this.runs.slice(0, targetRunIdx)
+      const runsAfterTarget = this.runs.slice(targetRunIdx, this.runs.length)
+
+      if (targetRunIdx === 0) {
+        // Caret is at the beginning of a run
+        var newRuns = [
+          ...runsBeforeTarget,
+          ...runs,
+          target,
+          ...runsAfterTarget
+        ]
+      }
+      else if (targetRunIdx === targetRun.length) {
+        // Caret is at the end of a run. (This will
+        // only happen at the last item run the list of runs)
+        var newRuns = [
+          ...runsBeforeTarget,
+          target,
+          ...runs,
+          ...runsAfterTarget
+        ]
       }
       else {
-        content.splice(0, 0, beforeCaret)
+        // Caret is in the middle of a run.
+        const [t1, t2] = targetRun.split(targetRunOffset)
+        var newRuns = [
+          ...runsBeforeTarget,
+          t1, ...runs, t2,
+          ...runsAfterTarget
+        ]
       }
 
-      const lastRun = content[content.length-1]
-      if (formatsEqual(afterCaret.formats, lastRun.formats)) {
-        content[content.length-1] = lastRun.insertEnd(afterCaret.text)
-      }
-      else {
-        content.push(afterCaret)
-      }
+      return new Paragraph(Paragraph.optimizeRuns(newRuns))
     }
     else {
       // TODO: multiple selection
@@ -274,10 +323,23 @@ class Paragraph {
   }
 }
 
-const run1 = new Run(1, 'Foobar 1.', ["bold"])
-const run2 = new Run(2, ' Foobar 2.')
-const run3 = new Run(3, ' Foobar 3.', ["italic"])
-const paragraph = new Paragraph([run1, run2, run3])
+// const runs = [
+//   new Run(1, 'a', ['italic']),
+//   new Run(1, 'b', ['italic']),
+//   new Run(1, 'c', []),
+//   new Run(1, 'd', ['bold']),
+//   new Run(1, 'e', ['bold']),
+//   new Run(1, 'f', ['bold'])
+// ]
+
+// const optimized = Paragraph.optimizeRuns(runs)
+// console.log(optimized);
+
+
+// const run1 = new Run(1, 'Foobar 1.', ["bold"])
+// const run2 = new Run(2, ' Foobar 2.')
+// const run3 = new Run(3, ' Foobar 3.', ["italic"])
+// const paragraph = new Paragraph([run1, run2, run3])
 
 // [b:"Foobar 1.|"][" Foobar 2."][i:" Foobar 3."]
 //   .insert(9, " Foobar 1.5.", ["b"])

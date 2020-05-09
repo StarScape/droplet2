@@ -119,3 +119,18 @@ test('removeFormats', () => {
   const newRun = run1.applyFormats(['bold', 'italic']).removeFormats(['italic', 'bold'])
   expect(newRun.formats).toEqual([])
 })
+
+describe('split', () => {
+  const myRun = new Run(1, 'firstsecond')
+
+  test('middle', () => {
+    const [split1, split2] = myRun.split(5)
+    expect(split1.text).toBe('first')
+    expect(split2.text).toBe('second')
+  })
+
+  test('start and end (errors)', () => {
+    expect(() => myRun.split(0)).toThrow()
+    expect(() => myRun.split(11)).toThrow()
+  })
+})

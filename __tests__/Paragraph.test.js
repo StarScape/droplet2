@@ -37,13 +37,6 @@ test('runAtOffset', () => {
   expect(() => paragraph.runAtOffset(-1)[0]).toThrow()
 })
 
-describe('insert', () => {
-  test('single-selection insert at end of run with different formats', () => {
-
-  })
-})
-
-
 test('atOffset', () => {
   // 'Foobar 1. Foobar 2. Foobar 3.'
   expect(paragraph.atOffset(0)).toEqual([0, 0])
@@ -65,8 +58,41 @@ test('atOffset', () => {
   expect(() => paragraph.atOffset(-1)[0]).toThrow()
 })
 
-describe('insert', () => {
-  test('single-selection insert at end of run with different formats', () => {
+test('optimizeRuns', () => {
+  const runs = [
+    new Run(1, 'a', ['italic']),
+    new Run(1, 'b', ['italic']),
+    new Run(1, 'c', []),
+    new Run(1, 'd', ['bold']),
+    new Run(1, 'e', ['bold']),
+    new Run(1, 'f', ['bold']),
+    new Run(1, 'g', []),
+    new Run(1, 'h', []),
+    new Run(1, 'i', ['bold']),
+    new Run(1, 'j', [])
+  ]
 
-  })
+  const optimized = Paragraph.optimizeRuns(runs)
+
+  // Check that each set of adjacent runs w/ identical formatting
+  // are compressed into each other, and have the same formatting.
+  expect(optimized[0].text).toBe('ab')
+  expect(optimized[0].formats).toEqual(['italic'])
+
+  expect(optimized[1].text).toBe('c')
+  expect(optimized[1].formats).toEqual([])
+
+  expect(optimized[2].text).toBe('def')
+  expect(optimized[2].formats).toEqual(['bold'])
+
+  expect(optimized[3].text).toBe('gh')
+  expect(optimized[3].formats).toEqual([])
+
+  expect(optimized[4].text).toBe('i')
+  expect(optimized[4].formats).toEqual(['bold'])
+
+  expect(optimized[5].text).toBe('j')
+  expect(optimized[5].formats).toEqual([])
+
+  expect(optimized.length).toBe(6)
 })
