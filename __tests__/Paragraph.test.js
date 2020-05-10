@@ -13,30 +13,31 @@ beforeAll(() => {
   paragraph = new Paragraph([run1, run2, run3])
 })
 
-test('runAtOffset', () => {
-  const match = (p, offset, expectedText, expectedOffset) => {
-    const [receivedRunIdx, receivedRunOffset] = p.runAtOffset(offset)
-    expect(p.runs[receivedRunIdx].text).toBe(expectedText)
-    expect(receivedRunOffset).toBe(expectedOffset)
-  }
+// test('runAtOffset', () => {
+//   const match = (p, offset, expectedText, expectedOffset) => {
+//     const [receivedRunIdx, receivedRunOffset] = p.runAtOffset(offset)
+//     expect(p.runs[receivedRunIdx].text).toBe(expectedText)
+//     expect(receivedRunOffset).toBe(expectedOffset)
+//   }
 
-  // 'Foobar 1. Foobar 2. Foobar 3.'
-  match(paragraph, 0, 'Foobar 1.', 0)
-  match(paragraph, 5, 'Foobar 1.', 5)
-  match(paragraph, 8, 'Foobar 1.', 8)
-  match(paragraph, 9, 'Foobar 1.', 9)
-  match(paragraph, 10, ' Foobar 2.', 1)
-  match(paragraph, 11, ' Foobar 2.', 2)
-  match(paragraph, 18, ' Foobar 2.', 9)
-  match(paragraph, 19, ' Foobar 2.', 10)
-  match(paragraph, 20, ' Foobar 3.', 1)
-  match(paragraph, 25, ' Foobar 3.', 6)
-  match(paragraph, 28, ' Foobar 3.', 9)
+//   // 'Foobar 1. Foobar 2. Foobar 3.'
+//   match(paragraph, 0, 'Foobar 1.', 0)
+//   match(paragraph, 5, 'Foobar 1.', 5)
+//   match(paragraph, 8, 'Foobar 1.', 8)
+//   match(paragraph, 9, 'Foobar 1.', 9)
+//   match(paragraph, 10, ' Foobar 2.', 1)
+//   match(paragraph, 11, ' Foobar 2.', 2)
+//   match(paragraph, 18, ' Foobar 2.', 9)
+//   match(paragraph, 19, ' Foobar 2.', 10)
+//   match(paragraph, 20, ' Foobar 3.', 1)
+//   match(paragraph, 25, ' Foobar 3.', 6)
+//   match(paragraph, 28, ' Foobar 3.', 9)
 
-  expect(() => paragraph.runAtOffset(35)[0]).toThrow()
-  expect(() => paragraph.runAtOffset(-1)[0]).toThrow()
-})
+//   expect(() => paragraph.runAtOffset(35)[0]).toThrow()
+//   expect(() => paragraph.runAtOffset(-1)[0]).toThrow()
+// })
 
+// TODO: change this to test both beforeOffset and atOffset at same time
 test('atOffset', () => {
   // 'Foobar 1. Foobar 2. Foobar 3.'
   expect(paragraph.atOffset(0)).toEqual([0, 0])
@@ -95,4 +96,94 @@ test('optimizeRuns', () => {
   expect(optimized[5].formats).toEqual([])
 
   expect(optimized.length).toBe(6)
+})
+
+// Provide a simple way to render a paragraph as a string, thereby allowing us
+// to check output of insert() in the test below without manually checking each
+// item in the array every time, and all the glorious headache that would provide.
+//
+// As of writing, this is identical to the render() methods on Run and Paragraph, but
+// it is doubtful that it will always be. This can stay here as a simple solution for
+// the tests.
+const stringMapFormats = (r, func) => r.map(f => func(f)).join('')
+const naiveRunRender = (r) => {
+  return stringMapFormats(r.formats, f => `<${f}>`) + r.text + stringMapFormats(r.formats, f => `</${f}>`)
+}
+const naiveParagraphRender = (p) => p.runs.map(r => naiveRunRender(r)).join('')
+
+describe('insert (single selection)', () => {
+  // In HTML:
+  // <b>Foobar 1.</b> Foobar 2.<i> Foobar 3.</i>
+  const paragraph = new Paragraph([
+    new Run(1, 'Foobar 1.', ["bold"]),
+    new Run(2, ' Foobar 2.'),
+    new Run(3, ' Foobar 3.', ["italic"])
+  ])
+
+  test('at end of run with same formatting', () => {
+    const [p, s] = paragraph.insert(
+      [ new Run(4, " Foobar 1.5.", ['bold']) ],
+      new Selection({ pid: 1, offset: 9 })
+    )
+
+    expect(naiveParagraphRender(p)).toEqual(
+      '<bold>Foobar 1. Foobar 1.5.</bold> Foobar 2.<italic> Foobar 3.</italic>'
+    )
+
+    expect(s.start.offset).toEqual(21)
+  })
+
+  // TODO: write these other tests to work like the one above.
+
+  test('at end of run with different formatting', () => {
+    const [p, s] = paragraph.insert(
+      [new Run(4, " Foobar 1.5.", [])],
+      new Selection({ pid: 1, offset: 9 })
+    )
+
+    expect(naiveParagraphRender(p)).toEqual(
+      '<bold>Foobar 1.</bold> Foobar 1.5. Foobar 2.<italic> Foobar 3.</italic>'
+    )
+
+    expect(s.start.offset).toEqual(21)
+  })
+
+  test('middle of run with different formatting', () => {
+    const [p, s] = paragraph.insert(
+      [new Run(4, "bizzbuzz", ['italic'])],
+      new Selection({ pid: 1, offset: 16 })
+    )
+
+    expect(naiveParagraphRender(p)).toEqual(
+      '<bold>Foobar 1.</bold> Foobar<italic>bizzbuzz</italic> 2.<italic> Foobar 3.</italic>'
+    )
+
+    expect(s.start.offset).toEqual(24)
+  })
+
+  test('start of paragraph', () => {
+    const [p, s] = paragraph.insert(
+      [new Run(4, "Pre. ", ['underline'])],
+      new Selection({ pid: 1, offset: 0 })
+    )
+
+    expect(naiveParagraphRender(p)).toEqual(
+      '<underline>Pre. </underline><bold>Foobar 1.</bold> Foobar 2.<italic> Foobar 3.</italic>'
+    )
+
+    expect(s.start.offset).toEqual(5)
+  })
+
+  test('end of paragraph', () => {
+    const [p, s] = paragraph.insert(
+      [new Run(4, ' Post.', [])],
+      new Selection({ pid: 1, offset: 29 })
+    )
+
+    expect(naiveParagraphRender(p)).toEqual(
+      '<bold>Foobar 1.</bold> Foobar 2.<italic> Foobar 3.</italic> Post.'
+    )
+
+    expect(s.start.offset).toEqual(36)
+  })
 })

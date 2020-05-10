@@ -45,6 +45,7 @@ class Selection {
     if (!this.single) {
       throw new Error("Cannot call incrementSingle() on range selection")
     }
+    // console.log('foo: ' + this.start.offset + n);
     return new Selection({ ...this.start, offset: this.start.offset + n })
   }
 }
@@ -188,8 +189,6 @@ class Paragraph {
   static optimizeRuns(runs) {
     let optimized = [runs[0]]
 
-    // SHE WORK WOOOHOOO
-    // TODO: test more. Write tests in Jest
     for (let i = 1; i < runs.length; i++) {
       if (formatsEqual(optimized[optimized.length - 1].formats, runs[i].formats)) {
         optimized[optimized.length - 1] = optimized[optimized.length - 1].insertEnd(runs[i].text)
@@ -210,11 +209,12 @@ class Paragraph {
 
   constructor(runs) {
     this.runs = runs
+    this.id = -1 // TODO
   }
 
-  // Returns the run at `offset`, and `offset` translated to an offset into that run.
-  // Returned as a pair, [run, runOffset].
-  runAtOffset(offset) {
+  // Like atOffset, but returns pair for run immediately before text caret
+  // TODO: better documentation
+  beforeOffset(offset) {
     if (offset < 0 || offset > this.length) {
       throw new Error("Illegal offset into Paragraph " + offset)
     }
@@ -270,23 +270,23 @@ class Paragraph {
       const targetRun = this.runs[targetRunIdx]
 
       const runsBeforeTarget = this.runs.slice(0, targetRunIdx)
-      const runsAfterTarget = this.runs.slice(targetRunIdx, this.runs.length)
+      const runsAfterTarget = this.runs.slice(targetRunIdx + 1, this.runs.length)
 
-      if (targetRunIdx === 0) {
+      if (targetRunOffset === 0) {
         // Caret is at the beginning of a run
         var newRuns = [
           ...runsBeforeTarget,
           ...runs,
-          target,
+          targetRun,
           ...runsAfterTarget
         ]
       }
-      else if (targetRunIdx === targetRun.length) {
+      else if (targetRunOffset === targetRun.length) {
         // Caret is at the end of a run. (This will
         // only happen at the last item run the list of runs)
         var newRuns = [
           ...runsBeforeTarget,
-          target,
+          targetRun,
           ...runs,
           ...runsAfterTarget
         ]
@@ -301,7 +301,10 @@ class Paragraph {
         ]
       }
 
-      return new Paragraph(Paragraph.optimizeRuns(newRuns))
+      return [
+        new Paragraph(Paragraph.optimizeRuns(newRuns)),
+        selection.incrementSingle(runs.reduce((lens, r) => lens + r.length, 0))
+      ]
     }
     else {
       // TODO: multiple selection
@@ -323,69 +326,16 @@ class Paragraph {
   }
 }
 
-// const runs = [
-//   new Run(1, 'a', ['italic']),
-//   new Run(1, 'b', ['italic']),
-//   new Run(1, 'c', []),
-//   new Run(1, 'd', ['bold']),
-//   new Run(1, 'e', ['bold']),
-//   new Run(1, 'f', ['bold'])
-// ]
-
-// const optimized = Paragraph.optimizeRuns(runs)
-// console.log(optimized);
-
-
-// const run1 = new Run(1, 'Foobar 1.', ["bold"])
-// const run2 = new Run(2, ' Foobar 2.')
-// const run3 = new Run(3, ' Foobar 3.', ["italic"])
-// const paragraph = new Paragraph([run1, run2, run3])
-
-// [b:"Foobar 1.|"][" Foobar 2."][i:" Foobar 3."]
-//   .insert(9, " Foobar 1.5.", ["b"])
-//     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
-//     -> selection: 18
-
-// const [paragraph2, selection] = paragraph.insert(
-//   new Selection({ elem: 1, offset: 9 }),
-//   new Run(4, " Foobar x.", ['bold']),
-// )
-
-// console.log(paragraph2.render());
-// console.log(paragraph2.runs.length);
-
-// [b:"Foobar 1.|"][" Foobar 2."][i:" Foobar 3."]
-//   .insert(9, " Foobar 1.5.", [])
-//     -> paragraph: [b:"Foobar 1."][i:" Foobar x."][" Foobar 2."][i:" Foobar 3."]
-//     -> selection: 18
-
-// const [p, s] = paragraph.insert(
-//   new Selection({ elem: 1, offset: 9 }),
-//   new Run(4, " Foobar x.", [])
-// )
-
-// console.log(p.render())
-// console.log(p.runs.length)
-// console.log(p.runs[1].render())
-
-// console.log(paragraph.runAtOffset(0)) // 1
-// console.log(paragraph.runAtOffset(8)) // 1
-// console.log(paragraph.runAtOffset(9)) // 2
-// console.log(paragraph.runAtOffset(11)) // 2
-// console.log(paragraph.runAtOffset(18)) // 2
-// console.log(paragraph.runAtOffset(25)) // 3
-// console.log(paragraph.runAtOffset(28)) // 3
-
-
-// [b:"Foobar 1."][" Foobar 2."][i:" Foobar 3."].insert(8, " Foobar 1.5.", "i")
-//   -> paragraph: [b:"Foobar 1."][i:" Foobar 1.5."][" Foobar 2."][i:" Foobar 3."]
-//   -> selection: 20
+const run1 = new Run(1, 'Foobar 1.', ["bold"])
+const run2 = new Run(2, ' Foobar 2.')
+const run3 = new Run(3, ' Foobar 3.', ["italic"])
+const paragraph = new Paragraph([run1, run2, run3])
 
 const testTemplate = {
   selection: {
     range: false,
     start: {
-      elem: 1,
+      pid: 1,
       offset: 4 // between l and o
     }
   },
