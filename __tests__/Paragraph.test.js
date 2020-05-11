@@ -209,6 +209,14 @@ describe('remove (single selection)', () => {
     expect(s.caret).toEqual(5)
   })
 
+  test('end of run', () => {
+    const [p, s] = paragraph.remove(new Selection({ pid: 1, offset: 9 }))
+    expect(naiveParagraphRender(p)).toEqual(
+      '<bold>Foobar 1</bold> Foobar 2.<italic> Foobar 3.</italic>'
+    )
+    expect(s.caret).toEqual(8)
+  })
+
   test('end of paragraph', () => {
     const [p, s] = paragraph.remove(new Selection({ pid: 1, offset: 29 }))
     expect(naiveParagraphRender(p)).toEqual(
