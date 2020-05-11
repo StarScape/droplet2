@@ -41,9 +41,9 @@ class Selection {
 
   // For a single selection, returns new
   // Selection advanced by `n` characters
-  incrementSingle(n) {
+  shiftSingle(n) {
     if (!this.single) {
-      throw new Error("Cannot call incrementSingle() on range selection")
+      throw new Error("Cannot call shiftSingle() on range selection")
     }
     // console.log('foo: ' + this.start.offset + n);
     return new Selection({ ...this.start, offset: this.start.offset + n })
@@ -51,16 +51,16 @@ class Selection {
 }
 
 class Run {
-  get length() {
-    // TODO: memoize
-    return this.text.length
-  }
-
   constructor(id, text, formats = []) {
     // TODO: remove id
     this.id = id
     this.text = text
     this.formats = formats
+  }
+
+  get length() {
+    // TODO: memoize
+    return this.text.length
   }
 
   // Splits run into two separate runs at offset
@@ -134,7 +134,7 @@ class Run {
     })
 
     // Single-selection
-    if (end === undefined) {
+    if (end === undefined || end === null) {
       if (start === 0) {
         throw new Error('Cannot call remove() on a single selection at position 0.')
       }
@@ -185,15 +185,22 @@ class Paragraph {
     ]
   }
 
-  // Given a list of runs, will merge any two adjacent runs with the same formatting
+  // Given a list of runs, returns a list with adjacent
+  // runs of equal formatting merged, and empty runs removed.
   static optimizeRuns(runs) {
     let optimized = [runs[0]]
 
     for (let i = 1; i < runs.length; i++) {
       if (formatsEqual(optimized[optimized.length - 1].formats, runs[i].formats)) {
+        // Combine adjacent runs with equal formatting
         optimized[optimized.length - 1] = optimized[optimized.length - 1].insertEnd(runs[i].text)
       }
+      else if (!runs[i].text) {
+        // Remove empty runs
+        continue
+      }
       else {
+        // No optimiziation to do here, move along
         optimized.push(runs[i])
       }
     }
@@ -201,15 +208,15 @@ class Paragraph {
     return optimized
   }
 
+  constructor(runs) {
+    this.runs = runs
+    this.id = -1 // TODO
+  }
+
   // Returns the sum of the lengths of the paragraph's runs
   get length() {
     // TODO: memoize
     return this.runs.reduce((acc, run) => acc + run.length, 0)
-  }
-
-  constructor(runs) {
-    this.runs = runs
-    this.id = -1 // TODO
   }
 
   // Like atOffset, but returns pair for run immediately before text caret
@@ -262,7 +269,6 @@ class Paragraph {
 
   // runs: array of Runs
   // selection: Selection
-  // TODO: this was implemented before optimizeRuns was done and needs testing
   insert(runs, selection) {
     if (selection.single) {
       // Get run under text caret
@@ -303,7 +309,7 @@ class Paragraph {
 
       return [
         new Paragraph(Paragraph.optimizeRuns(newRuns)),
-        selection.incrementSingle(runs.reduce((lens, r) => lens + r.length, 0))
+        selection.shiftSingle(runs.reduce((lens, r) => lens + r.length, 0))
       ]
     }
     else {
@@ -312,12 +318,25 @@ class Paragraph {
     }
   }
 
-  insertRange(content, selection) {
-    if (content instanceof Run) {
-      
+  remove(selection) {
+    if (selection.single) {
+      if (selection.caret === 0) {
+        throw new Error("Cannot perform single-selection remove (backspace) on Paragraph at start of Paragraph.")
+      }
+
+      const [targetRunIdx, targetRunOffset] = this.beforeOffset(selection.caret)
+      const targetRun = this.runs[targetRunIdx]
+
+      const newRuns = [...this.runs]
+      newRuns[targetRunIdx] = targetRun.remove(targetRunOffset)
+
+      return [
+        new Paragraph(Paragraph.optimizeRuns(newRuns)),
+        selection.shiftSingle(-1)
+      ]
     }
     else {
-      throw new Error("Unrecognized form of content passed to insertRange " + content)
+      // TODO
     }
   }
 
@@ -330,6 +349,24 @@ const run1 = new Run(1, 'Foobar 1.', ["bold"])
 const run2 = new Run(2, ' Foobar 2.')
 const run3 = new Run(3, ' Foobar 3.', ["italic"])
 const paragraph = new Paragraph([run1, run2, run3])
+
+const myParagraph = new Paragraph([
+  new Run(1, 'Hello.', ['italic']),
+  new Run(2, 'A', []),
+  new Run(3, 'Goodbye.', ['bold'])
+])
+
+const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 7 }))
+// const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }))
+
+// console.log(p.runs);
+// console.log(p.render());
+
+// expect(naiveParagraphRender(p)).toEqual(
+//   '<italic>Hello.</italic><bold>Goodbye</bold>'
+// )
+// expect(p.runs.length).toEqual(2)
+
 
 const testTemplate = {
   selection: {

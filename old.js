@@ -41,9 +41,9 @@ class Selection {
 
   // For a single selection, returns new
   // Selection advanced by `n` characters
-  incrementSingle(n) {
+  shiftSingle(n) {
     if (!this.single) {
-      throw new Error("Cannot call incrementSingle() on range selection")
+      throw new Error("Cannot call shiftSingle() on range selection")
     }
     return new Selection({ ...this.start, offset: this.start.offset + n })
   }
@@ -92,7 +92,7 @@ class Run {
 
       return [
         new Run(this.id, modifiedText, this.formats),
-        selection.incrementSingle(text.length)
+        selection.shiftSingle(text.length)
       ]
     }
     else {
@@ -102,7 +102,7 @@ class Run {
 
       return [
         new Run(this.id, modifiedText, this.formats),
-        selection.collapse().incrementSingle(text.length)
+        selection.collapse().shiftSingle(text.length)
       ]
     }
   }
@@ -132,7 +132,7 @@ class Run {
 
       return [
         new Run(this.id, modifiedText, this.formats),
-        selection.incrementSingle(-1)
+        selection.shiftSingle(-1)
       ]
     }
     else {
@@ -254,7 +254,7 @@ class Paragraph {
       )
 
       const newRuns = Object.assign([], this.runs, { [run1Idx]: newRun });
-      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+      return [new Paragraph(newRuns), selection.shiftSingle(content.length)]
     }
     else if (formatsEqual(run2.formats, content.formats)) {
       const [newRun, newSelection] = run2.insert(
@@ -263,14 +263,14 @@ class Paragraph {
       )
 
       const newRuns = Object.assign([], this.runs, { [run2Idx]: newRun });
-      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+      return [new Paragraph(newRuns), selection.shiftSingle(content.length)]
     }
     else {
       const [runAfterCaretIdx, runAfterCaretOffset] = this.runAtOffset(selection.caret + 1)
 
       const newRuns = this.runs.slice();
       newRuns.splice(run1Idx + 1, 0, content)
-      return [new Paragraph(newRuns), selection.incrementSingle(content.length)]
+      return [new Paragraph(newRuns), selection.shiftSingle(content.length)]
     }
   }
 

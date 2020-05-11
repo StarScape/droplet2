@@ -64,6 +64,7 @@ test('optimizeRuns', () => {
     new Run(1, 'a', ['italic']),
     new Run(1, 'b', ['italic']),
     new Run(1, 'c', []),
+    new Run(1, '', []),         // make sure empty run is removed
     new Run(1, 'd', ['bold']),
     new Run(1, 'e', ['bold']),
     new Run(1, 'f', ['bold']),
@@ -96,6 +97,7 @@ test('optimizeRuns', () => {
   expect(optimized[5].formats).toEqual([])
 
   expect(optimized.length).toBe(6)
+
 })
 
 // Provide a simple way to render a paragraph as a string, thereby allowing us
@@ -184,6 +186,47 @@ describe('insert (single selection)', () => {
       '<bold>Foobar 1.</bold> Foobar 2.<italic> Foobar 3.</italic> Post.'
     )
 
-    expect(s.start.offset).toEqual(36)
+    expect(s.start.offset).toEqual(35)
+  })
+})
+
+describe('remove (single selection)', () => {
+  const paragraph = new Paragraph([
+    new Run(1, 'Foobar 1.', ["bold"]),
+    new Run(2, ' Foobar 2.'),
+    new Run(3, ' Foobar 3.', ["italic"])
+  ])
+
+  test('at beginning of paragraph', () => {
+    expect(() => paragraph.remove(new Selection({ pid: 1, offset: 0 }))).toThrow()
+  })
+
+  test('middle of paragraph', () => {
+    const [p, s] = paragraph.remove(new Selection({ pid: 1, offset: 6 }))
+    expect(naiveParagraphRender(p)).toEqual(
+      '<bold>Fooba 1.</bold> Foobar 2.<italic> Foobar 3.</italic>'
+    )
+    expect(s.caret).toEqual(5)
+  })
+
+  test('end of paragraph', () => {
+    const [p, s] = paragraph.remove(new Selection({ pid: 1, offset: 29 }))
+    expect(naiveParagraphRender(p)).toEqual(
+      '<bold>Foobar 1.</bold> Foobar 2.<italic> Foobar 3</italic>' // no period at end
+    )
+    expect(s.caret).toEqual(28)
+  })
+
+  test('single-character run', () => {
+    const myParagraph = new Paragraph([
+      new Run(1, 'Hello.', ['italic']),
+      new Run(2, 'A', []),
+      new Run(3, 'Goodbye.', ['bold'])
+    ])
+    const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 7 }))
+    expect(naiveParagraphRender(p)).toEqual(
+      '<italic>Hello.</italic><bold>Goodbye.</bold>'
+    )
+    expect(p.runs.length).toEqual(2)
   })
 })
