@@ -6,7 +6,7 @@ const formatsEqual = (f1, f2) =>
 class Selection {
   get single() {
     return (
-      this.start.elem === this.end.elem &&
+      this.start.pid === this.end.pid &&
       this.start.offset === this.end.offset
     )
   }
@@ -51,6 +51,11 @@ class Selection {
 }
 
 class Run {
+  // Returns an empty run (no text or formatting)
+  static empty() {
+    return new Run(-1, '', [])
+  }
+
   constructor(id, text, formats = []) {
     // TODO: remove id
     this.id = id
@@ -65,8 +70,14 @@ class Run {
 
   // Splits run into two separate runs at offset
   split(offset) {
-    if (offset === 0 || offset === this.length) {
-      throw new Error("Cannot split at beginning or end run. Offset: " + offset)
+    // If we perform a split on either edge of the run, return the umodified run
+    // for one half, and an empty run for the other. This prevents using null semanitcally
+    // (which I'm convinced is the devil), and turns out to play quite nicely with optimizeRuns.
+    if (offset === 0) {
+      return [Run.empty(), this]
+    }
+    else if (offset === this.length) {
+      return [this, Run.empty()]
     }
 
     const textBefore = this.text.slice(0, offset)
@@ -319,6 +330,12 @@ class Paragraph {
   }
 
   remove(selection) {
+    [selection.start.offset, selection.end.offset || 0].forEach(offset => {
+      if (offset < 0 || offset > this.length) {
+        throw new Error("Illegal offset into paragraph: " + offset)
+      }
+    })
+
     if (selection.single) {
       if (selection.caret === 0) {
         throw new Error("Cannot perform single-selection remove (backspace) on Paragraph at start of Paragraph.")
@@ -336,7 +353,34 @@ class Paragraph {
       ]
     }
     else {
-      // TODO
+      const [startRunIdx, startOffset] = this.atOffset(selection.start.offset)
+      const [endRunIdx, endOffset] = this.atOffset(selection.end.offset)
+      const startRun = this.runs[startRunIdx]
+      const endRun = this.runs[endRunIdx]
+
+      if (startRun === endRun) {
+        var newRuns = [...this.runs]
+        newRuns[startRunIdx] = startRun.remove(startOffset, endOffset)
+      }
+      else {
+        const [startRunTrimmed, startRunDiscarded] = startRun.split(startOffset)
+        const [endRunDiscarded, endRunTrimmed] = endRun.split(endOffset)
+
+        const runsBeforeStart = this.runs.slice(0, startRunIdx)
+        const runsAfterEnd = this.runs.slice(endRunIdx + 1, this.runs.length)
+
+        var newRuns = [
+          ...runsBeforeStart,
+          startRunTrimmed,
+          endRunTrimmed,
+          ...runsAfterEnd
+        ]
+      }
+
+      return [
+        new Paragraph(Paragraph.optimizeRuns(newRuns)),
+        selection.collapse()
+      ]
     }
   }
 
@@ -356,7 +400,20 @@ const myParagraph = new Paragraph([
   new Run(3, 'Goodbye.', ['bold'])
 ])
 
-const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 7 }))
+// Hello.s
+const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length }))
+
+// console.log(p.render());
+// console.log(p.runs);
+// console.log(s.caret);
+
+// Works - test more. What happens if we remove the whole run?
+// console.log(p.render());
+// console.log(p.runs.length);
+// console.log(s);
+
+// console.log(p.atOffset(0));
+
 // const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }))
 
 // console.log(p.runs);

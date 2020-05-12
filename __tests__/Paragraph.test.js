@@ -190,6 +190,10 @@ describe('insert (single selection)', () => {
   })
 })
 
+describe('insert (range-selection)', () => {
+  // TODO
+})
+
 describe('remove (single selection)', () => {
   const paragraph = new Paragraph([
     new Run(1, 'Foobar 1.', ["bold"]),
@@ -236,5 +240,82 @@ describe('remove (single selection)', () => {
       '<italic>Hello.</italic><bold>Goodbye.</bold>'
     )
     expect(p.runs.length).toEqual(2)
+  })
+
+  test('errors', () => {
+    expect(() =>
+      myParagraph.remove(new Selection({ pid: 1, offset: -1 }))
+    ).toThrow()
+
+    expect(() =>
+      myParagraph.remove(new Selection({ pid: 1, offset: 100 }))
+    ).toThrow()
+  })
+
+})
+
+describe('remove (range-selection)', () => {
+  const myParagraph = new Paragraph([
+    new Run(1, 'Hello.', ['italic']),
+    new Run(2, 'A', []),
+    new Run(3, 'Goodbye.', ['bold'])
+  ])
+
+  test('start and end inside same run, from beginning of paragraph', () => {
+    const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 4 }))
+    expect(naiveParagraphRender(p)).toBe(
+      '<italic>o.</italic>A<bold>Goodbye.</bold>'
+    )
+    expect(p.runs.length).toBe(3)
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(0)
+  })
+
+  test('start and end inside same run', () => {
+    const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 1 }, { pid: 1, offset: 4 }))
+    expect(naiveParagraphRender(p)).toBe(
+      '<italic>Ho.</italic>A<bold>Goodbye.</bold>'
+    )
+    expect(p.runs.length).toBe(3)
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(1)
+  })
+
+  test('removing whole run', () => {
+    const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 6 }))
+    expect(naiveParagraphRender(p)).toBe(
+      'A<bold>Goodbye.</bold>'
+    )
+    expect(p.runs.length).toBe(2)
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(0)
+  })
+
+  test('removing whole run in middle of paragraph', () => {
+    const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 6 }, { pid: 1, offset: 7 }))
+    expect(naiveParagraphRender(p)).toBe(
+      '<italic>Hello.</italic><bold>Goodbye.</bold>'
+    )
+    expect(p.runs.length).toBe(2)
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(6)
+  })
+
+  test('removing whole paragraph', () => {
+    const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length }))
+
+    // Range-removing the whole paragraph should return a paragraph with a single empty run
+    expect(naiveParagraphRender(p)).toBe('')
+    expect(p.runs.length).toBe(1)
+    expect(p.runs[0].formats).toEqual([])
+
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(0)
+  })
+
+  test('errors', () => {
+    expect(() =>
+      myParagraph.remove(new Selection({ pid: 1, offset: -1 }, { pid: 1, offset: 25 }))
+    ).toThrow()
   })
 })

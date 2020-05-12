@@ -129,8 +129,15 @@ describe('split', () => {
     expect(split2.text).toBe('second')
   })
 
-  test('start and end (errors)', () => {
-    expect(() => myRun.split(0)).toThrow()
-    expect(() => myRun.split(11)).toThrow()
+  test('start', () => {
+    const [split1, split2] = myRun.split(0)
+    expect(split1.text).toBe('')
+    expect(split2).toEqual(myRun)
+  })
+
+  test('end', () => {
+    const [split1, split2] = myRun.split(myRun.length)
+    expect(split1).toEqual(myRun)
+    expect(split2.text).toBe('')
   })
 })
