@@ -3,8 +3,8 @@ const { Run, Selection } = require('../Paragraph.js')
 let run1, run2
 
 beforeAll(() => {
-  run1 = new Run(1, 'Foobar')
-  run2 = new Run(1, 'Foo')
+  run1 = new Run('Foobar')
+  run2 = new Run('Foo')
 })
 
 describe('insert', () => {
@@ -121,7 +121,7 @@ test('removeFormats', () => {
 })
 
 describe('split', () => {
-  const myRun = new Run(1, 'firstsecond')
+  const myRun = new Run('firstsecond')
 
   test('middle', () => {
     const [split1, split2] = myRun.split(5)

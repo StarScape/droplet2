@@ -53,12 +53,11 @@ class Selection {
 class Run {
   // Returns an empty run (no text or formatting)
   static empty() {
-    return new Run(-1, '', [])
+    return new Run('', [])
   }
 
-  constructor(id, text, formats = []) {
+  constructor(text, formats = []) {
     // TODO: remove id
-    this.id = id
     this.text = text
     this.formats = formats
   }
@@ -83,8 +82,8 @@ class Run {
     const textBefore = this.text.slice(0, offset)
     const textAfter = this.text.slice(offset, this.length)
     return [
-      new Run(this.id, textBefore, this.formats),
-      new Run(this.id, textAfter, this.formats)
+      new Run(textBefore, this.formats),
+      new Run(textAfter, this.formats)
     ]
   }
 
@@ -110,13 +109,13 @@ class Run {
       const after = this.text.slice(start)
       const modifiedText = before + text + after
 
-      return new Run(this.id, modifiedText, this.formats)
+      return new Run(modifiedText, this.formats)
     }
     else {
       const before = this.text.slice(0, start)
       const after = this.text.slice(end)
       const modifiedText = before + text + after
-      return new Run(this.id, modifiedText, this.formats)
+      return new Run(modifiedText, this.formats)
     }
   }
 
@@ -154,26 +153,26 @@ class Run {
       const after = this.text.slice(start)
       const modifiedText = before + after
 
-      return new Run(this.id, modifiedText, this.formats)
+      return new Run(modifiedText, this.formats)
     }
     else {
       const before = this.text.slice(0, start)
       const after = this.text.slice(end)
       const modifiedText = before + after
 
-      return new Run(this.id, modifiedText, this.formats)
+      return new Run(modifiedText, this.formats)
     }
   }
 
   // Returns a new Run with `formats` added
   applyFormats(formats) {
     const intersection = new Set([...formats, ...this.formats])
-    return new Run(this.id, this.text, [...intersection])
+    return new Run(this.text, [...intersection])
   }
 
   // Returns a new Run with `formats` removed
   removeFormats(formats) {
-    return new Run(this.id, this.text, this.formats.filter(f => !formats.includes(f)))
+    return new Run(this.text, this.formats.filter(f => !formats.includes(f)))
   }
 
   render() {
@@ -191,7 +190,7 @@ class Paragraph {
         obj.selection.end,
       ),
       new Paragraph(
-        obj.runs.map(r => new Run(r.id, r.text, r.formats))
+        obj.runs.map(r => new Run(r.text, r.formats))
       ),
     ]
   }
@@ -357,6 +356,8 @@ class Paragraph {
       const [endRunIdx, endOffset] = this.atOffset(selection.end.offset)
       const startRun = this.runs[startRunIdx]
       const endRun = this.runs[endRunIdx]
+      console.log("endRunIdx")
+      console.log(endRunIdx)
 
       if (startRun === endRun) {
         var newRuns = [...this.runs]
@@ -389,15 +390,15 @@ class Paragraph {
   }
 }
 
-const run1 = new Run(1, 'Foobar 1.', ["bold"])
-const run2 = new Run(2, ' Foobar 2.')
-const run3 = new Run(3, ' Foobar 3.', ["italic"])
+const run1 = new Run('Foobar 1.', ["bold"])
+const run2 = new Run(' Foobar 2.')
+const run3 = new Run(' Foobar 3.', ["italic"])
 const paragraph = new Paragraph([run1, run2, run3])
 
 const myParagraph = new Paragraph([
-  new Run(1, 'Hello.', ['italic']),
-  new Run(2, 'A', []),
-  new Run(3, 'Goodbye.', ['bold'])
+  new Run('Hello.', ['italic']),
+  new Run('A', []),
+  new Run('Goodbye.', ['bold'])
 ])
 
 // Hello.s

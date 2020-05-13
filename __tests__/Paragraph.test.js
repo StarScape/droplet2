@@ -6,9 +6,9 @@ let run3
 let paragraph
 
 beforeAll(() => {
-  run1 = new Run(1, 'Foobar 1.', ["bold"])
-  run2 = new Run(2, ' Foobar 2.')
-  run3 = new Run(3, ' Foobar 3.', ["italic"])
+  run1 = new Run('Foobar 1.', ["bold"])
+  run2 = new Run(' Foobar 2.')
+  run3 = new Run(' Foobar 3.', ["italic"])
 
   paragraph = new Paragraph([run1, run2, run3])
 })
@@ -61,17 +61,17 @@ test('atOffset', () => {
 
 test('optimizeRuns', () => {
   const runs = [
-    new Run(1, 'a', ['italic']),
-    new Run(1, 'b', ['italic']),
-    new Run(1, 'c', []),
-    new Run(1, '', []),         // make sure empty run is removed
-    new Run(1, 'd', ['bold']),
-    new Run(1, 'e', ['bold']),
-    new Run(1, 'f', ['bold']),
-    new Run(1, 'g', []),
-    new Run(1, 'h', []),
-    new Run(1, 'i', ['bold']),
-    new Run(1, 'j', [])
+    new Run('a', ['italic']),
+    new Run('b', ['italic']),
+    new Run('c', []),
+    new Run('', []),         // make sure empty run is removed
+    new Run('d', ['bold']),
+    new Run('e', ['bold']),
+    new Run('f', ['bold']),
+    new Run('g', []),
+    new Run('h', []),
+    new Run('i', ['bold']),
+    new Run('j', [])
   ]
 
   const optimized = Paragraph.optimizeRuns(runs)
@@ -117,14 +117,14 @@ describe('insert (single selection)', () => {
   // In HTML:
   // <b>Foobar 1.</b> Foobar 2.<i> Foobar 3.</i>
   const paragraph = new Paragraph([
-    new Run(1, 'Foobar 1.', ["bold"]),
-    new Run(2, ' Foobar 2.'),
-    new Run(3, ' Foobar 3.', ["italic"])
+    new Run('Foobar 1.', ["bold"]),
+    new Run(' Foobar 2.'),
+    new Run(' Foobar 3.', ["italic"])
   ])
 
   test('at end of run with same formatting', () => {
     const [p, s] = paragraph.insert(
-      [ new Run(4, " Foobar 1.5.", ['bold']) ],
+      [ new Run(" Foobar 1.5.", ['bold']) ],
       new Selection({ pid: 1, offset: 9 })
     )
 
@@ -139,7 +139,7 @@ describe('insert (single selection)', () => {
 
   test('at end of run with different formatting', () => {
     const [p, s] = paragraph.insert(
-      [new Run(4, " Foobar 1.5.", [])],
+      [new Run(" Foobar 1.5.", [])],
       new Selection({ pid: 1, offset: 9 })
     )
 
@@ -152,7 +152,7 @@ describe('insert (single selection)', () => {
 
   test('middle of run with different formatting', () => {
     const [p, s] = paragraph.insert(
-      [new Run(4, "bizzbuzz", ['italic'])],
+      [new Run("bizzbuzz", ['italic'])],
       new Selection({ pid: 1, offset: 16 })
     )
 
@@ -165,7 +165,7 @@ describe('insert (single selection)', () => {
 
   test('start of paragraph', () => {
     const [p, s] = paragraph.insert(
-      [new Run(4, "Pre. ", ['underline'])],
+      [new Run("Pre. ", ['underline'])],
       new Selection({ pid: 1, offset: 0 })
     )
 
@@ -178,7 +178,7 @@ describe('insert (single selection)', () => {
 
   test('end of paragraph', () => {
     const [p, s] = paragraph.insert(
-      [new Run(4, ' Post.', [])],
+      [new Run(' Post.', [])],
       new Selection({ pid: 1, offset: 29 })
     )
 
@@ -196,9 +196,9 @@ describe('insert (range-selection)', () => {
 
 describe('remove (single selection)', () => {
   const paragraph = new Paragraph([
-    new Run(1, 'Foobar 1.', ["bold"]),
-    new Run(2, ' Foobar 2.'),
-    new Run(3, ' Foobar 3.', ["italic"])
+    new Run('Foobar 1.', ["bold"]),
+    new Run(' Foobar 2.'),
+    new Run(' Foobar 3.', ["italic"])
   ])
 
   test('at beginning of paragraph', () => {
@@ -231,9 +231,9 @@ describe('remove (single selection)', () => {
 
   test('single-character run', () => {
     const myParagraph = new Paragraph([
-      new Run(1, 'Hello.', ['italic']),
-      new Run(2, 'A', []),
-      new Run(3, 'Goodbye.', ['bold'])
+      new Run('Hello.', ['italic']),
+      new Run('A', []),
+      new Run('Goodbye.', ['bold'])
     ])
     const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 7 }))
     expect(naiveParagraphRender(p)).toEqual(
@@ -256,9 +256,9 @@ describe('remove (single selection)', () => {
 
 describe('remove (range-selection)', () => {
   const myParagraph = new Paragraph([
-    new Run(1, 'Hello.', ['italic']),
-    new Run(2, 'A', []),
-    new Run(3, 'Goodbye.', ['bold'])
+    new Run('Hello.', ['italic']),
+    new Run('A', []),
+    new Run('Goodbye.', ['bold'])
   ])
 
   test('start and end inside same run, from beginning of paragraph', () => {
