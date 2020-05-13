@@ -25,6 +25,13 @@ class Selection {
     this.end = end || start
     this.backwards = backwards
 
+    if (this.start.offset < 0) {
+      throw new Error("Cannot create Selection with illegal start offset " + this.start.offset)
+    }
+    if (this.end.offset < 0) {
+      throw new Error("Cannot create Selection with illegal end offset + " + this.end.offset)
+    }
+
     if (this.start === this.end && this.start.offset > this.end.offset) {
       throw new Error("Error initializing Selection: end offset cannot precede start offset.")
     }
@@ -33,6 +40,7 @@ class Selection {
   // Returns new single selection at the start of this selection.
   // If this selection is a multiple selection, returns itself.
   collapse() {
+    // TODO: should we allow this?
     if (this.single) {
       throw new Error("Cannot call collapse() on single selection")
     }
@@ -45,7 +53,6 @@ class Selection {
     if (!this.single) {
       throw new Error("Cannot call shiftSingle() on range selection")
     }
-    // console.log('foo: ' + this.start.offset + n);
     return new Selection({ ...this.start, offset: this.start.offset + n })
   }
 }
@@ -356,8 +363,6 @@ class Paragraph {
       const [endRunIdx, endOffset] = this.atOffset(selection.end.offset)
       const startRun = this.runs[startRunIdx]
       const endRun = this.runs[endRunIdx]
-      console.log("endRunIdx")
-      console.log(endRunIdx)
 
       if (startRun === endRun) {
         var newRuns = [...this.runs]
