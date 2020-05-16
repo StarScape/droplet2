@@ -59,49 +59,59 @@ test('atOffset', () => {
   expect(() => paragraph.atOffset(-1)[0]).toThrow()
 })
 
-test('optimizeRuns', () => {
-  const runs = [
-    new Run('a', ['italic']),
-    new Run('b', ['italic']),
-    new Run('c', []),
-    new Run('', []),         // make sure empty run is removed
-    new Run('d', ['bold']),
-    new Run('e', ['bold']),
-    new Run('f', ['bold']),
-    new Run('g', []),
-    new Run('h', []),
-    new Run('i', ['bold']),
-    new Run('j', [])
-  ]
+describe('optimizeRuns', () => {
+  test('deletes and combines unnecessary runs', () => {
+    const runs = [
+      new Run('a', ['italic']),
+      new Run('b', ['italic']),
+      new Run('c', []),
+      new Run('', []),         // make sure empty run is removed
+      new Run('d', ['bold']),
+      new Run('e', ['bold']),
+      new Run('f', ['bold']),
+      new Run('g', []),
+      new Run('h', []),
+      new Run('i', ['bold']),
+      new Run('j', [])
+    ]
 
-  const optimized = Paragraph.optimizeRuns(runs)
+    const optimized = Paragraph.optimizeRuns(runs)
 
-  // Check that each set of adjacent runs w/ identical formatting
-  // are compressed into each other, and have the same formatting.
-  expect(optimized[0].text).toBe('ab')
-  expect(optimized[0].formats).toEqual(['italic'])
+    // Check that each set of adjacent runs w/ identical formatting
+    // are compressed into each other, and have the same formatting.
+    expect(optimized[0].text).toBe('ab')
+    expect(optimized[0].formats).toEqual(['italic'])
 
-  expect(optimized[1].text).toBe('c')
-  expect(optimized[1].formats).toEqual([])
+    expect(optimized[1].text).toBe('c')
+    expect(optimized[1].formats).toEqual([])
 
-  expect(optimized[2].text).toBe('def')
-  expect(optimized[2].formats).toEqual(['bold'])
+    expect(optimized[2].text).toBe('def')
+    expect(optimized[2].formats).toEqual(['bold'])
 
-  expect(optimized[3].text).toBe('gh')
-  expect(optimized[3].formats).toEqual([])
+    expect(optimized[3].text).toBe('gh')
+    expect(optimized[3].formats).toEqual([])
 
-  expect(optimized[4].text).toBe('i')
-  expect(optimized[4].formats).toEqual(['bold'])
+    expect(optimized[4].text).toBe('i')
+    expect(optimized[4].formats).toEqual(['bold'])
 
-  expect(optimized[5].text).toBe('j')
-  expect(optimized[5].formats).toEqual([])
+    expect(optimized[5].text).toBe('j')
+    expect(optimized[5].formats).toEqual([])
 
-  expect(optimized.length).toBe(6)
+    expect(optimized.length).toBe(6)
+  })
 
+  test('with 1 empty run', () => {
+    const runs = [ new Run('', ['bold']) ]
+    const optimized = Paragraph.optimizeRuns(runs)
+
+    expect(optimized.length).toBe(1)
+    expect(optimized[0].text).toBe('')
+    expect(optimized[0].formats).toEqual(['bold'])
+  })
 })
 
-// Provide a simple way to render a paragraph as a string, thereby allowing us
-// to check output of insert() in the test below without manually checking each
+// These provide a simple way to render a paragraph as a string, thereby allowing
+// us to check output of insert() in the test below without manually checking each
 // item in the array every time, and all the glorious headache that would provide.
 //
 // As of writing, this is identical to the render() methods on Run and Paragraph, but
