@@ -191,7 +191,56 @@ describe('insert (single selection)', () => {
 })
 
 describe('insert (range-selection)', () => {
-  // TODO
+  const myParagraph = new Paragraph([
+    new Run('Hello.', ['italic']),
+    new Run('A', []),
+    new Run('Goodbye.', ['bold'])
+  ])
+
+  test('crossing over three runs', () => {
+    const [p, s] = myParagraph.insert(
+      [new Run('hello!', ['bold'])],
+      new Selection({ pid: 1, offset: 3 }, { pid: 1, offset: 8 })
+    )
+
+    expect(naiveParagraphRender(p)).toBe(
+      '<italic>Hel</italic><bold>hello!oodbye.</bold>'
+    )
+    expect(p.runs.length).toBe(2)
+
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(9)
+  })
+
+  test('whole paragraph', () => {
+    const [p, s] = myParagraph.insert(
+      [new Run('hello!', [])],
+      new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length })
+    )
+
+    expect(naiveParagraphRender(p)).toBe('hello!')
+    expect(p.runs.length).toBe(1)
+
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(6)
+  })
+
+  test('whole run', () => {
+    const [p, s] = myParagraph.insert(
+      [new Run('B', [])],
+      new Selection({ pid: 1, offset: 6 }, { pid: 1, offset: 7 })
+    )
+
+    expect(naiveParagraphRender(p)).toBe(
+      '<italic>Hello.</italic>B<bold>Goodbye.</bold>'
+    )
+    expect(p.runs.length).toBe(3)
+
+    expect(s.single).toBe(true)
+    expect(s.caret).toBe(7)
+  })
+
+  // TODO: write any more tests as you discover edge cases
 })
 
 describe('remove (single selection)', () => {

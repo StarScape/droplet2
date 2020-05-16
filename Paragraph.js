@@ -330,8 +330,9 @@ class Paragraph {
       ]
     }
     else {
-      // TODO: multiple selection
-      // return this.remove(selection).insertRange(selection, content)
+      // When a range is selected, remove the range and insert normally
+      const [paragraphRemoved, selectionRemoved] = this.remove(selection)
+      return paragraphRemoved.insert(runs, selectionRemoved)
     }
   }
 
@@ -406,30 +407,10 @@ const myParagraph = new Paragraph([
   new Run('Goodbye.', ['bold'])
 ])
 
-// Hello.s
-const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length }))
-
-// console.log(p.render());
-// console.log(p.runs);
-// console.log(s.caret);
-
-// Works - test more. What happens if we remove the whole run?
-// console.log(p.render());
-// console.log(p.runs.length);
-// console.log(s);
-
-// console.log(p.atOffset(0));
-
-// const [p, s] = myParagraph.remove(new Selection({ pid: 1, offset: 0 }))
-
-// console.log(p.runs);
-// console.log(p.render());
-
-// expect(naiveParagraphRender(p)).toEqual(
-//   '<italic>Hello.</italic><bold>Goodbye</bold>'
-// )
-// expect(p.runs.length).toEqual(2)
-
+const [p, s] = myParagraph.insert(
+  [new Run('hello!', ['bold'])],
+  new Selection({ pid: 1, offset: 3 }, { pid: 1, offset: 8 })
+)
 
 const testTemplate = {
   selection: {
