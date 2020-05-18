@@ -120,6 +120,14 @@ test('removeFormats', () => {
   expect(newRun.formats).toEqual([])
 })
 
+test('toggleFormat', () => {
+  const myRun = new Run('foobar', ['italic', 'bold'])
+  expect(myRun.toggleFormat('italic').formats).toEqual(['bold'])
+  expect(myRun.toggleFormat('bold').formats).toEqual(['italic'])
+  expect(myRun.toggleFormat('underline').formats)
+    .toEqual(['italic', 'bold', 'underline'])
+})
+
 describe('split', () => {
   const myRun = new Run('firstsecond')
 

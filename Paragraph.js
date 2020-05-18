@@ -171,6 +171,8 @@ class Run {
     }
   }
 
+  // TODO: can applyFormats and removeFormats be removed?
+
   // Returns a new Run with `formats` added
   applyFormats(formats) {
     const intersection = new Set([...formats, ...this.formats])
@@ -180,6 +182,24 @@ class Run {
   // Returns a new Run with `formats` removed
   removeFormats(formats) {
     return new Run(this.text, this.formats.filter(f => !formats.includes(f)))
+  }
+
+  // Returns a new Run with `f` toggled. E.g. if `f` is 'italic' and the run
+  // currently has italics on, it will be removed; if not, it will be added.
+  toggleFormat(f) {
+    const newFormats = [...this.formats]
+    const fIdx = newFormats.indexOf(f)
+
+    if (fIdx !== -1) {
+      // Remove format from newFormats if present
+      newFormats.splice(fIdx, 1)
+    }
+    else {
+      // Or add it if not
+      newFormats.push(f)
+    }
+
+    return new Run(this.text, newFormats)
   }
 
   render() {
@@ -391,6 +411,8 @@ class Paragraph {
     }
   }
 
+  // TODO: add method toggleFormat
+
   render() {
     return this.runs.map(r => r.render()).join('')
   }
@@ -407,10 +429,8 @@ const myParagraph = new Paragraph([
   new Run('Goodbye.', ['bold'])
 ])
 
-const [p, s] = myParagraph.insert(
-  [new Run('hello!', ['bold'])],
-  new Selection({ pid: 1, offset: 3 }, { pid: 1, offset: 8 })
-)
+const r = run1.toggleFormat('italic')
+console.log(r);
 
 const testTemplate = {
   selection: {
