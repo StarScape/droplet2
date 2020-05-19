@@ -186,9 +186,9 @@ class Run {
 
   // Returns a new Run with `f` toggled. E.g. if `f` is 'italic' and the run
   // currently has italics on, it will be removed; if not, it will be added.
-  toggleFormat(f) {
+  toggleFormat(format) {
     const newFormats = [...this.formats]
-    const fIdx = newFormats.indexOf(f)
+    const fIdx = newFormats.indexOf(format)
 
     if (fIdx !== -1) {
       // Remove format from newFormats if present
@@ -196,7 +196,7 @@ class Run {
     }
     else {
       // Or add it if not
-      newFormats.push(f)
+      newFormats.push(format)
     }
 
     return new Run(this.text, newFormats)
@@ -386,20 +386,22 @@ class Paragraph {
       const endRun = this.runs[endRunIdx]
 
       if (startRun === endRun) {
+        // Range-selection where start and end are within a single run
         var newRuns = [...this.runs]
         newRuns[startRunIdx] = startRun.remove(startOffset, endOffset)
       }
       else {
-        const [startRunTrimmed, startRunDiscarded] = startRun.split(startOffset)
-        const [endRunDiscarded, endRunTrimmed] = endRun.split(endOffset)
+        // Range-selection where start and end are within different runs
+        const [startRunKept, startRunDiscarded] = startRun.split(startOffset)
+        const [endRunDiscarded, endRunKept] = endRun.split(endOffset)
 
         const runsBeforeStart = this.runs.slice(0, startRunIdx)
         const runsAfterEnd = this.runs.slice(endRunIdx + 1, this.runs.length)
 
         var newRuns = [
           ...runsBeforeStart,
-          startRunTrimmed,
-          endRunTrimmed,
+          startRunKept,
+          endRunKept,
           ...runsAfterEnd
         ]
       }
@@ -412,6 +414,44 @@ class Paragraph {
   }
 
   // TODO: add method toggleFormat
+
+  toggleFormat(format, selection) {
+    if (selection.single) {
+      var newRuns = [...this.runs]
+
+      const [targetIdx, targetOffset] = this.atOffset(selection.start.offset)
+      newRuns[targetIdx] = this.runs[targetIdx].toggleFormat('format')
+    }
+    else {
+      const [startRunIdx, startOffset] = this.atOffset(selection.start.offset)
+      const [endRunIdx, endOffset] = this.atOffset(selection.end.offset)
+      const runsBeforeStart = this.runs.slice(0, startRunIdx)
+      const runsAfterEnd = this.runs.slice(endRunIdx + 1, this.runs.length)
+      const runsBetween = this.runs.slice(startRunIdx + 1, endRunIdx)
+
+      // Split start and end runs into *just* the text that is within the
+      // selection -- the text outside of the selection will not be formatted.
+      const [startOutside, startInside] = this.runs[startRunIdx].split(startOffset)
+      const [endInside, endOutside]   = this.runs[startRunIdx].split(endOffset)
+
+      const toggled = [...startInside, ...runsBetween, ...endInside].map(r => {
+        return r.toggleFormat(format)
+      })
+
+      var newRuns = [
+        ...runsBeforeStart,
+        startOutside,
+        ...toggled,
+        endOutside,
+        ...runsAfterEnd
+      ]
+    }
+
+    return new [
+      Paragraph(Paragraph.optimizeRuns(newRuns)),
+      selection
+    ]
+  }
 
   render() {
     return this.runs.map(r => r.render()).join('')
