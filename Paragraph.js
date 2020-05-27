@@ -64,7 +64,6 @@ class Run {
   }
 
   constructor(text, formats = []) {
-    // TODO: remove id
     this.text = text
     this.formats = formats
   }
@@ -72,6 +71,10 @@ class Run {
   get length() {
     // TODO: memoize
     return this.text.length
+  }
+
+  get empty() {
+    return this.text === null || this.text === undefined || this.text === ''
   }
 
   // Splits run into two separate runs at offset
@@ -225,14 +228,19 @@ class Paragraph {
   // Given a list of runs, returns a list with adjacent
   // runs of equal formatting merged, and empty runs removed.
   static optimizeRuns(runs) {
-    let optimized = [runs[0]]
+    const firstWithText = runs.findIndex(r => !r.empty)
+    if (firstWithText === -1) {
+      return [runs[0]]
+    }
 
-    for (let i = 1; i < runs.length; i++) {
+    let optimized = [runs[firstWithText]]
+
+    for (let i = firstWithText + 1; i < runs.length; i++) {
       if (formatsEqual(optimized[optimized.length - 1].formats, runs[i].formats)) {
         // Combine adjacent runs with equal formatting
         optimized[optimized.length - 1] = optimized[optimized.length - 1].insertEnd(runs[i].text)
       }
-      else if (!runs[i].text) {
+      else if (runs[i].empty) {
         // Remove empty runs
         continue
       }
@@ -413,44 +421,82 @@ class Paragraph {
     }
   }
 
-  // TODO: add method toggleFormat
+  // Returns new Paragraph with runs inside selection replaced by the result
+  // of calling `f` on each one. Will split runs if necessary. Returned list of runs
+  // will be optimized.
+  mapRuns(f, selection) {
+    const [startRunIdx, startOffset] = this.atOffset(selection.start.offset)
+    const [endRunIdx, endOffset] = this.atOffset(selection.end.offset)
+    const runsBeforeStart = this.runs.slice(0, startRunIdx)
+    const runsAfterEnd = this.runs.slice(endRunIdx + 1, this.runs.length)
+    const runsBetween = this.runs.slice(startRunIdx + 1, endRunIdx)
 
+    // Split start and end runs into *just* the text that is within the
+    // selection -- the text outside of the selection will be transformed
+    const [startOutside, startInside] = this.runs[startRunIdx].split(startOffset)
+    const [endInside, endOutside]   = this.runs[endRunIdx].split(endOffset)
+
+    const selectedArea = [startInside, ...runsBetween, endInside]
+    const transformed = selectedArea.map(r => f(r))
+
+    const newRuns = Paragraph.optimizeRuns([
+      ...runsBeforeStart,
+      startOutside,
+      ...transformed,
+      endOutside,
+      ...runsAfterEnd
+    ])
+
+    return new Paragraph(newRuns)
+  }
+
+  // Returns a list of all formats shared by the whole of `selection.` Example:
+  // calling getFormat on the selection "<i><b>x</b></i><i>y</i>" will return
+  // ["italic"], as that is the only format shared by the whole of the selection.
+  getFormats(selection) {
+    const [startRunIdx] = this.atOffset(selection.start.offset)
+    const [endRunIdx] = this.beforeOffset(selection.end.offset)
+
+    let commonFormats = this.runs[startRunIdx].formats
+
+    for (let i = startRunIdx; i <= endRunIdx; i++) {
+      const formats = this.runs[i].formats
+      commonFormats = commonFormats.filter(f => formats.includes(f))
+    }
+
+    return commonFormats
+  }
+
+  applyFormats(formats, selection) {
+    return this.mapRuns((r) => r.applyFormats(formats), selection)
+  }
+
+  removeFormats(formats, selection) {
+    return this.mapRuns((r) => r.removeFormats(formats), selection)
+  }
+
+  // Toggles the given format on the selection. If all text in the selection
+  // is formatted with `format`, then it will turn that format off for the selection.
+  // If not, it will turn it on.
   toggleFormat(format, selection) {
     if (selection.single) {
-      var newRuns = [...this.runs]
+      throw new Error("Cannot toggleFormat on a single selection.")
+    }
 
-      const [targetIdx, targetOffset] = this.atOffset(selection.start.offset)
-      newRuns[targetIdx] = this.runs[targetIdx].toggleFormat('format')
+    const [startRunIdx] = this.atOffset(selection.start.offset)
+    const [endRunIdx] = this.atOffset(selection.end.offset)
+
+    // Does the current selection already have the format we're toggling?
+    const formatActivated = this.getFormats(selection).includes(format)
+
+    // If so, remove that format from selection.
+    if (formatActivated) {
+      return this.removeFormats([format], selection)
     }
     else {
-      const [startRunIdx, startOffset] = this.atOffset(selection.start.offset)
-      const [endRunIdx, endOffset] = this.atOffset(selection.end.offset)
-      const runsBeforeStart = this.runs.slice(0, startRunIdx)
-      const runsAfterEnd = this.runs.slice(endRunIdx + 1, this.runs.length)
-      const runsBetween = this.runs.slice(startRunIdx + 1, endRunIdx)
-
-      // Split start and end runs into *just* the text that is within the
-      // selection -- the text outside of the selection will not be formatted.
-      const [startOutside, startInside] = this.runs[startRunIdx].split(startOffset)
-      const [endInside, endOutside]   = this.runs[startRunIdx].split(endOffset)
-
-      const toggled = [...startInside, ...runsBetween, ...endInside].map(r => {
-        return r.toggleFormat(format)
-      })
-
-      var newRuns = [
-        ...runsBeforeStart,
-        startOutside,
-        ...toggled,
-        endOutside,
-        ...runsAfterEnd
-      ]
+      // If not, apply that format to the selection.
+      return this.applyFormats([format], selection)
     }
-
-    return new [
-      Paragraph(Paragraph.optimizeRuns(newRuns)),
-      selection
-    ]
   }
 
   render() {
@@ -469,8 +515,10 @@ const myParagraph = new Paragraph([
   new Run('Goodbye.', ['bold'])
 ])
 
-const r = run1.toggleFormat('italic')
-console.log(r);
+const p = myParagraph.mapRuns(
+  (r) => r.removeFormats(['italic', 'bold']),
+  new Selection({ pid: 1, offset: 3 }, { pid: 1, offset: 10 })
+)
 
 const testTemplate = {
   selection: {

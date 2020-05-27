@@ -1,9 +1,23 @@
 const { Run, Selection, Paragraph } = require('../Paragraph.js')
 
-let run1
-let run2
-let run3
-let paragraph
+
+// These provide a simple way to render a paragraph as a string, thereby allowing
+// us to check output of insert() in the test below without manually checking each
+// item in the array every time, and all the glorious headache that would provide.
+//
+// As of writing, this is identical to the render() methods on Run and Paragraph, but
+// it is doubtful that it will always be. This can stay here as a simple solution for
+// the tests.
+const stringMapFormats = (r, func) => r.map(f => func(f)).join('')
+const naiveRunRender = (r) => {
+  return stringMapFormats(r.formats, f => `<${f}>`) + r.text + stringMapFormats(r.formats, f => `</${f}>`)
+}
+const naiveParagraphRender = (p) => p.runs.map(r => naiveRunRender(r)).join('')
+
+let run1;
+let run2;
+let run3;
+let paragraph;
 
 beforeAll(() => {
   run1 = new Run('Foobar 1.', ["bold"])
@@ -106,22 +120,11 @@ describe('optimizeRuns', () => {
 
     expect(optimized.length).toBe(1)
     expect(optimized[0].text).toBe('')
+
+    // TODO: SHOULD this be the expected behavior...?
     expect(optimized[0].formats).toEqual(['bold'])
   })
 })
-
-// These provide a simple way to render a paragraph as a string, thereby allowing
-// us to check output of insert() in the test below without manually checking each
-// item in the array every time, and all the glorious headache that would provide.
-//
-// As of writing, this is identical to the render() methods on Run and Paragraph, but
-// it is doubtful that it will always be. This can stay here as a simple solution for
-// the tests.
-const stringMapFormats = (r, func) => r.map(f => func(f)).join('')
-const naiveRunRender = (r) => {
-  return stringMapFormats(r.formats, f => `<${f}>`) + r.text + stringMapFormats(r.formats, f => `</${f}>`)
-}
-const naiveParagraphRender = (p) => p.runs.map(r => naiveRunRender(r)).join('')
 
 describe('insert (single selection)', () => {
   // In HTML:
@@ -376,5 +379,209 @@ describe('remove (range-selection)', () => {
     expect(() =>
       myParagraph.remove(new Selection({ pid: 1, offset: -1 }, { pid: 1, offset: 25 }))
     ).toThrow()
+  })
+})
+
+describe('applyFormats', () => {
+  const myParagraph = new Paragraph([
+    new Run('Hello.', ['italic']),
+    new Run('A', []),
+    new Run('Goodbye.', ['bold'])
+  ])
+
+  test('crossing over three runs', () => {
+    const p = myParagraph.applyFormats(
+      ['underline'],
+      new Selection({ pid: 1, offset: 3 }, { pid: 1, offset: 10 })
+    )
+
+    expect(p.runs[0].text).toBe('Hel')
+    expect(p.runs[0].formats).toEqual(['italic'])
+
+    expect(p.runs[1].text).toBe('lo.')
+    expect(p.runs[1].formats.sort()).toEqual(['italic', 'underline'].sort())
+
+    expect(p.runs[2].text).toBe('A')
+    expect(p.runs[2].formats).toEqual(['underline'])
+
+    expect(p.runs[3].text).toBe('Goo')
+    expect(p.runs[3].formats.sort()).toEqual(['underline', 'bold'].sort())
+
+    expect(p.runs[4].text).toBe('dbye.')
+    expect(p.runs[4].formats).toEqual(['bold'])
+  })
+
+  test('whole paragraph', () => {
+    const p = myParagraph.applyFormats(
+      ['underline'],
+      new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length })
+    )
+
+    expect(p.runs[0].text).toBe('Hello.')
+    expect(p.runs[0].formats.sort()).toEqual(['italic', 'underline'].sort())
+
+    expect(p.runs[1].text).toBe('A')
+    expect(p.runs[1].formats).toEqual(['underline'])
+
+    expect(p.runs[2].text).toBe('Goodbye.')
+    expect(p.runs[2].formats.sort()).toEqual(['underline', 'bold'].sort())
+  })
+
+  test('whole run', () => {
+    const p = myParagraph.applyFormats(
+      ['underline'],
+      new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 6 })
+    )
+
+    expect(p.runs[0].text).toBe('Hello.')
+    expect(p.runs[0].formats.sort()).toEqual(['italic', 'underline'].sort())
+
+    expect(p.runs[1].text).toBe('A')
+    expect(p.runs[1].formats).toEqual([])
+
+    expect(p.runs[2].text).toBe('Goodbye.')
+    expect(p.runs[2].formats).toEqual(['bold'])
+  })
+
+  // TODO: write any more tests as you discover edge cases
+})
+
+describe('removeFormats', () => {
+  const myParagraph = new Paragraph([
+    new Run('Hello.', ['italic']),
+    new Run('A', []),
+    new Run('Goodbye.', ['italic', 'bold'])
+  ])
+
+  test('crossing over three runs', () => {
+    const p = myParagraph.removeFormats(
+      ['italic'],
+      new Selection({ pid: 1, offset: 3 }, { pid: 1, offset: 10 })
+    )
+
+    expect(p.runs[0].text).toBe('Hel')
+    expect(p.runs[0].formats).toEqual(['italic'])
+
+    expect(p.runs[1].text).toBe('lo.A')
+    expect(p.runs[1].formats).toEqual([])
+
+    expect(p.runs[2].text).toBe('Goo')
+    expect(p.runs[2].formats.sort()).toEqual(['bold'].sort())
+
+    expect(p.runs[3].text).toBe('dbye.')
+    expect(p.runs[3].formats.sort()).toEqual(['bold', 'italic'].sort())
+  })
+
+  test('whole paragraph', () => {
+    const p = myParagraph.removeFormats(
+      ['italic'],
+      new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length })
+    )
+
+    expect(p.runs[0].text).toBe('Hello.A')
+    expect(p.runs[0].formats).toEqual([])
+
+    expect(p.runs[1].text).toBe('Goodbye.')
+    expect(p.runs[1].formats.sort()).toEqual(['bold'].sort())
+  })
+
+  test('whole run', () => {
+    const p = myParagraph.removeFormats(
+      ['italic'],
+      new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 6 })
+    )
+
+    expect(p.runs[0].text).toBe('Hello.A')
+    expect(p.runs[0].formats).toEqual([])
+
+    expect(p.runs[1].text).toBe('Goodbye.')
+    expect(p.runs[1].formats.sort()).toEqual(['italic', 'bold'].sort())
+  })
+})
+
+describe('getFormat', () => {
+  test('with shared format across many runs', () => {
+    const myParagraph = new Paragraph([
+      new Run('A', ['italic', 'bold']),
+      new Run('B', ['italic', 'underline']),
+      new Run('C', ['italic', 'strikethrough']),
+      new Run('D', ['italic']),
+    ])
+
+    const formats = myParagraph.getFormats(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length }))
+    expect(formats).toEqual(['italic'])
+  })
+
+  test('with no shared formats', () => {
+    const myParagraph = new Paragraph([
+      new Run('Aaaa', ['italic', 'bold']),
+      new Run('Bbbb', ['italic', 'underline']),
+      new Run('Cccc', ['strikethrough']),
+      new Run('Dddd', ['italic']),
+    ])
+
+    const formats = myParagraph.getFormats(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length }))
+    expect(formats).toEqual([])
+  })
+
+  test('just one run', () => {
+    const myParagraph = new Paragraph([
+      new Run('A', ['italic', 'bold']),
+      new Run('B', ['italic', 'underline']),
+      new Run('C', ['strikethrough']),
+      new Run('D', ['italic']),
+    ])
+
+    const formats = myParagraph.getFormats(new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 1 }))
+
+    expect(formats.sort()).toEqual(['italic', 'bold'].sort())
+  })
+})
+
+describe('toggleFormat', () => {
+  const myParagraph = new Paragraph([
+    new Run('A', ['bold']),
+    new Run('Foobar 1.', ['italic', 'bold']),
+    new Run('Foobar 2.', ['italic', 'bold']),
+    new Run('Foobar 3.', ['italic', 'bold']),
+    new Run('B', ['italic']),
+  ])
+
+  test('not activated on whole selection, should activate', () => {
+    const toggled = myParagraph.toggleFormat('bold', new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length }))
+
+    expect(toggled.runs[0].text).toEqual('A')
+    expect(toggled.runs[0].formats.sort()).toEqual(['bold'])
+
+    expect(toggled.runs[1].text).toEqual('Foobar 1.Foobar 2.Foobar 3.B')
+    expect(toggled.runs[1].formats.sort()).toEqual(['bold', 'italic'].sort())
+  })
+
+  test('activated on whole selection, should deactivate', () => {
+    const toggled = myParagraph.toggleFormat('bold', new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: myParagraph.length - 1 }))
+
+    expect(toggled.runs[0].text).toEqual('A')
+    expect(toggled.runs[0].formats.sort()).toEqual([])
+
+    expect(toggled.runs[1].text).toEqual('Foobar 1.Foobar 2.Foobar 3.B')
+    expect(toggled.runs[1].formats.sort()).toEqual(['italic'].sort())
+  })
+
+  test('single run', () => {
+    const toggled1 = myParagraph.toggleFormat(
+      'bold',
+      new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 1 })
+    )
+
+    expect(toggled1.runs[0].text).toBe('A')
+    expect(toggled1.runs[0].formats).toEqual([])
+
+    const toggled2 = myParagraph.toggleFormat(
+      'underline',
+      new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 1 })
+    )
+
+    expect(toggled2.runs[0].text).toBe('A')
+    expect(toggled2.runs[0].formats.sort()).toEqual(['underline', 'bold'].sort())
   })
 })
