@@ -422,9 +422,9 @@ class Paragraph {
   }
 
   // Returns new Paragraph with runs inside selection replaced by the result
-  // of calling `f` on each one. Will split runs if necessary. Returned list of runs
-  // will be optimized.
-  mapRuns(f, selection) {
+  // of calling `f` on each one. Will split runs if necessary so only selected.
+  // text is changed. Returned list of runs will be optimized.
+  mapSelection(f, selection) {
     const [startRunIdx, startOffset] = this.atOffset(selection.start.offset)
     const [endRunIdx, endOffset] = this.atOffset(selection.end.offset)
     const runsBeforeStart = this.runs.slice(0, startRunIdx)
@@ -468,11 +468,11 @@ class Paragraph {
   }
 
   applyFormats(formats, selection) {
-    return this.mapRuns((r) => r.applyFormats(formats), selection)
+    return this.mapSelection((r) => r.applyFormats(formats), selection)
   }
 
   removeFormats(formats, selection) {
-    return this.mapRuns((r) => r.removeFormats(formats), selection)
+    return this.mapSelection((r) => r.removeFormats(formats), selection)
   }
 
   // Toggles the given format on the selection. If all text in the selection
@@ -514,11 +514,6 @@ const myParagraph = new Paragraph([
   new Run('A', []),
   new Run('Goodbye.', ['bold'])
 ])
-
-const p = myParagraph.mapRuns(
-  (r) => r.removeFormats(['italic', 'bold']),
-  new Selection({ pid: 1, offset: 3 }, { pid: 1, offset: 10 })
-)
 
 const testTemplate = {
   selection: {
