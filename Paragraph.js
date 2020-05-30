@@ -531,6 +531,8 @@ class Paragraph {
   }
 }
 
+// TODO: Document class
+
 const run1 = new Run('Foobar 1.', ["bold"])
 const run2 = new Run(' Foobar 2.')
 const run3 = new Run(' Foobar 3.', ["italic"])

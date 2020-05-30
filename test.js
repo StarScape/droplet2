@@ -7,13 +7,10 @@ const syncParagraphWithDom = (elem, paragraph, selection) => {
   elem.innerHTML = paragraph.render()
 }
 
-
 window.onload = () => {
   const editor = document.querySelector('#editor')
 
   editor.addEventListener('input', (e) => {
-    // console.log('input')
-    // console.log(e);
     e.preventDefault()
   })
 
@@ -21,14 +18,21 @@ window.onload = () => {
   editor.addEventListener('beforeinput', (e) => {
     e.preventDefault()
 
+    let newParagraph = null
+    let newSelection = null
+
     if (e.inputType === 'insertText') {
-      const [newParagraph, newSelection] = paragraph.insert([new Run(e.data, ['italic'])], selection)
-
-      paragraph = newParagraph
-      selection = newSelection
-
-      syncParagraphWithDom(editor, paragraph, selection)
+      [newParagraph, newSelection] = paragraph.insert([new Run(e.data, ['italic'])], selection)
     }
+    else if (e.inputType === 'deleteContentBackward') {
+      if (selection.single && selection.caret === 0) return
+
+      [newParagraph, newSelection] = paragraph.remove(selection)
+    }
+
+    paragraph = newParagraph
+    selection = newSelection
+    syncParagraphWithDom(editor, paragraph, selection)
   })
 
   editor.addEventListener('keydown', (e) => {
