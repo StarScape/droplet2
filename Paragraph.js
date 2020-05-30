@@ -1,7 +1,25 @@
-const _ = require('./lodash')
+// const _ = require('./lodash')
+// const _ = require('./lodash')
+// import _ from './lodash.js'
+
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (a.length != b.length) return false;
+
+  // If you don't care about the order of the elements inside
+  // the array, you should sort both arrays here.
+  // Please note that calling sort on an array will modify that array.
+  // you might want to clone your array first.
+
+  for (var i = 0; i < a.length; ++i) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
 
 const formatsEqual = (f1, f2) =>
-  _.isEqual(f1.slice().sort(), f2.slice().sort())
+  arraysEqual(f1.slice().sort(), f2.slice().sort())
 
 class Selection {
   get single() {
@@ -207,6 +225,7 @@ class Run {
 
   render() {
     // TODO: this should maybe be changed to use CSS or something
+    // (Also there is a bug here)
     const stringifyFormats = (stringifier) => this.formats.map(f => stringifier(f)).join('')
     return stringifyFormats(f => `<${f}>`) + this.text + stringifyFormats(f => `</${f}>`)
   }
@@ -214,6 +233,7 @@ class Run {
 
 class Paragraph {
   static fromTemplate(obj) {
+    // TODO: this is wrong
     return [
       new Selection(
         obj.selection.start,
@@ -253,7 +273,7 @@ class Paragraph {
     return optimized
   }
 
-  constructor(runs) {
+  constructor(runs = [new Run('', [])]) {
     this.runs = runs
     this.id = -1 // TODO
   }
@@ -312,9 +332,16 @@ class Paragraph {
     return [runIdx, offsetIntoRun]
   }
 
+  // TODO: description
   // runs: array of Runs
   // selection: Selection
   insert(runs, selection) {
+    // =========================================================================================
+    // TODO: this function needs to be overloaded with two other options for the first argument:
+    // (1) A single run, which will be equivalent to an array of 1 run, and (2) a string, which
+    // will be equivalent to a single run with no formatting.
+    // =========================================================================================
+
     if (selection.single) {
       // Get run under text caret
       const [targetRunIdx, targetRunOffset] = this.atOffset(selection.caret)
@@ -515,6 +542,8 @@ const myParagraph = new Paragraph([
   new Run('Goodbye.', ['bold'])
 ])
 
+// TODO: do a full test inside a browser with just one paragraph, but basic editing features and rendering working.
+
 const testTemplate = {
   selection: {
     range: false,
@@ -537,9 +566,8 @@ const testTemplate = {
   ]
 }
 
-const testState = Paragraph.fromTemplate(testTemplate)
+const testState = Paragraph.fromTemplate(testTemplate);
 
-// console.log(testState)
-// console.log(testState[0].end)
+// module.exports =  { Selection, Run, Paragraph }
 
-module.exports =  { Selection, Run, Paragraph }
+export { Selection, Run, Paragraph }

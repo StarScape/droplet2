@@ -4,19 +4,32 @@
 
   <title>Test</title>
 
+  <style type="text/css">
+    #hello {
+      background-color: red;
+      padding: 0px;
+      margin: 0px;
+      position: absolute;
+      font-family: monospace;
+      font-kerning: none;
+      -webkit-font-smoothing: none;
+    }
+  </style>
+
 </head>
 <body>
 
-  <div id='test' style="width: 200px; border: 1px solid red;">
+<!--   <div id='test' style="width: 200px; border: 1px solid red;">
     Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
   </div>
+ -->
 
-  <script type="text/javascript">
-    document.querySelector('#test').addEventListener('click', (e) => {
-      console.log('hello!');
-      console.log(e);
-    })
-  </script>
+  <div id='editor' contenteditable='true' autofocus='true' style="width: 600px; height: 400px; border: 1px solid grey;">
+  </div>
+
+  <!-- <div id='hello'>aasdf134tdf3543wdfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajasddfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfk****ljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwajadfkjasdfkljasdfwaj;;;;;;</div> -->
+
+  <script type='module' src='./test.js'></script>
 
 </body>
 </html>
