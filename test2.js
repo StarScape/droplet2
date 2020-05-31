@@ -76,6 +76,20 @@ class CharRuler {
 
     return this.characterDiffs[chars]
   }
+
+  measureString(str) {
+    // const start = this.measure(str[0])
+    let sum = this.measure(str[0])
+
+    for (let i = 1; i < str.length; i++) {
+      const prev = str[i-1]
+      const curr = str[i]
+
+      sum += this.measureDiff(prev, curr)
+    }
+
+    return sum
+  }
 }
 
 // Split string into lines, each line as long
@@ -86,6 +100,8 @@ const lineify = (string, containerWidth, font, fontSize) => {
 
 const ruler = new CharRuler('15px', 'monospace')
 
-console.log(ruler.measure('b'));
-console.log(ruler.measure('a'));
-console.log(ruler.measureDiff('b', 'a'));
+// console.log(ruler.measure('a'));
+// console.log(ruler.measureDiff('b', 'a'));
+
+const s = ruler.measureString("hello")
+console.log(s);
