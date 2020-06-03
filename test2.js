@@ -111,11 +111,11 @@ class CharRuler {
 // Split string into lines, each line as long
 // as possible but not exceeding containerWidth
 const lineify = (str, containerWidth, ruler) => {
-  const words = str.split(' ') // TODO
-  const lines = [{ text: words[0], width: ruler.measureString(words[0]) }]
+  const words = str.split(/(\s)/g)
+  const lines = [{ text: '' }]
 
-  for (let word of words.slice(1)) {
-    const fullWord = ' ' + word
+  for (let word of words) {
+    const fullWord = word
     const speculativeLineText = lines[lines.length-1].text + fullWord
     const lineWidth = ruler.measureString(speculativeLineText)
 
@@ -144,8 +144,6 @@ const str2 = "Lorem Ipsum is simply dummy text of the printing and typesetting i
 const str3 = "The first publicly released version of Arc was made available on 29 January 2008,[10] implemented on Racket (named PLT-Scheme then). The release comes in the form of a .tar archive, containing the Racket source code for Arc. A tutorial[11] and a discussion forum[12] are also available. The forum uses the same program that Hacker News does, and is written in Arc."
 
 const lines = lineify(str, 200, ruler)
-
-// console.log(ruler);
 
 for (let l of lines) {
   const el = document.createElement('div')
