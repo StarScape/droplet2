@@ -15,17 +15,17 @@
       -webkit-font-smoothing: none;
     }
 
-    #foo {
-      position: absolute;
-      margin: 0;
-      padding: 0;
-      font-size: 15px;
-      font-family: monospace;
+    .my-boxes {
+      display: flex;
     }
 
-    .ruler {
+    .my-box {
+      width: 200px;
+      height: 1000px;
       margin: 0;
       padding: 0;
+      border: 1px solid grey;
+
       font-size: 15px;
       font-family: monospace;
     }
@@ -34,7 +34,10 @@
 </head>
 <body>
 
-  <div id='foo'></div>
+  <div class='my-boxes'>
+    <div class='my-box' id='fake-editor'></div>
+    <div class='my-box' id='fake-editor-dom-layout'>Hello world, this is an example of a paragraph that I might want to split into lines. I'm really just typing a bunch of random stuff in here. Don't know what else to say. Hmmmm...</div>
+  </div>
 
 <!--   <div id='test' style="width: 200px; border: 1px solid red;">
     Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.

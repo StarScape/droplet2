@@ -24,6 +24,7 @@ class CharRuler {
     this.element = document.createElement('div')
     this.element.style.visibility = 'hidden'
     this.element.style.position = 'absolute'
+    this.element.style.whiteSpace = 'pre'
     this.element.style.margin = 0
     this.element.style.padding = 0
     this.element.style.fontSize = fontSize
@@ -94,14 +95,44 @@ class CharRuler {
 
 // Split string into lines, each line as long
 // as possible but not exceeding containerWidth
-const lineify = (string, containerWidth, font, fontSize) => {
-  // TODO
+const lineify = (str, containerWidth, fontSize, fontFamily) => {
+  const ruler = new CharRuler(fontSize, fontFamily)
+  const words = str.split(' ')
+  const lines = [{ text: words[0], width: ruler.measureString(words[0]) }]
+  let line = 0
+
+  for (let word of words.slice(1)) {
+    const fullWord = ' ' + word
+    const speculativeLineText = lines[line].text + fullWord
+    const speculativeLineWidth = ruler.measureString(speculativeLineText)
+
+    if (speculativeLineWidth < containerWidth) {
+      lines[line].text += fullWord
+      lines[line].width = speculativeLineWidth
+    }
+    else {
+      lines[++line] = {
+        text: word,
+        width: ruler.measureString(fullWord),
+      }
+    }
+  }
+
+  return lines
 }
 
-const ruler = new CharRuler('15px', 'monospace')
+const fakeEditor = document.getElementById('fake-editor')
+const style = getComputedStyle(fakeEditor)
+const fontSize = style.getPropertyValue('font-size')
+const fontFamily = style.getPropertyValue('font-family')
 
-// console.log(ruler.measure('a'));
-// console.log(ruler.measureDiff('b', 'a'));
+const ruler = new CharRuler(fontSize, fontFamily)
+const str = "Hello world, this is an example of a paragraph that I might want to split into lines. I'm really just typing a bunch of random stuff in here. Don't know what else to say. Hmmmm..."
 
-const s = ruler.measureString("hello")
-console.log(s);
+const lines = lineify(str, 200, fontSize, fontFamily)
+
+for (let l of lines) {
+  const el = document.createElement('div')
+  el.innerHTML = l.text
+  fakeEditor.appendChild(el)
+}
