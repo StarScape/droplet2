@@ -46,7 +46,8 @@ class CharRuler {
 
     this.element.innerHTML = char
     this.singleCharacterWidths[char] = this.element.getBoundingClientRect().width
-    this.element.innerHTML = ''
+    // this.singleCharacterWidths[char] = this.element.clientWidth
+    // this.element.innerHTML = ''
 
     return this.singleCharacterWidths[char]
   }
@@ -73,13 +74,13 @@ class CharRuler {
 
     this.element.innerHTML = chars
     this.characterDiffs[chars] = this.element.getBoundingClientRect().width - this.measure(char1)
-    this.element.innerHTML = ''
+    // this.characterDiffs[chars] = this.element.clientWidth - this.measure(char1)
+    // this.element.innerHTML = ''
 
     return this.characterDiffs[chars]
   }
 
-  measureString(str) {
-    // const start = this.measure(str[0])
+  _measureString(str) {
     let sum = this.measure(str[0])
 
     for (let i = 1; i < str.length; i++) {
@@ -91,30 +92,41 @@ class CharRuler {
 
     return sum
   }
+
+  measureString(str) {
+    let sum = this.measure(str[0])
+
+    for (let i = 1; i < str.length; i++) {
+      const prev = str[i-1]
+      const curr = str[i]
+
+      // sum += this.measureDiff(prev, curr)
+      sum += this.measure(curr)
+    }
+
+    return sum
+  }
 }
 
 // Split string into lines, each line as long
 // as possible but not exceeding containerWidth
-const lineify = (str, containerWidth, fontSize, fontFamily) => {
-  const ruler = new CharRuler(fontSize, fontFamily)
-  const words = str.split(' ')
+const lineify = (str, containerWidth, ruler) => {
+  const words = str.split(' ') // TODO
   const lines = [{ text: words[0], width: ruler.measureString(words[0]) }]
-  let line = 0
 
   for (let word of words.slice(1)) {
     const fullWord = ' ' + word
-    const speculativeLineText = lines[line].text + fullWord
-    const speculativeLineWidth = ruler.measureString(speculativeLineText)
+    const speculativeLineText = lines[lines.length-1].text + fullWord
+    const lineWidth = ruler.measureString(speculativeLineText)
 
-    if (speculativeLineWidth < containerWidth) {
-      lines[line].text += fullWord
-      lines[line].width = speculativeLineWidth
+    if (lineWidth < containerWidth) {
+      lines[lines.length-1].text += fullWord
     }
     else {
-      lines[++line] = {
+      lines.push({
         text: word,
         width: ruler.measureString(fullWord),
-      }
+      })
     }
   }
 
@@ -128,8 +140,12 @@ const fontFamily = style.getPropertyValue('font-family')
 
 const ruler = new CharRuler(fontSize, fontFamily)
 const str = "Hello world, this is an example of a paragraph that I might want to split into lines. I'm really just typing a bunch of random stuff in here. Don't know what else to say. Hmmmm..."
+const str2 = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
+const str3 = "The first publicly released version of Arc was made available on 29 January 2008,[10] implemented on Racket (named PLT-Scheme then). The release comes in the form of a .tar archive, containing the Racket source code for Arc. A tutorial[11] and a discussion forum[12] are also available. The forum uses the same program that Hacker News does, and is written in Arc."
 
-const lines = lineify(str, 200, fontSize, fontFamily)
+const lines = lineify(str, 200, ruler)
+
+// console.log(ruler);
 
 for (let l of lines) {
   const el = document.createElement('div')
