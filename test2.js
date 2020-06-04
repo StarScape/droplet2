@@ -108,24 +108,23 @@ class CharRuler {
   }
 }
 
-// Split string into lines, each line as long
-// as possible but not exceeding containerWidth
+// Split string into lines, each line as long as possible but not exceeding containerWidth
 const lineify = (str, containerWidth, ruler) => {
-  const words = str.split(/(\s)/g)
+  const words = str.split(/(\s+)/g)
   const lines = [{ text: '' }]
 
   for (let word of words) {
-    const fullWord = word
-    const speculativeLineText = lines[lines.length-1].text + fullWord
-    const lineWidth = ruler.measureString(speculativeLineText)
+    // Text of line if we decide to put the next word on, and its length. We DON'T
+    // want to measure white-space that falls at the end of a line, hence the trim().
+    const lineTextNew = lines[lines.length-1].text + word
+    const lineWidthNew = ruler.measureString(lineTextNew.trim())
 
-    if (lineWidth < containerWidth) {
-      lines[lines.length-1].text += fullWord
+    if (lineWidthNew < containerWidth) {
+      lines[lines.length-1].text += word
     }
     else {
       lines.push({
         text: word,
-        width: ruler.measureString(fullWord),
       })
     }
   }
