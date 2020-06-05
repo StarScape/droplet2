@@ -108,6 +108,10 @@ class CharRuler {
   }
 }
 
+// ======================
+// | TODO: lineify runs |
+// ======================
+
 // Split string into lines, each line as long as possible but not exceeding containerWidth
 const lineify = (str, containerWidth, ruler) => {
   const words = str.split(/(\s+)/g)
