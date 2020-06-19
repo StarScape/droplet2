@@ -3,44 +3,48 @@ import CharRuler from './CharRuler.js'
 
 // Split string into lines, each line as long as possible but not exceeding containerWidth
 const lineify = (paragraph, containerWidth, ruler) => {
-  let cumOffset = 0
+  let widthOfPrevSpans = 0
+  let cumCharOffset = 0
   const lines = [{
     paragraph: paragraph,
-    paragraphOffset: cumOffset,
+    paragraphOffset: cumCharOffset,
     spans: [],
   }]
 
   for (let run of paragraph.runs) {
     const words = run.text.split(/(\s+)/g)
-    const currentLine = lines[lines.length-1]
-
-    currentLine.spans.push({ text: '', formats: run.formats })
+    lines[lines.length-1].spans.push({ text: '', formats: run.formats, width: 0 })
 
     for (let word of words) {
       const spans = lines[lines.length-1].spans
       const currentSpan = spans[spans.length-1]
 
-      // Text of line if we decide to put the next word on, and its px width. We DON'T
-      // want to measure white-space that falls at the end of a line, hence the trim().
-      const lineTextNew = spans.reduce((acc, sp) => acc + sp.text, '') + word
-      const lineWidthNew = ruler.measureString(lineTextNew.trim())
+      // We DON'T want to measure white-space that falls at the end of a line, hence the trim().
+      const spanTextNew = currentSpan.text + word
+      const spanWidthNew = ruler.measureString(spanTextNew.trim(), currentSpan.formats)
+      const lineWidthNew = widthOfPrevSpans + spanWidthNew
 
-      // TODO: measure width of runs independently and add up their results instead of measuring whole line string at once.
-      // This will both be more efficient and also allow us to acount for bolding/italics/format differences in measurement.
-
-      if (lineWidthNew < containerWidth) {
+      if (Math.floor(lineWidthNew) <= containerWidth) {
         currentSpan.text += word
+        currentSpan.width = ruler.measureString(spanTextNew, currentSpan.formats)
       }
       else {
         // No more space on line, make new one
-        cumOffset += lineTextNew.length
+        const lineTextNew = spans.reduce((txt, sp) => txt + sp.text, '')
+        cumCharOffset += lineTextNew.length
+
+        widthOfPrevSpans = 0
+
         lines.push({
           paragraph: paragraph,
-          paragraphOffset: cumOffset,
-          spans: [{ text: word, formats: run.formats }],
+          paragraphOffset: cumCharOffset,
+          spans: [{ text: word, formats: run.formats, width: 0 }],
         })
       }
     }
+
+    const currentLine = lines[lines.length-1]
+    widthOfPrevSpans += currentLine.spans[currentLine.spans.length-1].width
   }
 
   return lines
@@ -60,6 +64,7 @@ const para = new Paragraph([
 ])
 
 const lines = lineify(para, 200, ruler)
+// console.log(lines);
 
 for (let line of lines) {
   const lineElem = document.createElement('div')

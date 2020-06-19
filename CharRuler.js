@@ -9,6 +9,15 @@
  * than a few pure functions, though the methods of a CharRuler are essentially pure).
  */
 class CharRuler {
+  // TODO: test
+  static getFormatPrefix(formats) {
+    if (formats.length === 0) {
+      return ''
+    }
+    // TODO: replace this with a hash?
+    return [...formats].sort() + '-'
+  }
+
   /**
    * Create a CharRuler for a given font and font size.
    * @param fontSize {string} - Font size to measure with. Any valid CSS 'font-size' value.
@@ -33,75 +42,54 @@ class CharRuler {
     document.body.appendChild(this.element)
   }
 
+  _applyCSS(formats) {
+    if (formats.length === 0) return
+
+    for (let format of formats) {
+      if (format === 'italic') {
+        this.element.style.fontStyle = 'italic'
+      }
+      else if (format === 'bold') {
+        this.element.style.fontWeight = 'bold'
+      }
+      else {
+        // TODO: rest of styles
+        throw new Error("Unrecognized format: " + format)
+      }
+    }
+  }
+
+  _removeCSS(formats) {
+    if (formats.length === 0) return
+    this.element.style.fontStyle = ''
+    this.element.style.fontWeight = ''
+  }
+
   /**
    * Measures the width a single character takes up. Results are cached.
    *
    * @param {string} char - Single character to measure.
    * @return {number} Width of character, in pixels.
    */
-  measure(char) {
-    if (this.singleCharacterWidths[char]) {
-      return this.singleCharacterWidths[char]
+  measure(char, formats = []) {
+    const charKey = CharRuler.getFormatPrefix(formats) + char
+    if (this.singleCharacterWidths[charKey]) {
+      return this.singleCharacterWidths[charKey]
     }
 
+    this._removeCSS(formats)
+    this._applyCSS(formats)
     this.element.innerHTML = char
-    this.singleCharacterWidths[char] = this.element.getBoundingClientRect().width
-    // this.singleCharacterWidths[char] = this.element.clientWidth
-    // this.element.innerHTML = ''
+    this.singleCharacterWidths[charKey] = this.element.getBoundingClientRect().width
 
-    return this.singleCharacterWidths[char]
+    return this.singleCharacterWidths[charKey]
   }
 
-  /**
-   * Measures how much ADDITIONAL space char2 will take up, assuming
-   * char1 immediately preceeds it. This is to account for kerning effects.
-   * Results are cached.
-   *
-   * @param {string} char1 - First char
-   * @param {string} char2 - Char immediately following it
-   *
-   * @return {number} Width added by char2, in pixels.
-   */
-  measureDiff(char1, char2) {
-    if (char2 === null || char2 === undefined) {
-      throw new Error("char2 must be supplied to measure diff")
-    }
-    const chars = char1 + char2
+  measureString(str, formats = []) {
+    let sum = 0
 
-    if (this.characterDiffs[chars]) {
-      return this.characterDiffs[chars]
-    }
-
-    this.element.innerHTML = chars
-    this.characterDiffs[chars] = this.element.getBoundingClientRect().width - this.measure(char1)
-    // this.characterDiffs[chars] = this.element.clientWidth - this.measure(char1)
-    // this.element.innerHTML = ''
-
-    return this.characterDiffs[chars]
-  }
-
-  _measureString(str) {
-    let sum = this.measure(str[0])
-
-    for (let i = 1; i < str.length; i++) {
-      const prev = str[i-1]
-      const curr = str[i]
-
-      sum += this.measureDiff(prev, curr)
-    }
-
-    return sum
-  }
-
-  measureString(str) {
-    let sum = this.measure(str[0])
-
-    for (let i = 1; i < str.length; i++) {
-      const prev = str[i-1]
-      const curr = str[i]
-
-      // sum += this.measureDiff(prev, curr)
-      sum += this.measure(curr)
+    for (let i = 0; i < str.length; i++) {
+      sum += this.measure(str[i], formats)
     }
 
     return sum
