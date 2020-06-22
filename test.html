@@ -24,6 +24,22 @@
       font-size: 15px;
       /*font-family: monospace;*/
     }
+
+    .text-caret {
+      /* TODO: make this not take up space inside paragraph */
+      position: absolute;
+      height: 1em;
+      width: 1px;
+      background-color: black;
+      animation: blink 1.2s infinite;
+      animation-delay: 0.5s;
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0;
+      }
+    }
   </style>
 
 </head>

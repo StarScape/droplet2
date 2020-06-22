@@ -2,18 +2,22 @@ import { Paragraph, Selection, Run } from './Paragraph.js'
 import CharRuler from './CharRuler.js'
 
 // Split string into lines, each line as long as possible but not exceeding containerWidth
+// TODO: refactor to use classes `Line` and `Span` and `ParagraphViewModel`? Might be more clear/explicit.
 const lineify = (paragraph, containerWidth, ruler) => {
   let widthOfPrevSpans = 0
-  let cumCharOffset = 0
   const lines = [{
     paragraph: paragraph,
-    paragraphOffset: cumCharOffset,
     spans: [],
   }]
 
   for (let run of paragraph.runs) {
     const words = run.text.split(/(\s+)/g)
-    lines[lines.length-1].spans.push({ text: '', formats: run.formats, width: 0 })
+    lines[lines.length-1].spans.push({
+      text: '',
+      formats: run.formats,
+      width: 0,
+      paragraphOffset: null,
+    })
 
     for (let word of words) {
       const spans = lines[lines.length-1].spans
@@ -30,15 +34,16 @@ const lineify = (paragraph, containerWidth, ruler) => {
       }
       else {
         // No more space on line, make new one
-        const lineTextNew = spans.reduce((txt, sp) => txt + sp.text, '')
-        cumCharOffset += lineTextNew.length
-
         widthOfPrevSpans = 0
 
         lines.push({
           paragraph: paragraph,
-          paragraphOffset: cumCharOffset,
-          spans: [{ text: word, formats: run.formats, width: 0 }],
+          spans: [{
+            text: word,
+            formats: run.formats,
+            width: 0,
+            paragraphOffset: null,
+          }],
         })
       }
     }
@@ -47,7 +52,83 @@ const lineify = (paragraph, containerWidth, ruler) => {
     widthOfPrevSpans += currentLine.spans[currentLine.spans.length-1].width
   }
 
+  // TODO: disgusting, fix this
+  let cumCharOffset = 0
+  for (let line of lines) {
+    for (let span of line.spans) {
+      span.length = span.text.length
+      span.paragraphOffset = cumCharOffset
+      cumCharOffset += span.length
+    }
+  }
+
+  // TODO: replace with ViewModel#length
+  lines.paragraphLength = paragraph.length
+
   return lines
+}
+
+const moveCaretDown = (viewModel, offset) => {
+  // TODO
+}
+
+const _makeCursorElem = () => {
+  const elem = document.createElement('span')
+  elem.classList.add('text-caret')
+  return elem
+}
+
+const _makeSpanElem = (text, formats) => {
+  const spanElem = document.createElement('span')
+  spanElem.innerHTML = text
+
+  // Apply style
+  for (let format of formats) {
+    if (format === 'bold') {
+      spanElem.style.fontWeight = 'bold'
+    }
+    else if (format === 'italic') {
+      spanElem.style.fontStyle = 'italic'
+    }
+    // TODO: rest of formats
+  }
+
+  return spanElem
+}
+
+const renderViewModel = (viewModel, caret) => {
+  let html = ''
+
+  for (let line of viewModel) {
+    const lineElem = document.createElement('div')
+
+    for (let span of line.spans) {
+      const start = span.paragraphOffset
+      const end = start + span.length
+
+      if ((caret >= start && caret < end) || (end === viewModel.paragraphLength && caret === end)) {
+        const spanOffset = caret - span.paragraphOffset
+        const before = span.text.slice(0, spanOffset)
+        const after = span.text.slice(spanOffset, span.text.length) // TODO: replace with span.splitAt(spanOffset)
+
+        const span1 = _makeSpanElem(before, span.formats)
+        const span2 = _makeSpanElem(after, span.formats)
+        const cursor = _makeCursorElem()
+
+        lineElem.appendChild(span1)
+        lineElem.appendChild(cursor)
+        lineElem.appendChild(span2)
+      }
+      else {
+        const spanElem = _makeSpanElem(span.text, span.formats)
+        lineElem.appendChild(spanElem)
+      }
+    }
+
+    html += lineElem.outerHTML
+  }
+
+  return html
 }
 
 const fakeEditor = document.getElementById('fake-editor')
@@ -55,7 +136,7 @@ const style = getComputedStyle(fakeEditor)
 const fontSize = style.getPropertyValue('font-size')
 const fontFamily = style.getPropertyValue('font-family')
 
-// TODO: Test with this exact example
+// TODO: write test with this exact example
 const ruler = new CharRuler(fontSize, fontFamily)
 const para = new Paragraph([
   new Run("Hello world, this is an example of a paragraph ", []),
@@ -63,29 +144,16 @@ const para = new Paragraph([
   new Run("Don't know what else to say. Hmmmm...", ['bold'])
 ])
 
-const lines = lineify(para, 200, ruler)
-// console.log(lines);
+let caret = 0
 
-for (let line of lines) {
-  const lineElem = document.createElement('div')
-
-  for (let span of line.spans) {
-    const spanElem = document.createElement('span')
-    spanElem.innerHTML = span.text
-
-    // Apply style
-    for (let format of span.formats) {
-      if (format === 'bold') {
-        spanElem.style.fontWeight = 'bold'
-      }
-      else if (format === 'italic') {
-        spanElem.style.fontStyle = 'italic'
-      }
-      // TODO: rest of formats
-    }
-
-    lineElem.appendChild(spanElem)
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'ArrowLeft' && caret > 0) {
+    caret--
+  }
+  else if (e.code === 'ArrowRight' && caret < para.length) {
+    caret++
   }
 
-  fakeEditor.appendChild(lineElem)
-}
+  const lines = lineify(para, 200, ruler)
+  fakeEditor.innerHTML = renderViewModel(lines, caret)
+})
