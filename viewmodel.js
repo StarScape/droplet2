@@ -8,6 +8,7 @@ const addMax = (viewmodel, run, leftovers, ruler) => {
   }
 }
 
+// TODO: Add broad overview of what ViewModels are for.
 class ParagraphViewModel {
   static fromParagraph(p, containerWidth, ruler) {
     const vm = new ParagraphViewModel(p, containerWidth)
@@ -124,73 +125,6 @@ class ViewModelSpan {
   }
 }
 
-// Split string into lines, each line as long as possible but not exceeding containerWidth
-// TODO: refactor to use classes `Line` and `Span` and `ParagraphViewModel`? Might be more clear/explicit.
-const lineify = (paragraph, containerWidth, ruler) => {
-  let widthOfPrevSpans = 0
-  const lines = [{
-    paragraph: paragraph,
-    spans: [],
-  }]
-
-  for (let run of paragraph.runs) {
-    const words = run.text.split(/(\s+)/g)
-    lines[lines.length-1].spans.push({
-      text: '',
-      formats: run.formats,
-      width: 0,
-      offset: null,
-    })
-
-    for (let word of words) {
-      const spans = lines[lines.length-1].spans
-      const currentSpan = spans[spans.length-1]
-
-      // We DON'T want to measure white-space that falls at the end of a line, hence the trim().
-      const spanTextNew = currentSpan.text + word
-      const spanWidthNew = ruler.measureString(spanTextNew.trim(), currentSpan.formats)
-      const lineWidthNew = widthOfPrevSpans + spanWidthNew
-
-      if (Math.floor(lineWidthNew) <= containerWidth) {
-        currentSpan.text += word
-        currentSpan.width = ruler.measureString(spanTextNew, currentSpan.formats)
-      }
-      else {
-        // No more space on line, make new one
-        widthOfPrevSpans = 0
-
-        lines.push({
-          paragraph: paragraph,
-          spans: [{
-            text: word,
-            formats: run.formats,
-            width: 0,
-            offset: null,
-          }],
-        })
-      }
-    }
-
-    const currentLine = lines[lines.length-1]
-    widthOfPrevSpans += currentLine.spans[currentLine.spans.length-1].width
-  }
-
-  // TODO: disgusting, fix this
-  let cumCharOffset = 0
-  for (let line of lines) {
-    for (let span of line.spans) {
-      span.length = span.text.length
-      span.offset = cumCharOffset
-      cumCharOffset += span.length
-    }
-  }
-
-  // TODO: replace with ViewModel#length
-  lines.paragraphLength = paragraph.length
-
-  return lines
-}
-
 const moveCaretDown = (viewmodel, offset) => {
   // TODO
 }
@@ -268,7 +202,6 @@ const para = new Paragraph([
 ])
 
 let caret = 0
-
 
 document.addEventListener('keydown', (e) => {
   // TODO: this logic should be shifted to using Selection#shiftSingle
