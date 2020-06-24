@@ -91,6 +91,8 @@ class Run {
     // If we perform a split on either edge of the run, return the umodified run
     // for one half, and an empty run for the other. This prevents using null semanitcally
     // (which I'm convinced is the devil), and turns out to play quite nicely with optimizeRuns.
+
+    // TODO: are these two checks necessary? won't string.slice() automatically cover me here...?
     if (offset === 0) {
       return [Run.empty(), this]
     }
