@@ -1,1 +1,9 @@
+# Node
 node_modules/
+
+# System Files
+.DS_Store
+Thumbs.db
+
+# Temp file I use for piping into long commit messages
+commit.txt
