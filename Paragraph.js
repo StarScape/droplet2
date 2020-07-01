@@ -56,13 +56,22 @@ class Selection {
     return this.single ? this : new Selection(this.start)
   }
 
-  // For a single selection, returns new
-  // Selection advanced by `n` characters
+  // For a single selection, returns new Selection moved by `n` characters
   shiftSingle(n) {
     if (!this.single) {
       throw new Error("Cannot call shiftSingle() on range selection")
     }
     return new Selection({ ...this.start, offset: this.start.offset + n })
+  }
+
+  // For a single selection, returns new Selection with caret set at `offset` in same
+  // paragraph. It is the responsibility of the caller to ensure the offset is legal.
+  // TODO: test
+  setSingle(offset) {
+    if (!this.single) {
+      throw new Error("Cannot call setSingle() on range selection")
+    }
+    return new Selection({ ...this.start, offset: offset })
   }
 }
 
@@ -93,6 +102,8 @@ class Run {
     // (which I'm convinced is the devil), and turns out to play quite nicely with optimizeRuns.
 
     // TODO: are these two checks necessary? won't string.slice() automatically cover me here...?
+    // Might just have to check if text === '' at end of block, if anything formats will have something,
+    // which we don't want to leak either.
     if (offset === 0) {
       return [Run.empty(), this]
     }
@@ -216,6 +227,7 @@ class Run {
     return new Run(this.text, newFormats)
   }
 
+  // TODO: we shouldn't even have render inside the data model at all
   render() {
     // TODO: this should maybe be changed to use CSS or something
     // (Also there is a bug here)
@@ -274,7 +286,7 @@ class Paragraph {
   // Returns the sum of the lengths of the paragraph's runs
   get length() {
     // TODO: memoize
-    return this.runs.reduce((acc, run) => acc + run.length, 0)
+    return this.runs.reduce((len, run) => len + run.length, 0)
   }
 
   // Like atOffset, but returns pair for run immediately before text caret

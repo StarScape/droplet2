@@ -9,7 +9,7 @@
  * than a few pure functions, though the methods of a CharRuler are essentially pure).
  */
 class CharRuler {
-  // TODO: test
+  // TODO: test / replace with formatsToStyleStr()
   static getFormatPrefix(formats) {
     if (formats.length === 0) {
       return ''
@@ -65,6 +65,7 @@ class CharRuler {
     this.element.style.fontWeight = ''
   }
 
+
   /**
    * Measures the width a single character takes up. Results are cached.
    *
@@ -72,6 +73,8 @@ class CharRuler {
    * @return {number} Width of character, in pixels.
    */
   measure(char, formats = []) {
+    // TODO: change this to 'measureChar'
+
     const charKey = CharRuler.getFormatPrefix(formats) + char
     if (this.singleCharacterWidths[charKey]) {
       return this.singleCharacterWidths[charKey]

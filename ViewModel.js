@@ -29,7 +29,6 @@ const addMax = (viewmodel, run, leftovers, ruler) => {
  *
  */
 export class ParagraphViewModel {
-
   static fromParagraph(p, containerWidth, ruler) {
     const vm = new ParagraphViewModel(p, containerWidth)
     const leftovers = [] // leftovers from last line, used as queue
@@ -130,6 +129,16 @@ class ViewModelLine {
     this.width += span.width
     return rest
   }
+
+  /**
+   * Measures the width of the line with the provided ruler.
+   *
+   * @return {number} Width in px.
+   *
+   */
+  measure(ruler) {
+    return this.spans.reduce((sum, s) => sum + s.measure(ruler), 0)
+  }
 }
 
 class ViewModelSpan {
@@ -156,16 +165,31 @@ class ViewModelSpan {
    * Splits the span at `offset` and returns a 2-element array
    * containing the contents of the span on either side of the offset.
    *
+   * @param {number} offset - Paragraph offset to split run at.
+   *
    * @return {array} [beforeOffset, afterOffset]
    *
    */
   split(offset) {
-    const beforeText = this.text.slice(0, offset)
-    const afterText = this.text.slice(offset, this.length)
+    const spanOffset = offset - this.offset
+
+    const beforeText = this.text.slice(0, spanOffset)
+    const afterText = this.text.slice(spanOffset, this.length)
     const before = new ViewModelSpan(beforeText, this.offset, this.formats)
     const after = new ViewModelSpan(afterText, offset, this.formats)
 
     return [before, after]
+  }
+
+  /**
+   * Measures the width of the span with the provided ruler.
+   *
+   * @return {number} Width in px.
+   *
+   */
+  // TODO: do we need this?
+  measure(ruler) {
+    return ruler.measureString(this.text, this.formats)
   }
 }
 
