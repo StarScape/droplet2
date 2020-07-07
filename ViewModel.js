@@ -144,25 +144,25 @@ class ViewModelLine {
     const before = []
     const after = []
 
-    for (const span of this.spans) {
+    for (let span of this.spans) {
       const spanEndOffset = span.offset + span.length
-      const offsetInSpan = span.offset <= offset && offset < spanEndOffset
 
-      // TODO: Clean this up.
-      if (offsetInSpan) {
+      // Offset to split at lies after current span
+      if (spanEndOffset <= offset) {
+        before.push(span)
+      }
+      // Offset to split at lies in current span
+      else if (span.offset <= offset && offset < spanEndOffset) {
         const [left, right] = span.split(offset)
         before.push(left)
         after.push(right)
       }
-      else if (spanEndOffset < offset) {
-        before.push(span)
-      }
+      // Offset to split at lies before current span
       else if (span.offset >= offset) {
         after.push(span)
       }
       else {
-        // TODO: this error is when pressing up at the end of the paragraph :3
-        throw new Error('This should never happen.')
+        throw new Error('Offset is not in line. This should never happen.')
       }
     }
 
