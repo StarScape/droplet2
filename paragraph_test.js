@@ -2,6 +2,8 @@ import { Paragraph, Selection, Run, Selection as MySelection } from './Paragraph
 import { ParagraphViewModel } from './ViewModel.js'
 import CharRuler from './CharRuler.js'
 
+/***   Helper functions   ***/
+
 // TODO: Test ;)
 const formatsToStyleStr = (formats) => {
   let str = ''
@@ -47,41 +49,78 @@ const getCaretLine = (viewmodel, selection) => {
   throw new Error("Line is not inside of this paragraph's viewmodel.")
 }
 
-// Measure list of spans
+// Returns cumulative width of a list of spans, measured with `ruler`.
 const measureSpans = (spans, ruler) => {
   return spans.reduce((width, sp) => width + sp.measure(ruler), 0)
 }
 
+// Returns how many pixels the caret is from the left.
+const getCaretPx = (selection, line, ruler) => {
+  const beforeCaret = line.split(selection.caret)[0]
+  const caretPx = measureSpans(beforeCaret, ruler)
+  return caretPx
+}
+
+// Returns the offset inside `line` which is *closest* to `px` pixels from the left.
+// Useful for up/down caret operations.
+// As with all viewmodel operations, the returned offset is relative to the *paragraph*, not the line.
+const getNearestLineOffsetToPixel = (line, px, ruler) => {
+  const lineEnd = line.offset + line.length
+
+  let currentOffset = line.offset
+  let currentOffsetPx = 0
+  let prevDelta = Infinity
+
+  for (let span of line.spans) {
+    for (let char of span.text) {
+      const delta = Math.abs(currentOffsetPx - px)
+      if (delta > prevDelta) {
+        return currentOffset - 1
+      }
+
+      prevDelta = delta
+      currentOffsetPx += ruler.measure(char)
+      currentOffset++
+    }
+  }
+
+  // The *last character* in every line is actually a space, and the editor will display.
+  // the text caret at the beginning of the *next* line down.
+  // So we need the character just before it.
+  return lineEnd-1
+}
+
+/***   Main operations   ***/
 const caretDown = (viewmodel, selection, ruler) => {
   const lineIdx = getCaretLine(viewmodel, selection)
+  const line = viewmodel.lines[lineIdx]
 
-  // TODO: Clean all this up, think of a more elegant way.
   if (lineIdx < viewmodel.lines.length-1) {
-    const beforeCaret = viewmodel.lines[lineIdx].split(selection.caret)[0]
-    const caretPixelOffset = measureSpans(beforeCaret, ruler)
-    const nextLine = viewmodel.lines[lineIdx + 1]
-    const nextLineEnd = nextLine.offset + nextLine.length
+    const nextLineIdx = lineIdx + 1
+    const nextLine = viewmodel.lines[nextLineIdx]
+    const caretOffsetPx = getCaretPx(selection, line, ruler)
+    const downOffset = getNearestLineOffsetToPixel(nextLine, caretOffsetPx, ruler)
 
-    let newOffset = nextLine.offset
-    let newPixelOffset = 0
-    let lastPixelOffset = 0
-
-    for (let span of nextLine.spans) {
-      for (let char of span.text) {
-        if (newPixelOffset >= caretPixelOffset) {
-          if (Math.abs(lastPixelOffset - caretPixelOffset) < Math.abs(newPixelOffset - caretPixelOffset)) {
-            return selection.setSingle(newOffset - 1)
-          }
-          return selection.setSingle(newOffset)
-        }
-
-        lastPixelOffset = newPixelOffset
-        newOffset++
-        newPixelOffset += ruler.measure(char)
-      }
+    // There is no invisible space at the end of the last line, so we make an exception
+    if (nextLineIdx === viewmodel.lines.length-1) {
+      return selection.setSingle(downOffset + 1)
     }
+    return selection.setSingle(downOffset)
+  }
 
-    return selection.setSingle(nextLineEnd)
+  return selection
+}
+
+const caretUp = (viewmodel, selection, ruler) => {
+  const lineIdx = getCaretLine(viewmodel, selection)
+  const line = viewmodel.lines[lineIdx]
+
+  if (lineIdx > 0) {
+    const prevLine = viewmodel.lines[lineIdx - 1]
+    const caretOffsetPx = getCaretPx(selection, line, ruler)
+    const downOffset = getNearestLineOffsetToPixel(prevLine, caretOffsetPx, ruler)
+
+    return selection.setSingle(downOffset)
   }
 
   return selection
@@ -147,7 +186,7 @@ const _para = new Paragraph([
 
 // State
 let paragraph = _para
-let selection = new MySelection({ paragraph: paragraph, offset: 0 })
+let selection = new MySelection({ paragraph: paragraph, offset: 134 })
 let viewmodel = ParagraphViewModel.fromParagraph(paragraph, 200, ruler)
 
 const syncDom = () => {
@@ -169,7 +208,7 @@ document.addEventListener('keydown', (e) => {
   }
   else if (e.code === 'ArrowUp') {
     e.preventDefault()
-    // TODO
+    selection = caretUp(viewmodel, selection, ruler)
   }
 
   syncDom()

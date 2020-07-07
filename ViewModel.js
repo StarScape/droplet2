@@ -89,6 +89,10 @@ class ViewModelLine {
     this.spans = []
     this.width = 0
     this.containerWidth = containerWidth
+
+    /**
+     * Beginning offset of line within <em>paragraph</em>, not the line itself.
+     */
     this.offset = offset
   }
 
@@ -131,6 +135,41 @@ class ViewModelLine {
   }
 
   /**
+   * Returns everything in the line before and after the provided paragraph offset.
+   *
+   * @param {number} offset - Paragraph offset to split on.
+   * @return {array} Two arrays: one with everything before offset (inclusive), one with everything after.
+   */
+  split(offset) {
+    const before = []
+    const after = []
+
+    for (const span of this.spans) {
+      const spanEndOffset = span.offset + span.length
+      const offsetInSpan = span.offset <= offset && offset < spanEndOffset
+
+      // TODO: Clean this up.
+      if (offsetInSpan) {
+        const [left, right] = span.split(offset)
+        before.push(left)
+        after.push(right)
+      }
+      else if (spanEndOffset < offset) {
+        before.push(span)
+      }
+      else if (span.offset >= offset) {
+        after.push(span)
+      }
+      else {
+        // TODO: this error is when pressing up at the end of the paragraph :3
+        throw new Error('This should never happen.')
+      }
+    }
+
+    return [before, after]
+  }
+
+  /**
    * Measures the width of the line with the provided ruler.
    *
    * @return {number} Width in px.
@@ -156,6 +195,9 @@ class ViewModelSpan {
 
   constructor(text, offset, formats = []) {
     this.text = text
+    /**
+     * Beginning offset of span within  the <em>paragraph</em>, not the line itself.
+     */
     this.offset = offset
     this.formats = formats
     this.width = 0
