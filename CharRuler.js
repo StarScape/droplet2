@@ -72,8 +72,9 @@ class CharRuler {
    * @param {string} char - Single character to measure.
    * @return {number} Width of character, in pixels.
    */
+
+  // TODO: change this to 'measureChar'
   measure(char, formats = []) {
-    // TODO: change this to 'measureChar'
 
     const charKey = CharRuler.getFormatPrefix(formats) + char
     if (this.singleCharacterWidths[charKey]) {

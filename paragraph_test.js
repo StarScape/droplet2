@@ -79,14 +79,14 @@ const getNearestLineOffsetToPixel = (line, px, ruler) => {
       }
 
       prevDelta = delta
-      currentOffsetPx += ruler.measure(char)
+      currentOffsetPx += ruler.measure(char, span.formats)
       currentOffset++
     }
   }
 
   // The *last character* in every line is actually a space, and the editor will display.
   // the text caret at the beginning of the *next* line down.
-  // So we need the character just before it.
+  // We need the character just before it.
   return lineEnd-1
 }
 
@@ -172,6 +172,7 @@ const renderViewModel = (viewmodel, selection) => {
 }
 
 const fakeEditor = document.getElementById('fake-editor')
+const override = document.getElementById('override-checkbox')
 const style = getComputedStyle(fakeEditor)
 const fontSize = style.getPropertyValue('font-size')
 const fontFamily = style.getPropertyValue('font-family')
@@ -184,6 +185,11 @@ const _para = new Paragraph([
   new Run("Don't know what else to say. Hmmmm...", ['bold'])
 ])
 
+const m1 = ruler.measureString('stuff in here. ', ['italic'])
+const m2 = ruler.measureString("Don't kno", ['bold'])
+console.log(`m1 + m2 = ${m1 + m2}`);
+console.log(`m1 + m2 (longer) = 153.859375`);
+
 // State
 let paragraph = _para
 let selection = new MySelection({ paragraph: paragraph, offset: 134 })
@@ -194,6 +200,10 @@ const syncDom = () => {
 }
 
 document.addEventListener('keydown', (e) => {
+  if (override.checked) {
+    return
+  }
+
   if (e.code === 'ArrowLeft' && selection.caret > 0) {
     e.preventDefault()
     selection = selection.shiftSingle(-1)
