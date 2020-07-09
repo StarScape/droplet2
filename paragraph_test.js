@@ -185,10 +185,10 @@ const _para = new Paragraph([
   new Run("Don't know what else to say. Hmmmm...", ['bold'])
 ])
 
-const m1 = ruler.measureString('stuff in here. ', ['italic'])
-const m2 = ruler.measureString("Don't kno", ['bold'])
-console.log(`m1 + m2 = ${m1 + m2}`);
-console.log(`m1 + m2 (longer) = 153.859375`);
+// const m1 = ruler.measureString('stuff in here. ', ['italic'])
+// const m2 = ruler.measureString("Don't kno", ['bold'])
+// console.log(`m1 + m2 = ${m1 + m2}`);
+// console.log(`m1 + m2 (longer) = 153.859375`);
 
 // State
 let paragraph = _para
@@ -198,6 +198,8 @@ let viewmodel = ParagraphViewModel.fromParagraph(paragraph, 200, ruler)
 const syncDom = () => {
   fakeEditor.innerHTML = renderViewModel(viewmodel, selection)
 }
+
+syncDom()
 
 document.addEventListener('keydown', (e) => {
   if (override.checked) {

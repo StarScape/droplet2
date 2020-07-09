@@ -30,20 +30,29 @@ class CharRuler {
     this.fontSize = fontSize
     this.fontFamily = fontFamily
 
-    this.element = document.createElement('div')
-    this.element.style.visibility = 'hidden'
-    this.element.style.position = 'absolute'
-    this.element.style.whiteSpace = 'pre'
-    this.element.style.margin = 0
-    this.element.style.padding = 0
-    this.element.style.fontSize = fontSize
-    this.element.style.fontFamily = fontFamily
-
+    this.element = this._createElement()
     document.body.appendChild(this.element)
   }
 
+  _createElement() {
+    const element = document.createElement('div')
+    element.style.visibility = 'hidden'
+    element.style.position = 'absolute'
+    element.style.whiteSpace = 'pre'
+    element.style.margin = 0
+    element.style.padding = 0
+    element.style.fontSize = this.fontSize
+    element.style.fontFamily = this.fontFamily
+    element.style.fontStyle = 'normal'
+    element.style.fontWeight = 'normal'
+
+    return element
+  }
+
   _applyCSS(formats) {
-    if (formats.length === 0) return
+    if (formats.length === 0) {
+      return
+    }
 
     for (let format of formats) {
       if (format === 'italic') {
@@ -59,12 +68,10 @@ class CharRuler {
     }
   }
 
-  _removeCSS(formats) {
-    if (formats.length === 0) return
-    this.element.style.fontStyle = ''
-    this.element.style.fontWeight = ''
+  _removeCSS() {
+    this.element.style.fontStyle = 'normal'
+    this.element.style.fontWeight = 'normal'
   }
-
 
   /**
    * Measures the width a single character takes up. Results are cached.
@@ -75,13 +82,16 @@ class CharRuler {
 
   // TODO: change this to 'measureChar'
   measure(char, formats = []) {
+    if (char.length !== 1) {
+      throw new Error(`String with length greater than 1 passed to measure(): '${char}'`)
+    }
 
     const charKey = CharRuler.getFormatPrefix(formats) + char
     if (this.singleCharacterWidths[charKey]) {
       return this.singleCharacterWidths[charKey]
     }
 
-    this._removeCSS(formats)
+    this._removeCSS()
     this._applyCSS(formats)
     this.element.innerHTML = char
     this.singleCharacterWidths[charKey] = this.element.getBoundingClientRect().width
