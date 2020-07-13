@@ -181,13 +181,6 @@ const _para = new Paragraph([
   new Run("Don't know what else to say. Hmmmm...", ['bold'])
 ])
 
-const m1 = ruler.measureString('here. ', ['italic']) + ruler.measureString("Don't know", ["bold"])
-const m2 = ruler.measureString("say. Hmmmm...", ['bold'])
-console.log(m1);
-console.log(m2);
-// console.log(`m1 + m2 = ${m1 + m2}`);
-// console.log(`m1 + m2 (longer) = 153.859375`);
-
 // State
 let paragraph = _para
 let selection = new MySelection({ paragraph: paragraph, offset: 134 })
