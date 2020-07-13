@@ -61,7 +61,7 @@ const getCaretPx = (selection, line, ruler) => {
   return caretPx
 }
 
-// Returns the offset inside `line` which is *closest* to `px` pixels from the left.
+// Returns the offset inside `line` which is *closest* to `px` pixels from the left of line start.
 // Useful for up/down caret operations.
 // As with all viewmodel operations, the returned offset is relative to the *paragraph*, not the line.
 const getNearestLineOffsetToPixel = (line, px, ruler) => {
@@ -87,7 +87,7 @@ const getNearestLineOffsetToPixel = (line, px, ruler) => {
   // The *last character* in every line is actually a space, and the editor will display.
   // the text caret at the beginning of the *next* line down.
   // We need the character just before it.
-  return lineEnd-1
+  return line.endOffset
 }
 
 /***   Main operations   ***/
@@ -101,10 +101,6 @@ const caretDown = (viewmodel, selection, ruler) => {
     const caretOffsetPx = getCaretPx(selection, line, ruler)
     const downOffset = getNearestLineOffsetToPixel(nextLine, caretOffsetPx, ruler)
 
-    // There is no invisible space at the end of the last line, so we make an exception
-    if (nextLineIdx === viewmodel.lines.length-1) {
-      return selection.setSingle(downOffset + 1)
-    }
     return selection.setSingle(downOffset)
   }
 
@@ -185,8 +181,10 @@ const _para = new Paragraph([
   new Run("Don't know what else to say. Hmmmm...", ['bold'])
 ])
 
-// const m1 = ruler.measureString('stuff in here. ', ['italic'])
-// const m2 = ruler.measureString("Don't kno", ['bold'])
+const m1 = ruler.measureString('here. ', ['italic']) + ruler.measureString("Don't know", ["bold"])
+const m2 = ruler.measureString("say. Hmmmm...", ['bold'])
+console.log(m1);
+console.log(m2);
 // console.log(`m1 + m2 = ${m1 + m2}`);
 // console.log(`m1 + m2 (longer) = 153.859375`);
 

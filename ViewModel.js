@@ -85,6 +85,22 @@ class ViewModelLine {
     return this.spans.reduce((length, s) => length + s.length, 0)
   }
 
+  /**
+   * @return Offset of VISUAL last character in a line. Note there is an 'invisible'
+   *         space at the end of any line whose text overflows into the next.
+   */
+  get endOffset() {
+    const lastSpan = this.spans[this.spans.length - 1]
+
+    // There's an invisible space at the end of
+    // every line except the last in a paragraph.
+    if (lastSpan.text[lastSpan.text.length - 1] === ' ') {
+      return this.offset + this.length - 1
+    }
+
+    return this.offset + this.length
+  }
+
   constructor(containerWidth, offset) {
     this.spans = []
     this.width = 0
