@@ -122,6 +122,63 @@ const caretUp = (viewmodel, selection, ruler) => {
   return selection
 }
 
+/**
+ * @return Viewport position of the first glyph in a paragraph.
+ */
+const getParagraphTextPosition = (domElem) => {
+  // TODO: remove this code...and write an invariant that domElem can never have padding.
+  // domElem should always be a rendered paragraph elem anyway
+  const style = getComputedStyle(domElem)
+  const domElemRect = domElem.getBoundingClientRect()
+  const paddingLeft = parseFloat(style.getPropertyValue('padding-left')) || 0
+  const paddingTop = parseFloat(style.getPropertyValue('padding-top')) || 0
+
+  return {
+    x: domElemRect.x + paddingLeft,
+    y: domElemRect.y + paddingTop
+  }
+}
+
+/**
+ * Get paragraph offset clicked.
+ */
+const getClickedOffset = (e, domElem, viewmodel, ruler) => {
+  const lineHeight = 17 // TODO: Find someway to get line height...
+  const paragraphPosition = getParagraphTextPosition(domElem)
+  const domElemRect = domElem.getBoundingClientRect()
+
+  // TODO: Make proper 'click' method, similar to caretUp/caretDown
+
+  const px = e.clientX - paragraphPosition.x
+  const py = e.clientY - paragraphPosition.y
+
+  let line = null
+  if (py < 0) {
+    // Above paragraph
+    line = viewmodel.lines[0]
+  } else if (py > domElemRect.height) {
+    // Below paragraph
+    line = viewmodel.lines[viewmodel.lines.length-1]
+  } else {
+    // Inside paragraph
+    line = viewmodel.lines[Math.floor(py / lineHeight)]
+  }
+
+  let offset = null
+  if (px < 0) {
+    // To left of paragraph
+    offset = line.offset
+  } else if (px > domElemRect.width) {
+    // To right of paragraph
+    offset = line.endOffset
+  } else {
+    // Inside paragraph
+    offset = getNearestLineOffsetToPixel(line, px, ruler)
+  }
+
+  return offset
+}
+
 const renderCaret = () => {
   return `<span class='text-caret'></span>`
 }
@@ -136,7 +193,7 @@ const renderSpan = (span) => {
 }
 
 const renderViewModel = (viewmodel, selection) => {
-  let html = ''
+  let html = "<div class='paragraph'>"
   if (!selection.single) {
     throw new Error('Have not handled case for range-selection yet')
   }
@@ -164,6 +221,8 @@ const renderViewModel = (viewmodel, selection) => {
     html += lineElem.outerHTML
   }
 
+  html += '</div>'
+
   return html
 }
 
@@ -183,14 +242,23 @@ const _para = new Paragraph([
 
 // State
 let paragraph = _para
-let selection = new MySelection({ paragraph: paragraph, offset: 134 })
+let selection = new MySelection({ paragraph: paragraph, offset: 120 })
 let viewmodel = ParagraphViewModel.fromParagraph(paragraph, 200, ruler)
 
 const syncDom = () => {
   fakeEditor.innerHTML = renderViewModel(viewmodel, selection)
 }
-
 syncDom()
+
+fakeEditor.addEventListener('click', (e) => {
+  // Eventually, I will need to think about handling events for any
+  // number of paragraphs. For now, this will do :3
+  const paragraphElem = document.querySelector('.paragraph')
+  const offset = getClickedOffset(e, paragraphElem, viewmodel, ruler)
+
+  selection = selection.setSingle(offset)
+  syncDom()
+})
 
 document.addEventListener('keydown', (e) => {
   if (override.checked) {
