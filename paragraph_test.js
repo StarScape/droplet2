@@ -24,6 +24,35 @@ const formatsToStyleStr = (formats) => {
   return str
 }
 
+/**
+ * Does domElem have any padding set?
+ */
+const hasPadding = (domElem) => {
+  const style = getComputedStyle(domElem)
+  const paddingSides = ['padding-top', 'padding-right', 'padding-bottom', 'padding-left']
+
+  for (let side of paddingSides) {
+    if (parseFloat(style.getPropertyValue(side)) !== 0) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * @return Actual measured line height of paragraph DOM element.
+ */
+const getLineHeight = (paragraphDomElem) => {
+  const lines = paragraphDomElem.querySelectorAll('.line')
+  const lineHeights = Array.from(lines).map(line =>
+    parseFloat(getComputedStyle(line).getPropertyValue('height'))
+  )
+
+  // TODO: is this needed? Can we just yeet the first one?
+  return Math.max(...lineHeights)
+}
+
 // Returns line the caret is currently in
 const getCaretLine = (viewmodel, selection) => {
   if (!selection.single) {
@@ -91,6 +120,50 @@ const getNearestLineOffsetToPixel = (line, px, ruler) => {
 }
 
 /***   Main operations   ***/
+
+/**
+ * Returns paragraph offset clicked.
+ *
+ * @param {Event} e - Click event
+ * @param {HTMLDomElement} domElem - Paragraph element clicked
+ * @param {ParagraphViewModel} viewmodel - ViewModel of clicked paragraph
+ * @param {CharRuler} ruler - Ruler to measure with
+ */
+const clickedAt = (e, domElem, viewmodel, ruler) => {
+  if (hasPadding(domElem)) {
+    throw new Error(
+      "Paragraph elements CANNOT have padding. This will break certain rendering calculations!"
+    );
+  }
+
+  const lineHeight = getLineHeight(domElem)
+  const domElemRect = domElem.getBoundingClientRect()
+  const px = e.clientX - domElemRect.x
+  const py = e.clientY - domElemRect.y
+
+  // Get appropriate line
+  let line = null
+  if (py < 0) {
+    line = viewmodel.lines[0]
+  } else if (py > domElemRect.height) {
+    line = viewmodel.lines[viewmodel.lines.length-1]
+  } else {
+    line = viewmodel.lines[Math.floor(py / lineHeight)]
+  }
+
+  // Get appropriate position within line
+  let offset = null
+  if (px < 0) {
+    offset = line.offset
+  } else if (px > domElemRect.width) {
+    offset = line.endOffset
+  } else {
+    offset = getNearestLineOffsetToPixel(line, px, ruler)
+  }
+
+  return offset
+}
+
 const caretDown = (viewmodel, selection, ruler) => {
   const lineIdx = getCaretLine(viewmodel, selection)
   const line = viewmodel.lines[lineIdx]
@@ -122,63 +195,7 @@ const caretUp = (viewmodel, selection, ruler) => {
   return selection
 }
 
-/**
- * @return Viewport position of the first glyph in a paragraph.
- */
-const getParagraphTextPosition = (domElem) => {
-  // TODO: remove this code...and write an invariant that domElem can never have padding.
-  // domElem should always be a rendered paragraph elem anyway
-  const style = getComputedStyle(domElem)
-  const domElemRect = domElem.getBoundingClientRect()
-  const paddingLeft = parseFloat(style.getPropertyValue('padding-left')) || 0
-  const paddingTop = parseFloat(style.getPropertyValue('padding-top')) || 0
-
-  return {
-    x: domElemRect.x + paddingLeft,
-    y: domElemRect.y + paddingTop
-  }
-}
-
-/**
- * Get paragraph offset clicked.
- */
-const getClickedOffset = (e, domElem, viewmodel, ruler) => {
-  const lineHeight = 17 // TODO: Find someway to get line height...
-  const paragraphPosition = getParagraphTextPosition(domElem)
-  const domElemRect = domElem.getBoundingClientRect()
-
-  // TODO: Make proper 'click' method, similar to caretUp/caretDown
-
-  const px = e.clientX - paragraphPosition.x
-  const py = e.clientY - paragraphPosition.y
-
-  let line = null
-  if (py < 0) {
-    // Above paragraph
-    line = viewmodel.lines[0]
-  } else if (py > domElemRect.height) {
-    // Below paragraph
-    line = viewmodel.lines[viewmodel.lines.length-1]
-  } else {
-    // Inside paragraph
-    line = viewmodel.lines[Math.floor(py / lineHeight)]
-  }
-
-  let offset = null
-  if (px < 0) {
-    // To left of paragraph
-    offset = line.offset
-  } else if (px > domElemRect.width) {
-    // To right of paragraph
-    offset = line.endOffset
-  } else {
-    // Inside paragraph
-    offset = getNearestLineOffsetToPixel(line, px, ruler)
-  }
-
-  return offset
-}
-
+/***   Rendering   ***/
 const renderCaret = () => {
   return `<span class='text-caret'></span>`
 }
@@ -200,6 +217,7 @@ const renderViewModel = (viewmodel, selection) => {
 
   for (let line of viewmodel.lines) {
     const lineElem = document.createElement('div')
+    lineElem.classList.add('line')
 
     for (let span of line.spans) {
       const start = span.offset
@@ -226,6 +244,7 @@ const renderViewModel = (viewmodel, selection) => {
   return html
 }
 
+// Editor
 const fakeEditor = document.getElementById('fake-editor')
 const override = document.getElementById('override-checkbox')
 const style = getComputedStyle(fakeEditor)
@@ -254,7 +273,7 @@ fakeEditor.addEventListener('click', (e) => {
   // Eventually, I will need to think about handling events for any
   // number of paragraphs. For now, this will do :3
   const paragraphElem = document.querySelector('.paragraph')
-  const offset = getClickedOffset(e, paragraphElem, viewmodel, ruler)
+  const offset = clickedAt(e, paragraphElem, viewmodel, ruler)
 
   selection = selection.setSingle(offset)
   syncDom()
