@@ -12,7 +12,7 @@ const addMax = (viewmodel, run, leftovers, ruler) => {
  * An intermediate stage is necessary because handle the splitting of paragraphs into lines ourselves,
  * rather than having the browser do it for us -- this in turn is needed because we draw our own text caret
  * and selections, and in order to have fine-grained control of layout-sensitive operations such as navigating
- * the caret to the end of the line (⌘ + → / End).
+ * the caret to the end of the line (⌘ + → on macOS, End on Windows/Linux).
  *
  * The DOM APIs for handling selection are not terribly user-friendly either, or particularly conducive to the
  * idea of decoupling your underlying data respresentation from how it is rendered. For example, the Selection
@@ -76,7 +76,7 @@ export class ParagraphViewModel {
   }
 }
 
-class ViewModelLine {
+export class ViewModelLine {
   get lastSpan() {
     return this.spans[this.spans.length-1]
   }
@@ -196,7 +196,11 @@ class ViewModelLine {
   }
 }
 
-class ViewModelSpan {
+export class ViewModelSpan {
+  static empty() {
+    return new ViewModelSpan('', 0)
+  }
+
   get length() {
     return this.text.length
   }

@@ -20,6 +20,10 @@ class Selection {
     )
   }
 
+  get range() {
+    return !this.single
+  }
+
   // Shortcut for this.start.offset for single selections
   get caret() {
     // TODO: Test me

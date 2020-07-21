@@ -1,5 +1,5 @@
 import { Paragraph, Selection, Run, Selection as MySelection } from './Paragraph.js'
-import { ParagraphViewModel } from './ViewModel.js'
+import { ParagraphViewModel, ViewModelSpan } from './ViewModel.js'
 import CharRuler from './CharRuler.js'
 
 /***   Helper functions   ***/
@@ -196,7 +196,12 @@ const caretUp = (viewmodel, selection, ruler) => {
 }
 
 /***   Rendering   ***/
+const PARAGRAPH_CLASS = 'paragraph'
+const LINE_CLASS = 'line'
+const SELECTION_CLASS = 'range-selection'
+
 const renderCaret = () => {
+  // TODO: add an optional argument of a span/spans to this method as a way of render range-selections
   return `<span class='text-caret'></span>`
 }
 
@@ -210,38 +215,56 @@ const renderSpan = (span) => {
 }
 
 const renderViewModel = (viewmodel, selection) => {
-  let html = "<div class='paragraph'>"
-  if (!selection.single) {
-    throw new Error('Have not handled case for range-selection yet')
-  }
+  let html = `<div class='${PARAGRAPH_CLASS}'>`
+  let selectionOngoing = false
 
   for (let line of viewmodel.lines) {
-    const lineElem = document.createElement('div')
-    lineElem.classList.add('line')
+    let lineElem = `<div class='${LINE_CLASS}'>`
 
     for (let span of line.spans) {
       const start = span.offset
       const end = start + span.length
-      const caret = selection.caret
+      const withinSpan = (offset) =>
+        (offset >= start && offset < end) || (offset === viewmodel.length && offset === end)
 
-      if ((caret >= start && caret < end) || (end === viewmodel.length && caret === end)) {
-        const spanOffset = caret - span.offset
-        const [span1, span2] = span.split(caret).map(s => renderSpan(s))
-        const caretElem = renderCaret()
+      if (selection.single && withinSpan(selection.caret)) {
+        const [span1, span2] = span.split(selection.caret).map(s => renderSpan(s))
+        lineElem += (span1 + renderCaret() + span2)
 
-        lineElem.innerHTML += (span1 + caretElem + span2)
+        span = ViewModelSpan.empty()
       }
-      else {
-        lineElem.innerHTML += renderSpan(span)
+      else if (selection.range) {
+        if (selectionOngoing) {
+          lineElem += `<span class='${SELECTION_CLASS}'>`
+        }
+
+        if (withinSpan(selection.start.offset)) {
+          const [before, after] = span.split(selection.start.offset)
+
+          lineElem += renderSpan(before) + `<span class='${SELECTION_CLASS}'>`
+          span = after
+          selectionOngoing = true
+        }
+
+        if (withinSpan(selection.end.offset)) {
+          selectionOngoing = false
+
+          const [before, after] = span.split(selection.end.offset)
+          lineElem += renderSpan(before) + '</span>'
+          span = after
+        }
+      }
+
+      lineElem += renderSpan(span)
+      if (selectionOngoing) {
+        lineElem += '</span>'
       }
     }
 
-    html += lineElem.outerHTML
+    html += lineElem + '</div>'
   }
 
-  html += '</div>'
-
-  return html
+  return html + '</div>'
 }
 
 // Editor
@@ -254,14 +277,19 @@ const fontFamily = style.getPropertyValue('font-family')
 // TODO: write test with this exact example
 const ruler = new CharRuler(fontSize, fontFamily)
 const _para = new Paragraph([
-  new Run("Hello world, this is an example of a paragraph ", []),
+  new Run("Hello world, this is an example ", []),
+  new Run("of a paragraph ", []),
   new Run("that I might want to split into lines. I'm really just typing a bunch of random stuff in here. ", ['italic']),
   new Run("Don't know what else to say. Hmmmm...", ['bold'])
 ])
 
 // State
 let paragraph = _para
-let selection = new MySelection({ paragraph: paragraph, offset: 120 })
+let selection = new MySelection({ paragraph: paragraph, offset: 45 })
+// let selection = new MySelection(
+//   { paragraph: paragraph, offset: 0 },
+//   { paragraph: paragraph, offset: 46 }
+// )
 let viewmodel = ParagraphViewModel.fromParagraph(paragraph, 200, ruler)
 
 const syncDom = () => {
