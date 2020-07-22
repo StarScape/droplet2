@@ -195,6 +195,47 @@ const caretUp = (viewmodel, selection, ruler) => {
   return selection
 }
 
+const leftArrow = (selection) => {
+  if (selection.range) {
+    return selection.collapse()
+  }
+  else if (selection.single && selection.caret > 0) {
+    return selection.shiftSingle(-1)
+  }
+
+  return selection
+}
+
+const shiftLeftArrow = (selection) => {
+  if (selection.start.offset > 0) {
+    if (selection.range && !selection.backwards) {
+      return selection.expandRight(-1)
+    }
+    return selection.expandLeft(1)
+  }
+  return selection
+}
+
+const rightArrow = (selection) => {
+  if (selection.range) {
+    return selection.collapseEnd()
+  }
+  else if (selection.single && selection.end.offset < selection.end.paragraph.length) {
+    return selection.shiftSingle(1)
+  }
+  return selection
+}
+
+const shiftRightArrow = (selection) => {
+  if (selection.end.offset < selection.end.paragraph.length) {
+    if (selection.range && selection.backwards) {
+      return selection.expandLeft(-1)
+    }
+    return selection.expandRight(1)
+  }
+  return selection
+}
+
 /***   Rendering   ***/
 const PARAGRAPH_CLASS = 'paragraph'
 const LINE_CLASS = 'line'
@@ -214,6 +255,7 @@ const renderSpan = (span) => {
   return `<span style='${styleStr}'>${span.text}</span>`
 }
 
+// TODO: Render text caret even when range selection.
 const renderViewModel = (viewmodel, selection) => {
   let html = `<div class='${PARAGRAPH_CLASS}'>`
   let selectionOngoing = false
@@ -277,8 +319,7 @@ const fontFamily = style.getPropertyValue('font-family')
 // TODO: write test with this exact example
 const ruler = new CharRuler(fontSize, fontFamily)
 const _para = new Paragraph([
-  new Run("Hello world, this is an example ", []),
-  new Run("of a paragraph ", []),
+  new Run("Hello world, this is an example of a paragraph ", []),
   new Run("that I might want to split into lines. I'm really just typing a bunch of random stuff in here. ", ['italic']),
   new Run("Don't know what else to say. Hmmmm...", ['bold'])
 ])
@@ -312,13 +353,13 @@ document.addEventListener('keydown', (e) => {
     return
   }
 
-  if (e.code === 'ArrowLeft' && selection.caret > 0) {
+  if (e.code === 'ArrowLeft') {
     e.preventDefault()
-    selection = selection.shiftSingle(-1)
+    selection = e.shiftKey ? shiftLeftArrow(selection) : leftArrow(selection)
   }
-  else if (e.code === 'ArrowRight' && selection.caret < paragraph.length) {
+  else if (e.code === 'ArrowRight') {
     e.preventDefault()
-    selection = selection.shiftSingle(1)
+    selection = e.shiftKey ? shiftRightArrow(selection) : rightArrow(selection)
   }
   else if (e.code === 'ArrowDown') {
     e.preventDefault()

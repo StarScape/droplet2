@@ -1,12 +1,12 @@
 function arraysEqual(a, b) {
-  if (a === b) return true;
-  if (a == null || b == null) return false;
-  if (a.length != b.length) return false;
+  if (a === b) return true
+  if (a == null || b == null) return false
+  if (a.length != b.length) return false
 
   for (var i = 0; i < a.length; ++i) {
-    if (a[i] !== b[i]) return false;
+    if (a[i] !== b[i]) return false
   }
-  return true;
+  return true
 }
 
 const formatsEqual = (f1, f2) =>
@@ -45,19 +45,35 @@ class Selection {
       throw new Error("Cannot create Selection with illegal end offset + " + this.end.offset)
     }
 
-    if (this.start === this.end && this.start.offset > this.end.offset) {
+    if (this.start.paragraph === this.end.paragraph &&
+        this.start.offset > this.end.offset)
+    {
       throw new Error("Error initializing Selection: end offset cannot precede start offset.")
     }
   }
 
-  // Returns new single selection at the start of this selection.
-  // If this selection is a multiple selection, returns itself.
+  /**
+   * Returns new single selection at the start of this selection.
+   * If this selection is a single selection, returns itself.
+   */
   collapse() {
     // TODO: should we allow this?
     if (this.single) {
       throw new Error("Cannot call collapse() on single selection")
     }
     return this.single ? this : new Selection(this.start)
+  }
+
+  /**
+   * Returns new single selection at the end of this selection.
+   * If this selection is a single selection, returns itself.
+   */
+  collapseEnd() {
+    // TODO: should we allow this?
+    if (this.single) {
+      throw new Error("Cannot call collapse() on single selection")
+    }
+    return this.single ? this : new Selection(this.end)
   }
 
   // For a single selection, returns new Selection moved by `n` characters
@@ -76,6 +92,38 @@ class Selection {
       throw new Error("Cannot call setSingle() on range selection")
     }
     return new Selection({ ...this.start, offset: offset })
+  }
+
+  /**
+   * Expands the right side of the selection by n characters.
+   * If selection is not a range, it is made one.
+   */
+  // TODO: testme
+  expandRight(n) {
+    if (this.single && n < 0) {
+      throw new Error("Cannot expand right side of selection by a negative number when it is already a single-selection");
+    }
+
+    return new Selection(this.start, {
+      ...this.end,
+      offset: this.end.offset + n
+    }, false)
+  }
+
+  /*
+   * Expands the left side of the selection by n characters.
+   * If selection is not a range, it is made one.
+   */
+  // TODO: testme
+  expandLeft(n) {
+    if (this.single && n < 0) {
+      throw new Error("Cannot expand left side of selection by a negative number when it is already a single-selection");
+    }
+
+    return new Selection({
+      ...this.start,
+      offset: this.start.offset - n
+    }, this.end, true)
   }
 }
 
