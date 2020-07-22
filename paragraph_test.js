@@ -164,7 +164,7 @@ const clickedAt = (e, domElem, viewmodel, ruler) => {
   return offset
 }
 
-const caretDown = (viewmodel, selection, ruler) => {
+const downArrow = (viewmodel, selection, ruler) => {
   const lineIdx = getCaretLine(viewmodel, selection)
   const line = viewmodel.lines[lineIdx]
 
@@ -180,7 +180,7 @@ const caretDown = (viewmodel, selection, ruler) => {
   return selection
 }
 
-const caretUp = (viewmodel, selection, ruler) => {
+const upArrow = (viewmodel, selection, ruler) => {
   const lineIdx = getCaretLine(viewmodel, selection)
   const line = viewmodel.lines[lineIdx]
 
@@ -194,6 +194,9 @@ const caretUp = (viewmodel, selection, ruler) => {
 
   return selection
 }
+
+// TODO: Add methods for shiftUpArrow() and shiftDownArrow() that expand selection appropriately.
+// TODO: Can possibly wait until the real implementation.
 
 const leftArrow = (selection) => {
   if (selection.range) {
@@ -242,7 +245,6 @@ const LINE_CLASS = 'line'
 const SELECTION_CLASS = 'range-selection'
 
 const renderCaret = () => {
-  // TODO: add an optional argument of a span/spans to this method as a way of render range-selections
   return `<span class='text-caret'></span>`
 }
 
@@ -255,7 +257,9 @@ const renderSpan = (span) => {
   return `<span style='${styleStr}'>${span.text}</span>`
 }
 
-// TODO: Render text caret even when range selection.
+// =========================================================
+// TODO: Render text caret even when it's a range selection.
+// =========================================================
 const renderViewModel = (viewmodel, selection) => {
   let html = `<div class='${PARAGRAPH_CLASS}'>`
   let selectionOngoing = false
@@ -363,11 +367,11 @@ document.addEventListener('keydown', (e) => {
   }
   else if (e.code === 'ArrowDown') {
     e.preventDefault()
-    selection = caretDown(viewmodel, selection, ruler)
+    selection = downArrow(viewmodel, selection, ruler)
   }
   else if (e.code === 'ArrowUp') {
     e.preventDefault()
-    selection = caretUp(viewmodel, selection, ruler)
+    selection = upArrow(viewmodel, selection, ruler)
   }
 
   syncDom()
