@@ -56,7 +56,7 @@ const getLineHeight = (paragraphDomElem) => {
 // Returns line the caret is currently in
 const getCaretLine = (viewmodel, selection) => {
   if (!selection.single) {
-    throw new Error('Not yet implemented.')
+    throw new Error('Cannot get caret line for a multiple selection!')
   }
 
   let i = 0
@@ -164,6 +164,10 @@ const clickedAt = (e, domElem, viewmodel, ruler) => {
   return offset
 }
 
+// ========================================================
+// TODO: modify these to take into account collapsing the
+// selection before going up.
+// ========================================================
 const downArrow = (viewmodel, selection, ruler) => {
   const lineIdx = getCaretLine(viewmodel, selection)
   const line = viewmodel.lines[lineIdx]
@@ -257,9 +261,8 @@ const renderSpan = (span) => {
   return `<span style='${styleStr}'>${span.text}</span>`
 }
 
-// =========================================================
-// TODO: Render text caret even when it's a range selection.
-// =========================================================
+// TODO: Sit down with a sheet of paper and rethink how this function ought
+// to work. In its current state it's over complicated and not very maintainable.
 const renderViewModel = (viewmodel, selection) => {
   let html = `<div class='${PARAGRAPH_CLASS}'>`
   let selectionOngoing = false
@@ -273,13 +276,16 @@ const renderViewModel = (viewmodel, selection) => {
       const withinSpan = (offset) =>
         (offset >= start && offset < end) || (offset === viewmodel.length && offset === end)
 
+      // Draw caret
       if (selection.single && withinSpan(selection.caret)) {
         const [span1, span2] = span.split(selection.caret).map(s => renderSpan(s))
         lineElem += (span1 + renderCaret() + span2)
 
         span = ViewModelSpan.empty()
       }
-      else if (selection.range) {
+
+      // Draw range selection
+      if (selection.range) {
         if (selectionOngoing) {
           lineElem += `<span class='${SELECTION_CLASS}'>`
         }
@@ -288,6 +294,9 @@ const renderViewModel = (viewmodel, selection) => {
           const [before, after] = span.split(selection.start.offset)
 
           lineElem += renderSpan(before) + `<span class='${SELECTION_CLASS}'>`
+          if (selection.backwards) {
+            lineElem += renderCaret()
+          }
           span = after
           selectionOngoing = true
         }
@@ -297,6 +306,9 @@ const renderViewModel = (viewmodel, selection) => {
 
           const [before, after] = span.split(selection.end.offset)
           lineElem += renderSpan(before) + '</span>'
+          if (!selection.backwards) {
+            lineElem += renderCaret()
+          }
           span = after
         }
       }
@@ -330,7 +342,7 @@ const _para = new Paragraph([
 
 // State
 let paragraph = _para
-let selection = new MySelection({ paragraph: paragraph, offset: 45 })
+let selection = new MySelection({ paragraph: paragraph, offset: 0 })
 // let selection = new MySelection(
 //   { paragraph: paragraph, offset: 0 },
 //   { paragraph: paragraph, offset: 46 }

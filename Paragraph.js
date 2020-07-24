@@ -27,10 +27,13 @@ class Selection {
   // Shortcut for this.start.offset for single selections
   get caret() {
     // TODO: Test me
-    if (!this.single) {
-      throw new Error("Cannot call caret on range selection")
+    // if (!this.single) {
+    //   throw new Error("Cannot call caret on range selection")
+    // }
+    if (this.backwards) {
+      return this.start.offset
     }
-    return this.start.offset
+    return this.end.offset
   }
 
   constructor(start, end, backwards = false) {
