@@ -27,9 +27,6 @@ class Selection {
   // Shortcut for this.start.offset for single selections
   get caret() {
     // TODO: Test me
-    // if (!this.single) {
-    //   throw new Error("Cannot call caret on range selection")
-    // }
     if (this.backwards) {
       return this.start.offset
     }
@@ -55,34 +52,10 @@ class Selection {
     }
   }
 
-  /**
-   * Returns new single selection at the start of this selection.
-   * If this selection is a single selection, returns itself.
-   */
-  collapse() {
-    // TODO: should we allow this?
-    if (this.single) {
-      throw new Error("Cannot call collapse() on single selection")
-    }
-    return this.single ? this : new Selection(this.start)
-  }
-
-  /**
-   * Returns new single selection at the end of this selection.
-   * If this selection is a single selection, returns itself.
-   */
-  collapseEnd() {
-    // TODO: should we allow this?
-    if (this.single) {
-      throw new Error("Cannot call collapse() on single selection")
-    }
-    return this.single ? this : new Selection(this.end)
-  }
-
   // For a single selection, returns new Selection moved by `n` characters
-  shiftSingle(n) {
+  moveSingle(n) {
     if (!this.single) {
-      throw new Error("Cannot call shiftSingle() on range selection")
+      throw new Error("Cannot call moveSingle() on range selection")
     }
     return new Selection({ ...this.start, offset: this.start.offset + n })
   }
@@ -98,11 +71,43 @@ class Selection {
   }
 
   /**
+   * "Smart" collapse: collapses to the side of the range-selection 
+   * the caret is on. If this selection is singular, returns itself.
+   */
+  collapse() {
+    if (this.single) {
+      return this
+    }
+
+    if (this.backwards) {
+      return this.collapseStart()
+    }
+    return this.collapseEnd()
+  }
+
+  // Returns new single selection at the end of this selection.
+  collapseStart() {
+    if (this.single) {
+      throw new Error("Cannot call collapse() on single selection.")
+    }
+    return this.single ? this : new Selection(this.start)
+  }
+
+  // Returns new single selection at the end of this selection.
+  collapseEnd() {
+    // TODO: should we allow this?
+    if (this.single) {
+      throw new Error("Cannot call collapse() on single selection")
+    }
+    return this.single ? this : new Selection(this.end)
+  }
+
+  /**
    * Expands the right side of the selection by n characters.
    * If selection is not a range, it is made one.
    */
-  // TODO: testme
   expandRight(n) {
+    // TODO: testme
     if (this.single && n < 0) {
       throw new Error("Cannot expand right side of selection by a negative number when it is already a single-selection");
     }
@@ -117,8 +122,8 @@ class Selection {
    * Expands the left side of the selection by n characters.
    * If selection is not a range, it is made one.
    */
-  // TODO: testme
   expandLeft(n) {
+    // TODO: testme
     if (this.single && n < 0) {
       throw new Error("Cannot expand left side of selection by a negative number when it is already a single-selection");
     }
@@ -441,7 +446,7 @@ class Paragraph {
 
       return [
         new Paragraph(Paragraph.optimizeRuns(newRuns)),
-        selection.shiftSingle(runs.reduce((lens, r) => lens + r.length, 0))
+        selection.moveSingle(runs.reduce((lens, r) => lens + r.length, 0))
       ]
     }
     else {
@@ -471,7 +476,7 @@ class Paragraph {
 
       return [
         new Paragraph(Paragraph.optimizeRuns(newRuns)),
-        selection.shiftSingle(-1)
+        selection.moveSingle(-1)
       ]
     }
     else {

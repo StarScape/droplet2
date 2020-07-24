@@ -169,34 +169,36 @@ const clickedAt = (e, domElem, viewmodel, ruler) => {
 // selection before going up.
 // ========================================================
 const downArrow = (viewmodel, selection, ruler) => {
-  const lineIdx = getCaretLine(viewmodel, selection)
+  const collapsed = selection.collapse()
+  const lineIdx = getCaretLine(viewmodel, collapsed)
   const line = viewmodel.lines[lineIdx]
 
   if (lineIdx < viewmodel.lines.length-1) {
     const nextLineIdx = lineIdx + 1
     const nextLine = viewmodel.lines[nextLineIdx]
-    const caretOffsetPx = getCaretPx(selection, line, ruler)
+    const caretOffsetPx = getCaretPx(collapsed, line, ruler)
     const downOffset = getNearestLineOffsetToPixel(nextLine, caretOffsetPx, ruler)
 
-    return selection.setSingle(downOffset)
+    return collapsed.setSingle(downOffset)
   }
 
-  return selection
+  return collapsed
 }
 
 const upArrow = (viewmodel, selection, ruler) => {
-  const lineIdx = getCaretLine(viewmodel, selection)
+  const collapsed = selection.collapse()
+  const lineIdx = getCaretLine(viewmodel, collapsed)
   const line = viewmodel.lines[lineIdx]
 
   if (lineIdx > 0) {
     const prevLine = viewmodel.lines[lineIdx - 1]
-    const caretOffsetPx = getCaretPx(selection, line, ruler)
+    const caretOffsetPx = getCaretPx(collapsed, line, ruler)
     const downOffset = getNearestLineOffsetToPixel(prevLine, caretOffsetPx, ruler)
 
-    return selection.setSingle(downOffset)
+    return collapsed.setSingle(downOffset)
   }
 
-  return selection
+  return collapsed
 }
 
 // TODO: Add methods for shiftUpArrow() and shiftDownArrow() that expand selection appropriately.
@@ -204,10 +206,10 @@ const upArrow = (viewmodel, selection, ruler) => {
 
 const leftArrow = (selection) => {
   if (selection.range) {
-    return selection.collapse()
+    return selection.collapseStart()
   }
   else if (selection.single && selection.caret > 0) {
-    return selection.shiftSingle(-1)
+    return selection.moveSingle(-1)
   }
 
   return selection
@@ -228,7 +230,7 @@ const rightArrow = (selection) => {
     return selection.collapseEnd()
   }
   else if (selection.single && selection.end.offset < selection.end.paragraph.length) {
-    return selection.shiftSingle(1)
+    return selection.moveSingle(1)
   }
   return selection
 }
