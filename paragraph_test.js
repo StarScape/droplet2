@@ -164,10 +164,6 @@ const clickedAt = (e, domElem, viewmodel, ruler) => {
   return offset
 }
 
-// ========================================================
-// TODO: modify these to take into account collapsing the
-// selection before going up.
-// ========================================================
 const downArrow = (viewmodel, selection, ruler) => {
   const collapsed = selection.collapse()
   const lineIdx = getCaretLine(viewmodel, collapsed)
@@ -202,7 +198,7 @@ const upArrow = (viewmodel, selection, ruler) => {
 }
 
 // TODO: Add methods for shiftUpArrow() and shiftDownArrow() that expand selection appropriately.
-// TODO: Can possibly wait until the real implementation.
+// These can possibly wait until the real implementation.
 
 const leftArrow = (selection) => {
   if (selection.range) {
@@ -345,20 +341,17 @@ const _para = new Paragraph([
 // State
 let paragraph = _para
 let selection = new MySelection({ paragraph: paragraph, offset: 0 })
-// let selection = new MySelection(
-//   { paragraph: paragraph, offset: 0 },
-//   { paragraph: paragraph, offset: 46 }
-// )
 let viewmodel = ParagraphViewModel.fromParagraph(paragraph, 200, ruler)
 
 const syncDom = () => {
+  viewmodel = ParagraphViewModel.fromParagraph(paragraph, 200, ruler)
   fakeEditor.innerHTML = renderViewModel(viewmodel, selection)
 }
 syncDom()
 
 fakeEditor.addEventListener('click', (e) => {
-  // Eventually, I will need to think about handling events for any
-  // number of paragraphs. For now, this will do :3
+  // Eventually, I will need to think about handling events for any number of paragraphs. For now, this will do :3
+  // document.querySelector('#hidden-input').focus()
   const paragraphElem = document.querySelector('.paragraph')
   const offset = clickedAt(e, paragraphElem, viewmodel, ruler)
 
@@ -391,13 +384,22 @@ document.addEventListener('keydown', (e) => {
   syncDom()
 })
 
-document.addEventListener('beforeinput', (e) => {
-  // TODO: Finish this :)
+document.querySelector('#hidden-input').addEventListener('beforeinput', (e) => {
   if (e.inputType === 'insertText') {
-    const [newSelection, newParagraph] = paragraph.insert(e.keyOrWhatever, selection)
-    const newVm = ParagraphViewModel.fromParagraph(newParagraph)
+    const run = new Run(e.data, []);
+    const [newParagraph, newSelection] = paragraph.insert([run], selection)
+    console.log(newParagraph);
+    console.log(newSelection);
+    console.log('');
 
-    fakeEditor.innerHTML = renderViewModel(newVm, newSelection)
+    selection = newSelection
+    paragraph = newParagraph
+
+    // Terrible hack, avert your eyes, it's just for the mockup...
+    selection.start.paragraph = newParagraph
+    selection.end.paragraph = newParagraph
+
+    syncDom()
   }
 })
 

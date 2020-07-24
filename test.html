@@ -52,10 +52,19 @@
     #fake-editor:hover {
       cursor: text;
     }
+
+    /* TODO: make this completely gone. */
+    #hidden-input {
+      opacity: 0;
+      /*position: absolute;*/
+    }
   </style>
 
 </head>
 <body>
+
+  <!-- Hidden input for capturing keystrokes -->
+  <input id='hidden-input' type='text' autofocus />
 
   <div class='my-boxes'>
     <div class='my-box' id='fake-editor'></div>

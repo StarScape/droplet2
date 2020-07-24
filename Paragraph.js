@@ -296,6 +296,12 @@ class Run {
   }
 }
 
+// TODO: I think it is in the best interest to completely move away from using Selections
+// inside of Paragraph. Paragraph doesn't need to be aware of Selection, it adds extra complexity,
+// and I think I could achieve the same thing with plain indexes and only worry about Selections
+// at the Document level. This change will need to be thoroughly thought through before I do it,
+// of course, but I think it's the right choice.
+
 class Paragraph {
   static fromTemplate(obj) {
     // TODO: this is wrong
@@ -401,6 +407,10 @@ class Paragraph {
   // runs: array of Runs
   // selection: Selection
   insert(runs, selection) {
+    if (!Array.isArray(runs)) {
+      throw new Error("Runs is not an array, are you dumb?");
+      // alright you fucks, yes, I understand there's an argument for static typing...
+    }
     // =========================================================================================
     // TODO: this function needs to be overloaded with two other options for the first argument:
     // (1) A single run, which will be equivalent to an array of 1 run, and (2) a string, which
