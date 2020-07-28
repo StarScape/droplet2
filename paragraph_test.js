@@ -388,14 +388,26 @@ document.querySelector('#hidden-input').addEventListener('beforeinput', (e) => {
   if (e.inputType === 'insertText') {
     const run = new Run(e.data, []);
     const [newParagraph, newSelection] = paragraph.insert([run], selection)
-    console.log(newParagraph);
-    console.log(newSelection);
-    console.log('');
 
     selection = newSelection
     paragraph = newParagraph
 
     // Terrible hack, avert your eyes, it's just for the mockup...
+    selection.start.paragraph = newParagraph
+    selection.end.paragraph = newParagraph
+
+    syncDom()
+  }
+  else if (e.inputType === 'deleteContentBackward') {
+    if (selection.single && selection.caret === 0) {
+      return
+    }
+
+    const [newParagraph, newSelection] = paragraph.remove(selection)
+    selection = newSelection
+    paragraph = newParagraph
+
+    // That awful hack again :3
     selection.start.paragraph = newParagraph
     selection.end.paragraph = newParagraph
 
