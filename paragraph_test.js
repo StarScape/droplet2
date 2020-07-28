@@ -325,6 +325,7 @@ const renderViewModel = (viewmodel, selection) => {
 
 // Editor
 const fakeEditor = document.getElementById('fake-editor')
+const hiddenInput = document.querySelector('#hidden-input')
 const override = document.getElementById('override-checkbox')
 const style = getComputedStyle(fakeEditor)
 const fontSize = style.getPropertyValue('font-size')
@@ -354,6 +355,7 @@ fakeEditor.addEventListener('click', (e) => {
   // document.querySelector('#hidden-input').focus()
   const paragraphElem = document.querySelector('.paragraph')
   const offset = clickedAt(e, paragraphElem, viewmodel, ruler)
+  hiddenInput.focus()
 
   selection = selection.setSingle(offset)
   syncDom()
@@ -384,7 +386,11 @@ document.addEventListener('keydown', (e) => {
   syncDom()
 })
 
-document.querySelector('#hidden-input').addEventListener('beforeinput', (e) => {
+hiddenInput.addEventListener('beforeinput', (e) => {
+  if (override.checked) {
+    return
+  }
+
   if (e.inputType === 'insertText') {
     const run = new Run(e.data, []);
     const [newParagraph, newSelection] = paragraph.insert([run], selection)
@@ -415,3 +421,16 @@ document.querySelector('#hidden-input').addEventListener('beforeinput', (e) => {
   }
 })
 
+hiddenInput.addEventListener('focus', (e) => {
+  document.querySelector('.text-caret').classList.remove('hidden')
+  document.querySelectorAll('.range-selection').forEach(e =>
+    e.classList.remove('range-selection-blurred')
+  )
+})
+
+hiddenInput.addEventListener('blur', (e) => {
+  document.querySelector('.text-caret').classList.add('hidden')
+  document.querySelectorAll('.range-selection').forEach(e =>
+    e.classList.add('range-selection-blurred')
+  )
+})
