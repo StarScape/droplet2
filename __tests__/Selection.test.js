@@ -30,18 +30,23 @@ test('caret', () => {
   expect(single.caret).toBe(144)
 
   const range = new Selection({ pid: 1, offset: 0 }, { pid: 1, offset: 33 })
-  expect(() => range.caret).toThrow()
+  expect(range.caret).toBe(33)
 })
 
-test('shiftSingle', () => {
+test('moveSingle', () => {
   const s = new Selection({ pid: 1, offset: 10 })
-  expect(s.shiftSingle(5).caret).toBe(15)
-  expect(() => s.shiftSingle(-100)).toThrow()
+  expect(s.moveSingle(5).caret).toBe(15)
+  expect(() => s.moveSingle(-100)).toThrow()
 })
 
-test('collapse', () => {
+test('collapseStart and collapseEnd', () => {
   const s = new Selection({ pid: 1, offset: 12 }, { pid: 1, offset: 33 })
-  const collapsed = s.collapse()
-  expect(collapsed.caret).toBe(12)
-  expect(collapsed.single).toBe(true)
+  const collapsed1 = s.collapseStart()
+  const collapsed2 = s.collapseEnd()
+
+  expect(collapsed1.caret).toBe(12)
+  expect(collapsed1.single).toBe(true)
+
+  expect(collapsed2.caret).toBe(33)
+  expect(collapsed2.single).toBe(true)
 })

@@ -8,11 +8,27 @@ const { Run, Selection, Paragraph } = require('../Paragraph.js')
 // As of writing, this is identical to the render() methods on Run and Paragraph, but
 // it is doubtful that it will always be. This can stay here as a simple solution for
 // the tests.
-const stringMapFormats = (r, func) => r.map(f => func(f)).join('')
 const naiveRunRender = (r) => {
-  return stringMapFormats(r.formats, f => `<${f}>`) + r.text + stringMapFormats(r.formats, f => `</${f}>`)
+  let str = ''
+  let styleTags = r.formats.slice().sort()
+  for (let tag of styleTags) {
+    str += `<${tag}>`
+  }
+  str += r.text
+  for (let tag of styleTags) {
+    str += `</${tag}>`
+  }
+
+  return str
 }
-const naiveParagraphRender = (p) => p.runs.map(r => naiveRunRender(r)).join('')
+
+const naiveParagraphRender = (p) => {
+  let str = ''
+  for (let run of p.runs) {
+    str += naiveRunRender(run)
+  }
+  return str
+}
 
 let run1;
 let run2;

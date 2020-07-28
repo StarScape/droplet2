@@ -518,7 +518,7 @@ class Paragraph {
 
       return [
         new Paragraph(Paragraph.optimizeRuns(newRuns)),
-        selection.collapse()
+        selection.collapseStart()
       ]
     }
   }
@@ -645,6 +645,6 @@ const testTemplate = {
 
 const testState = Paragraph.fromTemplate(testTemplate);
 
-// module.exports =  { Selection, Run, Paragraph }
+module.exports =  { Selection, Run, Paragraph }
 
-export { Selection, Run, Paragraph }
+// export { Selection, Run, Paragraph }
