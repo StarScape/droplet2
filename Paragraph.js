@@ -3,7 +3,7 @@ function arraysEqual(a, b) {
   if (a == null || b == null) return false
   if (a.length != b.length) return false
 
-  for (var i = 0; i < a.length; ++i) {
+  for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) return false
   }
   return true
@@ -24,9 +24,8 @@ class Selection {
     return !this.single
   }
 
-  // Shortcut for this.start.offset for single selections
+  // Returns the location the text caret will be rendered at.
   get caret() {
-    // TODO: Test me
     if (this.backwards) {
       return this.start.offset
     }
@@ -62,7 +61,6 @@ class Selection {
 
   // For a single selection, returns new Selection with caret set at `offset` in same
   // paragraph. It is the responsibility of the caller to ensure the offset is legal.
-  // TODO: test
   setSingle(offset) {
     if (!this.single) {
       throw new Error("Cannot call setSingle() on range selection")
@@ -75,6 +73,8 @@ class Selection {
    * the caret is on. If this selection is singular, returns itself.
    */
   collapse() {
+    // TODO: is this method needed? A 'smart collapse' isn't used in Sublime or GDocs.
+    // I still kind of like it though, might be worth keeping.
     if (this.single) {
       return this
     }
@@ -619,8 +619,6 @@ const myParagraph = new Paragraph([
   new Run('Goodbye.', ['bold'])
 ])
 
-// TODO: do a full test inside a browser with just one paragraph, but basic editing features and rendering working.
-
 const testTemplate = {
   selection: {
     range: false,
@@ -645,6 +643,6 @@ const testTemplate = {
 
 const testState = Paragraph.fromTemplate(testTemplate);
 
-// module.exports =  { Selection, Run, Paragraph }
+module.exports =  { Selection, Run, Paragraph }
 
-export { Selection, Run, Paragraph }
+// export { Selection, Run, Paragraph }
