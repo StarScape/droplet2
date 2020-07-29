@@ -357,7 +357,7 @@ fakeEditor.addEventListener('click', (e) => {
   const offset = clickedAt(e, paragraphElem, viewmodel, ruler)
   hiddenInput.focus()
 
-  selection = selection.setSingle(offset)
+  selection = selection.collapse().setSingle(offset)
   syncDom()
 })
 
@@ -430,7 +430,13 @@ hiddenInput.addEventListener('focus', (e) => {
 
 hiddenInput.addEventListener('blur', (e) => {
   document.querySelector('.text-caret').classList.add('hidden')
-  document.querySelectorAll('.range-selection').forEach(e =>
-    e.classList.add('range-selection-blurred')
-  )
+})
+
+document.addEventListener('click', (e) => {
+  // Unfocus range-selection
+  if (!e.path.includes(fakeEditor)) {
+    document.querySelectorAll('.range-selection').forEach(e =>
+      e.classList.add('range-selection-blurred')
+    )
+  }
 })
