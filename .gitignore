@@ -1,5 +1,6 @@
-# Node
 node_modules/
+.shadow-cljs/
+.calva/
 
 # System Files
 .DS_Store
@@ -7,3 +8,6 @@ Thumbs.db
 
 # Temp file I use for piping into long commit messages
 commit.txt
+
+# ClojureScript build directory
+public/js/
