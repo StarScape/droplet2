@@ -6,4 +6,8 @@
   {:app {:output-dir "public/js"
          :asset-path "/js" ;; NOTE: relative to server root
          :target :browser
-         :modules {:main {:init-fn app.main/main}}}}}
+         :modules {:main {:init-fn app.main/main}}}
+   :test {:target :node-test
+          :ns-regexp "-test$"
+          :output-to "out/tests.js"
+          :autorun true}}}

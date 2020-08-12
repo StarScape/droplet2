@@ -4,13 +4,13 @@
   "description": "",
   "main": "Paragraph.js",
   "scripts": {
+    "cljs-test": "shadow-cljs compile test && node out/test.js",
     "test": "jest"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "jest": "^25.4.0",
-    "shadow-cljs": "^2.10.21"
+    "jest": "^25.4.0"
   },
   "dependencies": {
     "object-hash": "^2.0.3"
