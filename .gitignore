@@ -9,5 +9,6 @@ Thumbs.db
 # Temp file I use for piping into long commit messages
 commit.txt
 
-# ClojureScript build directory
+# ClojureScript build directories
 public/js/
+out/

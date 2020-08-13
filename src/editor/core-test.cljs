@@ -1,2 +1,0 @@
-(ns app.core-test)
-
