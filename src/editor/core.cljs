@@ -77,13 +77,79 @@
   [r]
   (or (= "" (:text r)) (= nil (:text r))))
 
+(defn len
+  "Returns the number of characters in the run."
+  [r]
+  (count (:text r)))
+
+(defn split
+  "Splits the run at `offset`, returning a vector of two new runs containing the text to either side."
+  [r offset]
+  (cond
+    (zero? offset) [(empty-run) r]
+    (= offset (len r)) [r (empty-run)]
+    :else (let [text-before (.slice (:text r) 0 offset)
+                text-after (.slice (:text r) offset (len r))]
+            [(run text-before (:formats r)), (run text-after (:formats r))])))
+
 (defn insert
   "Insert insert text into run at the given selection."
-  [run text start end]
-  #_(uwu-uwu))
+  ;; Range selection, remove block-selected text and then insert.
+  ([r text start end]
+   (let [before (.slice (:text r) 0 start)
+         after (.slice (:text r) end)]
+     (assoc r :text (str before text after))))
+  ;; Single selection
+  ([r text caret]
+   (insert r text caret caret)))
+
+(defn insert-start
+  "Shortcut for inserting text at the start of a run."
+  [run text]
+  (insert run text 0))
+
+(defn insert-end
+  "Shortcut for inserting text at the end of a run."
+  [run text]
+  (insert run text (count (:text run))))
+
+(defn delete
+  "Remove the text between start and end. If passed a single position, acts like backspace."
+  ([run start end]
+   (let [before (.slice (:text run) 0 start)
+         after (.slice (:text run) end)]
+     (assoc run :text (str before after))))
+  ([run caret]
+   (delete run (dec caret) caret)))
+
+(defn- toggle-set-entry [s v]
+  (if (contains? s v)
+    (disj s v)
+    (conj s v)))
+
+(defn toggle-format
+  "Toggles the provided format on Run `r`. E.g. if `format` is not present it will be added, if
+   it is it will be turned off. Providing a format that is not present in `r` will have no effect."
+  [r format]
+  (update r :formats #(toggle-set-entry % format)))
+
+(defn toggle-formats
+  "The same as `toggle-format`, but takes a coll of all formats to toggle."
+  [r formats-coll]
+  (assoc r :formats (reduce toggle-set-entry (:formats r) formats-coll)))
+
+;; TODO: do we need apply-formats and remove-formats?
+
+(def r1 (run "Foobar" #{:italic :bold}))
+
+(toggle-format r1 :bold)
+(toggle-formats r1 #{:underline})
 
 (comment
   (empty-run? (run "Foo" #{:italic :bold :underline}))
   (empty-run? (empty-run))
-
-  )
+  (def r (run "Foo"))
+  (insert-end r "Bar")
+  (insert-start r "oof")
+  (delete r 1 3)
+  (delete r 3))
