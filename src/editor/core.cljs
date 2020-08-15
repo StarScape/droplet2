@@ -62,13 +62,20 @@
 ;;       (collapse-start sel)
 ;;       (collapse-end sel))))
 
+(defprotocol TextContainer
+  (len [this] "Returns the number of chars in container (run/paragraph)."))
+
 ;;; Run operations ;;;
+(defrecord Run [text formats]
+  TextContainer
+  (len [r] (count (:text r))))
+
 (defn run
   "Returns a new run. A run is defined as text with associating formatting."
   ([text formats]
-   {:text text, :formats formats})
+   (->Run text formats))
   ([text]
-   {:text text, :formats #{}}))
+   (->Run text #{})))
 
 (defn empty-run "Returns an empty run." [] (run ""))
 
@@ -76,11 +83,6 @@
   "Returns true if the run is empty."
   [r]
   (or (= "" (:text r)) (= nil (:text r))))
-
-(defn len
-  "Returns the number of characters in the run."
-  [r]
-  (count (:text r)))
 
 (defn split
   "Splits the run at `offset`, returning a vector of two new runs containing the text to either side."
@@ -141,54 +143,42 @@
 ;; TODO: do we need apply-formats and remove-formats?
 ;; TODO: write tests for run
 
-
 ;;; Paragraph operations ;;;
+(defrecord Paragraph [runs]
+  TextContainer
+  (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p))))
 
-;; Forward declare for use in `paragraph` function.
-(declare optimize-runs)
+
+(declare optimize-runs) ;; Forward declare for use in `paragraph` function.
 
 (defn paragraph
   "Creates a new paragraph."
   [runs]
-  {:runs (optimize-runs runs)})
+  (->Paragraph (optimize-runs runs)))
 
 (defn- optimize-runs
   "Merges adjacent runs that have the same formatting, and removes empty runs.
    Will return an empty run if one is passed in, or all runs have no content."
   [runs]
   (let [non-empty-runs (filterv (complement empty-run?) runs)]
-    (reduce
-     (fn [optimized next-run]
-       (let [top (peek optimized)]
-         (if (= (:formats next-run) (:formats top))
-           (-> optimized
-               pop
-               (conj (insert-end top (:text next-run))))
-           (conj optimized next-run))))
-     (vector (first non-empty-runs))
-     (subvec non-empty-runs 1))))
-
-(def sum-runs [(run "pre" #{})
-               (run "Foo" #{:italic})
-               (run "" #{:somethin-else})
-               (run "bar" #{:italic})
-               (run "bizz" #{:bold})
-               (run "buzz" #{:bold :underline})])
-
-(optimize-runs sum-runs)
-
-(paragraph [(run "Foo" #{:italic}) (run "bar" #{:bold})])
-
-(def r1 (run "Foobar" #{:italic :bold}))
-
-(toggle-format r1 :bold)
-(toggle-formats r1 #{:underline})
+    (reduce (fn [optimized next-run]
+              (let [top (peek optimized)]
+                (if (= (:formats next-run) (:formats top))
+                  (-> (pop optimized)
+                      (conj (insert-end top (:text next-run))))
+                  (conj optimized next-run))))
+            (vector (first non-empty-runs))
+            (subvec non-empty-runs 1))))
 
 (comment
-  (empty-run? (run "Foo" #{:italic :bold :underline}))
-  (empty-run? (empty-run))
-  (def r (run "Foo"))
-  (insert-end r "Bar")
-  (insert-start r "oof")
-  (delete r 1 3)
-  (delete r 3))
+  (def sum-runs [(run "pre" #{})
+                 (run "Foo" #{:italic})
+                 (run "" #{:strike})
+                 (run "bar" #{:italic})
+                 (run "bizz" #{:bold})
+                 (run "buzz" #{:bold :underline})])
+  (paragraph sum-runs)
+  (=
+   {:text "foo" :formats #{:bar}}
+   (into {} (run "foo" #{:bar})))
+  (run "foo"))

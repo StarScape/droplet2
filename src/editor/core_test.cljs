@@ -49,3 +49,5 @@
         collapsed-end (c/collapse-end sel)]
     (= (c/caret collapsed-start) 10)
     (= (c/caret collapsed-end) 20)))
+
+;; TODO: write tests for Paragraph and Run
