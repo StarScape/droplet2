@@ -139,6 +139,45 @@
   (assoc r :formats (reduce toggle-set-entry (:formats r) formats-coll)))
 
 ;; TODO: do we need apply-formats and remove-formats?
+;; TODO: write tests for run
+
+
+;;; Paragraph operations ;;;
+
+;; Forward declare for use in `paragraph` function.
+(declare optimize-runs)
+
+(defn paragraph
+  "Creates a new paragraph."
+  [runs]
+  {:runs (optimize-runs runs)})
+
+(defn- optimize-runs
+  "Merges adjacent runs that have the same formatting, and removes empty runs.
+   Will return an empty run if one is passed in, or all runs have no content."
+  [runs]
+  (let [non-empty-runs (filterv (complement empty-run?) runs)]
+    (reduce
+     (fn [optimized next-run]
+       (let [top (peek optimized)]
+         (if (= (:formats next-run) (:formats top))
+           (-> optimized
+               pop
+               (conj (insert-end top (:text next-run))))
+           (conj optimized next-run))))
+     (vector (first non-empty-runs))
+     (subvec non-empty-runs 1))))
+
+(def sum-runs [(run "pre" #{})
+               (run "Foo" #{:italic})
+               (run "" #{:somethin-else})
+               (run "bar" #{:italic})
+               (run "bizz" #{:bold})
+               (run "buzz" #{:bold :underline})])
+
+(optimize-runs sum-runs)
+
+(paragraph [(run "Foo" #{:italic}) (run "bar" #{:bold})])
 
 (def r1 (run "Foobar" #{:italic :bold}))
 
