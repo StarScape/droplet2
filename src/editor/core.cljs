@@ -42,19 +42,19 @@
 (defn set-single
   "Sets a single-selection to a given offset."
   [sel offset]
-   (-> sel
-       (assoc-in [:start :offset] offset)
-       (assoc-in [:end :offset] offset)))
+  (-> sel
+      (assoc-in [:start :offset] offset)
+      (assoc-in [:end :offset] offset)))
 
 (defn collapse-start
   "Returns a new single-selection at the start of the selection"
   [sel]
-   (selection [(-> sel :start :paragraph) (-> sel :start :offset)]))
+  (selection [(-> sel :start :paragraph) (-> sel :start :offset)]))
 
 (defn collapse-end
   "Returns a new single-selection at the end of the selection"
   [sel]
-   (selection [(-> sel :end :paragraph) (-> sel :end :offset)]))
+  (selection [(-> sel :end :paragraph) (-> sel :end :offset)]))
 
 ;; TODO is this needed? see Paragraph.js
 (defn smart-collapse [sel]
@@ -164,6 +164,7 @@
   [runs]
   (->Paragraph (optimize-runs runs)))
 
+;; Paragraph helper functions
 (defn- optimize-runs
   "Merges adjacent runs that have the same formatting, and removes empty runs.
    Will return an empty run if one is passed in, or all runs have no content."
@@ -178,18 +179,58 @@
             (vector (first non-empty-runs))
             (subvec non-empty-runs 1))))
 
-;; (defmethod insert [Paragraph PersistentVector Selection]
-;;   [para runs sel]
-;;   (if (single? sel)))
+(defn- at-offset
+  "Returns the index of the run `offset` falls inside of, as well as the
+   number of characters that `offset` lies inside that run, as a vector pair."
+  [runs offset]
+  (loop [run-idx -1
+         offset-into-run 0
+         sum-prev-offsets 0]
+    (if (> sum-prev-offsets offset)
+      [run-idx offset-into-run]
+      (do
+        (prn runs)
+        (recur
+         (inc run-idx)
+         (- offset sum-prev-offsets)
+         (+ sum-prev-offsets (len (nth runs (inc run-idx)))))))))
+
+(defn- split-runs
+  "Splits runs at offset, returning a vector of [before, after].
+   Will break a run apart if `offset` is inside that run."
+  [runs offset]
+  (let [[target-run-idx target-run-offset] (at-offset runs offset)
+        [target-before target-after] (split (nth runs target-run-idx) target-run-offset)
+        before (take target-run-idx runs)
+        after (drop (inc target-run-idx) runs)]
+    [(conj (vec before) target-before)
+     (apply vector target-after after)]))
+
+(defmethod insert [Paragraph Selection PersistentVector]
+  [para sel runs]
+  (if (single? sel)
+    (let [[before after] (split-runs (:runs para) (caret sel))
+          new-runs (concat before runs after)]
+      (assoc para :runs (optimize-runs new-runs)))
+    (let [removed (remove para sel)]
+      (insert removed runs (collapse-start sel)))))
+
+;; (def runs [(run "foo" #{:italic})
+;;            (run "bar" #{:bold})
+;;            (run "bizz" #{:italic})
+;;            (run "buzz" #{:bold})])
+
+(def sum-runs [(run "pre" #{})
+               (run "Foo" #{:italic})
+               (run "" #{:strike})
+               (run "bar" #{:italic})
+               (run "bizz" #{:bold})
+               (run "buzz" #{:bold :underline})])
+(def p (paragraph sum-runs))
+(def s (selection [p 12]))
+(insert p s [(run "INSERTED")])
 
 (comment
-  (def sum-runs [(run "pre" #{})
-                 (run "Foo" #{:italic})
-                 (run "" #{:strike})
-                 (run "bar" #{:italic})
-                 (run "bizz" #{:bold})
-                 (run "buzz" #{:bold :underline})])
-  (paragraph sum-runs)
   (=
    {:text "foo" :formats #{:bar}}
    (into {} (run "foo" #{:bar})))
