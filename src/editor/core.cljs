@@ -1,16 +1,18 @@
 (ns editor.core)
 
-;;; Selection operations ;;;
+;; TODO: spec all this out. Also learn spec :)
 
-; ;; TODO: spec this all out. Also learn spec :)
+;;; Selection operations ;;;
+(defrecord Selection [start end backwards?])
+
 (defn selection
   "Creates a new selection."
   ([[start-paragraph start-offset] [end-paragraph end-offset] backwards?]
-   {:start {:paragraph start-paragraph
-            :offset start-offset}
-    :end {:paragraph end-paragraph
-          :offset end-offset}
-    :backwards? backwards?})
+   (map->Selection {:start {:paragraph start-paragraph
+                            :offset start-offset}
+                    :end {:paragraph end-paragraph
+                          :offset end-offset}
+                    :backwards? backwards?}))
   ([start end]
    (selection start end false))
   ([start]
@@ -55,15 +57,20 @@
    (selection [(-> sel :end :paragraph) (-> sel :end :offset)]))
 
 ;; TODO is this needed? see Paragraph.js
-;; (defn collapse [sel]
-;;   (if (single? sel)
-;;     sel
-;;     (if (:backwards sel)
-;;       (collapse-start sel)
-;;       (collapse-end sel))))
+(defn smart-collapse [sel]
+  (if (single? sel)
+    sel
+    (if (:backwards sel)
+      (collapse-start sel)
+      (collapse-end sel))))
 
+;; Some operations used across core datatypes
 (defprotocol TextContainer
   (len [this] "Returns the number of chars in container (run/paragraph)."))
+
+(defn type-dispatch [& args] (mapv type args))
+(defmulti insert "Inserts into a Run/Paragraph/Document." #'type-dispatch)
+(defmulti delete "Deletes from a Run/Paragraph/Document." #'type-dispatch)
 
 ;;; Run operations ;;;
 (defrecord Run [text formats]
@@ -94,16 +101,17 @@
                 text-after (.slice (:text r) offset (len r))]
             [(run text-before (:formats r)), (run text-after (:formats r))])))
 
-(defn insert
-  "Insert insert text into run at the given selection."
-  ;; Range selection, remove block-selected text and then insert.
-  ([r text start end]
-   (let [before (.slice (:text r) 0 start)
-         after (.slice (:text r) end)]
-     (assoc r :text (str before text after))))
-  ;; Single selection
-  ([r text caret]
-   (insert r text caret caret)))
+;; Range selection, remove block-selected text and then insert.
+(defmethod insert [Run js/String js/Number js/Number]
+  [r text start end]
+  (let [before (.slice (:text r) 0 start)
+        after (.slice (:text r) end)]
+    (assoc r :text (str before text after))))
+
+;; Single selection insert, nothing removed.
+(defmethod insert [Run js/String js/Number]
+  [r text caret]
+  (insert r text caret caret))
 
 (defn insert-start
   "Shortcut for inserting text at the start of a run."
@@ -115,19 +123,20 @@
   [run text]
   (insert run text (count (:text run))))
 
-(defn delete
-  "Remove the text between start and end. If passed a single position, acts like backspace."
-  ([run start end]
-   (let [before (.slice (:text run) 0 start)
-         after (.slice (:text run) end)]
-     (assoc run :text (str before after))))
-  ([run caret]
-   (delete run (dec caret) caret)))
+;; Delete between start and end
+(defmethod delete [Run js/Number js/Number]
+  [run start end]
+  (let [before (.slice (:text run) 0 start)
+        after (.slice (:text run) end)]
+    (assoc run :text (str before after))))
+
+;; Delete at, acts like backspace
+(defmethod delete [Run js/Number]
+  [run caret]
+  (delete run (dec caret) caret))
 
 (defn- toggle-set-entry [s v]
-  (if (contains? s v)
-    (disj s v)
-    (conj s v)))
+  (if (contains? s v) (disj s v) (conj s v)))
 
 (defn toggle-format
   "Toggles the provided format on Run `r`. E.g. if `format` is not present it will be added, if
@@ -147,7 +156,6 @@
 (defrecord Paragraph [runs]
   TextContainer
   (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p))))
-
 
 (declare optimize-runs) ;; Forward declare for use in `paragraph` function.
 
@@ -169,6 +177,10 @@
                   (conj optimized next-run))))
             (vector (first non-empty-runs))
             (subvec non-empty-runs 1))))
+
+;; (defmethod insert [Paragraph PersistentVector Selection]
+;;   [para runs sel]
+;;   (if (single? sel)))
 
 (comment
   (def sum-runs [(run "pre" #{})

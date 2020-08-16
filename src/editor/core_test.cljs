@@ -10,16 +10,16 @@
 (deftest selection-init
   (testing "Basic initialization"
     (let [sel (c/selection [:p1 0] [:p2 10] true)]
-      (is (= sel {:start {:paragraph :p1, :offset 0}
-                  :end {:paragraph :p2, :offset 10}
-                  :backwards? true}))))
+      (is (= (into {} sel) {:start {:paragraph :p1, :offset 0}
+                            :end {:paragraph :p2, :offset 10}
+                            :backwards? true}))))
   (testing "Different ways of initializing selection"
     (let [s1 (c/selection [:p1 0] [:p1 0] false)
           s2 (c/selection [:p1 0] [:p1 0])
           s3 (c/selection [:p1 0])]
-      (is (= s1 {:start {:paragraph :p1, :offset 0}
-                 :end {:paragraph :p1, :offset 0}
-                 :backwards? false}))
+      (is (= (into {} s1) {:start {:paragraph :p1, :offset 0}
+                           :end {:paragraph :p1, :offset 0}
+                           :backwards? false}))
       (is (= s1 s2 s3)))))
 
 (deftest caret
