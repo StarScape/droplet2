@@ -159,6 +159,7 @@
 
 (declare optimize-runs) ;; Forward declare for use in `paragraph` function.
 
+;; TODO: should we change these to ->paragraph and ->run to make more clear?
 (defn paragraph
   "Creates a new paragraph."
   [runs]
@@ -179,56 +180,65 @@
             (vector (first non-empty-runs))
             (subvec non-empty-runs 1))))
 
-(defn- at-offset
+(defn at-offset
   "Returns the index of the run `offset` falls inside of, as well as the
    number of characters that `offset` lies inside that run, as a vector pair."
   [runs offset]
-  (loop [run-idx -1
-         offset-into-run 0
-         sum-prev-offsets 0]
+  (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
     (if (> sum-prev-offsets offset)
       [run-idx offset-into-run]
-      (do
-        (prn runs)
-        (recur
-         (inc run-idx)
-         (- offset sum-prev-offsets)
-         (+ sum-prev-offsets (len (nth runs (inc run-idx)))))))))
+      (recur
+       (inc run-idx)
+       (- offset sum-prev-offsets)
+       (+ sum-prev-offsets (len (nth runs (inc run-idx))))))))
 
 (defn- split-runs
-  "Splits runs at offset, returning a vector of [before, after].
+  "Splits runs at offset, returning a vector of [runs before, runs after].
    Will break a run apart if `offset` is inside that run."
   [runs offset]
   (let [[target-run-idx target-run-offset] (at-offset runs offset)
         [target-before target-after] (split (nth runs target-run-idx) target-run-offset)
-        before (take target-run-idx runs)
-        after (drop (inc target-run-idx) runs)]
-    [(conj (vec before) target-before)
-     (apply vector target-after after)]))
+        before (conj (take target-run-idx runs) target-before)
+        after (cons target-after (drop (inc target-run-idx) runs))]
+    [before after]))
 
+;; Main Paragraph operations
 (defmethod insert [Paragraph Selection PersistentVector]
   [para sel runs]
   (if (single? sel)
     (let [[before after] (split-runs (:runs para) (caret sel))
           new-runs (concat before runs after)]
       (assoc para :runs (optimize-runs new-runs)))
-    (let [removed (remove para sel)]
-      (insert removed runs (collapse-start sel)))))
+    (let [selection-removed (delete para sel)]
+      (insert selection-removed (collapse-start sel) runs))))
 
-;; (def runs [(run "foo" #{:italic})
-;;            (run "bar" #{:bold})
-;;            (run "bizz" #{:italic})
-;;            (run "buzz" #{:bold})])
+(defmethod insert [Paragraph Selection Run]
+  [para sel r]
+  (insert para sel [r]))
 
-(def sum-runs [(run "pre" #{})
-               (run "Foo" #{:italic})
-               (run "" #{:strike})
-               (run "bar" #{:italic})
-               (run "bizz" #{:bold})
-               (run "buzz" #{:bold :underline})])
-(def p (paragraph sum-runs))
-(def s (selection [p 12]))
+(defmethod delete [Paragraph Selection]
+  [para sel]
+  ;; TODO
+  (throw "Not implemented, WTF are you doing?"))
+
+;; (def sum-runs [(run "pre" #{})
+;;                (run "Foo" #{:italic})
+;;                (run "" #{:strike})
+;;                (run "bar" #{:italic})
+;;                (run "bizz" #{:bold})
+;;                (run "buzz" #{:bold :underline})])
+
+(def my-runs [(run "foo" #{:italic})
+              (run "bar" #{:bold})
+              (run "bizz" #{:italic})
+              (run "buzz" #{:bold})])
+
+(def p (paragraph my-runs))
+(def s (selection [p 1]))
+
+(split-runs my-runs 8)
 (insert p s [(run "INSERTED")])
+;; (insert p s [(run "INSERTED")])
 
 (comment
   (=
