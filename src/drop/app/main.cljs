@@ -1,4 +1,4 @@
-(ns app.main)
+(ns drop.app.main)
 
 (defn ^:dev/after-load reload
   "Called after hot-reloading."

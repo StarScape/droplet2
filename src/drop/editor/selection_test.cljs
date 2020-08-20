@@ -1,6 +1,6 @@
-(ns editor.core-test
+(ns drop.editor.selection-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [editor.core :as c]))
+            [drop.editor.core :as c]))
 
 (def sel-single (c/selection [:p1 10]))
 (def sel-range (c/selection [:p1 10] [:p1 20]))

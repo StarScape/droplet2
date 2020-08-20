@@ -1,4 +1,4 @@
-(ns editor.core)
+(ns drop.editor.core)
 
 ;; TODO: spec all this out. Also learn spec :)
 
@@ -180,12 +180,31 @@
             (vector (first non-empty-runs))
             (subvec non-empty-runs 1))))
 
+;; These two functions are poorly named, really. Should probably be something like
+;; run-idx-and-run-relative-offset-for-paragraph offset, but I haven't come up with
+;; anything that's descriptive enough and without being verbose.
 (defn at-offset
   "Returns the index of the run `offset` falls inside of, as well as the
    number of characters that `offset` lies inside that run, as a vector pair."
   [runs offset]
   (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
     (if (> sum-prev-offsets offset)
+      [run-idx offset-into-run]
+      (recur
+       (inc run-idx)
+       (- offset sum-prev-offsets)
+       (+ sum-prev-offsets (len (nth runs (inc run-idx))))))))
+
+(defn before-offset
+  "Returns the index of the run immediately before `offset`, as well as the
+   number of characters that `offset` lies inside that run, as a vector pair.
+
+   The difference from `at-offset`, is that it will return info for the run *before*
+   the offset -- i.e. the one that would get backspaced if it were the cursor. At a
+   boundary between runs before-offset will favor the first run."
+  [runs offset]
+  (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
+    (if (>= sum-prev-offsets offset)
       [run-idx offset-into-run]
       (recur
        (inc run-idx)
@@ -216,25 +235,39 @@
   [para sel r]
   (insert para sel [r]))
 
+(defn- range-delete-paragraph [para sel]
+  (let [[run-idx run-offset] (before-offset (:runs para) (caret sel))
+        new-run (-> (nth (:runs para) run-idx)
+                    (delete run-offset))]
+    (assoc-in para [:runs run-idx] new-run)))
+
+(defn- single-delete-paragraph [para sel]
+  (let [runs (:runs para)
+        ;; [start-idx start-offset] (at-offset runs (-> sel :start :offset))
+        ;; [end-idx end-offset] (at-offset runs (-> sel :end :offset))
+        [before _] (split-runs runs (-> sel :start :offset))
+        [_ after] (split-runs runs (-> sel :end :offset))
+        new-runs (optimize-runs (concat before after))]
+    (assoc para :runs new-runs)))
+
 (defmethod delete [Paragraph Selection]
   [para sel]
   ;; TODO
-  (throw "Not implemented, WTF are you doing?"))
-
-;; (def sum-runs [(run "pre" #{})
-;;                (run "Foo" #{:italic})
-;;                (run "" #{:strike})
-;;                (run "bar" #{:italic})
-;;                (run "bizz" #{:bold})
-;;                (run "buzz" #{:bold :underline})])
+  (if (single? sel)
+    (range-delete-paragraph para sel)
+    (single-delete-paragraph para sel)))
 
 (def my-runs [(run "foo" #{:italic})
               (run "bar" #{:bold})
               (run "bizz" #{:italic})
               (run "buzz" #{:bold})])
 
+
 (def p (paragraph my-runs))
 (def s (selection [p 1]))
+
+;; f[oob]arbizzbuzz
+(delete p (selection [p 1] [p 4]))
 
 (split-runs my-runs 8)
 (insert p s [(run "INSERTED")])
