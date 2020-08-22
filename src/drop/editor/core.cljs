@@ -84,13 +84,12 @@
   ([text]
    (->Run text #{})))
 
-(defn empty-run "Returns an empty run." [] (run ""))
-
 (defn empty-run?
   "Returns true if the run is empty."
   [r]
   (or (= "" (:text r)) (= nil (:text r))))
 
+;; TODO: test split
 (defn split
   "Splits the run at `offset`, returning a vector of two new runs containing the text to either side."
   [r offset]
@@ -166,19 +165,21 @@
   (->Paragraph (optimize-runs runs)))
 
 ;; Paragraph helper functions
-(defn- optimize-runs
+(defn optimize-runs
   "Merges adjacent runs that have the same formatting, and removes empty runs.
    Will return an empty run if one is passed in, or all runs have no content."
   [runs]
   (let [non-empty-runs (filterv (complement empty-run?) runs)]
-    (reduce (fn [optimized next-run]
-              (let [top (peek optimized)]
-                (if (= (:formats next-run) (:formats top))
-                  (-> (pop optimized)
-                      (conj (insert-end top (:text next-run))))
-                  (conj optimized next-run))))
-            (vector (first non-empty-runs))
-            (subvec non-empty-runs 1))))
+    (if (empty? non-empty-runs)
+      [(run "")]
+      (reduce (fn [optimized next-run]
+                (let [top (peek optimized)]
+                  (if (= (:formats next-run) (:formats top))
+                    (-> (pop optimized)
+                        (conj (insert-end top (:text next-run))))
+                    (conj optimized next-run))))
+              (vector (first non-empty-runs))
+              (subvec non-empty-runs 1)))))
 
 ;; These two functions are poorly named, really. Should probably be something like
 ;; run-idx-and-run-relative-offset-for-paragraph offset, but I haven't come up with
@@ -215,10 +216,19 @@
   "Splits runs at offset, returning a vector of [runs before, runs after].
    Will break a run apart if `offset` is inside that run."
   [runs offset]
-  (let [[target-run-idx target-run-offset] (at-offset runs offset)
-        [target-before target-after] (split (nth runs target-run-idx) target-run-offset)
-        before (conj (take target-run-idx runs) target-before)
-        after (cons target-after (drop (inc target-run-idx) runs))]
+  (let [offset-fun (if (zero? offset)
+                     at-offset
+                     before-offset)
+
+        [target-run-idx target-run-offset] (offset-fun runs offset)
+        target-run (nth runs target-run-idx)
+        [target-before target-after] (split target-run target-run-offset)
+
+        runs-before (vec (take target-run-idx runs))
+        runs-after (vec (drop (inc target-run-idx) runs))
+
+        before (conj runs-before target-before)
+        after (into [target-after] runs-after)]
     [before after]))
 
 ;; Main Paragraph operations
@@ -262,19 +272,11 @@
               (run "bizz" #{:italic})
               (run "buzz" #{:bold})])
 
-
 (def p (paragraph my-runs))
 (def s (selection [p 1]))
 
-;; f[oob]arbizzbuzz
-(delete p (selection [p 1] [p 4]))
+(def simplep (paragraph [(run "foobar1" #{:bold})
+                         (run "goobar2")
+                         (run "hoobar3" #{:italic})]))
 
-(split-runs my-runs 8)
-(insert p s [(run "INSERTED")])
-;; (insert p s [(run "INSERTED")])
-
-(comment
-  (=
-   {:text "foo" :formats #{:bar}}
-   (into {} (run "foo" #{:bar})))
-  (run "foo"))
+(insert simplep (selection [simplep 21]) (run "post"))

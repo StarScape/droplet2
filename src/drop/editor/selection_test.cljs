@@ -7,7 +7,7 @@
 (def sel-backwards (c/selection [:p1 10] [:p1 20] true))
 
 ;; Some mock paragraphs
-(deftest selection-init
+(deftest selection-init-test
   (testing "Basic initialization"
     (let [sel (c/selection [:p1 0] [:p2 10] true)]
       (is (= (into {} sel) {:start {:paragraph :p1, :offset 0}
@@ -22,12 +22,12 @@
                            :backwards? false}))
       (is (= s1 s2 s3)))))
 
-(deftest caret
+(deftest caret-test
   (is (= (c/caret sel-single) 10))
   (is (= (c/caret sel-range) 20))
   (is (= (c/caret sel-backwards) 10)))
 
-(deftest single?
+(deftest single?-test
   (let [s1 (c/selection [:p1 1])
         s2 (c/selection [:p1 1] [:p1 10])
         s3 (c/selection [:p1 1] [:p1 1])]
@@ -35,15 +35,15 @@
     (is (not (c/single? s2)))
     (is (c/single? s3))))
 
-(deftest shift-single
+(deftest shift-single-test
   (is (=
        (+ 5 (c/caret sel-single))
        (-> sel-single (c/shift-single 5) c/caret))))
 
-(deftest set-single
+(deftest set-single-test
   (is (= 255 (-> sel-single (c/set-single 255) c/caret))))
 
-(deftest collapse
+(deftest collapse-test
   (let [sel (c/selection [:p1 10] [:p1 20])
         collapsed-start (c/collapse-start sel)
         collapsed-end (c/collapse-end sel)]
