@@ -267,21 +267,21 @@
 
 (defmethod delete [Paragraph Selection]
   [para sel]
-  ;; TODO
   (if (single? sel)
     (single-delete-paragraph para sel)
     (range-delete-paragraph para sel)))
 
-(def my-runs [(run "foo" #{:italic})
-              (run "bar" #{:bold})
-              (run "bizz" #{:italic})
-              (run "buzz" #{:bold})])
+(comment
+  (def my-runs [(run "foo" #{:italic})
+                (run "bar" #{:bold})
+                (run "bizz" #{:italic})
+                (run "buzz" #{:bold})])
 
-(def p (paragraph my-runs))
-(def s (selection [p 1]))
+  (def p (paragraph my-runs))
+  (def s (selection [p 1]))
 
-(def simplep (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar3" #{:italic})]))
+  (def simplep (paragraph [(run "foobar1" #{:bold})
+                           (run "goobar2")
+                           (run "hoobar3" #{:italic})]))
 
-(insert simplep (selection [simplep 21]) (run "post"))
+  (insert simplep (selection [simplep 21]) (run "post")))
