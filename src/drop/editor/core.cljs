@@ -84,6 +84,8 @@
   ([text]
    (->Run text #{})))
 
+(defn empty-run "Returns an empty run." [] (run ""))
+
 (defn empty-run?
   "Returns true if the run is empty."
   [r]
@@ -220,10 +222,12 @@
                      at-offset
                      before-offset)
 
+        ;; Split the run at the caret position
         [target-run-idx target-run-offset] (offset-fun runs offset)
         target-run (nth runs target-run-idx)
         [target-before target-after] (split target-run target-run-offset)
 
+        ;; Get runs before and after the run the caret is inside of
         runs-before (vec (take target-run-idx runs))
         runs-after (vec (drop (inc target-run-idx) runs))
 
@@ -245,13 +249,14 @@
   [para sel r]
   (insert para sel [r]))
 
-(defn- range-delete-paragraph [para sel]
+(defn- single-delete-paragraph [para sel]
   (let [[run-idx run-offset] (before-offset (:runs para) (caret sel))
         new-run (-> (nth (:runs para) run-idx)
-                    (delete run-offset))]
-    (assoc-in para [:runs run-idx] new-run)))
+                    (delete run-offset))
+        new-runs (assoc (:runs para) run-idx new-run)]
+    (assoc para :runs (optimize-runs new-runs))))
 
-(defn- single-delete-paragraph [para sel]
+(defn- range-delete-paragraph [para sel]
   (let [runs (:runs para)
         ;; [start-idx start-offset] (at-offset runs (-> sel :start :offset))
         ;; [end-idx end-offset] (at-offset runs (-> sel :end :offset))
@@ -264,8 +269,8 @@
   [para sel]
   ;; TODO
   (if (single? sel)
-    (range-delete-paragraph para sel)
-    (single-delete-paragraph para sel)))
+    (single-delete-paragraph para sel)
+    (range-delete-paragraph para sel)))
 
 (def my-runs [(run "foo" #{:italic})
               (run "bar" #{:bold})
