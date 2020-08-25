@@ -271,6 +271,16 @@
     (single-delete-paragraph para sel)
     (range-delete-paragraph para sel)))
 
+;; TODO: Paragraph format functions apply-format and remove-format
+
+;; TODO: Add two convenience functions: remove-after(caret) and remove-before(caret).
+;;       These will come in handy when calling in from the Document :)
+
+;; TODO: Add functions next-word and previous-word that fulfill the functions of ctrl+right
+;;       and ctrl+left, respectively. You will need to think this through and adhere to expected
+;;       behavior. The tricky part will be making sure it behaves correctly when passing between
+;;       runs.
+
 (comment
   (def my-runs [(run "foo" #{:italic})
                 (run "bar" #{:bold})
