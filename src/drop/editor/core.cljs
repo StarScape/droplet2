@@ -271,15 +271,24 @@
     (single-delete-paragraph para sel)
     (range-delete-paragraph para sel)))
 
-;; TODO: Paragraph format functions apply-format and remove-format
+(def word-separators #{"." "/" "\\" "(" ")" "\"" "'" "-" ":" "," "." ";" "<" ">" "~" "!" "@" "#" "$" "%" "^" "&" "*" "|" "+" "=" "[" "]" "{" "}" "`" "~" "?"})
 
-;; TODO: Add two convenience functions: remove-after(caret) and remove-before(caret).
-;;       These will come in handy when calling in from the Document :)
+(defn next-word
+  "Returns the location of next word in paragraph as a single-selection.
+   Passed in selection must be a single-selection as well."
+  [para sel]
+  (let [text (apply str (map :text (:runs para)))
+        text-len (count text)]
+    (loop [i (min text-len (inc (caret sel)))]
+      (if (or (>= i text-len)
+              (= " " (nth text i)))
+        i
+        (recur (inc i))))))
 
-;; TODO: Add functions next-word and previous-word that fulfill the functions of ctrl+right
-;;       and ctrl+left, respectively. You will need to think this through and adhere to expected
-;;       behavior. The tricky part will be making sure it behaves correctly when passing between
-;;       runs.
+(def my-par (paragraph [(run "Hello world")]))
+
+(next-word my-par (selection [my-par 0]))
+;; Expecting: 5
 
 (comment
   (def my-runs [(run "foo" #{:italic})
@@ -295,3 +304,14 @@
                            (run "hoobar3" #{:italic})]))
 
   (insert simplep (selection [simplep 21]) (run "post")))
+
+;; TODO: Paragraph format functions apply-format and remove-format
+
+;; TODO: Add two convenience functions: remove-after(caret) and remove-before(caret).
+;;       These will come in handy when calling in from the Document :)
+
+;; TODO: Add functions next-word and previous-word that fulfill the functions of ctrl+right
+;;       and ctrl+left, respectively. You will need to think this through and adhere to expected
+;;       behavior. The tricky part will be making sure it behaves correctly when passing between
+;;       runs.
+
