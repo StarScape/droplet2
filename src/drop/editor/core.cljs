@@ -271,7 +271,14 @@
     (single-delete-paragraph para sel)
     (range-delete-paragraph para sel)))
 
-(def word-separators #{"." "/" "\\" "(" ")" "\"" "'" "-" ":" "," "." ";" "<" ">" "~" "!" "@" "#" "$" "%" "^" "&" "*" "|" "+" "=" "[" "]" "{" "}" "`" "~" "?"})
+(def word-separators #{" " "." "/" "\\"
+                       "(" ")" "\"" "'"
+                       "-" ":" "," ";"
+                       "<" ">" "~" "!"
+                       "@" "#" "$" "%"
+                       "^" "&" "*" "|"
+                       "+" "=" "[" "]"
+                       "{" "}" "`" "?"})
 
 (defn next-word
   "Returns the location of next word in paragraph as a single-selection.
@@ -281,13 +288,13 @@
         text-len (count text)]
     (loop [i (min text-len (inc (caret sel)))]
       (if (or (>= i text-len)
-              (= " " (nth text i)))
-        i
+              (word-separators (nth text i)))
+        (selection [para i])
         (recur (inc i))))))
 
-(def my-par (paragraph [(run "Hello world")]))
+(def my-par (paragraph [(run "Hello world. Hello world, my name is Jack.")]))
 
-(next-word my-par (selection [my-par 0]))
+(next-word my-par (selection [my-par 42]))
 ;; Expecting: 5
 
 (comment

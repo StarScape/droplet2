@@ -174,3 +174,20 @@
       (is (= p
              (paragraph [(run "foobar1" #{:bold})
                          (run "goobar2")]))))))
+
+(deftest next-word-test
+  (let [p (paragraph [(run "Hello world. Hello world, my name is Jack")])]
+    (testing "beginning of word goes to end"
+      (is (= 5 (c/caret (c/next-word p (selection [p 0]))))))
+
+    (testing "middle of word goes to end"
+      (is (= 5 (c/caret (c/next-word p (selection [p 2]))))))
+
+    (testing "end of word goes to end of next word, skipping space"
+      (is (= 11 (c/caret (c/next-word p (selection [p 5]))))))
+
+    (testing "period counts as a separate word"
+      (is (= 12 (c/caret (c/next-word p (selection [p 11]))))))
+
+    (testing "gives end of paragraph when there is no space at end of last word"
+      (is (= 41 (c/caret (c/next-word p (selection [p 38]))))))))
