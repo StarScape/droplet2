@@ -271,32 +271,6 @@
     (single-delete-paragraph para sel)
     (range-delete-paragraph para sel)))
 
-(def word-separators #{" " "." "/" "\\"
-                       "(" ")" "\"" "'"
-                       "-" ":" "," ";"
-                       "<" ">" "~" "!"
-                       "@" "#" "$" "%"
-                       "^" "&" "*" "|"
-                       "+" "=" "[" "]"
-                       "{" "}" "`" "?"})
-
-(defn next-word
-  "Returns the location of next word in paragraph as a single-selection.
-   Passed in selection must be a single-selection as well."
-  [para sel]
-  (let [text (apply str (map :text (:runs para)))
-        text-len (count text)]
-    (loop [i (min text-len (inc (caret sel)))]
-      (if (or (>= i text-len)
-              (word-separators (nth text i)))
-        (selection [para i])
-        (recur (inc i))))))
-
-(def my-par (paragraph [(run "Hello world. Hello world, my name is Jack.")]))
-
-(next-word my-par (selection [my-par 42]))
-;; Expecting: 5
-
 (comment
   (def my-runs [(run "foo" #{:italic})
                 (run "bar" #{:bold})
