@@ -25,6 +25,9 @@
   (testing "skips over multiple separators if starting from a separator"
     (is (= 47 (next-word para 44))))
 
+  (testing "skips to end of word when starting from a single punctuation mark inside of a word (e.g. a dash)"
+    (is (= 80 (next-word para 77))))
+
   (testing "goes to end of the paragraph if already in the last word/separator/whitespace-block"
     (is (= (count test-str) (next-word para 78)))))
 
