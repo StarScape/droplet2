@@ -24,7 +24,9 @@
   "Is argument a word char?"
   [char]
   (and (not (whitespace? char))
-       (not (separator? char))))
+       (not (separator? char))
+       (not= nil char)
+       (not= "" char)))
 
 (defn until
   "Advance in string `text` beginning at index `start` until a character
@@ -36,9 +38,27 @@
       i
       (recur (inc i)))))
 
+(defn back-until
+  "Go back in string `text` beginning at index `start` until the character **before** the matches predicate `pred`.
+   The standard behavior of prev-word is more dependent on what lies immediately *before* the caret than underneath
+   it, which is why this function works a little different from `until`.
+
+   Note the index returned is not the one the predicate matches, but the one after."
+  [text start pred]
+  (loop [i start]
+    (if (or (<= i 0)
+            (pred (nth text (dec i))))
+      i
+      (recur (dec i)))))
+
+(defn until-non-whitespace [text start] (until text start #(not (whitespace? %))))
+(defn back-until-non-whitespace [text start] (back-until text start #(not (whitespace? %))))
+
 (defn until-non-separator [text start] (until text start #(not (separator? %))))
+(defn back-until-non-separator [text start] (back-until text start #(not (separator? %))))
 
 (defn until-non-word [text start] (until text start #(not (word? %))))
+(defn back-until-non-word [text start] (back-until text start #(not (word? %))))
 
 ;; Main functionality ;;
 
@@ -62,28 +82,49 @@
 (defn- next-word-offset
   "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection."
   [text start-offset]
-  (let [first-char (nth text start-offset)]
-    (cond
-      (whitespace? first-char)
-      (let [idx (until text start-offset #(not (whitespace? %)))
-            char (nth text idx)]
-        (if (separator? char)
-          (until-non-separator text idx)
-          (until-non-word text idx)))
+  (if (>= start-offset (count text))
+    (count text)
+    (let [first-char (nth text start-offset)]
+      (cond
+        (whitespace? first-char)
+        (let [idx (until-non-whitespace text start-offset)
+              char (nth text idx)]
+          (if (separator? char)
+            (until-non-separator text idx)
+            (until-non-word text idx)))
 
-      (separator? first-char)
-      (let [next-char (.charAt text (inc start-offset))]
-        (if (word? next-char)
-          (until-non-word text (inc start-offset))
-          (until-non-separator text start-offset)))
+        (separator? first-char)
+        (let [next-char (.charAt text (inc start-offset))]
+          (if (word? next-char)
+            (until-non-word text (inc start-offset))
+            (until-non-separator text start-offset)))
 
-      ;; Word character
-      :else
-      (until-non-word text start-offset))))
+        ;; Word character
+        :else
+        (until-non-word text start-offset)))))
 
-;; TODO
-(defn- prev-word-offset [text start-offset]
-  0)
+(defn- prev-word-offset
+  "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection."
+  [text start-offset]
+  (if (<= start-offset 0)
+    0
+    (let [before-start (nth text (dec start-offset))]
+      (cond
+        (whitespace? before-start)
+        (let [idx (back-until-non-whitespace text start-offset)
+              char-before-idx (nth text (dec idx))]
+          (if (separator? char-before-idx)
+            (back-until-non-separator text idx)
+            (back-until-non-word text idx)))
+
+        (separator? before-start)
+        (if (word? (.charAt text (- start-offset 2)))
+          (back-until-non-word text (dec start-offset))
+          (back-until-non-separator text start-offset))
+
+        ;; Word character
+        :else
+        (back-until-non-word text start-offset)))))
 
 (extend-type core/Paragraph
   Navigable
@@ -99,4 +140,6 @@
 
 (comment
   (def my-par (core/paragraph [(core/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
-  (next-word my-par 77))
+  (prev-word-offset (apply str (map :text (:runs my-par))) 0)
+  (next-word-offset (apply str (map :text (:runs my-par))) 80)
+  )
