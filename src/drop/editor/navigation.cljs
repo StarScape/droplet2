@@ -2,17 +2,16 @@
   (:require [clojure.string :as str]
             [drop.editor.core :as core :refer [caret]]))
 
-;; TODO: a good approach might be to make a protocol `Navigable` and implement it for Paragraphs and Documents
+;; Some helpers and useful primitives ;;
 
-;; Non-whitespace word separators
-(def separators #{"." "/" "\\"
-                  "(" ")" "\"" "'"
-                  "-" ":" "," ";"
-                  "<" ">" "~" "!"
-                  "@" "#" "$" "%"
-                  "^" "&" "*" "|"
-                  "+" "=" "[" "]"
-                  "{" "}" "`" "?"})
+(def separators
+  "Non-whitespace word separators"
+  #{"." "/" "\\" "(" ")" "\"" "'"
+    "-" ":" "," ";" "<" ">" "~" "!"
+    "@" "#" "$" "%" "^" "&" "*" "|"
+    "+" "=" "[" "]" "{" "}" "`" "?"})
+
+(defn separator? "Is argument a separator char?" [char] (separators char))
 
 (defn whitespace?
   "Is argument a whitespace char?"
@@ -21,8 +20,6 @@
     true
     false))
 
-(defn separator? "Is argument a separator char?" [char] (separators char))
-
 (defn word?
   "Is argument a word char?"
   [char]
@@ -30,7 +27,8 @@
        (not (separator? char))))
 
 (defn until
-  "Advance in string `text` beginning at index `start` until a character is found matching predicate `pred`."
+  "Advance in string `text` beginning at index `start` until a character
+   is found for which predicate `pred` returns true, and returns that index."
   [text start pred]
   (loop [i start]
     (if (or (>= i (count text))
@@ -38,38 +36,67 @@
       i
       (recur (inc i)))))
 
-(defn until-non-separator [text start]
-  (until text start #(not (separator? %))))
+(defn until-non-separator [text start] (until text start #(not (separator? %))))
 
-(defn until-non-word [text start]
-  (until text start #(not (word? %))))
+(defn until-non-word [text start] (until text start #(not (word? %))))
 
-; Might be better named `jump-right`, since it doesn't *really* correspond to going to the next word in all circumstances
-(defn next-word
-  "Returns off of the end of the next word in paragraph after offset `start`.
-   Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac)."
-  [para start]
-  (let [text (apply str (map :text (:runs para)))
-        first-char (nth text start)]
+;; Main functionality ;;
+
+(defprotocol Navigable
+  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new selection."
+  ;; (forward [this sel] "Move forward by 1 character.")
+  ;; (backward [this sel] "Move backward by 1 character.")
+  ;; (start [this sel] "Go to start of paragraph or document.")
+  ;; (end [this sel] "Go to end of paragraph or document.")
+
+  (next-word
+    [this sel]
+    "Returns selection after jumping to the end of the next word from selection `sel`.
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac).")
+
+  (prev-word
+    [this sel]
+    "Returns selection after jumping to the start of the previous word from selection `sel`.
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac)."))
+
+(defn- next-word-offset
+  "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection."
+  [text start-offset]
+  (let [first-char (nth text start-offset)]
     (cond
       (whitespace? first-char)
-      (let [idx (until text start #(not (whitespace? %)))
+      (let [idx (until text start-offset #(not (whitespace? %)))
             char (nth text idx)]
         (if (separator? char)
           (until-non-separator text idx)
           (until-non-word text idx)))
 
       (separator? first-char)
-      (let [next-char (.charAt text (inc start))]
+      (let [next-char (.charAt text (inc start-offset))]
         (if (word? next-char)
-          (until-non-word text (inc start))
-          (until-non-separator text start)))
+          (until-non-word text (inc start-offset))
+          (until-non-separator text start-offset)))
 
       ;; Word character
       :else
-      (until-non-word text start))))
+      (until-non-word text start-offset))))
 
-; (count "Hello. world.")
-(def my-par (core/paragraph [(core/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
+;; TODO
+(defn- prev-word-offset [text start-offset]
+  0)
 
-(next-word my-par 77)
+(extend-type core/Paragraph
+  Navigable
+  (next-word [para sel]
+    (let [text (apply str (map :text (:runs para)))
+          offset (next-word-offset text (caret sel))]
+      (core/selection [para offset])))
+
+  (prev-word [para sel]
+    (let [text (apply str (map :text (:runs para)))
+          offset (prev-word-offset text (caret sel))]
+      (core/selection [para offset]))))
+
+(comment
+  (def my-par (core/paragraph [(core/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
+  (next-word my-par 77))
