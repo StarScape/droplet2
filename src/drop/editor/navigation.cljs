@@ -11,7 +11,7 @@
     "@" "#" "$" "%" "^" "&" "*" "|"
     "+" "=" "[" "]" "{" "}" "`" "?"})
 
-(defn separator? "Is argument a separator char?" [char] (separators char))
+(defn separator? "Is argument a separator char?" [char] (contains? separators char))
 
 (defn whitespace?
   "Is argument a whitespace char?"
@@ -27,6 +27,12 @@
        (not (separator? char))
        (not= nil char)
        (not= "" char)))
+
+(defn inside-word?
+  "Are the characters on either side of the char at index `idx` in the string `text` word-chars?"
+  [text idx]
+  (and (word? (.charAt text (dec idx)))
+       (word? (.charAt text (inc idx)))))
 
 (defn until
   "Advance in string `text` beginning at index `start` until a character
@@ -62,24 +68,8 @@
 
 ;; Main functionality ;;
 
-(defprotocol Navigable
-  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new selection."
-  ;; (forward [this sel] "Move forward by 1 character.")
-  ;; (backward [this sel] "Move backward by 1 character.")
-  ;; (start [this sel] "Go to start of paragraph or document.")
-  ;; (end [this sel] "Go to end of paragraph or document.")
 
-  (next-word
-    [this sel]
-    "Returns selection after jumping to the end of the next word from selection `sel`.
-    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac).")
-
-  (prev-word
-    [this sel]
-    "Returns selection after jumping to the start of the previous word from selection `sel`.
-    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac)."))
-
-(defn- next-word-offset
+(defn next-word-offset
   "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection."
   [text start-offset]
   (if (>= start-offset (count text))
@@ -94,10 +84,9 @@
             (until-non-word text idx)))
 
         (separator? first-char)
-        (let [next-char (.charAt text (inc start-offset))]
-          (if (word? next-char)
-            (until-non-word text (inc start-offset))
-            (until-non-separator text start-offset)))
+        (if (inside-word? text start-offset)
+          (until-non-word text (inc start-offset))
+          (until-non-separator text start-offset))
 
         ;; Word character
         :else
@@ -118,13 +107,31 @@
             (back-until-non-word text idx)))
 
         (separator? before-start)
-        (if (word? (.charAt text (- start-offset 2)))
+        ;; Using inside-word? as our metric might not be the best way, time will tell
+        (if (inside-word? text (dec start-offset))
           (back-until-non-word text (dec start-offset))
           (back-until-non-separator text start-offset))
 
         ;; Word character
         :else
         (back-until-non-word text start-offset)))))
+
+(defprotocol Navigable
+  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new selection."
+  ;; (forward [this sel] "Move forward by 1 character.")
+  ;; (backward [this sel] "Move backward by 1 character.")
+  ;; (start [this sel] "Go to start of paragraph or document.")
+  ;; (end [this sel] "Go to end of paragraph or document.")
+
+  (next-word
+    [this sel]
+    "Returns selection after jumping to the end of the next word from selection `sel`.
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac).")
+
+  (prev-word
+    [this sel]
+    "Returns selection after jumping to the start of the previous word from selection `sel`.
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac)."))
 
 (extend-type core/Paragraph
   Navigable

@@ -1,6 +1,6 @@
 (ns drop.editor.navigation-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.navigation :as nav :refer [next-word]]
+            [drop.editor.navigation :as nav :refer [next-word prev-word next-word-offset prev-word-offset]]
             [drop.editor.core :as core :refer [caret selection]]))
 
 (def test-str "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")
@@ -31,37 +31,50 @@
   (testing "goes to end of the paragraph if already in the last word/separator/whitespace-block"
     (is (= (count test-str) (caret (next-word para (selection [para 78])))))))
 
-; (deftest next-word-test
-;   (let [p (paragraph [(run "Hello world. Hello world, my name is Jack")])]
-;     (testing "beginning of word goes to end"
-;       (is (= 5 (c/caret (c/next-word p (selection [p 0]))))))
+;; TODO: fix this
+(deftest prev-word-test
+  (testing "starting from within word goes to first char of the word"
+    (is (= 6 (caret (prev-word para (selection [para 9]))))))
 
-;     (testing "middle of word goes to end"
-;       (is (= 5 (c/caret (c/next-word p (selection [p 2]))))))
+  (testing "starting from space directly after word goes to first char of word"
+    (is (= 32 (caret (prev-word para (selection [para 36]))))))
 
-;     (testing "end of word goes to end of next word, skipping space"
-;       (is (= 11 (c/caret (c/next-word p (selection [p 5]))))))
+  (testing "starting from after space goes to the beginning of the previous word"
+    (is (= 13 (caret (prev-word para (selection [para 19]))))))
 
-;     (testing "period counts as a separate word"
-;       (is (= 12 (c/caret (c/next-word p (selection [p 11]))))))
+  (testing "starting from immediately after single separator with a word before it goes to word start"
+    (is (= 11 (caret (prev-word para (selection [para 12]))))))
 
-;     (testing "gives end of paragraph when there is no space at end of last word"
-;       (is (= 41 (c/caret (c/next-word p (selection [p 38]))))))))
+  (testing "in hyphenated word, starting from the end goes back to the hyphen"
+    (is (= 78 (caret (prev-word para (selection [para 80]))))))
 
-; (deftest prev-word-test
-;   (let [p (paragraph [(run "Hello world. Hello world, my name is Jack")])]
-;     (testing "beginning of word goes to end"
-;       (is (= 5 (c/caret (c/next-word p (selection [p 0]))))))
+  (testing "in hyphenated word, starting from immediately after the hyphen goes back to beginning of previous word"
+    (is (= 75 (caret (prev-word para (selection [para 78]))))))
 
-;     (testing "middle of word goes to end"
-;       (is (= 5 (c/caret (c/next-word p (selection [p 2]))))))
+  (testing "in hypenated word, starting from first hyphen goes to beginning of word"
+    (is (= 75 (caret (prev-word para (selection [para 77]))))))
 
-;     (testing "end of word goes to end of next word, skipping space"
-;       (is (= 11 (c/caret (c/next-word p (selection [p 5]))))))
+  (testing "skips over as much whitespace as possible to get to the start of the previous word"
+    (is (= 13 (caret (prev-word para (selection [para 21]))))))
 
-;     (testing "period counts as a separate word"
-;       (is (= 12 (c/caret (c/next-word p (selection [p 11]))))))
+  (testing "skips over mutliple separators if there is a separator before the starting position"
+    (is (= 44 (caret (prev-word para (selection [para 47]))))))
 
-;     (testing "gives end of paragraph when there is no space at end of last word"
-;       (is (= 41 (c/caret (c/next-word p (selection [p 38]))))))))
+  (testing "goes to beginning of the paragraph if already in the last word/separator/whitespace-block"
+    (is (= 0 (caret (prev-word para (selection [para 4])))))))
 
+(deftest hyphen-back-and-forth-test
+  (let [text "word1 a-very-long-hyphenated-word word2"]
+    (is (= 33 (->> 5
+                   (next-word-offset text)
+                   (next-word-offset text)
+                   (next-word-offset text)
+                   (next-word-offset text)
+                   (next-word-offset text))))
+
+    (is (= 6 (->> 33
+                  (prev-word-offset text)
+                  (prev-word-offset text)
+                  (prev-word-offset text)
+                  (prev-word-offset text)
+                  (prev-word-offset text))))))
