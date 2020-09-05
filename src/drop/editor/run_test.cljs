@@ -59,12 +59,3 @@
 
   (testing "backspace before beginning"
     (comment "TODO")))
-
-(deftest toggle-format-test
-  (let [test-run (c/run "foobar" #{:italic :bold})
-        toggled1 (c/toggle-format test-run :italic)
-        toggled2 (c/toggle-format test-run :bold)
-        toggled3 (c/toggle-format test-run :underline)]
-    (is (= #{:bold} (:formats toggled1)))
-    (is (= #{:italic} (:formats toggled2)))
-    (is (= #{:italic :bold :underline} (:formats toggled3)))))

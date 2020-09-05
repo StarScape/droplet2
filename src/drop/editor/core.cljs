@@ -139,21 +139,6 @@
   [run caret]
   (delete run (dec caret) caret))
 
-;; I believe these toggle-format related functions can be done away with
-(defn- toggle-set-entry [s v]
-  (if (contains? s v) (disj s v) (conj s v)))
-
-(defn toggle-format
-  "Toggles the provided format on Run `r`. E.g. if `format` is not present it will be added, if
-   it is it will be turned off. Providing a format that is not present in `r` will have no effect."
-  [r format]
-  (update r :formats #(toggle-set-entry % format)))
-
-(defn toggle-formats
-  "The same as `toggle-format`, but takes a coll of all formats to toggle."
-  [r formats-coll]
-  (assoc r :formats (reduce toggle-set-entry (:formats r) formats-coll)))
-
 (defn apply-formats
   "Returns a new run with the all the supplied formats applied."
   [r formats]
@@ -314,7 +299,7 @@
          (map :formats)
          (apply set/intersection))))
 
-(defn separate-selection
+(defn separate-selected
   "Splits the runs at the beginning and end of the selection and returns three vectors
    of runs: [runs before selection start, runs inside selection, runs after selection end].
 
@@ -331,16 +316,26 @@
   "Returns the content within the range-selection
    inside the paragraph, as a vector of runs."
   [para sel]
-  (let [[_before within _after] (separate-selection (:runs para) sel)]
+  (let [[_before within _after] (separate-selected (:runs para) sel)]
     within))
 
-(defn update-selection
-  "Transforms the content within the range selection `sel` using `update-fn`.
-   The value passed into `update-fn` each time will be a run, and should return another."
-  [para sel update-fn]
-  (let [[before within after] (separate-selection (:runs para) sel)
-        updated-within (mapv update-fn within)
-        new-runs (optimize-runs (concat before updated-within after))]
+(defn toggle-format
+  [para sel format]
+  (let [[before in-selection after]
+        (separate-selected (:runs para) sel)
+
+        common-formats
+        (->> in-selection
+             (map :formats)
+             (apply set/intersection))
+
+        in-selection-updated
+        (if (contains? common-formats format)
+          (mapv #(remove-format % format) in-selection)
+          (mapv #(apply-format % format) in-selection))
+
+        new-runs
+        (optimize-runs (concat before in-selection-updated after))]
     (assoc para :runs new-runs)))
 
 ;; TODO: Paragraph format functions apply-format and remove-format
@@ -354,11 +349,11 @@
 (def s (selection [p 1]))
 
 ;; foobarbizzbuzz
-(update-selection p (selection [p 1] [p (- (len p) 2)]) #(apply-format % :underline))
-(selected-content p (selection [p 1] [p (- (len p) 2)]))
-(selected-content p (selection [p 2] [p (- (len p) 2)]))
+;; (update-selected p (selection [p 1] [p (- (len p) 2)]) #(apply-format % :underline))
+;; (selected-content p (selection [p 1] [p (- (len p) 2)]))
+;; (separate-selected p (selection [p 2] [p (- (len p) 2)]))
 
-(len p)
+(toggle-format p (selection [p 0] [p 6]) :italic)
 
 (def simplep (paragraph [(run "foobar1" #{:bold})
                          (run "goobar2")
