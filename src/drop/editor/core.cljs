@@ -139,6 +139,7 @@
   [run caret]
   (delete run (dec caret) caret))
 
+;; I believe these toggle-format related functions can be done away with
 (defn- toggle-set-entry [s v]
   (if (contains? s v) (disj s v) (conj s v)))
 
@@ -152,6 +153,26 @@
   "The same as `toggle-format`, but takes a coll of all formats to toggle."
   [r formats-coll]
   (assoc r :formats (reduce toggle-set-entry (:formats r) formats-coll)))
+
+(defn apply-formats
+  "Returns a new run with the all the supplied formats applied."
+  [r formats]
+  (update r :formats #(apply conj % formats)))
+
+(defn apply-format
+  "Returns a new run with the format applied."
+  [r format]
+  (update r :formats #(conj % format)))
+
+(defn remove-formats
+  "Returns a new run with all the supplied formats removed."
+  [r formats]
+  (update r :formats #(apply disj % formats)))
+
+(defn remove-format
+  "Returns a new run with the format removed."
+  [r format]
+  (update r :formats #(disj % format)))
 
 ;;; Paragraph operations ;;;
 (defrecord Paragraph [runs]
