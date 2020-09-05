@@ -29,7 +29,10 @@
     (is (= 80 (caret (next-word para (selection [para 77]))))))
 
   (testing "goes to end of the paragraph if already in the last word/separator/whitespace-block"
-    (is (= (count test-str) (caret (next-word para (selection [para 78])))))))
+    (is (= (count test-str) (caret (next-word para (selection [para 78]))))))
+
+  (testing "collapses first"
+    (is (= 11 (caret (next-word para (selection [para 0] [para 5])))))))
 
 ;; TODO: fix this
 (deftest prev-word-test
@@ -61,7 +64,10 @@
     (is (= 44 (caret (prev-word para (selection [para 47]))))))
 
   (testing "goes to beginning of the paragraph if already in the last word/separator/whitespace-block"
-    (is (= 0 (caret (prev-word para (selection [para 4])))))))
+    (is (= 0 (caret (prev-word para (selection [para 4]))))))
+
+  (testing "collapses first"
+    (is (= 0 (caret (prev-word para (selection [para 5] [para 55] true)))))))
 
 (deftest hyphen-back-and-forth-test
   (let [text "word1 a-very-long-hyphenated-word word2"]

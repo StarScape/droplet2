@@ -1,6 +1,6 @@
 (ns drop.editor.navigation
   (:require [clojure.string :as str]
-            [drop.editor.core :as core :refer [caret]]))
+            [drop.editor.core :as core :refer [caret smart-collapse]]))
 
 ;; Some helpers and useful primitives ;;
 
@@ -68,7 +68,6 @@
 
 ;; Main functionality ;;
 
-
 (defn next-word-offset
   "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection."
   [text start-offset]
@@ -117,11 +116,11 @@
         (back-until-non-word text start-offset)))))
 
 (defprotocol Navigable
-  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new selection."
-  ;; (forward [this sel] "Move forward by 1 character.")
-  ;; (backward [this sel] "Move backward by 1 character.")
+  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new Selection."
   ;; (start [this sel] "Go to start of paragraph or document.")
   ;; (end [this sel] "Go to end of paragraph or document.")
+  ;; (next-char [this sel] "Move forward by 1 character.")
+  ;; (prev-char [this sel] "Move backward by 1 character.")
 
   (next-word
     [this sel]
@@ -139,12 +138,12 @@
   Navigable
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
-          offset (next-word-offset text (caret sel))]
+          offset (next-word-offset text (caret (smart-collapse sel)))]
       (core/selection [para offset])))
 
   (prev-word [para sel]
     (let [text (apply str (map :text (:runs para)))
-          offset (prev-word-offset text (caret sel))]
+          offset (prev-word-offset text (caret (smart-collapse sel)))]
       (core/selection [para offset]))))
 
 (comment

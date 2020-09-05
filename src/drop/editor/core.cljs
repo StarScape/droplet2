@@ -61,7 +61,7 @@
 (defn smart-collapse [sel]
   (if (single? sel)
     sel
-    (if (:backwards sel)
+    (if (:backwards? sel)
       (collapse-start sel)
       (collapse-end sel))))
 
@@ -338,25 +338,9 @@
         (optimize-runs (concat before in-selection-updated after))]
     (assoc para :runs new-runs)))
 
-;; TODO: Paragraph format functions apply-format and remove-format
-
+;; foobarbizzbuzz
 (def my-runs [(run "foo" #{:italic})
               (run "bar" #{:bold :italic})
               (run "bizz" #{:italic})
               (run "buzz" #{:bold})])
-
 (def p (paragraph my-runs))
-(def s (selection [p 1]))
-
-;; foobarbizzbuzz
-;; (update-selected p (selection [p 1] [p (- (len p) 2)]) #(apply-format % :underline))
-;; (selected-content p (selection [p 1] [p (- (len p) 2)]))
-;; (separate-selected p (selection [p 2] [p (- (len p) 2)]))
-
-(toggle-format p (selection [p 0] [p 6]) :italic)
-
-(def simplep (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar3" #{:italic})]))
-
-(insert simplep (selection [simplep 21]) (run "post"))

@@ -208,3 +208,13 @@
       (is (= #{:italic}
              (c/shared-formats p (selection [p 0] [p 3]))
              (c/shared-formats p (selection [p 0] [p 4])))))))
+
+;; TODO: finish this test
+;; (deftest toggle-format-test
+;;   (let [p (paragraph [(run "aaa", #{:italic :bold})
+;;                       (run "bbb", #{:italic :underline})
+;;                       (run "ccc", #{:strikethrough})
+;;                       (run "ddd", #{:italic})])]
+
+;;     (testing "not activated on whole selection, should activate"
+;;       (is (= #{:})))))
