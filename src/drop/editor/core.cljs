@@ -314,6 +314,35 @@
          (map :formats)
          (apply set/intersection))))
 
+(defn separate-selection
+  "Splits the runs at the beginning and end of the selection and returns three vectors
+   of runs: [runs before selection start, runs inside selection, runs after selection end].
+
+   This may seem like an esoteric operation but it's a useful helper for some of the
+   core functions (see below)."
+  [runs sel]
+  (let [[before-sel after-start] (split-runs runs (-> sel :start :offset))
+        before-sel-len (reduce + (map len before-sel))
+        adjusted-end-offset (- (-> sel :end :offset) before-sel-len)
+        [within-sel after-sel] (split-runs after-start adjusted-end-offset)]
+    [before-sel within-sel after-sel]))
+
+(defn selected-content
+  "Returns the content within the range-selection
+   inside the paragraph, as a vector of runs."
+  [para sel]
+  (let [[_before within _after] (separate-selection (:runs para) sel)]
+    within))
+
+(defn update-selection
+  "Transforms the content within the range selection `sel` using `update-fn`.
+   The value passed into `update-fn` each time will be a run, and should return another."
+  [para sel update-fn]
+  (let [[before within after] (separate-selection (:runs para) sel)
+        updated-within (mapv update-fn within)
+        new-runs (optimize-runs (concat before updated-within after))]
+    (assoc para :runs new-runs)))
+
 ;; TODO: Paragraph format functions apply-format and remove-format
 
 (def my-runs [(run "foo" #{:italic})
@@ -325,7 +354,11 @@
 (def s (selection [p 1]))
 
 ;; foobarbizzbuzz
-(shared-formats p (selection [p 0] [p 10]))
+(update-selection p (selection [p 1] [p (- (len p) 2)]) #(apply-format % :underline))
+(selected-content p (selection [p 1] [p (- (len p) 2)]))
+(selected-content p (selection [p 2] [p (- (len p) 2)]))
+
+(len p)
 
 (def simplep (paragraph [(run "foobar1" #{:bold})
                          (run "goobar2")
