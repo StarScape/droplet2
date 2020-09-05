@@ -1,4 +1,5 @@
-(ns drop.editor.core)
+(ns drop.editor.core
+  (:require [clojure.set :as set]))
 
 ;; TODO: spec all this out. Also learn spec :)
 
@@ -280,15 +281,30 @@
   [para offset]
   (delete para (selection [para 0] [para offset])))
 
+(defn all-formats
+  "Returns the set of all the formats shared by each run that is inside (wholly or
+   partially) the selection. Will return an empty set if there are no formats shared."
+  [para sel]
+  (let [runs (:runs para)
+        [start-run-idx _] (at-offset runs (-> sel :start :offset))
+        [end-run-idx _] (before-offset runs (-> sel :end :offset))
+        selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+    (->> selected-runs
+         (map :formats)
+         (apply set/intersection))))
+
 ;; TODO: Paragraph format functions apply-format and remove-format
 
 (def my-runs [(run "foo" #{:italic})
-              (run "bar" #{:bold})
+              (run "bar" #{:bold :italic})
               (run "bizz" #{:italic})
               (run "buzz" #{:bold})])
 
 (def p (paragraph my-runs))
 (def s (selection [p 1]))
+
+;; foobarbizzbuzz
+(all-formats p (selection [p 0] [p 10]))
 
 (def simplep (paragraph [(run "foobar1" #{:bold})
                          (run "goobar2")
