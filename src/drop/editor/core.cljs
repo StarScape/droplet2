@@ -281,7 +281,7 @@
   [para offset]
   (delete para (selection [para 0] [para offset])))
 
-(defn all-formats
+(defn shared-formats
   "Returns the set of all the formats shared by each run that is inside (wholly or
    partially) the selection. Will return an empty set if there are no formats shared."
   [para sel]
@@ -304,7 +304,7 @@
 (def s (selection [p 1]))
 
 ;; foobarbizzbuzz
-(all-formats p (selection [p 0] [p 10]))
+(shared-formats p (selection [p 0] [p 10]))
 
 (def simplep (paragraph [(run "foobar1" #{:bold})
                          (run "goobar2")

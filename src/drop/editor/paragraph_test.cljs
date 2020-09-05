@@ -174,3 +174,37 @@
       (is (= p
              (paragraph [(run "foobar1" #{:bold})
                          (run "goobar2")]))))))
+
+(deftest shared-formats-test
+  (testing "with a shared format across many runs"
+    (let [p (paragraph [(run "a", #{:italic :bold})
+                        (run "b", #{:italic :underline})
+                        (run "c", #{:italic :strikethrough})
+                        (run "d", #{:italic})])]
+      (is (= #{:italic}
+             (c/shared-formats p (selection [p 0] [p (c/len p)]))))))
+
+  (testing "with a no shared formats"
+    (let [p (paragraph [(run "a", #{:italic :bold})
+                        (run "b", #{:italic :underline})
+                        (run "c", #{:strikethrough})
+                        (run "d", #{:italic})])]
+      (is (= #{}
+             (c/shared-formats p (selection [p 0] [p (c/len p)]))))))
+
+  (testing "single run"
+    (let [p (paragraph [(run "a", #{:italic :bold})
+                        (run "b", #{:italic :underline})
+                        (run "c", #{:strikethrough})
+                        (run "d", #{:italic})])]
+      (is (= #{:italic :bold}
+             (c/shared-formats p (selection [p 0] [p 1]))))))
+
+  (testing "two runs"
+    (let [p (paragraph [(run "aa", #{:italic :bold})
+                        (run "bb", #{:italic :underline})
+                        (run "cc", #{:strikethrough})
+                        (run "dd", #{:italic})])]
+      (is (= #{:italic}
+             (c/shared-formats p (selection [p 0] [p 3]))
+             (c/shared-formats p (selection [p 0] [p 4])))))))
