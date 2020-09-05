@@ -133,6 +133,8 @@
     "Returns selection after jumping to the start of the previous word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac)."))
 
+;; TODO: next-word and prev-word should collapse first thing
+
 (extend-type core/Paragraph
   Navigable
   (next-word [para sel]

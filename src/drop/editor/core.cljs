@@ -65,6 +65,8 @@
       (collapse-end sel))))
 
 ;; Some operations used across core datatypes
+
+;; This protocol could stand a better name if we're honest
 (defprotocol TextContainer
   (len [this] "Returns the number of chars in container (run/paragraph)."))
 
@@ -149,9 +151,6 @@
   "The same as `toggle-format`, but takes a coll of all formats to toggle."
   [r formats-coll]
   (assoc r :formats (reduce toggle-set-entry (:formats r) formats-coll)))
-
-;; TODO: do we need apply-formats and remove-formats?
-;; TODO: write tests for run
 
 ;;; Paragraph operations ;;;
 (defrecord Paragraph [runs]
@@ -271,28 +270,28 @@
     (single-delete-paragraph para sel)
     (range-delete-paragraph para sel)))
 
-(comment
-  (def my-runs [(run "foo" #{:italic})
-                (run "bar" #{:bold})
-                (run "bizz" #{:italic})
-                (run "buzz" #{:bold})])
+(defn delete-after
+  "Removes everything in paragraph `para` after the provided offset."
+  [para offset]
+  (delete para (selection [para offset] [para (len para)])))
 
-  (def p (paragraph my-runs))
-  (def s (selection [p 1]))
-
-  (def simplep (paragraph [(run "foobar1" #{:bold})
-                           (run "goobar2")
-                           (run "hoobar3" #{:italic})]))
-
-  (insert simplep (selection [simplep 21]) (run "post")))
+(defn delete-before
+  "Removes everything in paragraph `para` before the provided offset."
+  [para offset]
+  (delete para (selection [para 0] [para offset])))
 
 ;; TODO: Paragraph format functions apply-format and remove-format
 
-;; TODO: Add two convenience functions: remove-after(caret) and remove-before(caret).
-;;       These will come in handy when calling in from the Document :)
+(def my-runs [(run "foo" #{:italic})
+              (run "bar" #{:bold})
+              (run "bizz" #{:italic})
+              (run "buzz" #{:bold})])
 
-;; TODO: Add functions next-word and previous-word that fulfill the functions of ctrl+right
-;;       and ctrl+left, respectively. You will need to think this through and adhere to expected
-;;       behavior. The tricky part will be making sure it behaves correctly when passing between
-;;       runs.
+(def p (paragraph my-runs))
+(def s (selection [p 1]))
 
+(def simplep (paragraph [(run "foobar1" #{:bold})
+                         (run "goobar2")
+                         (run "hoobar3" #{:italic})]))
+
+(insert simplep (selection [simplep 21]) (run "post"))
