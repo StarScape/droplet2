@@ -1,0 +1,15 @@
+{:source-paths ["src"]
+ :dependencies [[hashp "0.2.0"]]
+ :dev-http {8080 "public"}
+ :nrepl {:port 3333}
+ :builds
+  {:app {:output-dir "public/js"
+         :asset-path "/js" ;; NOTE: relative to server root
+         :target :browser
+         :modules {:main {:init-fn drop.app.main/main}}
+         :nrepl {:init-ns user}
+         :devtools {:preloads [hashp.core]}}
+   :test {:target :node-test
+          :ns-regexp "-test$"
+          :output-to "out/tests.js"
+          :autorun true}}}
