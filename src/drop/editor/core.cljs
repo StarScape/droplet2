@@ -1,72 +1,10 @@
 (ns drop.editor.core
-  (:require [clojure.set :as set]))
+  (:require [clojure.set :as set])
+  (:require [drop.editor.selection :as sel :refer [Selection selection]]))
 
 ;; TODO: spec all this out. Also learn spec :)
 
 ;;; Selection operations ;;;
-(defrecord Selection [start end backwards?])
-
-(defn selection
-  "Creates a new selection."
-  ([[start-paragraph start-offset] [end-paragraph end-offset] backwards?]
-   (map->Selection {:start {:paragraph start-paragraph
-                            :offset start-offset}
-                    :end {:paragraph end-paragraph
-                          :offset end-offset}
-                    :backwards? backwards?}))
-  ([start end]
-   (selection start end false))
-  ([start]
-   (selection start start false)))
-
-(defn caret
-  "Returns the location the caret will be rendered at."
-  [sel]
-  (if (:backwards? sel)
-    (-> sel :start :offset)
-    (-> sel :end :offset)))
-
-(defn single?
-  "Returns true if argument is a single selection."
-  [sel]
-  (= (:start sel) (:end sel)))
-
-(def range?
-  "Returns true if argument is a range selection."
-  (complement single?))
-
-(defn shift-single
-  "Shift a single-selection by n characters (can be positive or negative)."
-  [{{paragraph :paragraph offset :offset} :start} n]
-  (selection [paragraph (+ n offset)]))
-
-(defn set-single
-  "Sets a single-selection to a given offset."
-  [sel offset]
-  (-> sel
-      (assoc-in [:start :offset] offset)
-      (assoc-in [:end :offset] offset)))
-
-(defn collapse-start
-  "Returns a new single-selection at the start of the selection"
-  [sel]
-  (selection [(-> sel :start :paragraph) (-> sel :start :offset)]))
-
-(defn collapse-end
-  "Returns a new single-selection at the end of the selection"
-  [sel]
-  (selection [(-> sel :end :paragraph) (-> sel :end :offset)]))
-
-;; TODO is this needed? see Paragraph.js
-(defn smart-collapse [sel]
-  (if (single? sel)
-    sel
-    (if (:backwards? sel)
-      (collapse-start sel)
-      (collapse-end sel))))
-
-;; Some operations used across core datatypes
-
 ;; This protocol could stand a better name if we're honest
 (defprotocol TextContainer
   (len [this] "Returns the number of chars in container (run/paragraph)."))
@@ -244,19 +182,19 @@
 ;; Main Paragraph operations
 (defmethod insert [Paragraph Selection PersistentVector]
   [para sel runs]
-  (if (single? sel)
-    (let [[before after] (split-runs (:runs para) (caret sel))
+  (if (sel/single? sel)
+    (let [[before after] (split-runs (:runs para) (sel/caret sel))
           new-runs (concat before runs after)]
       (assoc para :runs (optimize-runs new-runs)))
     (let [selection-removed (delete para sel)]
-      (insert selection-removed (collapse-start sel) runs))))
+      (insert selection-removed (sel/collapse-start sel) runs))))
 
 (defmethod insert [Paragraph Selection Run]
   [para sel r]
   (insert para sel [r]))
 
 (defn- single-delete-paragraph [para sel]
-  (let [[run-idx run-offset] (before-offset (:runs para) (caret sel))
+  (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
         new-run (-> (nth (:runs para) run-idx)
                     (delete run-offset))
         new-runs (assoc (:runs para) run-idx new-run)]
@@ -273,7 +211,7 @@
 
 (defmethod delete [Paragraph Selection]
   [para sel]
-  (if (single? sel)
+  (if (sel/single? sel)
     (single-delete-paragraph para sel)
     (range-delete-paragraph para sel)))
 
@@ -338,9 +276,24 @@
         (optimize-runs (concat before in-selection-updated after))]
     (assoc para :runs new-runs)))
 
+;; TODO next: write Document stuff
+;; - insert
+;; - delete
+
+;;; Document operations ;;;
+(defrecord Document [selection children])
+
+;; (defmethod insert [Document Selection Run]
+;;   )
+
 ;; foobarbizzbuzz
-(def my-runs [(run "foo" #{:italic})
-              (run "bar" #{:bold :italic})
-              (run "bizz" #{:italic})
-              (run "buzz" #{:bold})])
-(def p (paragraph my-runs))
+(def p1 (paragraph [(run "foo" #{:italic})
+                    (run "bar" #{:bold :italic})
+                    (run "bizz" #{:italic})
+                    (run "buzz" #{:bold})]))
+(def p2 (paragraph [(run "aaa" #{})
+                    (run "bbb" #{})
+                    (run "ccc" #{})
+                    (run "ddd" #{})]))
+
+(def doc (->Document (selection [p1 0]) [p1 p2]))

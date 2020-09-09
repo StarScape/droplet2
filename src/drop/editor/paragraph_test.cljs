@@ -1,6 +1,7 @@
 (ns drop.editor.paragraph-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.core :as c :refer [run paragraph selection]]))
+            [drop.editor.selection :as sel :refer [selection]]
+            [drop.editor.core :as c :refer [run paragraph]]))
 
 ;; These provide a simple way to render a paragraph as a string, thereby allowing
 ;; us to check output of `insert` in the test below without manually checking each

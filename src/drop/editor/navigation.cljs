@@ -1,6 +1,7 @@
 (ns drop.editor.navigation
   (:require [clojure.string :as str]
-            [drop.editor.core :as core :refer [caret smart-collapse]]))
+            [drop.editor.core :as core]
+            [drop.editor.selection :as sel :refer [caret smart-collapse]]))
 
 ;; Some helpers and useful primitives ;;
 
@@ -139,12 +140,12 @@
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           offset (next-word-offset text (caret (smart-collapse sel)))]
-      (core/selection [para offset])))
+      (sel/selection [para offset])))
 
   (prev-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           offset (prev-word-offset text (caret (smart-collapse sel)))]
-      (core/selection [para offset]))))
+      (sel/selection [para offset]))))
 
 (comment
   (def my-par (core/paragraph [(core/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
