@@ -1,5 +1,7 @@
 (ns drop.editor.selection)
 
+;; TODO: Change selection to use index instead of a reference to a paragraph
+
 (defrecord Selection [start end backwards?])
 
 (defn selection

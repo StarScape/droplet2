@@ -23,7 +23,9 @@
   ([text formats]
    (->Run text formats))
   ([text]
-   (->Run text #{})))
+   (->Run text #{}))
+  ([]
+   (->Run "text" #{})))
 
 (defn empty-run "Returns an empty run." [] (run ""))
 
@@ -55,6 +57,7 @@
   [r text caret]
   (insert r text caret caret))
 
+;; TODO: make these two multimethods and implement them for paragraphs as well
 (defn insert-start
   "Shortcut for inserting text at the start of a run."
   [run text]
@@ -107,8 +110,10 @@
 ;; TODO: should we change these to ->paragraph and ->run to make more clear?
 (defn paragraph
   "Creates a new paragraph."
-  [runs]
-  (->Paragraph (optimize-runs runs)))
+  ([runs]
+   (->Paragraph (optimize-runs runs)))
+  ([]
+   (->Paragraph [(run)])))
 
 ;; Paragraph helper functions
 (defn optimize-runs
@@ -258,6 +263,9 @@
     within))
 
 (defn toggle-format
+  "Either applies the selected format to the selection (if the selected text
+   does not already have that format) or removes it (if the selected text **does**
+   have that format)."
   [para sel format]
   (let [[before in-selection after]
         (separate-selected (:runs para) sel)
@@ -281,19 +289,95 @@
 ;; - delete
 
 ;;; Document operations ;;;
-(defrecord Document [selection children])
+(defrecord Document [children]
+  TextContainer
+  (len [doc] (reduce #(+ %1 (len %2)) 0 (:children doc))))
 
-;; (defmethod insert [Document Selection Run]
-;;   )
+(defn document
+  "Creates a new document."
+  ([children]
+   (->Document children))
+  ([]
+   (->Document [(paragraph)])))
+
+(defn- insert-into-single-paragraph
+  "Helper function. For document inserts where we only have to worry about a single paragraph,
+   meaning we can basically just delegate to the paragraph insert function and replace the paragraph."
+  [doc sel run]
+  (let [target-idx (-> sel :start :paragraph)
+        target-para (nth (:children doc) target-idx)
+        new-para #p (insert target-para sel run)]
+    (assoc-in doc [:children target-idx] new-para)))
+
+(defn- insert-paragraphs-into-doc
+  "Helper function. Inserts multiple paragraphs into the document."
+  [doc sel paragraphs]
+  (let [target-para-idx (-> sel :start :paragraph)
+        target-para (nth (:children doc) target-para-idx)
+        [before-caret after-caret] (split-runs (:runs target-para) (sel/caret sel))
+
+        first-paragraph
+        (paragraph (concat before-caret (:runs (first paragraphs))))
+        #_(-> target-para
+            (delete-after (sel/caret sel))
+            (insert-end (:runs (first paragraphs))))
+        #_(insert-end (delete-after target-para (sel/caret sel)) (:runs (first paragraphs)))
+
+        last-paragraph
+        (paragraph (concat (:runs (peek paragraphs)) after-caret))
+
+        in-between-paragraphs
+        (subvec paragraphs 1 (-> paragraphs count dec))
+
+        new-children
+        (concat (subvec (:children doc) 0 target-para-idx)
+                (flatten [first-paragraph in-between-paragraphs last-paragraph])
+                (subvec (:children doc) (inc target-para-idx)))]
+    (assoc doc :children new-children)))
+
+(defmethod insert [Document Selection PersistentVector]
+  [doc sel runs-or-paras]
+  (if (sel/single? sel)
+    (condp = (type (first runs-or-paras))
+      Run (insert-into-single-paragraph doc sel runs-or-paras)
+      Paragraph (insert-paragraphs-into-doc doc sel runs-or-paras))
+    (insert (delete doc sel) (sel/collapse-start sel) runs-or-paras)))
+
+(defmethod insert [Document Selection Paragraph]
+  [doc sel para]
+  (if (sel/single? sel)
+    (insert-into-single-paragraph doc sel (:runs para))
+    (insert-into-single-paragraph (delete doc sel) (sel/collapse-start sel) (:runs para))))
+
+(defmethod insert [Document Selection Run]
+  [doc sel r]
+  (if (sel/single? sel)
+    (insert-into-single-paragraph doc sel r)
+    (insert-into-single-paragraph (delete doc sel) (sel/collapse-start sel) r)))
+
+(defmethod insert [Document Selection js/String]
+  [doc sel text]
+  (insert-into-single-paragraph doc sel (run text)))
 
 ;; foobarbizzbuzz
 (def p1 (paragraph [(run "foo" #{:italic})
                     (run "bar" #{:bold :italic})
                     (run "bizz" #{:italic})
                     (run "buzz" #{:bold})]))
+
 (def p2 (paragraph [(run "aaa" #{})
                     (run "bbb" #{})
                     (run "ccc" #{})
                     (run "ddd" #{})]))
 
-(def doc (->Document (selection [p1 0]) [p1 p2]))
+(def to-insert [(paragraph [(run "inserted paragraph 1")])
+                (paragraph [(run "inserted paragraph 2")])
+                (paragraph [(run "inserted paragraph 3")])])
+
+(def doc (->Document [p1 p2]))
+
+;; (insert doc
+;;         (selection [0 3])
+;;         [(run "Hello" #{:italic}) (run "Goodbye!")])
+
+(insert doc (selection [0 10]) to-insert)
