@@ -13,7 +13,7 @@
   (testing "with range that is whole run"
     (let [r (c/insert run1 "fizzbuzz" 0 6)]
       (is (= "fizzbuzz" (:text r)))
-      (is (= 8 (c/len r)))))
+      (is (= 8 (c/text-len r)))))
 
   (testing "single-selection at the start of a run"
     (let [r (c/insert run1 "a" 0)]

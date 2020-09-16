@@ -77,7 +77,7 @@
                          (run "hoobar3" #{:italic})])))))
 
   (testing "at end of paragraph"
-    (let [sel (selection [simplep (c/len simplep)])
+    (let [sel (selection [simplep (c/text-len simplep)])
           p (c/insert simplep sel (run "post"))]
       (is (= p
              (paragraph [(run "foobar1" #{:bold})
@@ -104,7 +104,7 @@
                          (run "hoobar3" #{:italic})])))))
 
   (testing "end of paragraph"
-    (let [sel (selection [simplep (c/len simplep)])
+    (let [sel (selection [simplep (c/text-len simplep)])
           p (c/delete simplep sel)]
       (is (= p
              (paragraph [(run "foobar1" #{:bold})
@@ -128,7 +128,7 @@
 
 (deftest delete-range-test
   (testing "whole paragraph"
-    (let [sel (selection [simplep 0] [simplep (c/len simplep)])
+    (let [sel (selection [simplep 0] [simplep (c/text-len simplep)])
           p (c/delete simplep sel)]
       (is (= p (paragraph [(run "")])))))
 
@@ -170,7 +170,7 @@
                          (run "hoobar3" #{:italic})])))))
 
   (testing "whole last run"
-    (let [sel (selection [simplep 14] [simplep (c/len simplep)])
+    (let [sel (selection [simplep 14] [simplep (c/text-len simplep)])
           p (c/delete simplep sel)]
       (is (= p
              (paragraph [(run "foobar1" #{:bold})
@@ -183,7 +183,7 @@
                         (run "c", #{:italic :strikethrough})
                         (run "d", #{:italic})])]
       (is (= #{:italic}
-             (c/shared-formats p (selection [p 0] [p (c/len p)]))))))
+             (c/shared-formats p (selection [p 0] [p (c/text-len p)]))))))
 
   (testing "with a no shared formats"
     (let [p (paragraph [(run "a", #{:italic :bold})
@@ -191,7 +191,7 @@
                         (run "c", #{:strikethrough})
                         (run "d", #{:italic})])]
       (is (= #{}
-             (c/shared-formats p (selection [p 0] [p (c/len p)]))))))
+             (c/shared-formats p (selection [p 0] [p (c/text-len p)]))))))
 
   (testing "single run"
     (let [p (paragraph [(run "a", #{:italic :bold})

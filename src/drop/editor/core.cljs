@@ -7,16 +7,20 @@
 ;;; Selection operations ;;;
 ;; This protocol could stand a better name if we're honest
 (defprotocol TextContainer
-  (len [this] "Returns the number of chars in container (run/paragraph)."))
+  (text-len [this] "Returns the number of chars in container (run/paragraph)."))
 
 (defn type-dispatch [& args] (mapv type args))
+
 (defmulti insert "Inserts into a Run/Paragraph/Document." #'type-dispatch)
+(defmulti insert-start "Shortcut for is at the start of a text container." #'type-dispatch)
+(defmulti insert-end "Inserts at the end of a text container." #'type-dispatch)
+
 (defmulti delete "Deletes from a Run/Paragraph/Document." #'type-dispatch)
 
 ;;; Run operations ;;;
 (defrecord Run [text formats]
   TextContainer
-  (len [r] (count (:text r))))
+  (text-len [r] (count (:text r))))
 
 (defn run
   "Returns a new run. A run is defined as text with associating formatting."
@@ -40,9 +44,9 @@
   [r offset]
   (cond
     (zero? offset) [(empty-run) r]
-    (= offset (len r)) [r (empty-run)]
+    (= offset (text-len r)) [r (empty-run)]
     :else (let [text-before (.slice (:text r) 0 offset)
-                text-after (.slice (:text r) offset (len r))]
+                text-after (.slice (:text r) offset (text-len r))]
             [(run text-before (:formats r)), (run text-after (:formats r))])))
 
 ;; Range selection, remove block-selected text and then insert.
@@ -58,15 +62,13 @@
   (insert r text caret caret))
 
 ;; TODO: make these two multimethods and implement them for paragraphs as well
-(defn insert-start
-  "Shortcut for inserting text at the start of a run."
+(defmethod insert-start [Run js/String]
   [run text]
   (insert run text 0))
 
-(defn insert-end
-  "Shortcut for inserting text at the end of a run."
+(defmethod insert-end [Run js/String]
   [run text]
-  (insert run text (count (:text run))))
+  (insert run text (text-len run)))
 
 ;; Delete between start and end
 (defmethod delete [Run js/Number js/Number]
@@ -103,7 +105,7 @@
 ;;; Paragraph operations ;;;
 (defrecord Paragraph [runs]
   TextContainer
-  (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p))))
+  (text-len [p] (reduce #(+ %1 (text-len %2)) 0 (:runs p))))
 
 (declare optimize-runs) ;; Forward declare for use in `paragraph` function.
 
@@ -145,7 +147,7 @@
       (recur
        (inc run-idx)
        (- offset sum-prev-offsets)
-       (+ sum-prev-offsets (len (nth runs (inc run-idx))))))))
+       (+ sum-prev-offsets (text-len (nth runs (inc run-idx))))))))
 
 (defn before-offset
   "Returns the index of the run immediately before `offset`, as well as the
@@ -161,22 +163,22 @@
       (recur
        (inc run-idx)
        (- offset sum-prev-offsets)
-       (+ sum-prev-offsets (len (nth runs (inc run-idx))))))))
+       (+ sum-prev-offsets (text-len (nth runs (inc run-idx))))))))
 
 (defn- split-runs
   "Splits runs at offset, returning a vector of [runs before, runs after].
    Will break a run apart if `offset` is inside that run."
   [runs offset]
-  (let [offset-fun (if (zero? offset)
+  (let [offset-fn (if (zero? offset)
                      at-offset
                      before-offset)
 
         ;; Split the run at the caret position
-        [target-run-idx target-run-offset] (offset-fun runs offset)
+        [target-run-idx target-run-offset] (offset-fn runs offset)
         target-run (nth runs target-run-idx)
         [target-before target-after] (split target-run target-run-offset)
 
-        ;; Get runs before and after the run the caret is inside of
+        ;; Get runs before and after the run that the caret is inside of
         runs-before (vec (take target-run-idx runs))
         runs-after (vec (drop (inc target-run-idx) runs))
 
@@ -223,7 +225,7 @@
 (defn delete-after
   "Removes everything in paragraph `para` after the provided offset."
   [para offset]
-  (delete para (selection [para offset] [para (len para)])))
+  (delete para (selection [para offset] [para (text-len para)])))
 
 (defn delete-before
   "Removes everything in paragraph `para` before the provided offset."
@@ -250,7 +252,7 @@
    core functions (see below)."
   [runs sel]
   (let [[before-sel after-start] (split-runs runs (-> sel :start :offset))
-        before-sel-len (reduce + (map len before-sel))
+        before-sel-len (reduce + (map text-len before-sel))
         adjusted-end-offset (- (-> sel :end :offset) before-sel-len)
         [within-sel after-sel] (split-runs after-start adjusted-end-offset)]
     [before-sel within-sel after-sel]))
@@ -291,7 +293,7 @@
 ;;; Document operations ;;;
 (defrecord Document [children]
   TextContainer
-  (len [doc] (reduce #(+ %1 (len %2)) 0 (:children doc))))
+  (text-len [doc] (reduce #(+ %1 (text-len %2)) 0 (:children doc))))
 
 (defn document
   "Creates a new document."
@@ -306,7 +308,7 @@
   [doc sel run]
   (let [target-idx (-> sel :start :paragraph)
         target-para (nth (:children doc) target-idx)
-        new-para #p (insert target-para sel run)]
+        new-para (insert target-para sel run)]
     (assoc-in doc [:children target-idx] new-para)))
 
 (defn- insert-paragraphs-into-doc
@@ -318,9 +320,11 @@
 
         first-paragraph
         (paragraph (concat before-caret (:runs (first paragraphs))))
+        ;; TODO: try and rewrite this a bit more elegantly using insert-end/insert-start.
+        ;; Will need to implement those as multimethods?
         #_(-> target-para
-            (delete-after (sel/caret sel))
-            (insert-end (:runs (first paragraphs))))
+              (delete-after (sel/caret sel))
+              (insert-end (:runs (first paragraphs))))
         #_(insert-end (delete-after target-para (sel/caret sel)) (:runs (first paragraphs)))
 
         last-paragraph
