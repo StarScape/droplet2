@@ -365,6 +365,7 @@
   (insert-into-single-paragraph doc sel (run text)))
 
 ;; foobarbizzbuzz
+;; aaabbbcccddd
 (def p1 (paragraph [(run "foo" #{:italic})
                     (run "bar" #{:bold :italic})
                     (run "bizz" #{:italic})
