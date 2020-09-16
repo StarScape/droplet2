@@ -63,12 +63,12 @@
 
 ;; TODO: make these two multimethods and implement them for paragraphs as well
 (defmethod insert-start [Run js/String]
-  [run text]
-  (insert run text 0))
+  [r text]
+  (insert r text 0))
 
 (defmethod insert-end [Run js/String]
-  [run text]
-  (insert run text (text-len run)))
+  [r text]
+  (insert r text (text-len r)))
 
 ;; Delete between start and end
 (defmethod delete [Run js/Number js/Number]
@@ -311,6 +311,7 @@
         new-para (insert target-para sel run)]
     (assoc-in doc [:children target-idx] new-para)))
 
+;; TODO: switch this to a faster concat using the rrb library
 (defn- insert-paragraphs-into-doc
   "Helper function. Inserts multiple paragraphs into the document."
   [doc sel paragraphs]
@@ -380,8 +381,8 @@
 
 (def doc (->Document [p1 p2]))
 
-;; (insert doc
-;;         (selection [0 3])
-;;         [(run "Hello" #{:italic}) (run "Goodbye!")])
+(insert doc
+        (selection [0 3])
+        [(run "Hello" #{:italic}) (run "Goodbye!")])
 
 (insert doc (selection [0 10]) to-insert)
