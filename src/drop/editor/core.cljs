@@ -200,6 +200,23 @@
   [para sel r]
   (insert para sel [r]))
 
+;; TODO: these might stand some mild testing
+(defmethod insert-start [Paragraph PersistentVector]
+  [para runs]
+  (insert para (selection [-1 0]) runs))
+
+(defmethod insert-start [Paragraph Run]
+  [para run]
+  (insert para (selection [-1 0]) run))
+
+(defmethod insert-end [Paragraph PersistentVector]
+  [para runs]
+  (insert para (selection [-1 (text-len para)]) runs))
+
+(defmethod insert-end [Paragraph Run]
+  [para run]
+  (insert para (selection [-1 (text-len para)]) run))
+
 (defn- single-delete-paragraph [para sel]
   (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
         new-run (-> (nth (:runs para) run-idx)
@@ -364,6 +381,32 @@
   [doc sel text]
   (insert-into-single-paragraph doc sel (run text)))
 
+(defn merge-paragraph-with-previous
+  [doc para-idx]
+  (let [children (:children doc)
+        para (nth children para-idx)
+        prev (nth children (dec para-idx))
+        merged (insert-end prev (:runs para))
+        ;; This is hideous, clean it:
+        new-children (into (conj (subvec children 0 (dec para-idx)) merged)
+                           (subvec children (inc para-idx) (count children)))]
+    (assoc doc :children new-children)))
+
+(defn- doc-single-delete [doc sel]
+  (if (zero? (sel/caret sel))
+    (if (zero? (sel/para sel))
+      doc
+      (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
+    (update-in doc [:children (sel/para sel)] #(delete % sel))))
+
+(defmethod delete [Document Selection]
+  [doc sel]
+  (if (sel/single? sel)
+    (doc-single-delete doc sel)
+    nil))
+
+;; TODO: delete
+
 ;; foobarbizzbuzz
 ;; aaabbbcccddd
 (def p1 (paragraph [(run "foo" #{:italic})
@@ -381,6 +424,9 @@
                 (paragraph [(run "inserted paragraph 3")])])
 
 (def doc (->Document [p1 p2]))
+
+(delete doc (selection [0 4]))
+(delete doc (selection [1 0]))
 
 (insert doc
         (selection [0 3])

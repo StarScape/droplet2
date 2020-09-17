@@ -24,6 +24,11 @@
     (-> sel :start :offset)
     (-> sel :end :offset)))
 
+(defn para
+  "Shortcut for (-> sel :start :paragraph) for a single selection."
+  [sel]
+  (-> sel :start :paragraph))
+
 (defn single?
   "Returns true if argument is a single selection."
   [sel]
