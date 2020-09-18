@@ -1,10 +1,12 @@
 (ns drop.editor.core
-  (:require [clojure.set :as set])
-  (:require [drop.editor.selection :as sel :refer [Selection selection]]))
+  (:require [clojure.set :as set]
+            [drop.editor.selection :as sel :refer [Selection selection]]
+            [drop.editor.vec-utils :as vec-utils]))
 
 ;; TODO: spec all this out. Also learn spec :)
 
-;;; Selection operations ;;;
+;; Some operations common to Runs, Paragraphs, and Documents
+
 ;; This protocol could stand a better name if we're honest
 (defprotocol TextContainer
   (text-len [this] "Returns the number of chars in container (run/paragraph)."))
@@ -217,14 +219,14 @@
   [para run]
   (insert para (selection [-1 (text-len para)]) run))
 
-(defn- single-delete-paragraph [para sel]
+(defn- paragraph-single-delete [para sel]
   (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
         new-run (-> (nth (:runs para) run-idx)
                     (delete run-offset))
         new-runs (assoc (:runs para) run-idx new-run)]
     (assoc para :runs (optimize-runs new-runs))))
 
-(defn- range-delete-paragraph [para sel]
+(defn- paragraph-range-delete [para sel]
   (let [runs (:runs para)
         ;; [start-idx start-offset] (at-offset runs (-> sel :start :offset))
         ;; [end-idx end-offset] (at-offset runs (-> sel :end :offset))
@@ -236,8 +238,8 @@
 (defmethod delete [Paragraph Selection]
   [para sel]
   (if (sel/single? sel)
-    (single-delete-paragraph para sel)
-    (range-delete-paragraph para sel)))
+    (paragraph-single-delete para sel)
+    (paragraph-range-delete para sel)))
 
 (defn delete-after
   "Removes everything in paragraph `para` after the provided offset."
@@ -303,11 +305,17 @@
         (optimize-runs (concat before in-selection-updated after))]
     (assoc para :runs new-runs)))
 
-;; TODO next: write Document stuff
-;; - insert
-;; - delete
+(defn merge-paragraphs
+  "Merges the two paragraphs."
+  [p1 p2]
+  (paragraph (concat (:runs p1) (:runs p2))))
 
-;;; Document operations ;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                       ;;
+;;  Document operations  ;;
+;;                       ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defrecord Document [children]
   TextContainer
   (text-len [doc] (reduce #(+ %1 (text-len %2)) 0 (:children doc))))
@@ -351,6 +359,7 @@
         in-between-paragraphs
         (subvec paragraphs 1 (-> paragraphs count dec))
 
+        ;; TODO: rewrite with replace-range ;)
         new-children
         (concat (subvec (:children doc) 0 target-para-idx)
                 (flatten [first-paragraph in-between-paragraphs last-paragraph])
@@ -387,9 +396,7 @@
         para (nth children para-idx)
         prev (nth children (dec para-idx))
         merged (insert-end prev (:runs para))
-        ;; This is hideous, clean it:
-        new-children (into (conj (subvec children 0 (dec para-idx)) merged)
-                           (subvec children (inc para-idx) (count children)))]
+        new-children (vec-utils/replace-range children (dec para-idx) para-idx merged)]
     (assoc doc :children new-children)))
 
 (defn- doc-single-delete [doc sel]
@@ -399,11 +406,28 @@
       (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
     (update-in doc [:children (sel/para sel)] #(delete % sel))))
 
+(defn- doc-range-delete [doc sel]
+  (let [startp-idx (-> sel :start :paragraph)
+        endp-idx (-> sel :end :paragraph)]
+    (if (= startp-idx endp-idx)
+      (assoc-in doc [:children startp-idx] (delete ((:children doc) startp-idx) sel))
+      (let [children
+            (:children doc)
+
+            new-para
+            (merge-paragraphs
+             (delete-after (children startp-idx) (-> sel :start :offset))
+             (delete-before (children endp-idx) (-> sel :end :offset)))
+
+            new-children
+            (vec-utils/replace-range children startp-idx endp-idx new-para)]
+        (assoc doc :children new-children)))))
+
 (defmethod delete [Document Selection]
   [doc sel]
   (if (sel/single? sel)
     (doc-single-delete doc sel)
-    nil))
+    (doc-range-delete doc sel)))
 
 ;; TODO: delete
 
@@ -427,6 +451,8 @@
 
 (delete doc (selection [0 4]))
 (delete doc (selection [1 0]))
+
+(delete doc (selection [0 3] [1 3]))
 
 (insert doc
         (selection [0 3])
