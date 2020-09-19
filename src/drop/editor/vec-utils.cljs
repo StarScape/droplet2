@@ -20,5 +20,6 @@
 (comment
   (replace-range [1 2 3 4] 1 2 [:a :b])
   (replace-range [1 2 3 4] 1 [:a :b])
-  (replace-range [1 2 3 4] 1 :a))
+  (replace-range [1 2 3 4] 1 :a)
+  (replace-range [1 2 3 4] 1 1 [:two]))
 

@@ -111,7 +111,6 @@
 
 (declare optimize-runs) ;; Forward declare for use in `paragraph` function.
 
-;; TODO: should we change these to ->paragraph and ->run to make more clear?
 (defn paragraph
   "Creates a new paragraph."
   ([runs]
@@ -172,8 +171,8 @@
    Will break a run apart if `offset` is inside that run."
   [runs offset]
   (let [offset-fn (if (zero? offset)
-                     at-offset
-                     before-offset)
+                    at-offset
+                    before-offset)
 
         ;; Split the run at the caret position
         [target-run-idx target-run-offset] (offset-fn runs offset)
@@ -406,22 +405,20 @@
       (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
     (update-in doc [:children (sel/para sel)] #(delete % sel))))
 
+;; TODO: Fix tests, then clean up other methods above where replace-range would have been useful.
+
 (defn- doc-range-delete [doc sel]
   (let [startp-idx (-> sel :start :paragraph)
-        endp-idx (-> sel :end :paragraph)]
-    (if (= startp-idx endp-idx)
-      (assoc-in doc [:children startp-idx] (delete ((:children doc) startp-idx) sel))
-      (let [children
-            (:children doc)
-
-            new-para
-            (merge-paragraphs
-             (delete-after (children startp-idx) (-> sel :start :offset))
-             (delete-before (children endp-idx) (-> sel :end :offset)))
-
-            new-children
-            (vec-utils/replace-range children startp-idx endp-idx new-para)]
-        (assoc doc :children new-children)))))
+        endp-idx (-> sel :end :paragraph)
+        children (:children doc)
+        ;; Replace one paragraph if start and end in the same paragraph, or all of them if not.
+        new-para (if (= startp-idx endp-idx)
+                   (delete ((:children doc) startp-idx) sel)
+                   (merge-paragraphs
+                    (delete-after (children startp-idx) (-> sel :start :offset))
+                    (delete-before (children endp-idx) (-> sel :end :offset))))
+        new-children (vec-utils/replace-range children startp-idx endp-idx new-para)]
+    (assoc doc :children new-children)))
 
 (defmethod delete [Document Selection]
   [doc sel]
