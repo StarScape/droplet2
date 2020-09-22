@@ -13,6 +13,9 @@
 
 (defn type-dispatch [& args] (mapv type args))
 
+;; TODO: once all implementations of insert are done, there should be a HELLUVA
+;; docstring explaining its use...the various forms it can take, etc. The goal is
+;; for it to be "don't think about it, it just works, using this general form."
 (defmulti insert "Inserts into a Run/Paragraph/Document." #'type-dispatch)
 (defmulti insert-start "Shortcut for is at the start of a text container." #'type-dispatch)
 (defmulti insert-end "Inserts at the end of a text container." #'type-dispatch)
@@ -166,6 +169,11 @@
        (- offset sum-prev-offsets)
        (+ sum-prev-offsets (text-len (nth runs (inc run-idx))))))))
 
+;; TODO: I think split-runs and separate-selection could be merged into one
+;; function that takes a SELECTION, and either splits AROUND the selection (if
+;; single) and returns [before, after], or [before, inside, after] (if range).
+;;
+;; Performance implications and so forth will need to be considered.
 (defn- split-runs
   "Splits runs at offset, returning a vector of [runs before, runs after].
    Will break a run apart if `offset` is inside that run."
@@ -186,6 +194,19 @@
         before (conj runs-before target-before)
         after (into [target-after] runs-after)]
     [before after]))
+
+(defn separate-selected
+  "Splits the runs at the beginning and end of the selection and returns three vectors
+   of runs: [runs before selection start, runs inside selection, runs after selection end].
+
+   This may seem like an esoteric operation but it's a useful helper for some of the
+   core functions (see below)."
+  [runs sel]
+  (let [[before-sel after-start] (split-runs runs (-> sel :start :offset))
+        before-sel-len (reduce + (map text-len before-sel))
+        adjusted-end-offset (- (-> sel :end :offset) before-sel-len)
+        [within-sel after-sel] (split-runs after-start adjusted-end-offset)]
+    [before-sel within-sel after-sel]))
 
 ;; Main Paragraph operations
 (defmethod insert [Paragraph Selection PersistentVector]
@@ -250,6 +271,14 @@
   [para offset]
   (delete para (selection [para 0] [para offset])))
 
+;; TODO: should probably be a multimethod/TextContainer thang
+(defn selected-content
+  "Returns the content within the range-selection
+   inside the paragraph, as a vector of runs."
+  [para sel]
+  (let [[_before within _after] (separate-selected (:runs para) sel)]
+    within))
+
 (defn shared-formats
   "Returns the set of all the formats shared by each run that is inside (wholly or
    partially) the selection. Will return an empty set if there are no formats shared."
@@ -262,26 +291,6 @@
          (map :formats)
          (apply set/intersection))))
 
-(defn separate-selected
-  "Splits the runs at the beginning and end of the selection and returns three vectors
-   of runs: [runs before selection start, runs inside selection, runs after selection end].
-
-   This may seem like an esoteric operation but it's a useful helper for some of the
-   core functions (see below)."
-  [runs sel]
-  (let [[before-sel after-start] (split-runs runs (-> sel :start :offset))
-        before-sel-len (reduce + (map text-len before-sel))
-        adjusted-end-offset (- (-> sel :end :offset) before-sel-len)
-        [within-sel after-sel] (split-runs after-start adjusted-end-offset)]
-    [before-sel within-sel after-sel]))
-
-(defn selected-content
-  "Returns the content within the range-selection
-   inside the paragraph, as a vector of runs."
-  [para sel]
-  (let [[_before within _after] (separate-selected (:runs para) sel)]
-    within))
-
 (defn toggle-format
   "Either applies the selected format to the selection (if the selected text
    does not already have that format) or removes it (if the selected text **does**
@@ -291,19 +300,18 @@
         (separate-selected (:runs para) sel)
 
         common-formats
-        (->> in-selection
-             (map :formats)
-             (apply set/intersection))
+        (->> in-selection (map :formats) (apply set/intersection))
 
-        in-selection-updated
+        selected-runs-toggled
         (if (contains? common-formats format)
           (mapv #(remove-format % format) in-selection)
           (mapv #(apply-format % format) in-selection))
 
         new-runs
-        (optimize-runs (concat before in-selection-updated after))]
+        (optimize-runs (concat before selected-runs-toggled after))]
     (assoc para :runs new-runs)))
 
+;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs
   "Merges the two paragraphs."
   [p1 p2]
@@ -337,33 +345,35 @@
 
 ;; TODO: switch this to a faster concat using the rrb library
 (defn- insert-paragraphs-into-doc
-  "Helper function. Inserts multiple paragraphs into the document."
+  "Helper function. Inserts multiple paragraphs into the document.
+   The selection MUST be a single-selection. This is just a helper and
+   it's assumed any deleting of a range selection has already been done"
   [doc sel paragraphs]
   (let [target-para-idx (-> sel :start :paragraph)
-        target-para (nth (:children doc) target-para-idx)
-        [before-caret after-caret] (split-runs (:runs target-para) (sel/caret sel))
+        target-para ((:children doc) target-para-idx)
 
         first-paragraph
-        (paragraph (concat before-caret (:runs (first paragraphs))))
-        ;; TODO: try and rewrite this a bit more elegantly using insert-end/insert-start.
-        ;; Will need to implement those as multimethods?
-        #_(-> target-para
-              (delete-after (sel/caret sel))
-              (insert-end (:runs (first paragraphs))))
-        #_(insert-end (delete-after target-para (sel/caret sel)) (:runs (first paragraphs)))
+        (-> target-para
+            (delete-after (sel/caret sel))
+            (insert-end (:runs (first paragraphs))))
 
         last-paragraph
-        (paragraph (concat (:runs (peek paragraphs)) after-caret))
+        (-> target-para
+            (delete-before (sel/caret sel))
+            (insert-start (:runs (peek paragraphs))))
 
         in-between-paragraphs
-        (subvec paragraphs 1 (-> paragraphs count dec))
+        (subvec paragraphs 1 (dec (count paragraphs)))
 
-        ;; TODO: rewrite with replace-range ;)
+        all-modified-paragraphs
+        (flatten [first-paragraph in-between-paragraphs last-paragraph])
+
         new-children
-        (concat (subvec (:children doc) 0 target-para-idx)
-                (flatten [first-paragraph in-between-paragraphs last-paragraph])
-                (subvec (:children doc) (inc target-para-idx)))]
-    (assoc doc :children new-children)))
+        (vec-utils/replace-range (:children doc)
+                                 target-para-idx
+                                 (inc target-para-idx)
+                                 all-modified-paragraphs)]
+    (assoc doc :children #p new-children)))
 
 (defmethod insert [Document Selection PersistentVector]
   [doc sel runs-or-paras]
@@ -404,8 +414,6 @@
       doc
       (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
     (update-in doc [:children (sel/para sel)] #(delete % sel))))
-
-;; TODO: Fix tests, then clean up other methods above where replace-range would have been useful.
 
 (defn- doc-range-delete [doc sel]
   (let [startp-idx (-> sel :start :paragraph)
