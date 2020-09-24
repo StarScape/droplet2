@@ -87,7 +87,8 @@
 
 (deftest delete-single-test
   (testing "at beginning of paragraph"
-    (comment "TODO"))
+    (let [p (c/delete simplep (selection [simplep 0]))]
+      (is (= p simplep))))
 
   (testing "in middle of paragraph"
     (let [p (c/delete simplep (selection [simplep 11]))]
@@ -209,6 +210,33 @@
       (is (= #{:italic}
              (c/shared-formats p (selection [p 0] [p 3]))
              (c/shared-formats p (selection [p 0] [p 4])))))))
+
+(deftest delete-after-test
+  (testing "beginning of paragraph"
+    (let [p (c/delete-after simplep 0)]
+      (is (= p (paragraph [(run "")])))))
+
+  (testing "middle of paragraph"
+    (let [p (c/delete-after simplep 7)]
+      (is (= p (paragraph [(run "foobar1" #{:bold})])))))
+
+  (testing "end of paragraph"
+    (let [p (c/delete-after simplep 21)]
+      (is (= p simplep)))))
+
+(deftest delete-before-test
+  (testing "beginning of paragraph"
+    (let [p (c/delete-before simplep 0)]
+      (is (= p simplep))))
+
+  (testing "middle of paragraph"
+    (let [p (c/delete-before simplep 7)]
+      (is (= p (paragraph [(run "goobar2" #{})
+                           (run "hoobar3" #{:italic})])))))
+
+  (testing "end of paragraph"
+    (let [p (c/delete-before simplep 21)]
+      (is (= p (paragraph [(run "")]))))))
 
 ;; TODO: finish this test
 ;; (deftest toggle-format-test

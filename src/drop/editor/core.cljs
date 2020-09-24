@@ -249,7 +249,6 @@
   [para run]
   (insert para (selection [-1 (text-len para)]) run))
 
-;; TODO: write test for the bug you just fixed below :) (caret == 0)
 (defn- paragraph-single-delete [para sel]
   (if (zero? (sel/caret sel))
     para
