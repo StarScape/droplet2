@@ -38,6 +38,11 @@
 
 (def doc (c/document [p1 p2]))
 
+(def long-doc (c/document [(paragraph [(run "foo1" #{:italic})])
+                           (paragraph [(run "foo2" #{:bold})])
+                           (paragraph [(run "foo3" #{:underline})])
+                           (paragraph [(run "foo4" #{:strike})])]))
+
 (deftest insert-test
   (testing "runs"
     (is (= [[:p
@@ -185,14 +190,36 @@
 
 ;; TODO: test range delete
 (deftest delete-range-test
-  #_(testing "does nothing at beginning of doc"
-    (is (= doc (c/delete doc (selection [0 0])))))
-
-  #_(testing "deletes single char in middle of paragraph"
+  (testing "deletes from start of paragraph"
     (is (= [[:p
-             [:run "oo" :italic]
              [:run "bar" :bold :italic]
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/delete doc (selection [0 1])))))))
+           (convert-doc (c/delete doc (selection [0 0] [0 3]))))))
+
+  (testing "deletes up to end of paragraph"
+    (is (= [[:p [:run "foo" :italic]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/delete doc (selection [0 3] [0 14]))))))
+
+  (testing "deletes whole paragraph"
+    (is (= [[:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/delete doc (selection [0 0] [1 0]))))))
+
+  (testing "merges start and ending paragraphs when deleting across paragraphs"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bbbcccddd"]]]
+           (convert-doc (c/delete doc (selection [0 3] [1 3]))))))
+
+  ;; TODO
+  (testing "merges start and ending paragraphs when deleting across more than 2 paragraphs"
+    (is (= [[:p
+             [:run "foo1" :italic]
+             [:run "foo4" :strike]]]
+           (convert-doc (c/delete long-doc (selection [0 4] [3 0]))))))
+
+  (testing "deletes whole document"
+    (is (= [[:p [:run ""]]]
+           (convert-doc (c/delete doc (selection [0 0] [1 12])))))))
