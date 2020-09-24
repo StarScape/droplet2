@@ -139,35 +139,45 @@
               (subvec non-empty-runs 1)))))
 
 ;; These two functions are poorly named, really. Should probably be something like
-;; run-idx-and-run-relative-offset-for-paragraph offset, but I haven't come up with
+;; run-idx-and-run-relative-offset-from-paragraph-offset, but I haven't come up with
 ;; anything that's descriptive enough and without being verbose.
+;; There are a bit more complicated than I would like them to be, but at least the
+;; complexity is contained, here.
+
+;; TODO TODO TODO: there is a bug when `at-offset` is passed a single, empty run
 (defn at-offset
   "Returns the index of the run `offset` falls inside of, as well as the
-   number of characters that `offset` lies inside that run, as a vector pair."
+   number of characters that `offset` lies inside that run, as a vector pair,
+   like so: [run-idx, offset-into-run]."
   [runs offset]
-  (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
-    (if (> sum-prev-offsets offset)
-      [run-idx offset-into-run]
-      (recur
-       (inc run-idx)
-       (- offset sum-prev-offsets)
-       (+ sum-prev-offsets (text-len (nth runs (inc run-idx))))))))
+  (if (zero? offset)
+    [0 0]
+    (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
+      (if (> sum-prev-offsets offset)
+        [run-idx offset-into-run]
+        (recur
+         (inc run-idx)
+         (- offset sum-prev-offsets)
+         (+ sum-prev-offsets (text-len (nth runs (inc run-idx)))))))))
 
 (defn before-offset
   "Returns the index of the run immediately before `offset`, as well as the
-   number of characters that `offset` lies inside that run, as a vector pair.
+   number of characters that `offset` lies inside that run, as a vector pair,
+   like so: [run-idx, offset-into-run].
 
    The difference from `at-offset`, is that it will return info for the run *before*
    the offset -- i.e. the one that would get backspaced if it were the cursor. At a
    boundary between runs before-offset will favor the first run."
   [runs offset]
-  (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
-    (if (>= sum-prev-offsets offset)
-      [run-idx offset-into-run]
-      (recur
-       (inc run-idx)
-       (- offset sum-prev-offsets)
-       (+ sum-prev-offsets (text-len (nth runs (inc run-idx))))))))
+  (if (zero? offset)
+    [0 0]
+    (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
+      (if (>= sum-prev-offsets offset)
+        [run-idx offset-into-run]
+        (recur
+         (inc run-idx)
+         (- offset sum-prev-offsets)
+         (+ sum-prev-offsets (text-len (nth runs (inc run-idx)))))))))
 
 ;; TODO: I think split-runs and separate-selection could be merged into one
 ;; function that takes a SELECTION, and either splits AROUND the selection (if
@@ -239,12 +249,15 @@
   [para run]
   (insert para (selection [-1 (text-len para)]) run))
 
+;; TODO: write test for the bug you just fixed below :) (caret == 0)
 (defn- paragraph-single-delete [para sel]
-  (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
-        new-run (-> (nth (:runs para) run-idx)
-                    (delete run-offset))
-        new-runs (assoc (:runs para) run-idx new-run)]
-    (assoc para :runs (optimize-runs new-runs))))
+  (if (zero? (sel/caret sel))
+    para
+    (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
+          new-run (-> (nth (:runs para) run-idx)
+                      (delete run-offset))
+          new-runs (assoc (:runs para) run-idx new-run)]
+      (assoc para :runs (optimize-runs new-runs)))))
 
 (defn- paragraph-range-delete [para sel]
   (let [runs (:runs para)
@@ -261,15 +274,25 @@
     (paragraph-single-delete para sel)
     (paragraph-range-delete para sel)))
 
+;; TODO: add test for delete-after at start and end of para
+
 (defn delete-after
   "Removes everything in paragraph `para` after the provided offset."
   [para offset]
-  (delete para (selection [para offset] [para (text-len para)])))
+  (let [para-len (text-len para)]
+    (if (= offset para-len)
+      para
+      (delete para (selection [-1 offset] [-1 para-len])))))
+
+;; TODO: add test for delete-before at start and end of para
 
 (defn delete-before
   "Removes everything in paragraph `para` before the provided offset."
   [para offset]
-  (delete para (selection [para 0] [para offset])))
+  (delete para (selection [-1 0] [-1 offset])))
+
+(delete-before (paragraph [(run "foobar")]) 0)
+(delete (paragraph [(run "foobar")]) (selection [-1 0]))
 
 ;; TODO: should probably be a multimethod/TextContainer thang
 (defn selected-content
@@ -347,19 +370,20 @@
 (defn- insert-paragraphs-into-doc
   "Helper function. Inserts multiple paragraphs into the document.
    The selection MUST be a single-selection. This is just a helper and
-   it's assumed any deleting of a range selection has already been done"
+   it's assumed any deleting of a range selection has already been done."
   [doc sel paragraphs]
   (let [target-para-idx (-> sel :start :paragraph)
         target-para ((:children doc) target-para-idx)
+        sel-caret (sel/caret sel)
 
         first-paragraph
         (-> target-para
-            (delete-after (sel/caret sel))
+            (delete-after sel-caret)
             (insert-end (:runs (first paragraphs))))
 
         last-paragraph
         (-> target-para
-            (delete-before (sel/caret sel))
+            (delete-before sel-caret)
             (insert-start (:runs (peek paragraphs))))
 
         in-between-paragraphs
@@ -371,9 +395,9 @@
         new-children
         (vec-utils/replace-range (:children doc)
                                  target-para-idx
-                                 (inc target-para-idx)
+                                 target-para-idx
                                  all-modified-paragraphs)]
-    (assoc doc :children #p new-children)))
+    (assoc doc :children new-children)))
 
 (defmethod insert [Document Selection PersistentVector]
   [doc sel runs-or-paras]
@@ -438,6 +462,33 @@
 
 ;; foobarbizzbuzz
 ;; aaabbbcccddd
+;; (def p1 (paragraph [(run "foo" #{:italic})
+;;                     (run "bar" #{:bold :italic})
+;;                     (run "bizz" #{:italic})
+;;                     (run "buzz" #{:bold})]))
+
+;; (def p2 (paragraph [(run "aaa" #{})
+;;                     (run "bbb" #{})
+;;                     (run "ccc" #{})
+;;                     (run "ddd" #{})]))
+
+;; (def to-insert [(paragraph [(run "inserted paragraph 1")])
+;;                 (paragraph [(run "inserted paragraph 2")])
+;;                 (paragraph [(run "inserted paragraph 3")])])
+
+;; (def doc (->Document [p1 p2]))
+
+;; (delete doc (selection [0 4]))
+;; (delete doc (selection [1 0]))
+
+;; (delete doc (selection [0 3] [1 3]))
+
+;; (insert doc
+;;         (selection [0 3])
+;;         [(run "Hello" #{:italic}) (run "Goodbye!")])
+
+;; (insert doc (selection [0 10]) to-insert)
+
 (def p1 (paragraph [(run "foo" #{:italic})
                     (run "bar" #{:bold :italic})
                     (run "bizz" #{:italic})
@@ -452,15 +503,7 @@
                 (paragraph [(run "inserted paragraph 2")])
                 (paragraph [(run "inserted paragraph 3")])])
 
-(def doc (->Document [p1 p2]))
-
-(delete doc (selection [0 4]))
-(delete doc (selection [1 0]))
-
-(delete doc (selection [0 3] [1 3]))
-
-(insert doc
-        (selection [0 3])
-        [(run "Hello" #{:italic}) (run "Goodbye!")])
-
-(insert doc (selection [0 10]) to-insert)
+(def doc (document [p1 p2]))
+;; TODO: there be a bug right hurr
+(insert doc (selection [0 14]) to-insert)
+;; (println (insert doc (selection [1 0]) to-insert))

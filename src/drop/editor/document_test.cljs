@@ -130,8 +130,8 @@
             [:p [:run "aaabbbcccddd"]]]
            (convert-doc (c/insert doc (selection [0 3]) "inserted")))))
 
-  #_(testing "when given a range-selection, deletes before inserting"
-    (is (= [[:p [:run "f(inserted!)d"]]]
+  (testing "when given a range-selection, deletes before inserting"
+    (is (= [[:p [:run "f" :italic] [:run "(inserted!)d"]]]
            (convert-doc (c/insert
                          doc
                          (selection [0 1] [1 11])
