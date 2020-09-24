@@ -9,11 +9,12 @@
 ;;
 ;; For example, `(convert-doc doc)` called on `doc` defined below would evaluate to:
 ;;
-;; [[["foo" :italic]
-;;   ["bar" :bold :italic]
-;;   ["bizz" :italic]
-;;   ["buzz" :bold]]
-;;   [["aaabbbcccddd"]]]
+;; [[:p
+;;   [:run "foo" :italic]
+;;   [:run "bar" :bold :italic]
+;;   [:run "bizz" :italic]
+;;   [:run "buzz" :bold]]
+;;   [:p [:run "aaabbbcccddd"]]]
 ;;
 ;; [1] https://github.com/weavejester/hiccup
 
@@ -141,3 +142,57 @@
     (is (thrown?
          js/Error
          (convert-doc (c/insert doc (selection [0 55]) (run "Goodbye!" #{:italic})))))))
+
+(deftest delete-single-test
+  (testing "does nothing at beginning of doc"
+    (is (= doc (c/delete doc (selection [0 0])))))
+
+  (testing "deletes single char in middle of paragraph"
+    (is (= [[:p
+             [:run "oo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/delete doc (selection [0 1]))))))
+
+  (testing "deletes single char at end of paragraph"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/delete doc (selection [0 14]))))))
+
+  (testing "merges paragraphs when backspacing from start of paragraph that is not first"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]
+             [:run "aaabbbcccddd"]]]
+           (convert-doc (c/delete doc (selection [1 0]))))))
+
+  (testing "deletes single char as normal at end of the paragraph"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccdd"]]]
+           (convert-doc (c/delete doc (selection [1 12])))))))
+
+;; TODO: test range delete
+(deftest delete-range-test
+  #_(testing "does nothing at beginning of doc"
+    (is (= doc (c/delete doc (selection [0 0])))))
+
+  #_(testing "deletes single char in middle of paragraph"
+    (is (= [[:p
+             [:run "oo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/delete doc (selection [0 1])))))))

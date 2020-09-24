@@ -66,7 +66,6 @@
   [r text caret]
   (insert r text caret caret))
 
-;; TODO: make these two multimethods and implement them for paragraphs as well
 (defmethod insert-start [Run js/String]
   [r text]
   (insert r text 0))
@@ -141,10 +140,10 @@
 ;; These two functions are poorly named, really. Should probably be something like
 ;; run-idx-and-run-relative-offset-from-paragraph-offset, but I haven't come up with
 ;; anything that's descriptive enough and without being verbose.
+;;
 ;; There are a bit more complicated than I would like them to be, but at least the
-;; complexity is contained, here.
+;; complexity is mostly contained here.
 
-;; TODO TODO TODO: there is a bug when `at-offset` is passed a single, empty run
 (defn at-offset
   "Returns the index of the run `offset` falls inside of, as well as the
    number of characters that `offset` lies inside that run, as a vector pair,
@@ -273,8 +272,6 @@
     (paragraph-single-delete para sel)
     (paragraph-range-delete para sel)))
 
-;; TODO: add test for delete-after at start and end of para
-
 (defn delete-after
   "Removes everything in paragraph `para` after the provided offset."
   [para offset]
@@ -282,8 +279,6 @@
     (if (= offset para-len)
       para
       (delete para (selection [-1 offset] [-1 para-len])))))
-
-;; TODO: add test for delete-before at start and end of para
 
 (defn delete-before
   "Removes everything in paragraph `para` before the provided offset."
@@ -356,6 +351,16 @@
   ([]
    (->Document [(paragraph)])))
 
+;; Document helper functions
+(defn merge-paragraph-with-previous
+  [doc para-idx]
+  (let [children (:children doc)
+        para (nth children para-idx)
+        prev (nth children (dec para-idx))
+        merged (insert-end prev (:runs para))
+        new-children (vec-utils/replace-range children (dec para-idx) para-idx merged)]
+    (assoc doc :children new-children)))
+
 (defn- insert-into-single-paragraph
   "Helper function. For document inserts where we only have to worry about a single paragraph,
    meaning we can basically just delegate to the paragraph insert function and replace the paragraph."
@@ -398,6 +403,7 @@
                                  all-modified-paragraphs)]
     (assoc doc :children new-children)))
 
+;; Document main operations
 (defmethod insert [Document Selection PersistentVector]
   [doc sel runs-or-paras]
   (if (sel/single? sel)
@@ -421,15 +427,6 @@
 (defmethod insert [Document Selection js/String]
   [doc sel text]
   (insert-into-single-paragraph doc sel (run text)))
-
-(defn merge-paragraph-with-previous
-  [doc para-idx]
-  (let [children (:children doc)
-        para (nth children para-idx)
-        prev (nth children (dec para-idx))
-        merged (insert-end prev (:runs para))
-        new-children (vec-utils/replace-range children (dec para-idx) para-idx merged)]
-    (assoc doc :children new-children)))
 
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
@@ -457,37 +454,10 @@
     (doc-single-delete doc sel)
     (doc-range-delete doc sel)))
 
-;; TODO: delete
+;; TODO: write tests for delete.
 
 ;; foobarbizzbuzz
 ;; aaabbbcccddd
-;; (def p1 (paragraph [(run "foo" #{:italic})
-;;                     (run "bar" #{:bold :italic})
-;;                     (run "bizz" #{:italic})
-;;                     (run "buzz" #{:bold})]))
-
-;; (def p2 (paragraph [(run "aaa" #{})
-;;                     (run "bbb" #{})
-;;                     (run "ccc" #{})
-;;                     (run "ddd" #{})]))
-
-;; (def to-insert [(paragraph [(run "inserted paragraph 1")])
-;;                 (paragraph [(run "inserted paragraph 2")])
-;;                 (paragraph [(run "inserted paragraph 3")])])
-
-;; (def doc (->Document [p1 p2]))
-
-;; (delete doc (selection [0 4]))
-;; (delete doc (selection [1 0]))
-
-;; (delete doc (selection [0 3] [1 3]))
-
-;; (insert doc
-;;         (selection [0 3])
-;;         [(run "Hello" #{:italic}) (run "Goodbye!")])
-
-;; (insert doc (selection [0 10]) to-insert)
-
 (def p1 (paragraph [(run "foo" #{:italic})
                     (run "bar" #{:bold :italic})
                     (run "bizz" #{:italic})
@@ -502,7 +472,17 @@
                 (paragraph [(run "inserted paragraph 2")])
                 (paragraph [(run "inserted paragraph 3")])])
 
-(def doc (document [p1 p2]))
-;; TODO: there be a bug right hurr
+(def doc (->Document [p1 p2]))
+
+(delete doc (selection [0 4]))
+(delete doc (selection [1 0]))
+
+(delete doc (selection [0 3] [1 3]))
+
+(insert doc
+        (selection [0 3])
+        [(run "Hello" #{:italic}) (run "Goodbye!")])
+
+(insert doc (selection [0 10]) to-insert)
+
 (insert doc (selection [0 14]) to-insert)
-;; (println (insert doc (selection [1 0]) to-insert))
