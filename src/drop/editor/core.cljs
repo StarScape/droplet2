@@ -34,7 +34,7 @@
   ([text]
    (->Run text #{}))
   ([]
-   (->Run "text" #{})))
+   (->Run "" #{})))
 
 (defn empty-run "Returns an empty run." [] (run ""))
 
@@ -404,6 +404,7 @@
     (assoc doc :children new-children)))
 
 ;; Document main operations
+;; TODO: could we make the delete-before-moving on logic here a little more elegant with a `cond->` form?
 (defmethod insert [Document Selection PersistentVector]
   [doc sel runs-or-paras]
   (if (sel/single? sel)
@@ -427,6 +428,16 @@
 (defmethod insert [Document Selection js/String]
   [doc sel text]
   (insert-into-single-paragraph doc sel (run text)))
+
+(defn insert-paragraph-before
+  "Inserts an empty paragraph into the document immediately before the paragraph at position `index`."
+  [doc index]
+  (update doc :children #(vec-utils/replace-range % index index [(paragraph) (% index)])))
+
+(defn insert-paragraph-after
+  "Inserts an empty paragraph into the document immediately after the paragraph at position `index`."
+  [doc index]
+  (update doc :children #(vec-utils/replace-range % index index [(% index) (paragraph)])))
 
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
@@ -454,7 +465,15 @@
     (doc-single-delete doc sel)
     (doc-range-delete doc sel)))
 
-;; TODO: write tests for delete.
+;; TODO: implement
+(defn enter
+  "Equivalent to what happens when the user hits the enter button."
+  [doc sel]
+  nil)
+
+;; TODO: implement selected-content (protocol?)
+;; TODO: implement shared-formats (protocol?)
+;; TODO: implement toggle-formats (protocol?)
 
 ;; foobarbizzbuzz
 ;; aaabbbcccddd
@@ -474,15 +493,17 @@
 
 (def doc (->Document [p1 p2]))
 
-(delete doc (selection [0 4]))
-(delete doc (selection [1 0]))
+;; (insert-paragraph-after doc 1)
 
-(delete doc (selection [0 3] [1 3]))
+;; (delete doc (selection [0 4]))
+;; (delete doc (selection [1 0]))
 
-(insert doc
-        (selection [0 3])
-        [(run "Hello" #{:italic}) (run "Goodbye!")])
+;; (delete doc (selection [0 3] [1 3]))
 
-(insert doc (selection [0 10]) to-insert)
+;; (insert doc
+;;         (selection [0 3] [1 9])
+;;         [(run "Hello" #{:italic}) (run "Goodbye!")])
 
-(insert doc (selection [0 14]) to-insert)
+;; (insert doc (selection [0 10]) to-insert)
+
+;; (insert doc (selection [0 14]) to-insert)
