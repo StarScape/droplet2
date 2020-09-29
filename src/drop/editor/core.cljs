@@ -352,7 +352,16 @@
    (->Document [(paragraph)])))
 
 ;; Document helper functions
-(defn merge-paragraph-with-previous
+(defn- split-paragraph
+  "Splits the selected paragraph at the (single) selection and returns the two halves."
+  [doc sel]
+  (map paragraph (-> (:children doc)
+                     (get (-> sel :start :paragraph))
+                     (get :runs)
+                     (split-runs (sel/caret sel)))))
+
+(defn- merge-paragraph-with-previous
+  "Returns a new doc with the paragraph at `para-idx` merged into the one before it."
   [doc para-idx]
   (let [children (:children doc)
         para (nth children para-idx)
@@ -360,6 +369,12 @@
         merged (insert-end prev (:runs para))
         new-children (vec-utils/replace-range children (dec para-idx) para-idx merged)]
     (assoc doc :children new-children)))
+
+(defn- replace-paragraph-with
+  "Returns a new doc with the paragraph at `para-idx` replaced with
+   `content`, which can be either a paragraph or a list of paragraphs."
+  [doc para-idx content]
+  (update doc :children #(vec-utils/replace-range % para-idx para-idx content)))
 
 (defn- insert-into-single-paragraph
   "Helper function. For document inserts where we only have to worry about a single paragraph,
@@ -432,12 +447,14 @@
 (defn insert-paragraph-before
   "Inserts an empty paragraph into the document immediately before the paragraph at position `index`."
   [doc index]
-  (update doc :children #(vec-utils/replace-range % index index [(paragraph) (% index)])))
+  #_(update doc :children #(vec-utils/replace-range % index index [(paragraph) (% index)]))
+  (replace-paragraph-with doc index [(paragraph) ((:children doc) index)]))
 
 (defn insert-paragraph-after
   "Inserts an empty paragraph into the document immediately after the paragraph at position `index`."
   [doc index]
-  (update doc :children #(vec-utils/replace-range % index index [(% index) (paragraph)])))
+  #_(update doc :children #(vec-utils/replace-range % index index [(% index) (paragraph)]))
+  (replace-paragraph-with doc index [((:children doc) index) (paragraph)]))
 
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
@@ -469,7 +486,19 @@
 (defn enter
   "Equivalent to what happens when the user hits the enter button."
   [doc sel]
-  nil)
+  (let [caret (sel/caret sel)
+        para-idx (-> sel :start :paragraph)
+        para ((:children doc) para-idx)]
+    (cond
+      (= caret 0)
+      (insert-paragraph-before doc (-> sel :start :paragraph))
+
+      (= caret (text-len para))
+      (insert-paragraph-after doc (-> sel :start :paragraph))
+
+      :else
+      (let [[para1 para2] #p (split-paragraph doc sel)]
+        (replace-paragraph-with doc para-idx [para1 (paragraph) para2])))))
 
 ;; TODO: implement selected-content (protocol?)
 ;; TODO: implement shared-formats (protocol?)
@@ -492,6 +521,9 @@
                 (paragraph [(run "inserted paragraph 3")])])
 
 (def doc (->Document [p1 p2]))
+
+(comment
+  (.log js/console (enter doc (selection [0 10]))))
 
 ;; (insert-paragraph-after doc 1)
 
