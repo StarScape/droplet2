@@ -497,7 +497,7 @@
       (insert-paragraph-after doc (-> sel :start :paragraph))
 
       :else
-      (let [[para1 para2] #p (split-paragraph doc sel)]
+      (let [[para1 para2] (split-paragraph doc sel)]
         (replace-paragraph-with doc para-idx [para1 (paragraph) para2])))))
 
 ;; TODO: implement selected-content (protocol?)
@@ -522,8 +522,7 @@
 
 (def doc (->Document [p1 p2]))
 
-(comment
-  (.log js/console (enter doc (selection [0 10]))))
+(enter doc (selection [0 10]))
 
 ;; (insert-paragraph-after doc 1)
 

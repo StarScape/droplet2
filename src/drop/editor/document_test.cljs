@@ -188,7 +188,6 @@
             [:p [:run "aaabbbcccdd"]]]
            (convert-doc (c/delete doc (selection [1 12])))))))
 
-;; TODO: test range delete
 (deftest delete-range-test
   (testing "deletes from start of paragraph"
     (is (= [[:p
@@ -213,7 +212,6 @@
              [:run "bbbcccddd"]]]
            (convert-doc (c/delete doc (selection [0 3] [1 3]))))))
 
-  ;; TODO
   (testing "merges start and ending paragraphs when deleting across more than 2 paragraphs"
     (is (= [[:p
              [:run "foo1" :italic]
@@ -223,3 +221,44 @@
   (testing "deletes whole document"
     (is (= [[:p [:run ""]]]
            (convert-doc (c/delete doc (selection [0 0] [1 12])))))))
+
+(deftest enter-test
+  (testing "Works at start of paragraph"
+    (is (= [[:p [:run ""]]
+            [:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/enter doc (selection [0 0]))))))
+
+  (testing "Works at end of paragraph"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run ""]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/enter doc (selection [0 14]))))))
+
+  (testing "Works in middle of paragraph"
+    (is (= [[:p [:run "foo" :italic]]
+            [:p [:run ""]]
+            [:p
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/enter doc (selection [0 3]))))))
+
+  (testing "Works at end of doc"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]
+            [:p [:run ""]]]
+           (convert-doc (c/enter doc (selection [1 12])))))))
