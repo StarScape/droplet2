@@ -11,6 +11,17 @@
 (defprotocol TextContainer
   (text-len [this] "Returns the number of chars in container (run/paragraph)."))
 
+(defprotocol Selectable
+  "Any text container for which paragraph offset selections are valid.
+   Note that this precludes runs, as they are contained inside paragraphs
+   and therefore a 'paragraph offset into a run' would not make sense.
+   Basically, this is a set of common operations on paragraphs and documents."
+
+  (selected-content
+   [container sel]
+   "Returns the content within the range-selection inside the container, either as a vector
+    of runs of a vector of paragraphs, depending which is appropriate."))
+
 (defn type-dispatch [& args] (mapv type args))
 
 ;; TODO: once all implementations of insert are done, there should be a HELLUVA
@@ -187,9 +198,10 @@
   "Splits runs at offset, returning a vector of [runs before, runs after].
    Will break a run apart if `offset` is inside that run."
   [runs offset]
-  (let [offset-fn (if (zero? offset)
-                    at-offset
-                    before-offset)
+  (let [runs-len (reduce + (map text-len runs))
+        offset-fn (if (= runs-len offset)
+                    before-offset
+                    at-offset)
 
         ;; Split the run at the caret position
         [target-run-idx target-run-offset] (offset-fn runs offset)
@@ -211,11 +223,11 @@
    This may seem like an esoteric operation but it's a useful helper for some of the
    core functions (see below)."
   [runs sel]
-  (let [[before-sel after-start] (split-runs runs (-> sel :start :offset))
-        before-sel-len (reduce + (map text-len before-sel))
-        adjusted-end-offset (- (-> sel :end :offset) before-sel-len)
-        [within-sel after-sel] (split-runs after-start adjusted-end-offset)]
-    [before-sel within-sel after-sel]))
+  (let [[runs-before runs-after] (split-runs runs (-> sel :start :offset))
+        runs-before-len (reduce + (map text-len runs-before))
+        adjusted-end-offset (- (-> sel :end :offset) runs-before-len)
+        [within-sel after-sel] (split-runs runs-after adjusted-end-offset)]
+    [runs-before within-sel after-sel]))
 
 ;; Main Paragraph operations
 (defmethod insert [Paragraph Selection PersistentVector]
@@ -285,11 +297,14 @@
   [para offset]
   (delete para (selection [-1 0] [-1 offset])))
 
-(delete-before (paragraph [(run "foobar")]) 0)
-(delete (paragraph [(run "foobar")]) (selection [-1 0]))
+;; TODO: write tests for Selectable functions
+(extend-type Paragraph
+  Selectable
+  (selected-content [para sel]
+    (second (separate-selected (:runs para) sel))))
 
 ;; TODO: should probably be a multimethod/TextContainer thang
-(defn selected-content
+#_(defn para-selected-content
   "Returns the content within the range-selection
    inside the paragraph, as a vector of runs."
   [para sel]
@@ -484,7 +499,8 @@
 
 ;; TODO: implement
 (defn enter
-  "Equivalent to what happens when the user hits the enter button."
+  "Equivalent to what happens when the user hits the enter button.
+   Creates a new paragraph in the appropriate position in the doc."
   [doc sel]
   (let [caret (sel/caret sel)
         para-idx (-> sel :start :paragraph)
@@ -500,9 +516,32 @@
       (let [[para1 para2] (split-paragraph doc sel)]
         (replace-paragraph-with doc para-idx [para1 (paragraph) para2])))))
 
+(defn doc-selected-content
+  [doc sel]
+  (let [start-para-idx (-> sel :start :paragraph)
+        start-para ((:children doc) start-para-idx)
+        end-para-idx (-> sel :end :paragraph)
+        end-para ((:children doc) end-para-idx)]
+    (if (= start-para-idx end-para-idx)
+      (selected-content ((:children doc) start-para-idx) sel)
+      ((comp vec flatten) [(delete-before start-para (-> sel :start :offset))
+                           (subvec (:children doc) (inc start-para-idx) end-para-idx)
+                           (delete-after end-para (-> sel :start :offset))]))))
+
+;; TODO: test selected-content for doc
+
+;; TODO: should the functions be inlined here?
+(extend-type Document
+  Selectable
+  (selected-content [doc sel] (doc-selected-content doc sel)))
+
 ;; TODO: implement selected-content (protocol?)
 ;; TODO: implement shared-formats (protocol?)
 ;; TODO: implement toggle-formats (protocol?)
+;; TODO: navigable functions for document
+;; TODO: render document ;)
+;; TODO: functions will need to be modified to return new selection
+;;       (and possible the list of changes)
 
 ;; foobarbizzbuzz
 ;; aaabbbcccddd
@@ -520,9 +559,12 @@
                 (paragraph [(run "inserted paragraph 2")])
                 (paragraph [(run "inserted paragraph 3")])])
 
-(def doc (->Document [p1 p2]))
+(def doc (->Document [p1 (paragraph [(run "111")]) p2]))
 
-(enter doc (selection [0 10]))
+(doc-selected-content doc (selection [0 3] [0 14]))
+(doc-selected-content doc (selection [0 3] [2 3]))
+
+;; (enter doc (selection [0 10]))
 
 ;; (insert-paragraph-after doc 1)
 
