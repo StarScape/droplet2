@@ -223,7 +223,7 @@
            (convert-doc (c/delete doc (selection [0 0] [1 12])))))))
 
 (deftest enter-test
-  (testing "Works at start of paragraph"
+  (testing "works at start of paragraph"
     (is (= [[:p [:run ""]]
             [:p
              [:run "foo" :italic]
@@ -233,7 +233,7 @@
             [:p [:run "aaabbbcccddd"]]]
            (convert-doc (c/enter doc (selection [0 0]))))))
 
-  (testing "Works at end of paragraph"
+  (testing "works at end of paragraph"
     (is (= [[:p
              [:run "foo" :italic]
              [:run "bar" :bold :italic]
@@ -243,7 +243,7 @@
             [:p [:run "aaabbbcccddd"]]]
            (convert-doc (c/enter doc (selection [0 14]))))))
 
-  (testing "Works in middle of paragraph"
+  (testing "works in middle of paragraph"
     (is (= [[:p [:run "foo" :italic]]
             [:p [:run ""]]
             [:p
@@ -253,7 +253,7 @@
             [:p [:run "aaabbbcccddd"]]]
            (convert-doc (c/enter doc (selection [0 3]))))))
 
-  (testing "Works at end of doc"
+  (testing "works at end of doc"
     (is (= [[:p
              [:run "foo" :italic]
              [:run "bar" :bold :italic]
@@ -262,3 +262,29 @@
             [:p [:run "aaabbbcccddd"]]
             [:p [:run ""]]]
            (convert-doc (c/enter doc (selection [1 12])))))))
+
+(deftest selected-content-test
+  (testing "returns list of runs when passed selection within one paragraph"
+    (is (= [(run "bar" #{:bold :italic})
+            (run "bizz" #{:italic})
+            (run "buzz" #{:bold})]
+           (c/selected-content doc (selection [0 3] [0 14])))))
+
+  (testing "returns list of paragraphs when passed selection across multiple paragraphs"
+    (is (= [(paragraph [(run "bar" #{:bold :italic})
+                        (run "bizz" #{:italic})
+                        (run "buzz" #{:bold})])
+            (paragraph [(run "aaa")])]
+           (c/selected-content doc (selection [0 3] [1 3])))))
+
+  (testing "returns list of paragraphs when passed selection across multiple (> 3) paragraphs"
+    (is (= [(paragraph [(run "foo1" #{:italic})])
+            (paragraph [(run "foo2" #{:bold})])
+            (paragraph [(run "foo3" #{:underline})])
+            (paragraph [(run "foo" #{:strike})])]
+           (c/selected-content long-doc (selection [0 0] [3 3])))))
+
+  ;; TODO: I **think** this is the correct implementation here...could be wrong though...
+  (testing "returns one paragraph and empty next paragraph when going from start of paragraph 1 to start of paragraph 2"
+    (is (= [(paragraph [(run "foo1" #{:italic})]) (paragraph)]
+           (c/selected-content long-doc (selection [0 0] [1 0]))))))

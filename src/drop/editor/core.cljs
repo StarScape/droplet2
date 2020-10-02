@@ -516,6 +516,7 @@
       (let [[para1 para2] (split-paragraph doc sel)]
         (replace-paragraph-with doc para-idx [para1 (paragraph) para2])))))
 
+;; TODO: move to block below?
 (defn doc-selected-content
   [doc sel]
   (let [start-para-idx (-> sel :start :paragraph)
@@ -526,9 +527,7 @@
       (selected-content ((:children doc) start-para-idx) sel)
       ((comp vec flatten) [(delete-before start-para (-> sel :start :offset))
                            (subvec (:children doc) (inc start-para-idx) end-para-idx)
-                           (delete-after end-para (-> sel :start :offset))]))))
-
-;; TODO: test selected-content for doc
+                           (delete-after end-para (-> sel :end :offset))]))))
 
 ;; TODO: should the functions be inlined here?
 (extend-type Document
@@ -559,10 +558,17 @@
                 (paragraph [(run "inserted paragraph 2")])
                 (paragraph [(run "inserted paragraph 3")])])
 
-(def doc (->Document [p1 (paragraph [(run "111")]) p2]))
+(def doc (->Document [p1 #_(paragraph [(run "111")]) p2]))
 
-(doc-selected-content doc (selection [0 3] [0 14]))
-(doc-selected-content doc (selection [0 3] [2 3]))
+(def long-doc (document [(paragraph [(run "foo1" #{:italic})])
+                         (paragraph [(run "foo2" #{:bold})])
+                         (paragraph [(run "foo3" #{:underline})])
+                         (paragraph [(run "foo4" #{:strike})])]))
+
+;; (doc-selected-content doc (selection [0 3] [0 14]))
+;; (selected-content doc (selection [0 3] [1 3]))
+
+(selected-content long-doc (selection [0 0] [3 3]))
 
 ;; (enter doc (selection [0 10]))
 
