@@ -209,7 +209,18 @@
                         (run "dd", #{:italic})])]
       (is (= #{:italic}
              (c/shared-formats p (selection [p 0] [p 3]))
+             (c/shared-formats p (selection [p 0] [p 4]))))))
+
+  (testing "single-arity version selections whole paragraph"
+    (let [p (paragraph [(run "aa", #{:italic :bold})
+                        (run "bb", #{:italic :underline})
+                        (run "cc", #{:italic :strikethrough})
+                        (run "dd", #{:italic})])]
+      (is (= #{:italic}
+             (c/shared-formats p (selection [p 0] [p 3]))
              (c/shared-formats p (selection [p 0] [p 4])))))))
+
+;; TODO: text for selected-content
 
 (deftest delete-after-test
   (testing "beginning of paragraph"

@@ -18,6 +18,7 @@
    Basically, this is a set of common operations on paragraphs and documents."
 
   (selected-content
+   [container]
    [container sel]
    "Returns the content within the range-selection inside the container, either as a vector
     of runs of a vector of paragraphs, depending which is appropriate."))
@@ -300,8 +301,10 @@
 ;; TODO: write tests for Selectable functions
 (extend-type Paragraph
   Selectable
-  (selected-content [para sel]
-    (second (separate-selected (:runs para) sel))))
+  ;; TODO: should this return a paragraph instead of a list of runs?
+  (selected-content
+   ([para] (selected-content para (selection [-1 0] [-1 (text-len para)])))
+   ([para sel] (second (separate-selected (:runs para) sel)))))
 
 ;; TODO: should probably be a multimethod/TextContainer thang
 #_(defn para-selected-content
@@ -314,14 +317,15 @@
 (defn shared-formats
   "Returns the set of all the formats shared by each run that is inside (wholly or
    partially) the selection. Will return an empty set if there are no formats shared."
-  [para sel]
-  (let [runs (:runs para)
-        [start-run-idx _] (at-offset runs (-> sel :start :offset))
-        [end-run-idx _] (before-offset runs (-> sel :end :offset))
-        selected-runs (subvec runs start-run-idx (inc end-run-idx))]
-    (->> selected-runs
-         (map :formats)
-         (apply set/intersection))))
+  ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
+  ([para sel]
+   (let [runs (:runs para)
+         [start-run-idx _] (at-offset runs (-> sel :start :offset))
+         [end-run-idx _] (before-offset runs (-> sel :end :offset))
+         selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+     (->> selected-runs
+          (map :formats)
+          (apply set/intersection)))))
 
 (defn toggle-format
   "Either applies the selected format to the selection (if the selected text
@@ -529,12 +533,32 @@
                            (subvec (:children doc) (inc start-para-idx) end-para-idx)
                            (delete-after end-para (-> sel :end :offset))]))))
 
+(defn doc-shared-formats [doc sel]
+  (if (= (-> sel :start :paragraph) (-> sel :end :paragraph))
+    (shared-formats ((:children doc) (-> sel :start :paragraph)) sel)
+    (->> (selected-content doc sel)
+         (map shared-formats)
+         (apply set/intersection))))
+
+(comment
+  (defprotocol SomeBehavior
+    (method1 [a] [a b]))
+
+  (deftype AType [x y]
+    SomeBehavior
+    (method1 [a] :goodbye)
+    (method1 [a b] :hello))
+
+  (method1 (AType. 1 2) 1)
+  (method1 (AType. 1 2))
+
+  (subvec [1 2 3 4] 1 3))
+
 ;; TODO: should the functions be inlined here?
 (extend-type Document
   Selectable
   (selected-content [doc sel] (doc-selected-content doc sel)))
 
-;; TODO: implement selected-content (protocol?)
 ;; TODO: implement shared-formats (protocol?)
 ;; TODO: implement toggle-formats (protocol?)
 ;; TODO: navigable functions for document
@@ -547,9 +571,9 @@
 (def p1 (paragraph [(run "foo" #{:italic})
                     (run "bar" #{:bold :italic})
                     (run "bizz" #{:italic})
-                    (run "buzz" #{:bold})]))
+                    (run "buzz" #{:bold :italic})]))
 
-(def p2 (paragraph [(run "aaa" #{})
+(def p2 (paragraph [(run "aaa" #{:bold :italic})
                     (run "bbb" #{})
                     (run "ccc" #{})
                     (run "ddd" #{})]))
@@ -568,7 +592,10 @@
 ;; (doc-selected-content doc (selection [0 3] [0 14]))
 ;; (selected-content doc (selection [0 3] [1 3]))
 
-(selected-content long-doc (selection [0 0] [3 3]))
+(doc-shared-formats doc (selection [0 0] [0 8]))
+(doc-shared-formats doc (selection [0 0] [1 3]))
+
+;; (selected-content long-doc (selection [0 0] [3 3]))
 
 ;; (enter doc (selection [0 10]))
 
