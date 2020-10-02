@@ -17,9 +17,7 @@
    and therefore a 'paragraph offset into a run' would not make sense.
    Basically, this is a set of common operations on paragraphs and documents."
 
-  (selected-content
-   [container]
-   [container sel]
+  (selected-content [container sel]
    "Returns the content within the range-selection inside the container, either as a vector
     of runs of a vector of paragraphs, depending which is appropriate."))
 
@@ -302,17 +300,7 @@
 (extend-type Paragraph
   Selectable
   ;; TODO: should this return a paragraph instead of a list of runs?
-  (selected-content
-   ([para] (selected-content para (selection [-1 0] [-1 (text-len para)])))
-   ([para sel] (second (separate-selected (:runs para) sel)))))
-
-;; TODO: should probably be a multimethod/TextContainer thang
-#_(defn para-selected-content
-  "Returns the content within the range-selection
-   inside the paragraph, as a vector of runs."
-  [para sel]
-  (let [[_before within _after] (separate-selected (:runs para) sel)]
-    within))
+  (selected-content [para sel] (second (separate-selected (:runs para) sel))))
 
 (defn shared-formats
   "Returns the set of all the formats shared by each run that is inside (wholly or
