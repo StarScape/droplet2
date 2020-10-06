@@ -288,3 +288,16 @@
   (testing "returns one paragraph and empty next paragraph when going from start of paragraph 1 to start of paragraph 2"
     (is (= [(paragraph [(run "foo1" #{:italic})]) (paragraph)]
            (c/selected-content long-doc (selection [0 0] [1 0]))))))
+
+(deftest shared-formats-test
+  (let [formats-doc (c/document [(paragraph [(run "foo1" #{:italic})
+                                             (run "foo2" #{:italic :bold})
+                                             (run "foo3" #{:bold})])
+                                 (paragraph [(run "bar1" #{:italic :bold :underline})])])]
+    (testing "works inside same paragraph"
+      (is (= #{:italic} (c/shared-formats formats-doc (selection [0 0] [0 8]))))
+      (is (= #{:italic :bold} (c/shared-formats formats-doc (selection [0 4] [0 8]))))
+      (is (= #{:bold} (c/shared-formats formats-doc (selection [0 4] [0 12])))))
+
+    (testing "works across paragraphs"
+      (is (= #{:bold} (c/shared-formats formats-doc (selection [0 8] [1 3])))))))

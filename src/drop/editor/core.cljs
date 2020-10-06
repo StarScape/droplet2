@@ -17,9 +17,16 @@
    and therefore a 'paragraph offset into a run' would not make sense.
    Basically, this is a set of common operations on paragraphs and documents."
 
-  (selected-content [container sel]
+  (selected-content
+   [container sel]
    "Returns the content within the range-selection inside the container, either as a vector
-    of runs of a vector of paragraphs, depending which is appropriate."))
+    of runs of a vector of paragraphs, depending which is appropriate.")
+  (shared-formats
+   [container]
+   [container sel]
+   "Returns the set of all the formats shared by each run that is inside (wholly or
+    partially) the selection. Will return an empty set if there are no formats shared.
+    If not passed a selection, will return shared formats for the whole container."))
 
 (defn type-dispatch [& args] (mapv type args))
 
@@ -300,9 +307,19 @@
 (extend-type Paragraph
   Selectable
   ;; TODO: should this return a paragraph instead of a list of runs?
-  (selected-content [para sel] (second (separate-selected (:runs para) sel))))
+  (selected-content [para sel] (second (separate-selected (:runs para) sel)))
+  (shared-formats
+   ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
+   ([para sel]
+    (let [runs (:runs para)
+          [start-run-idx _] (at-offset runs (-> sel :start :offset))
+          [end-run-idx _] (before-offset runs (-> sel :end :offset))
+          selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+      (->> selected-runs
+           (map :formats)
+           (apply set/intersection))))))
 
-(defn shared-formats
+#_(defn shared-formats
   "Returns the set of all the formats shared by each run that is inside (wholly or
    partially) the selection. Will return an empty set if there are no formats shared."
   ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
@@ -528,24 +545,11 @@
          (map shared-formats)
          (apply set/intersection))))
 
-(comment
-  (defprotocol SomeBehavior
-    (method1 [a] [a b]))
-
-  (deftype AType [x y]
-    SomeBehavior
-    (method1 [a] :goodbye)
-    (method1 [a b] :hello))
-
-  (method1 (AType. 1 2) 1)
-  (method1 (AType. 1 2))
-
-  (subvec [1 2 3 4] 1 3))
-
 ;; TODO: should the functions be inlined here?
 (extend-type Document
   Selectable
-  (selected-content [doc sel] (doc-selected-content doc sel)))
+  (selected-content [doc sel] (doc-selected-content doc sel))
+  (shared-formats [doc sel] (doc-shared-formats doc sel)))
 
 ;; TODO: implement shared-formats (protocol?)
 ;; TODO: implement toggle-formats (protocol?)

@@ -220,7 +220,7 @@
              (c/shared-formats p (selection [p 0] [p 3]))
              (c/shared-formats p (selection [p 0] [p 4])))))))
 
-;; TODO: text for selected-content
+;; TODO: test for selected-content
 
 (deftest delete-after-test
   (testing "beginning of paragraph"
