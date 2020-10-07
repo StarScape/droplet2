@@ -5,11 +5,28 @@
 
 ;; TODO: spec all this out. Also learn spec :)
 
+;; TODO: I think it might be beneficial to not return vectors of runs/paragraphs,
+;; but instead to return paragraphs/documents (respectively). I think this might
+;; give us better polymorphism bang-for-buck...
+
 ;; Some operations common to Runs, Paragraphs, and Documents
 
 ;; This protocol could stand a better name if we're honest
 (defprotocol TextContainer
   (text-len [this] "Returns the number of chars in container (run/paragraph)."))
+
+(defprotocol Formattable
+  "Primitive operations for formatting text-containers (runs, paragraphs, documents)."
+  (apply-format
+   [this format]
+   [this sel format]
+   "Returns a new container with the format applied.
+    Arity taking a selection is not implemented for runs.")
+  (remove-format
+   [this format]
+   [this sel format]
+   "Returns a new container with the format removed, if it is present.
+    Arity taking a selection is not implemented for runs."))
 
 (defprotocol Selectable
   "Any text container for which paragraph offset selections are valid.
@@ -20,7 +37,7 @@
   (selected-content
    [container sel]
    "Returns the content within the range-selection inside the container, either as a vector
-    of runs of a vector of paragraphs, depending which is appropriate.")
+    of runs or a vector of paragraphs, depending which is appropriate.")
   (shared-formats
    [container]
    [container sel]
@@ -42,7 +59,15 @@
 ;;; Run operations ;;;
 (defrecord Run [text formats]
   TextContainer
-  (text-len [r] (count (:text r))))
+  (text-len [r] (count (:text r)))
+
+  Formattable
+  (apply-format
+   [r format]
+   (update r :formats #(conj % format)))
+  (remove-format
+   [r format]
+   (update r :formats #(disj % format))))
 
 (defn run
   "Returns a new run. A run is defined as text with associating formatting."
@@ -98,32 +123,28 @@
         after (.slice (:text run) end)]
     (assoc run :text (str before after))))
 
-;; Delete at, acts like backspace
+;; Delete at offset, acts like backspace
 (defmethod delete [Run js/Number]
   [run caret]
   (delete run (dec caret) caret))
 
+;; TODO: should these 2 be in the Formattable protocol?
 (defn apply-formats
   "Returns a new run with the all the supplied formats applied."
   [r formats]
   (update r :formats #(apply conj % formats)))
-
-(defn apply-format
-  "Returns a new run with the format applied."
-  [r format]
-  (update r :formats #(conj % format)))
 
 (defn remove-formats
   "Returns a new run with all the supplied formats removed."
   [r formats]
   (update r :formats #(apply disj % formats)))
 
-(defn remove-format
-  "Returns a new run with the format removed."
-  [r format]
-  (update r :formats #(disj % format)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                        ;;
+;;  Paragraph operations  ;;
+;;                        ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;; Paragraph operations ;;;
 (defrecord Paragraph [runs]
   TextContainer
   (text-len [p] (reduce #(+ %1 (text-len %2)) 0 (:runs p))))
@@ -303,6 +324,13 @@
   [para offset]
   (delete para (selection [-1 0] [-1 offset])))
 
+(defn update-selected-runs
+  "Returns a new paragraph with f applied to each run inside the selection."
+  [para sel f]
+  (let [[before selected after] (separate-selected (:runs para) sel)
+        selected-updated (map f selected)]
+    (paragraph (flatten [before selected-updated after]))))
+
 ;; TODO: write tests for Selectable functions
 (extend-type Paragraph
   Selectable
@@ -317,21 +345,31 @@
           selected-runs (subvec runs start-run-idx (inc end-run-idx))]
       (->> selected-runs
            (map :formats)
-           (apply set/intersection))))))
+           (apply set/intersection)))))
+
+  ;; TODO: test these
+  Formattable
+  (apply-format
+   ([p format] (update p :runs (partial map #(apply-format % format))))
+   ([p sel format] (update-selected-runs p sel #(apply-format % format))))
+  (remove-format
+   ([p format] (update p :runs (partial map #(remove-format % format))))
+   ([p sel format] (update-selected-runs p sel #(remove-format % format)))))
 
 #_(defn shared-formats
-  "Returns the set of all the formats shared by each run that is inside (wholly or
+   "Returns the set of all the formats shared by each run that is inside (wholly or
    partially) the selection. Will return an empty set if there are no formats shared."
-  ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
-  ([para sel]
-   (let [runs (:runs para)
-         [start-run-idx _] (at-offset runs (-> sel :start :offset))
-         [end-run-idx _] (before-offset runs (-> sel :end :offset))
-         selected-runs (subvec runs start-run-idx (inc end-run-idx))]
-     (->> selected-runs
-          (map :formats)
-          (apply set/intersection)))))
+   ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
+   ([para sel]
+    (let [runs (:runs para)
+          [start-run-idx _] (at-offset runs (-> sel :start :offset))
+          [end-run-idx _] (before-offset runs (-> sel :end :offset))
+          selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+      (->> selected-runs
+           (map :formats)
+           (apply set/intersection)))))
 
+;; TODO: make part of selectable protocol
 (defn toggle-format
   "Either applies the selected format to the selection (if the selected text
    does not already have that format) or removes it (if the selected text **does**
@@ -482,10 +520,10 @@
 
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
-    (if (zero? (sel/para sel))
+    (if (zero? (sel/start-para sel))
       doc
       (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
-    (update-in doc [:children (sel/para sel)] #(delete % sel))))
+    (update-in doc [:children (sel/start-para sel)] #(delete % sel))))
 
 (defn- doc-range-delete [doc sel]
   (let [startp-idx (-> sel :start :paragraph)
@@ -532,18 +570,44 @@
         start-para ((:children doc) start-para-idx)
         end-para-idx (-> sel :end :paragraph)
         end-para ((:children doc) end-para-idx)]
-    (if (= start-para-idx end-para-idx)
+    (if (sel/single-paragraph? sel)
       (selected-content ((:children doc) start-para-idx) sel)
       ((comp vec flatten) [(delete-before start-para (-> sel :start :offset))
                            (subvec (:children doc) (inc start-para-idx) end-para-idx)
                            (delete-after end-para (-> sel :end :offset))]))))
 
 (defn doc-shared-formats [doc sel]
-  (if (= (-> sel :start :paragraph) (-> sel :end :paragraph))
+  (if (sel/single-paragraph? sel)
     (shared-formats ((:children doc) (-> sel :start :paragraph)) sel)
     (->> (selected-content doc sel)
          (map shared-formats)
          (apply set/intersection))))
+
+(defn doc-toggle-format [doc sel format]
+  (if (sel/single-paragraph? sel)
+    (update-in doc [:children (sel/start-para sel)] #(toggle-format % sel format))
+    (let [children (:children doc)
+          common-formats (shared-formats doc sel)
+          format-fn (if (common-formats format) remove-format apply-format)
+          start-para-idx (-> sel :start :paragraph)
+          end-para-idx (-> sel :end :paragraph)
+          start-para (children start-para-idx)
+          end-para (children end-para-idx)
+          new-start-para (format-fn
+                          start-para
+                          (selection [-1 (-> sel :start :offset)] [-1 (text-len start-para)])
+                          format)
+          new-end-para (format-fn
+                        end-para
+                        (selection [-1 0] [-1 (-> sel :end :offset)])
+                        format)
+          inbetween-paras (subvec (selected-content doc sel) (inc start-para-idx) end-para-idx)
+          inbetween-paras-new (map #(format-fn % format) inbetween-paras)
+          new-children (-> children
+                           (assoc start-para-idx new-start-para)
+                           (assoc end-para-idx new-end-para)
+                           (vec-utils/replace-range (inc start-para-idx) (dec end-para-idx) inbetween-paras-new))]
+      (assoc doc :children new-children))))
 
 ;; TODO: should the functions be inlined here?
 (extend-type Document
@@ -551,7 +615,6 @@
   (selected-content [doc sel] (doc-selected-content doc sel))
   (shared-formats [doc sel] (doc-shared-formats doc sel)))
 
-;; TODO: implement shared-formats (protocol?)
 ;; TODO: implement toggle-formats (protocol?)
 ;; TODO: navigable functions for document
 ;; TODO: render document ;)
@@ -581,11 +644,16 @@
                          (paragraph [(run "foo3" #{:underline})])
                          (paragraph [(run "foo4" #{:strike})])]))
 
+;; (doc-toggle-format #p doc (selection [0 6] [1 3]) :bold)
+
+;; TODO: identify bug and fix
+(doc-toggle-format long-doc (selection [0 0] [2 4]) :italic)
+
 ;; (doc-selected-content doc (selection [0 3] [0 14]))
 ;; (selected-content doc (selection [0 3] [1 3]))
 
-(doc-shared-formats doc (selection [0 0] [0 8]))
-(doc-shared-formats doc (selection [0 0] [1 3]))
+;; (doc-shared-formats doc (selection [0 0] [0 8]))
+;; (doc-shared-formats doc (selection [0 0] [1 3]))
 
 ;; (selected-content long-doc (selection [0 0] [3 3]))
 

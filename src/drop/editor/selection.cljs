@@ -24,7 +24,7 @@
     (-> sel :start :offset)
     (-> sel :end :offset)))
 
-(defn para
+(defn start-para
   "Shortcut for (-> sel :start :paragraph) for a single selection."
   [sel]
   (-> sel :start :paragraph))
@@ -37,6 +37,11 @@
 (def range?
   "Returns true if argument is a range selection."
   (complement single?))
+
+(defn single-paragraph?
+  "Returns true if the selection is contained within a single paragraph."
+  [sel]
+  (= (-> sel :start :paragraph) (-> sel :end :paragraph)))
 
 (defn shift-single
   "Shift a single-selection by n characters (can be positive or negative)."
