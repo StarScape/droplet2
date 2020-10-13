@@ -258,3 +258,18 @@
 
 ;;     (testing "not activated on whole selection, should activate"
 ;;       (is (= #{:})))))
+
+(deftest char-at-test
+  (let [mypara (paragraph [(run "foo")])]
+    (is (= "f" (c/char-at mypara (selection [-1 0]))))
+    (is (= "o" (c/char-at mypara (selection [-1 1]))))
+    (is (= "o" (c/char-at mypara (selection [-1 2]))))
+    (is (thrown? js/Error (c/char-at mypara (selection [-1 3]))))))
+
+(deftest char-before-test
+  (let [mypara (paragraph [(run "foo")])]
+    (is (= "\n" (c/char-before mypara (selection [-1 0]))))
+    (is (= "f" (c/char-before mypara (selection [-1 1]))))
+    (is (= "o" (c/char-before mypara (selection [-1 2]))))
+    (is (= "o" (c/char-before mypara (selection [-1 3]))))
+    (is (thrown? js/Error (c/char-before mypara (selection [-1 4]))))))

@@ -34,6 +34,12 @@
    and therefore a 'paragraph offset into a run' would not make sense.
    Basically, this is a set of common operations on paragraphs and documents."
 
+  (char-at
+   [container sel]
+   "Returns the character under the block cursor at the given single selection `sel`")
+  (char-before
+   [container sel]
+   "Returns the character immediately before the block cursor at the given single selection `sel`")
   (selected-content
    [container sel]
    "Returns the content within the range-selection inside the container, either as a vector
@@ -262,8 +268,6 @@
         [within-sel after-sel] (split-runs runs-after adjusted-end-offset)]
     [runs-before within-sel after-sel]))
 
-(separate-selected [(run "foo" #{:italic}) (run "bar")] (selection [-1 0] [-1 3]))
-
 ;; Main Paragraph operations
 (defmethod insert [Paragraph Selection PersistentVector]
   [para sel runs]
@@ -342,8 +346,19 @@
 ;; TODO: write tests for Selectable functions
 (extend-type Paragraph
   Selectable
+  (char-at [para sel]
+    (let [[run-idx run-offset] (at-offset (:runs para) (sel/caret sel))
+          run-text (:text ((:runs para) run-idx))]
+      (nth run-text run-offset)))
+
+  (char-before [para sel]
+    (if (zero? (sel/caret sel))
+      "\n"
+      (char-at para (sel/shift-single sel -1))))
+
   ;; TODO: should this return a paragraph instead of a list of runs?
   (selected-content [para sel] (second (separate-selected (:runs para) sel)))
+
   (shared-formats
    ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
    ([para sel]
@@ -354,6 +369,7 @@
       (->> selected-runs
            (map :formats)
            (apply set/intersection)))))
+
   (toggle-format
    [para sel format]
    (let [[before in-selection after]
@@ -376,9 +392,13 @@
   (apply-format
    ([p format] (update p :runs (partial map #(apply-format % format))))
    ([p sel format] (update-selected-runs p sel #(apply-format % format))))
+
   (remove-format
    ([p format] (update p :runs (partial map #(remove-format % format))))
    ([p sel format] (update-selected-runs p sel #(remove-format % format)))))
+
+(char-at (paragraph [(run "foobar")]) (selection [-1 5]))
+(char-before (paragraph [(run "foobar")]) (selection [-1 0]))
 
 #_(defn shared-formats
    "Returns the set of all the formats shared by each run that is inside (wholly or
@@ -639,8 +659,7 @@
   (shared-formats [doc sel] (doc-shared-formats doc sel))
   (toggle-format [doc sel format] (doc-toggle-format doc sel format)))
 
-;; TODO: implement toggle-formats (protocol?)
-;; TODO: selected-content for single selections
+;; TODO: selected-content for single selections (should it be some different function?)
 ;; TODO: navigable functions for document
 ;; TODO: render document ;)
 ;; TODO: functions will need to be modified to return new selection
@@ -669,10 +688,7 @@
                          (paragraph [(run "foo3" #{:underline})])
                          (paragraph [(run "foo4" #{:strike})])]))
 
-;; || TODO: write tests for doc-toggle-format ||
-
-;; TODO: this is failing
-(toggle-format doc (selection [0 0] [0 2]) :italic)
+;; (toggle-format doc (selection [0 0] [0 2]) :italic)
 ;; (doc-toggle-format long-doc (selection [0 0] [1 4]) :italic)
 
 ;; (doc-selected-content doc (selection [0 3] [0 14]))
