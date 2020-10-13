@@ -162,7 +162,15 @@
       (if (and (= (sel/caret collapsed) (core/text-len para))
                (not= para-idx (-> doc :children count dec)))
         (selection [(inc para-idx) 0])
-        (next-word ((:children doc) (sel/start-para sel)) sel)))))
+        (next-word ((:children doc) (sel/start-para collapsed)) collapsed))))
+
+  (prev-word [doc sel]
+    (let [collapsed (smart-collapse sel)
+          para-idx (sel/start-para collapsed)
+          para ((:children doc) para-idx)]
+      (if (and (= 0 (sel/caret collapsed)) (not= 0 para-idx))
+        (selection [(dec para-idx) (core/text-len ((:children doc) (dec para-idx)))])
+        (prev-word ((:children doc) (sel/start-para collapsed)) collapsed)))))
 
 
 (comment
@@ -172,4 +180,5 @@
 
   (def my-doc (core/document [my-par, (core/paragraph [(core/run "foo bar?")])]))
   (caret (next-word my-doc (selection [1 0])))
+  (caret (prev-word my-doc (selection [0 7])))
   )

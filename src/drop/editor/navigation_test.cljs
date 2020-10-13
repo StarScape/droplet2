@@ -89,6 +89,24 @@
   (testing "collapses first"
     (is (= 0 (caret (prev-word para (selection [-1 5] [-1 55] true)))))))
 
+(deftest prev-word-document-test
+  (testing "should return the same offset as the paragraph prev-word for all offsets but 0"
+    (is (->> (range 1 (inc (core/text-len para)))
+             (map (fn [offset]
+                    (= (caret (prev-word doc (selection [0 offset])))
+                       (caret (prev-word para (selection [-1 offset]))))))
+             (every? true?))))
+
+  (testing "prev-word from first offset in paragraph should go to the last char of next paragraph"
+    (is (= (selection [0 (core/text-len para)])
+           (prev-word doc (selection [1 0])))))
+
+  (testing "past end of paragraph should fail"
+    (is (thrown? js/Error (prev-word doc (selection [0 200])))))
+
+  (testing "prev-word from offset 0 of first paragraph should return itself"
+    (is (= (selection [0 0]) (prev-word doc (selection [0 0]))))))
+
 (deftest hyphen-back-and-forth-test
   (let [text "word1 a-very-long-hyphenated-word word2"]
     ;; Start at offset 5, jump right 5 times
