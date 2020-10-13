@@ -397,9 +397,6 @@
    ([p format] (update p :runs (partial map #(remove-format % format))))
    ([p sel format] (update-selected-runs p sel #(remove-format % format)))))
 
-(char-at (paragraph [(run "foobar")]) (selection [-1 5]))
-(char-before (paragraph [(run "foobar")]) (selection [-1 0]))
-
 #_(defn shared-formats
    "Returns the set of all the formats shared by each run that is inside (wholly or
    partially) the selection. Will return an empty set if there are no formats shared."

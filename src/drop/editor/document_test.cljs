@@ -268,7 +268,7 @@
     (is (= [(run "bar" #{:bold :italic})
             (run "bizz" #{:italic})
             (run "buzz" #{:bold})]
-           (c/selected-content doc (selection [0 3])))))
+           (c/selected-content doc (selection [0 3] [0 14])))))
 
   (testing "returns list of paragraphs when passed selection across multiple paragraphs"
     (is (= [(paragraph [(run "bar" #{:bold :italic})
