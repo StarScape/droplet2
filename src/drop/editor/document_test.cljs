@@ -1,7 +1,7 @@
 (ns drop.editor.document-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [drop.editor.selection :as sel :refer [selection]]
-            [drop.editor.core :as c :refer [run paragraph]]))
+            [drop.editor.core :as c :refer [run paragraph document]]))
 
 ;; Because checking equivalence on a bunch of nested records is a ROYAL pain in the ass,
 ;; I invented a sort of custom version of Hiccup[1] for represented documents with paragraphs
@@ -36,9 +36,9 @@
                 (paragraph [(run "inserted paragraph 2")])
                 (paragraph [(run "inserted paragraph 3")])])
 
-(def doc (c/document [p1 p2]))
+(def doc (document [p1 p2]))
 
-(def long-doc (c/document [(paragraph [(run "foo1" #{:italic})])
+(def long-doc (document [(paragraph [(run "foo1" #{:italic})])
                            (paragraph [(run "foo2" #{:bold})])
                            (paragraph [(run "foo3" #{:underline})])
                            (paragraph [(run "foo4" #{:strike})])]))
@@ -290,7 +290,7 @@
            (c/selected-content long-doc (selection [0 0] [1 0]))))))
 
 (deftest shared-formats-test
-  (let [formats-doc (c/document [(paragraph [(run "foo1" #{:italic})
+  (let [formats-doc (document [(paragraph [(run "foo1" #{:italic})
                                              (run "foo2" #{:italic :bold})
                                              (run "foo3" #{:bold})])
                                  (paragraph [(run "bar1" #{:italic :bold :underline})])])]
@@ -301,3 +301,52 @@
 
     (testing "works across paragraphs"
       (is (= #{:bold} (c/shared-formats formats-doc (selection [0 8] [1 3])))))))
+
+(deftest toggle-format-test
+  (testing "toggling single run"
+    (is (= [[:p
+             [:run "foo"]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/toggle-format doc (selection [0 0] [0 3]) :italic)))))
+
+  (testing "toggling across runs WITH shared format"
+    (is (= [[:p
+             [:run "foo"]
+             [:run "bar" :bold]
+             [:run "bizz"]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/toggle-format doc (selection [0 0] [0 10]) :italic)))))
+
+  (testing "toggling across runs WITHOUT shared format"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold :italic]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/toggle-format doc (selection [0 0] [0 14]) :italic)))))
+
+  (testing "toggling across paragraphs WITHOUT shared format"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold :italic]]
+            [:p [:run "aaabbbcccddd" :italic]]]
+           (convert-doc (c/toggle-format doc (selection [0 0] [1 12]) :italic)))))
+
+  (testing "toggling across paragraphs WITH shared format"
+    (let [modified (-> doc
+                       (update-in [:children 0 :runs 3 :formats] conj :italic)
+                       (update-in [:children 1 :runs 0 :formats] conj :italic))]
+      (is (= [[:p
+               [:run "foo" :italic]
+               [:run "bar" :bold :italic]
+               [:run "bizz" :italic]
+               [:run "buzz" :bold]]
+              [:p [:run "aaabbbcccddd"]]]
+             (convert-doc (c/toggle-format modified (selection [0 10] [1 12]) :italic)))))))

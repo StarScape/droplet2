@@ -43,7 +43,12 @@
    [container sel]
    "Returns the set of all the formats shared by each run that is inside (wholly or
     partially) the selection. Will return an empty set if there are no formats shared.
-    If not passed a selection, will return shared formats for the whole container."))
+    If not passed a selection, will return shared formats for the whole container.")
+  (toggle-format
+   [doc sel format]
+   "Either applies the selected format to the selection (if the selected text
+    does not already have that format) or removes it (if the selected text **does**
+    have that format)."))
 
 (defn type-dispatch [& args] (mapv type args))
 
@@ -225,8 +230,9 @@
   "Splits runs at offset, returning a vector of [runs before, runs after].
    Will break a run apart if `offset` is inside that run."
   [runs offset]
-  (let [runs-len (reduce + (map text-len runs))
-        offset-fn (if (= runs-len offset)
+  (let [run-end-offsets (set (reductions + (map text-len runs)))
+        ;; runs-len (reduce + (map text-len runs))
+        offset-fn (if (run-end-offsets offset)
                     before-offset
                     at-offset)
 
@@ -241,7 +247,7 @@
 
         before (conj runs-before target-before)
         after (into [target-after] runs-after)]
-    [before after]))
+    (mapv optimize-runs [before after])))
 
 (defn separate-selected
   "Splits the runs at the beginning and end of the selection and returns three vectors
@@ -255,6 +261,8 @@
         adjusted-end-offset (- (-> sel :end :offset) runs-before-len)
         [within-sel after-sel] (split-runs runs-after adjusted-end-offset)]
     [runs-before within-sel after-sel]))
+
+(separate-selected [(run "foo" #{:italic}) (run "bar")] (selection [-1 0] [-1 3]))
 
 ;; Main Paragraph operations
 (defmethod insert [Paragraph Selection PersistentVector]
@@ -346,6 +354,22 @@
       (->> selected-runs
            (map :formats)
            (apply set/intersection)))))
+  (toggle-format
+   [para sel format]
+   (let [[before in-selection after]
+         (separate-selected (:runs para) sel)
+
+         common-formats
+         (->> in-selection (map :formats) (apply set/intersection))
+
+         selected-runs-toggled
+         (if (contains? common-formats format)
+           (mapv #(remove-format % format) in-selection)
+           (mapv #(apply-format % format) in-selection))
+
+         new-runs
+         (optimize-runs (concat before selected-runs-toggled after))]
+     (assoc para :runs new-runs)))
 
   ;; TODO: test these
   Formattable
@@ -369,8 +393,7 @@
            (map :formats)
            (apply set/intersection)))))
 
-;; TODO: make part of selectable protocol
-(defn toggle-format
+#_(defn toggle-format
   "Either applies the selected format to the selection (if the selected text
    does not already have that format) or removes it (if the selected text **does**
    have that format)."
@@ -613,13 +636,15 @@
 (extend-type Document
   Selectable
   (selected-content [doc sel] (doc-selected-content doc sel))
-  (shared-formats [doc sel] (doc-shared-formats doc sel)))
+  (shared-formats [doc sel] (doc-shared-formats doc sel))
+  (toggle-format [doc sel format] (doc-toggle-format doc sel format)))
 
 ;; TODO: implement toggle-formats (protocol?)
+;; TODO: selected-content for single selections
 ;; TODO: navigable functions for document
 ;; TODO: render document ;)
 ;; TODO: functions will need to be modified to return new selection
-;;       (and possible the list of changes)
+;;       (and possibly the list of changes)
 
 ;; foobarbizzbuzz
 ;; aaabbbcccddd
@@ -644,10 +669,11 @@
                          (paragraph [(run "foo3" #{:underline})])
                          (paragraph [(run "foo4" #{:strike})])]))
 
-;; (doc-toggle-format #p doc (selection [0 6] [1 3]) :bold)
+;; || TODO: write tests for doc-toggle-format ||
 
-;; TODO: identify bug and fix
-(doc-toggle-format long-doc (selection [0 0] [2 4]) :italic)
+;; TODO: this is failing
+(toggle-format doc (selection [0 0] [0 2]) :italic)
+;; (doc-toggle-format long-doc (selection [0 0] [1 4]) :italic)
 
 ;; (doc-selected-content doc (selection [0 3] [0 14]))
 ;; (selected-content doc (selection [0 3] [1 3]))
@@ -673,3 +699,9 @@
 ;; (insert doc (selection [0 10]) to-insert)
 
 ;; (insert doc (selection [0 14]) to-insert)
+
+;; (= [(run "bar" #{:bold :italic})
+;;     (run "bizz" #{:italic})
+;;     (run "buzz" #{:bold})]
+;;    (selected-content doc (selection [0 3] [0 14])))
+;; (selected-content doc (selection [0 3] [0 14]))
