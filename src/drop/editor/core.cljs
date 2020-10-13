@@ -652,6 +652,8 @@
 ;; TODO: should the functions be inlined here?
 (extend-type Document
   Selectable
+  (char-at [doc sel] (char-at ((:children doc) (sel/start-para sel)) sel))
+  (char-before [doc sel] (char-before ((:children doc) (sel/start-para sel)) sel))
   (selected-content [doc sel] (doc-selected-content doc sel))
   (shared-formats [doc sel] (doc-shared-formats doc sel))
   (toggle-format [doc sel format] (doc-toggle-format doc sel format)))

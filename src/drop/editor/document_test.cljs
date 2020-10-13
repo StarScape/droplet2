@@ -350,3 +350,35 @@
                [:run "buzz" :bold]]
               [:p [:run "aaabbbcccddd"]]]
              (convert-doc (c/toggle-format modified (selection [0 10] [1 12]) :italic)))))))
+
+(deftest char-at-test
+  (testing "works in 1st paragraph"
+    (is (= "f" (c/char-at doc (selection [0 0]))))
+    (is (= "o" (c/char-at doc (selection [0 1]))))
+    (is (= "z" (c/char-at doc (selection [0 13]))))
+    (is (thrown? js/Error (c/char-at doc (selection [0 14])))))
+
+  (testing "works in other paragraphs"
+    (is (= "a" (c/char-at doc (selection [1 0]))))
+    (is (= "b" (c/char-at doc (selection [1 3]))))
+    (is (= "c" (c/char-at doc (selection [1 7]))))
+    (is (= "d" (c/char-at doc (selection [1 11]))))
+    (is (thrown? js/Error (c/char-at doc (selection [1 12]))))))
+
+(deftest char-before-test
+  (testing "works in 1st paragraph"
+    (is (= "\n" (c/char-before doc (selection [0 0]))))
+    (is (= "f" (c/char-before doc (selection [0 1]))))
+    (is (= "o" (c/char-before doc (selection [0 2]))))
+    (is (= "z" (c/char-before doc (selection [0 13]))))
+    (is (= "z" (c/char-before doc (selection [0 14])))))
+
+  (testing "works in other paragraphs"
+    (is (= "\n" (c/char-before doc (selection [1 0]))))
+    (is (= "a" (c/char-before doc (selection [1 1]))))
+    (is (= "a" (c/char-before doc (selection [1 3]))))
+    (is (= "b" (c/char-before doc (selection [1 4]))))
+    (is (= "c" (c/char-before doc (selection [1 7]))))
+    (is (= "d" (c/char-before doc (selection [1 11]))))
+    (is (= "d" (c/char-before doc (selection [1 12]))))
+    (is (thrown? js/Error (c/char-before doc (selection [1 13]))))))
