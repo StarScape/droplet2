@@ -65,13 +65,21 @@
   [sel]
   (selection [(-> sel :end :paragraph) (-> sel :end :offset)]))
 
-;; TODO is this needed? see Paragraph.js
-(defn smart-collapse [sel]
+(defn smart-collapse
+  "Collapses to the side of the selection that the text caret is on.
+   This tends to be the preferred way of collapsing a selection, unless
+   you specifically need `collapse-start` or `collapse-end`. Notably, most
+   text editors **do not** collapse this way (instead always collapsing to
+   the end when e.g. the user hits the down arrow), but I like this functionality.
+
+   Examples:
+   ```
+   (smart-collapse (selection [0 2] [0 5] true)) ; collapses to selection with offset 2
+   (smart-collapse (selection [0 2] [0 5] false)) ; collapses to selection with offset 5
+   ```"
+  [sel]
   (if (single? sel)
     sel
     (if (:backwards? sel)
       (collapse-start sel)
       (collapse-end sel))))
-
-;; Some operations used across core datatypes
-

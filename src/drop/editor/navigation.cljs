@@ -1,7 +1,7 @@
 (ns drop.editor.navigation
   (:require [clojure.string :as str]
             [drop.editor.core :as core]
-            [drop.editor.selection :as sel :refer [caret smart-collapse]]))
+            [drop.editor.selection :as sel :refer [selection caret smart-collapse]]))
 
 ;; Some helpers and useful primitives ;;
 
@@ -70,8 +70,11 @@
 ;; Main functionality ;;
 
 (defn next-word-offset
-  "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection."
+  "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
   [text start-offset]
+  {:pre [(<= start-offset (.-length text))]
+   :post [(<= % (.-length text))]}
   (if (>= start-offset (count text))
     (count text)
     (let [first-char (nth text start-offset)]
@@ -93,8 +96,11 @@
         (until-non-word text start-offset)))))
 
 (defn- prev-word-offset
-  "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection."
+  "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
   [text start-offset]
+  {:pre [(<= start-offset (.-length text))]
+   :post [(<= % (.-length text))]}
   (if (<= start-offset 0)
     0
     (let [before-start (nth text (dec start-offset))]
@@ -126,12 +132,12 @@
   (next-word
     [this sel]
     "Returns selection after jumping to the end of the next word from selection `sel`.
-    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac).")
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac).")
 
   (prev-word
     [this sel]
     "Returns selection after jumping to the start of the previous word from selection `sel`.
-    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac)."))
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
 
 ;; TODO: next-word and prev-word should collapse first thing
 
@@ -140,15 +146,30 @@
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           offset (next-word-offset text (caret (smart-collapse sel)))]
-      (sel/selection [para offset])))
+      (sel/set-single sel offset)))
 
   (prev-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           offset (prev-word-offset text (caret (smart-collapse sel)))]
-      (sel/selection [para offset]))))
+      (sel/set-single sel offset))))
+
+(extend-type core/Document
+  Navigable
+  (next-word [doc sel]
+    (let [collapsed (smart-collapse sel)
+          para-idx (sel/start-para collapsed)
+          para ((:children doc) para-idx)]
+      (if (and (= (sel/caret collapsed) (core/text-len para))
+               (not= para-idx (-> doc :children count dec)))
+        (selection [(inc para-idx) 0])
+        (next-word ((:children doc) (sel/start-para sel)) sel)))))
+
 
 (comment
   (def my-par (core/paragraph [(core/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
   (prev-word-offset (apply str (map :text (:runs my-par))) 0)
   (next-word-offset (apply str (map :text (:runs my-par))) 80)
+
+  (def my-doc (core/document [my-par, (core/paragraph [(core/run "foo bar?")])]))
+  (caret (next-word my-doc (selection [1 0])))
   )

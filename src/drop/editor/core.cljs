@@ -658,7 +658,6 @@
   (shared-formats [doc sel] (doc-shared-formats doc sel))
   (toggle-format [doc sel format] (doc-toggle-format doc sel format)))
 
-;; TODO: selected-content for single selections (should it be some different function?)
 ;; TODO: navigable functions for document
 ;; TODO: render document ;)
 ;; TODO: functions will need to be modified to return new selection
