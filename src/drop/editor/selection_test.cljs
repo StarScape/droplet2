@@ -50,4 +50,7 @@
     (= (sel/caret collapsed-start) 10)
     (= (sel/caret collapsed-end) 20)))
 
+(deftest expand-left-test
+  )
+
 ;; TODO: write tests for Paragraph and Run

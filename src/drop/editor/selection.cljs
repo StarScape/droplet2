@@ -43,8 +43,9 @@
   [sel]
   (= (-> sel :start :paragraph) (-> sel :end :paragraph)))
 
+;; TODO: add `pre` conditions that these must accept single selections :)
 (defn shift-single
-  "Shift a single-selection by n characters (can be positive or negative)."
+  "Shift a single-selection by `n` characters (can be positive or negative)."
   [{{paragraph :paragraph offset :offset} :start} n]
   (selection [paragraph (+ n offset)]))
 
@@ -54,6 +55,23 @@
   (-> sel
       (assoc-in [:start :offset] offset)
       (assoc-in [:end :offset] offset)))
+
+(defn expand-left
+  "Expands the left side of the selection by `n` characters (can be positive or negative).
+   If selection is not a range-selection it is made one. Note that the returned selection
+   will always be `backwards?`."
+  [sel n]
+  {:pre  [(when (single? sel) (>= n 0))]
+   :post [(>= (-> % :start :offset) 0)]}
+  (-> sel (update-in [:start :offset] - n) (assoc :backwards? true)))
+
+(defn expand-right
+  "Expands the left side of the selection by `n` characters (can be positive or negative).
+   If selection is not a range-selection it is made one. Note that the returned selection
+   will always be `backwards?`."
+  [sel n]
+  {:pre  [(when (single? sel) (>= n 0))]}
+  (-> sel (update-in [:end :offset] + n) (assoc :backwards? false)))
 
 (defn collapse-start
   "Returns a new single-selection at the start of the selection"
@@ -83,3 +101,6 @@
     (if (:backwards? sel)
       (collapse-start sel)
       (collapse-end sel))))
+
+;; TODO: expand-left and expand-right functions from JS implementation.
+;; (Could probably be renamed shift-left and shift-right)

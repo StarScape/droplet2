@@ -129,6 +129,8 @@
   ;; (next-char [this sel] "Move forward by 1 character.")
   ;; (prev-char [this sel] "Move backward by 1 character.")
 
+  ;; TODO: should there be selection functions? Can be copied from JS implementation.
+
   (next-word
     [this sel]
     "Returns selection after jumping to the end of the next word from selection `sel`.
