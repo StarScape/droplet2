@@ -43,15 +43,16 @@
   [sel]
   (= (-> sel :start :paragraph) (-> sel :end :paragraph)))
 
-;; TODO: add `pre` conditions that these must accept single selections :)
 (defn shift-single
   "Shift a single-selection by `n` characters (can be positive or negative)."
-  [{{paragraph :paragraph offset :offset} :start} n]
+  [{{paragraph :paragraph offset :offset} :start :as sel} n]
+  {:pre [(single? sel)]}
   (selection [paragraph (+ n offset)]))
 
 (defn set-single
   "Sets a single-selection to a given offset."
   [sel offset]
+  {:pre [(single? sel), (nat-int? offset)]}
   (-> sel
       (assoc-in [:start :offset] offset)
       (assoc-in [:end :offset] offset)))

@@ -141,19 +141,19 @@
     "Returns selection after jumping to the start of the previous word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
 
-;; TODO: next-word and prev-word should collapse first thing
-
 (extend-type core/Paragraph
   Navigable
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
-          offset (next-word-offset text (caret (smart-collapse sel)))]
-      (sel/set-single sel offset)))
+          collapsed (smart-collapse sel)
+          offset (next-word-offset text (caret collapsed))]
+      (sel/set-single collapsed offset)))
 
   (prev-word [para sel]
     (let [text (apply str (map :text (:runs para)))
-          offset (prev-word-offset text (caret (smart-collapse sel)))]
-      (sel/set-single sel offset))))
+          collapsed (smart-collapse sel)
+          offset (prev-word-offset text (caret collapsed))]
+      (sel/set-single collapsed offset))))
 
 (extend-type core/Document
   Navigable

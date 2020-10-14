@@ -36,12 +36,15 @@
     (is (sel/single? s3))))
 
 (deftest shift-single-test
-  (is (=
-       (+ 5 (sel/caret sel-single))
-       (-> sel-single (sel/shift-single 5) sel/caret))))
+  (is (= (+ 5 (sel/caret sel-single))
+         (sel/caret (sel/shift-single sel-single 5))))
+  (is (thrown? js/Error (sel/shift-single sel-range 10))))
 
 (deftest set-single-test
-  (is (= 255 (-> sel-single (sel/set-single 255) sel/caret))))
+  (is (= 255 (-> sel-single (sel/set-single 255) sel/caret)))
+  (is (thrown? js/Error (sel/set-single sel-range 10)))
+  (is (thrown? js/Error (sel/set-single sel-single -1)))
+  (is (= 0 (sel/caret (sel/set-single sel-single 0)))))
 
 (deftest collapse-test
   (let [sel (selection [:p1 10] [:p1 20])
@@ -49,8 +52,3 @@
         collapsed-end (sel/collapse-end sel)]
     (= (sel/caret collapsed-start) 10)
     (= (sel/caret collapsed-end) 20)))
-
-(deftest expand-left-test
-  )
-
-;; TODO: write tests for Paragraph and Run
