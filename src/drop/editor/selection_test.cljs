@@ -38,7 +38,8 @@
 (deftest shift-single-test
   (is (= (+ 5 (sel/caret sel-single))
          (sel/caret (sel/shift-single sel-single 5))))
-  (is (thrown? js/Error (sel/shift-single sel-range 10))))
+  (is (thrown? js/Error (sel/shift-single sel-range 10)))
+  (is (thrown? js/Error (sel/shift-single sel-single -10000))))
 
 (deftest set-single-test
   (is (= 255 (-> sel-single (sel/set-single 255) sel/caret)))

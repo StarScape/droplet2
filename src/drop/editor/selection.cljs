@@ -46,7 +46,8 @@
 (defn shift-single
   "Shift a single-selection by `n` characters (can be positive or negative)."
   [{{paragraph :paragraph offset :offset} :start :as sel} n]
-  {:pre [(single? sel)]}
+  {:pre [(single? sel)]
+   :post [(nat-int? (caret %))]}
   (selection [paragraph (+ n offset)]))
 
 (defn set-single
