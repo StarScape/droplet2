@@ -9,13 +9,13 @@ const addMax = (viewmodel, run, leftovers, ruler) => {
 
 /**
  * The ViewModel is an intermediate representation between the core editor data types -> HTML.
- * An intermediate stage is necessary because handle the splitting of paragraphs into lines ourselves,
+ * An intermediate stage is necessary because we handle the splitting of paragraphs into lines ourselves,
  * rather than having the browser do it for us -- this in turn is needed because we draw our own text caret
  * and selections, and in order to have fine-grained control of layout-sensitive operations such as navigating
- * the caret to the end of the line (⌘ + → on macOS, End on Windows/Linux).
+ * the caret to the end of the line (⌘ + → on macOS, End on Windows/Linux), or when and how to collapse selections.
  *
- * The DOM APIs for handling selection are not terribly user-friendly either, or particularly conducive to the
- * idea of decoupling your underlying data respresentation from how it is rendered. For example, the Selection
+ * The DOM APIs for handling selection are not terribly user-friendly, or particularly conducive to the
+ * decoupling of your underlying data respresentation from how they are rendered. For example, the Selection
  * API relies on an anchor node and an offset into it, but if anchorNode is an element and not a text node, the
  * offset will be the *number of elements* into the anchor node, not the *text* offset, which is obviously what
  * we're interested in here, since we're dealing with manipulations on text.

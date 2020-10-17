@@ -1,9 +1,9 @@
 (ns drop.editor.selection)
 
-;; TODO: Change selection to use index instead of a reference to a paragraph
-
+;; TODO: docstring for Selection
 (defrecord Selection [start end backwards?])
 
+;; TODO: add pre conditions to enforce rules?
 (defn selection
   "Creates a new selection."
   ([[start-paragraph start-offset] [end-paragraph end-offset] backwards?]
@@ -57,6 +57,8 @@
   (-> sel
       (assoc-in [:start :offset] offset)
       (assoc-in [:end :offset] offset)))
+
+;; TODO: Should these be shift-left and shift-right and work differently?
 
 (defn expand-left
   "Expands the left side of the selection by `n` characters (can be positive or negative).
