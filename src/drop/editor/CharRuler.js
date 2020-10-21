@@ -112,3 +112,10 @@ export class CharRuler {
     return sum
   }
 }
+
+// For testing, returns every char width as 10px
+export const fakeRuler = {
+  measureString: (str, formats = []) => {
+    return str.length * 10
+  }
+}

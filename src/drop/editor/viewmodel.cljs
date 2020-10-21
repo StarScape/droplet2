@@ -18,73 +18,99 @@
    representation between the model and the view, not because it's directly inspired by any of the MVC/psuedo-MVC
    frameworks that also happen to use that term."
   (:require [clojure.string :as str]
-            ["./CharRuler" :refer (CharRuler)]
-            [drop.editor.core :as core]
-            [drop.editor.vec-utils :refer [replace-last]]))
+            ["./CharRuler" :refer (CharRuler fakeRuler)]
+            [drop.editor.core :as c]))
 
 (defrecord ViewModel [paragraphs])
 (defrecord Paragraph [paragraph container-width lines])
 (defrecord Line [spans width start-offset])
 (defrecord Span [text start-offset width])
 
+;; TODO: is it worth replacing the reliance on CharRuler with a simple function `(measure)` that wraps it?
+
 ;; (defn from-doc
 ;;   "Convert [[Document]] to ViewModel."
 ;;   [doc container-width]
 ;;   (->ViewModel (mapv #(split-into-lines % container-width) (:children doc))))
 
-(defn line []
-  (->Line [] 0 0))
+(defn line [] (->Line [] 0 0))
+(defn span [] (->Span "" 0 0))
 
-(defn span []
-  (->Span "" 0 0))
+(defn get-words
+  "Splits string `s` into a vector of words."
+  [s]
+  (str/split s #"(\s+)"))
 
-(defn add-span [line span]
+(defn add-span
+  "Adds the span to the given line and updates the line's width."
+  [line span]
   (-> line
       (update :spans conj span)
       (update :width + (:width span))))
 
-(defn words [s]
-  (str/split s #"(\s+)"))
+(defn max-words
+  "Takes the maximum number of words from `src-str` without exceeding `space-left`,
+   as measured by function `measure-fn`. Returns two strings: all the text added, and
+   all the text that would not fit (an empty string if everything fit)."
+  [src space-left measure-fn]
+  (loop [out "", words (get-words src), i 0]
+    (let [next-word (first words)
+          new-text (str out next-word)
+          new-width (measure-fn (.trim new-text))]
+      (if (and (< i 20) (<= (int new-width) space-left))
+        (recur new-text (rest words) (inc i))
+        [out (apply str words)]))))
+
+(comment
+  (max-words "the second line now. " 300 #(.measureString fakeRuler % #{})))
 
 (defn add-max-to-span
+  "Adds as many words to `span` as it can without exceeding the width of `space-left`,
+   then returns the span and a run with the text that would not fit (if any)."
   [span run space-left ruler]
-  (let [words (words run)]
-    (reduce
-     (fn [sp word]
-       (let [new-text (str (:text span) word)
-             ; We DON'T want to count whitespace at the end of a line, hence the trim.
-             new-width (.measure ruler (.trim new-text) (:formats span))]
-         (if (<= (.floor js/Math new-width) space-left)
-           (-> sp (update :text str word) (assoc :width (.measure ruler new-text (:formats span))))
-           sp)))
-     span words)))
+  (let [measure #(.measureString ruler % (:formats run))
+        [span-text, remaining-text] (max-words (:text run) space-left measure)]
+    [(assoc span :text span-text :width (measure span-text))
+     (c/run remaining-text (:formats run))]))
+
+(comment
+  (add-max-to-span (span) (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
+  (add-max-to-span (span) (c/run "foobar bizz buzz hello hello a goodbye") 10 fakeRuler) ; be sure and test this
+  (add-max-to-span (span) (c/run "the second line now. ") 300 fakeRuler))
 
 (defn add-max-to-lines
   "Adds the maximum amount of chars from `run` onto the last line in `line`, adding
    an extra line to the end of lines if necessary. Returns updated list of lines, and
-   a run with chars that did not fit on line (can be empty), as a pair."
+   a run with text that did not fit on line (can be empty), as a pair."
   [lines run width ruler]
   (let [space-left (- width (:width (peek lines)))
         [new-span, remaining] (add-max-to-span (span) run space-left ruler)]
-    [(if (= remaining run)
-       (conj lines (line)) ; nothing added, add newline
-      ;  (replace-last lines (add-span last-line new-span))
-       (update lines (dec (count lines)) add-span new-span))
+    ;; #p (update lines (dec (count lines)) add-span new-span)
+    [(cond-> lines
+       (not-empty (:text new-span)) (update (dec (count lines)) add-span new-span)
+       (not-empty (:text remaining)) (conj (line)))
      remaining]))
+
+(comment
+  (add-max-to-lines [(line)] (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
+  (add-max-to-lines [(line)] (c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. ") 300 fakeRuler)
+  (add-max-to-lines [(line)] (c/run "the second line now. ") 300 fakeRuler)) ;; bug
 
 (defn lineify
   ([runs width ruler]
-   (lineify [(line)] runs width ruler))
-  ([lines runs width ruler]
-   (if (empty? runs)
+   (lineify [(line)] runs width ruler 0))
+  ([lines runs width ruler c]
+   (if (every? #(empty? (:text %)) runs)
      lines
-     (let [[lines' remaining]
-           (add-max-to-lines lines (first runs) width ruler)]
-       (recur lines' (cons remaining runs) width ruler)))))
+     (let [[lines' remaining] (add-max-to-lines lines (first runs) width ruler)]
+       (recur lines' (cons #p remaining (rest runs)) width ruler (inc c))))))
+
+(comment
+  (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fakeRuler))
 
 (def p
-  (core/paragraph [(core/run "foofoofoofoo" #{:italic})
-                   (core/run "barbarbarbar" #{})]))
+  (c/paragraph [(c/run "foofoofoofoo" #{:italic})
+                   (c/run "barbarbarbar" #{})]))
 (def ruler (CharRuler.))
 
-(lineify p 100 ruler)
+
