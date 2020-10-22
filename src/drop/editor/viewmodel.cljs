@@ -85,7 +85,6 @@
   [lines run width ruler]
   (let [space-left (- width (:width (peek lines)))
         [new-span, remaining] (add-max-to-span (span) run space-left ruler)]
-    ;; #p (update lines (dec (count lines)) add-span new-span)
     [(cond-> lines
        (not-empty (:text new-span)) (update (dec (count lines)) add-span new-span)
        (not-empty (:text remaining)) (conj (line)))
@@ -94,23 +93,24 @@
 (comment
   (add-max-to-lines [(line)] (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
   (add-max-to-lines [(line)] (c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. ") 300 fakeRuler)
-  (add-max-to-lines [(line)] (c/run "the second line now. ") 300 fakeRuler)) ;; bug
+  (add-max-to-lines [(line)] (c/run "the second line now. ") 300 fakeRuler))
 
 (defn lineify
   ([runs width ruler]
    (lineify [(line)] runs width ruler 0))
   ([lines runs width ruler c]
-   (if (every? #(empty? (:text %)) runs)
+   (if (or (empty? runs) (> c 20))
      lines
-     (let [[lines' remaining] (add-max-to-lines lines (first runs) width ruler)]
-       (recur lines' (cons #p remaining (rest runs)) width ruler (inc c))))))
+     (let [[lines' leftover] (add-max-to-lines lines (first runs) width ruler)
+           remaining-runs (cond->> (rest runs)
+                            (not-empty (:text leftover)) (cons leftover))]
+       (recur lines' remaining-runs width ruler (inc c))))))
 
 (comment
-  (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fakeRuler))
+  (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fakeRuler)
+  (lineify [(c/run "abc" #{:italic}) (c/run "foobar")] 300 fakeRuler))
 
 (def p
   (c/paragraph [(c/run "foofoofoofoo" #{:italic})
                    (c/run "barbarbarbar" #{})]))
 (def ruler (CharRuler.))
-
-
