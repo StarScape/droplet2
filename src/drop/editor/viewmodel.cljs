@@ -23,7 +23,7 @@
 
 (defrecord ViewModel [paragraphs])
 (defrecord Paragraph [paragraph container-width lines])
-(defrecord Line [spans width start-offset])
+(defrecord Line [spans start-offset end-offset width])
 (defrecord Span [text start-offset width])
 
 ;; TODO: is it worth replacing the reliance on CharRuler with a simple function `(measure)` that wraps it?
@@ -33,8 +33,8 @@
 ;;   [doc container-width]
 ;;   (->ViewModel (mapv #(split-into-lines % container-width) (:children doc))))
 
-(defn line [] (->Line [] 0 0))
-(defn span [] (->Span "" 0 0))
+(defn empty-line [] (->Line [] 0 0 0))
+(defn empty-span [] (->Span "" 0 0))
 
 (defn get-words
   "Splits string `s` into a vector of words."
@@ -44,9 +44,25 @@
 (defn add-span
   "Adds the span to the given line and updates the line's width."
   [line span]
-  (-> line
-      (update :spans conj span)
-      (update :width + (:width span))))
+  (let [prev-span (peek (:spans line))
+        offset (if prev-span
+                 (+ (count (:text prev-span)) (:start-offset prev-span))
+                 (:start-offset line))
+        span' (assoc span :start-offset offset)]
+    (-> line
+        (update :spans conj span')
+        (update :width + (:width span'))
+        (update :end-offset + (count (:text span'))))))
+
+(defn span-after
+  "Returns a new empty span with offsets set to immediately after `prev-span`."
+  [prev-span]
+  (->Span "" (+ (:start-offset prev-span) (count (:text prev-span))) 0))
+
+(defn line-after
+  "Returns a new empty line with offsets set to immediately after `prev-line`."
+  [prev-line]
+  (->Line [] (:end-offset prev-line) (:end-offset prev-line) 0))
 
 (defn max-words
   "Takes the maximum number of words from `src-str` without exceeding `space-left`,
@@ -74,30 +90,40 @@
      (c/run remaining-text (:formats run))]))
 
 (comment
-  (add-max-to-span (span) (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
-  (add-max-to-span (span) (c/run "foobar bizz buzz hello hello a goodbye") 10 fakeRuler) ; be sure and test this
-  (add-max-to-span (span) (c/run "the second line now. ") 300 fakeRuler))
+  (add-max-to-span (empty-span) (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
+  (add-max-to-span (empty-span) (c/run "foobar bizz buzz hello hello a goodbye") 10 fakeRuler) ; be sure and test this
+  (add-max-to-span (empty-span) (c/run "the second line now. ") 300 fakeRuler))
 
 (defn add-max-to-lines
   "Adds the maximum amount of chars from `run` onto the last line in `line`, adding
    an extra line to the end of lines if necessary. Returns updated list of lines, and
    a run with text that did not fit on line (can be empty), as a pair."
   [lines run width ruler]
-  (let [space-left (- width (:width (peek lines)))
-        [new-span, remaining] (add-max-to-span (span) run space-left ruler)]
-    [(cond-> lines
+  (let [last-line (peek lines)
+        last-span (peek (:spans last-line))
+        space-left (- width (:width last-line))
+        [new-span, remaining] (add-max-to-span last-span #_(span-after last-span) run space-left ruler)]
+    #_[(cond-> lines
        (not-empty (:text new-span)) (update (dec (count lines)) add-span new-span)
-       (not-empty (:text remaining)) (conj (line)))
+       (not-empty (:text remaining)) (conj (line-after #p last-line)))
+     remaining]
+    [(as-> lines lines'
+       (if (not-empty (:text new-span))
+         (update lines' (dec (count lines')) add-span new-span)
+         lines')
+       (if (not-empty (:text remaining))
+         (conj lines' (line-after #p (peek lines')))
+         lines'))
      remaining]))
 
 (comment
-  (add-max-to-lines [(line)] (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
-  (add-max-to-lines [(line)] (c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. ") 300 fakeRuler)
-  (add-max-to-lines [(line)] (c/run "the second line now. ") 300 fakeRuler))
+  (add-max-to-lines [(empty-line)] (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
+  (add-max-to-lines [(empty-line)] (c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. ") 300 fakeRuler)
+  (add-max-to-lines [(empty-line)] (c/run "the second line now. ") 300 fakeRuler))
 
 (defn lineify
   ([runs width ruler]
-   (lineify [(line)] runs width ruler 0))
+   (lineify [(empty-line)] runs width ruler 0))
   ([lines runs width ruler c]
    (if (or (empty? runs) (> c 20))
      lines
