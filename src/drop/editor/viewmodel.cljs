@@ -33,8 +33,8 @@
 ;;   [doc container-width]
 ;;   (->ViewModel (mapv #(split-into-lines % container-width) (:children doc))))
 
-(defn empty-line [] (->Line [] 0 0 0))
 (defn empty-span [] (->Span "" 0 0))
+(defn empty-line [] (->Line [] 0 0 0))
 
 (defn get-words
   "Splits string `s` into a vector of words."
@@ -69,13 +69,13 @@
    as measured by function `measure-fn`. Returns two strings: all the text added, and
    all the text that would not fit (an empty string if everything fit)."
   [src space-left measure-fn]
-  (loop [out "", words (get-words src), i 0]
+  (loop [out "", words (get-words src)]
     (let [next-word (first words)
           new-text (str out next-word)
           new-width (measure-fn (.trim new-text))]
-      (if (and (< i 20) (<= (int new-width) space-left))
-        (recur new-text (rest words) (inc i))
-        [out (apply str words)]))))
+      (if (or (empty? words) (> (int new-width) space-left))
+        [out (apply str words)]
+        (recur new-text (rest words))))))
 
 (comment
   (max-words "the second line now. " 300 #(.measureString fakeRuler % #{})))
@@ -102,11 +102,7 @@
   (let [last-line (peek lines)
         last-span (peek (:spans last-line))
         space-left (- width (:width last-line))
-        [new-span, remaining] (add-max-to-span last-span #_(span-after last-span) run space-left ruler)]
-    #_[(cond-> lines
-       (not-empty (:text new-span)) (update (dec (count lines)) add-span new-span)
-       (not-empty (:text remaining)) (conj (line-after last-line)))
-     remaining]
+        [new-span, remaining] (add-max-to-span last-span run space-left ruler)]
     [(as-> lines lines'
        (if (not-empty (:text new-span))
          (update lines' (dec (count lines')) add-span new-span)
