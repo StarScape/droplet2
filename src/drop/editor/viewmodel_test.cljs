@@ -9,8 +9,10 @@
   [structure]
   (cond
     (vector? structure) (mapv unrecord structure)
-    (map? structure) (into {} structure)
-    :else (throw (js/Error. (str "Unrecognized data type in unrecord: " (type structure))))))
+    (map? structure) (reduce-kv (fn [new-map k v]
+                                     (assoc new-map k (unrecord v)))
+                                   {} structure)
+    :else structure))
 
 (def runs [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")])
 (def runs-formatted [(c/run "foobar bizz " #{})
@@ -34,6 +36,7 @@
              :end-offset 6
              :width 60
              :spans [{:text "foobar"
+                      :formats #{}
                       :start-offset 0
                       :width 60}]}])))
 
@@ -43,21 +46,21 @@
              :end-offset 29
              :width 290
              :spans [{:text "foobar bizz buzz hello hello "
-                      ;;:formats #{}
+                      :formats #{}
                       :start-offset 0
                       :width 290}]}
             {:start-offset 29
              :end-offset 60
              :width 310
              :spans [{:text "goodbye. And this should be on "
-                      ;;:formats #{}
+                      :formats #{}
                       :start-offset 29
                       :width 310}]}
             {:start-offset 60
              :end-offset 80
              :width 200
              :spans [{:text "the second line now."
-                      ;;:formats #{}
+                      :formats #{}
                       :start-offset 60
                       :width 200}]}])))
 
@@ -67,41 +70,41 @@
              :end-offset 29
              :width 290
              :spans [{:text "foobar bizz "
-                      ;;:formats #{}
+                      :formats #{}
                       :start-offset 0
                       :width 120}
                      {:text "buzz hello hello "
-                      ;;:formats #{:italic}
+                      :formats #{:italic}
                       :start-offset 12
                       :width 170}]}
             {:start-offset 29
              :end-offset 60
              :width 310
              :spans [{:text "goodbye. And "
-                      ;;:formats #{:italic}
+                      :formats #{:italic}
                       :start-offset 29
                       :width 130}
                      {:text "this should"
-                      ;;:formats #{:bold}
+                      :formats #{:bold}
                       :start-offset 42
                       :width 110}
                      {:text " be "
-                      ;;:formats #{:bold :italic}
+                      :formats #{:bold :italic}
                       :start-offset 53
                       :width 40}
                      {:text "on "
-                      ;;:formats #{}
+                      :formats #{}
                       :start-offset 57
                       :width 30}]}
             {:start-offset 60
              :end-offset 80
              :width 200
              :spans [{:text "the second line "
-                      ;;:formats #{}
+                      :formats #{}
                       :start-offset 60
                       :width 160}
                      {:text "now."
-                      ;;:formats #{:underline}
+                      :formats #{:underline}
                       :start-offset 76
                       :width 40}]}]))))
 

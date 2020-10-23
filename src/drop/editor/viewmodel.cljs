@@ -24,7 +24,7 @@
 (defrecord ViewModel [paragraphs])
 (defrecord Paragraph [paragraph container-width lines])
 (defrecord Line [spans start-offset end-offset width])
-(defrecord Span [text start-offset width])
+(defrecord Span [text formats start-offset width])
 
 ;; TODO: is it worth replacing the reliance on CharRuler with a simple function `(measure)` that wraps it?
 
@@ -33,7 +33,7 @@
 ;;   [doc container-width]
 ;;   (->ViewModel (mapv #(split-into-lines % container-width) (:children doc))))
 
-(defn empty-span [] (->Span "" 0 0))
+(defn empty-span [] (->Span "" #{} 0 0))
 (defn empty-line [] (->Line [] 0 0 0))
 
 (defn get-words
@@ -54,45 +54,45 @@
         (update :width + (:width span'))
         (update :end-offset + (count (:text span'))))))
 
-(defn span-after
-  "Returns a new empty span with offsets set to immediately after `prev-span`."
-  [prev-span]
-  (->Span "" (+ (:start-offset prev-span) (count (:text prev-span))) 0))
-
 (defn line-after
   "Returns a new empty line with offsets set to immediately after `prev-line`."
   [prev-line]
   (->Line [] (:end-offset prev-line) (:end-offset prev-line) 0))
 
 (defn max-words
-  "Takes the maximum number of words from `src-str` without exceeding `space-left`,
-   as measured by function `measure-fn`. Returns two strings: all the text added, and
-   all the text that would not fit (an empty string if everything fit)."
+  "Takes the maximum number of words from `src` without exceeding `space-left`,
+   as measured by function `measure-fn`. Returns two strings: all the text added,
+   and all the text that would not fit (which is an empty string if everything fit)."
   [src space-left measure-fn]
   (loop [out "", words (get-words src)]
     (let [next-word (first words)
           new-text (str out next-word)
           new-width (measure-fn (.trim new-text))]
-      (if (or (empty? words) (> (int new-width) space-left))
-        [out (apply str words)]
-        (recur new-text (rest words))))))
+      (if (and (not-empty words)
+               (<= (int new-width) space-left))
+        (recur new-text (rest words))
+        [out (apply str words)]))))
 
 (comment
-  (max-words "the second line now. " 300 #(.measureString fakeRuler % #{})))
+  (max-words "the second line now. " 300 #(.measureString fakeRuler % #{}))
+  (max-words "foobar bizz buzz hello hello a goodbye" 300 #(.measureString fakeRuler % #{})))
 
+;; TODO: rename to `max-span-from-run` or something similar.
 (defn add-max-to-span
   "Adds as many words to `span` as it can without exceeding the width of `space-left`,
    then returns the span and a run with the text that would not fit (if any)."
-  [span run space-left ruler]
-  (let [measure #(.measureString ruler % (:formats run))
+  [run space-left ruler]
+  (let [span (->Span "" (:formats run) 0 0)
+        measure #(.measureString ruler % (:formats run))
         [span-text, remaining-text] (max-words (:text run) space-left measure)]
     [(assoc span :text span-text :width (measure span-text))
      (c/run remaining-text (:formats run))]))
 
 (comment
-  (add-max-to-span (empty-span) (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
-  (add-max-to-span (empty-span) (c/run "foobar bizz buzz hello hello a goodbye") 10 fakeRuler) ; be sure and test this
-  (add-max-to-span (empty-span) (c/run "the second line now. ") 300 fakeRuler))
+  (add-max-to-span (c/run "foobar bizz buzz hello hello goodbye") 300 fakeRuler)
+  (add-max-to-span (c/run "foobar bizz buzz hello hello a goodbye") 300 fakeRuler) ; be sure and test this
+  (add-max-to-span (c/run "foobar bizz buzz hello hello a goodbye") 10 fakeRuler) ; be sure and test this
+  (add-max-to-span (c/run "the second line now. ") 300 fakeRuler))
 
 (defn add-max-to-lines
   "Adds the maximum amount of chars from `run` onto the last line in `line`, adding
@@ -100,9 +100,9 @@
    a run with text that did not fit on line (can be empty), as a pair."
   [lines run width ruler]
   (let [last-line (peek lines)
-        last-span (peek (:spans last-line))
+        ;; last-span (peek (:spans last-line))
         space-left (- width (:width last-line))
-        [new-span, remaining] (add-max-to-span last-span run space-left ruler)]
+        [new-span, remaining] (add-max-to-span #_last-span run space-left ruler)]
     [(as-> lines lines'
        (if (not-empty (:text new-span))
          (update lines' (dec (count lines')) add-span new-span)
