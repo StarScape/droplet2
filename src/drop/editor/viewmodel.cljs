@@ -105,14 +105,14 @@
         [new-span, remaining] (add-max-to-span last-span #_(span-after last-span) run space-left ruler)]
     #_[(cond-> lines
        (not-empty (:text new-span)) (update (dec (count lines)) add-span new-span)
-       (not-empty (:text remaining)) (conj (line-after #p last-line)))
+       (not-empty (:text remaining)) (conj (line-after last-line)))
      remaining]
     [(as-> lines lines'
        (if (not-empty (:text new-span))
          (update lines' (dec (count lines')) add-span new-span)
          lines')
        (if (not-empty (:text remaining))
-         (conj lines' (line-after #p (peek lines')))
+         (conj lines' (line-after (peek lines')))
          lines'))
      remaining]))
 
@@ -135,8 +135,3 @@
 (comment
   (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fakeRuler)
   (lineify [(c/run "abc" #{:italic}) (c/run "foobar")] 300 fakeRuler))
-
-(def p
-  (c/paragraph [(c/run "foofoofoofoo" #{:italic})
-                   (c/run "barbarbarbar" #{})]))
-(def ruler (CharRuler.))
