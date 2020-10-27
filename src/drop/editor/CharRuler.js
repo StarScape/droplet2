@@ -1,3 +1,5 @@
+// TODO: replace this whole business with a CLJS (measure) function.
+
 /**
  * Class for measuring the widths characters will take up inside an element,
  * both by themselves, and after other characters. This is to account for
@@ -58,10 +60,10 @@ export class CharRuler {
     }
 
     for (let format of formats) {
-      if (format === 'italic') {
+      if (format.toString() === ':italic') {
         this.element.style.fontStyle = 'italic'
       }
-      else if (format === 'bold') {
+      else if (format.toString() === ':bold') {
         this.element.style.fontWeight = 'bold'
       }
       else {

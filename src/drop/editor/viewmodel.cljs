@@ -21,17 +21,13 @@
             ["./CharRuler" :refer (CharRuler fakeRuler)]
             [drop.editor.core :as c]))
 
-(defrecord ViewModel [paragraphs])
-(defrecord Paragraph [paragraph container-width lines])
+(defrecord DocumentViewModel [paragraphs container-width])
+(defrecord ParagraphViewModel [lines paragraph container-width])
 (defrecord Line [spans start-offset end-offset width])
 (defrecord Span [text formats start-offset width])
 
-;; TODO: is it worth replacing the reliance on CharRuler with a simple function `(measure)` that wraps it?
 
-;; (defn from-doc
-;;   "Convert [[Document]] to ViewModel."
-;;   [doc container-width]
-;;   (->ViewModel (mapv #(split-into-lines % container-width) (:children doc))))
+;; TODO: is it worth replacing the reliance on CharRuler with a simple function `(measure)` that wraps it?
 
 (defn empty-span [] (->Span "" #{} 0 0))
 (defn empty-line [] (->Line [] 0 0 0))
@@ -100,9 +96,8 @@
    a run with text that did not fit on line (can be empty), as a pair."
   [lines run width ruler]
   (let [last-line (peek lines)
-        ;; last-span (peek (:spans last-line))
         space-left (- width (:width last-line))
-        [new-span, remaining] (add-max-to-span #_last-span run space-left ruler)]
+        [new-span, remaining] (add-max-to-span run space-left ruler)]
     [(as-> lines lines'
        (if (not-empty (:text new-span))
          (update lines' (dec (count lines')) add-span new-span)
@@ -118,16 +113,28 @@
   (add-max-to-lines [(empty-line)] (c/run "the second line now. ") 300 fakeRuler))
 
 (defn lineify
+  "Convert vector of runs to a vector of lines, with no line exceeding `width`.
+   Consuming APIs shouldn't use this directly, see instead `from-para`."
   ([runs width ruler]
-   (lineify [(empty-line)] runs width ruler 0))
-  ([lines runs width ruler c]
-   (if (or (empty? runs) (> c 20))
+   (lineify [(empty-line)] runs width ruler))
+  ([lines runs width ruler]
+   (if (empty? runs)
      lines
      (let [[lines' leftover] (add-max-to-lines lines (first runs) width ruler)
            remaining-runs (cond->> (rest runs)
                             (not-empty (:text leftover)) (cons leftover))]
-       (recur lines' remaining-runs width ruler (inc c))))))
+       (recur lines' remaining-runs width ruler)))))
 
 (comment
   (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fakeRuler)
   (lineify [(c/run "abc" #{:italic}) (c/run "foobar")] 300 fakeRuler))
+
+(defn from-para
+  "Converts a [[Paragraph]] to a ParagraphViewModel."
+  [para width ruler]
+  (->ParagraphViewModel (lineify (:runs para) width ruler) para width))
+
+(defn from-doc
+  "Convert [[Document]] to ViewModel."
+  [doc width ruler]
+  (->DocumentViewModel (mapv #(from-para % width ruler) (:children doc)) width))
