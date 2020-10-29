@@ -260,7 +260,7 @@ const renderSpan = (span) => {
 }
 
 // TODO: Sit down with a sheet of paper and rethink how this function ought
-// to work. In its current state it's over complicated and not very maintainable.
+// to work. In its current state it's over-complicated and not very maintainable.
 const renderViewModel = (viewmodel, selection) => {
   let html = `<div class='${PARAGRAPH_CLASS}'>`
   let selectionOngoing = false

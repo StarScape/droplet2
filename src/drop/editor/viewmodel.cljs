@@ -134,7 +134,8 @@
   [para width ruler]
   (->ParagraphViewModel (lineify (:runs para) width ruler) para width))
 
-(defn from-doc
-  "Convert [[Document]] to ViewModel."
-  [doc width ruler]
-  (->DocumentViewModel (mapv #(from-para % width ruler) (:children doc)) width))
+;; TODO: probs not necessary...
+;; (defn from-doc
+;;   "Convert [[Document]] to ViewModel."
+;;   [doc width ruler]
+;;   (->DocumentViewModel (mapv #(from-para % width ruler) (:children doc)) width))
