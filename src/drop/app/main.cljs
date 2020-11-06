@@ -26,12 +26,12 @@
 
 ;; TODO: this or classes?
 (defn formats->css-str [formats]
-  (apply str
-         (map #(case %
-                 :italic "font-style: italic;"
-                 :bold "font-weight: bold;"
-                 :underline "text-decoration: line-through;")
-              formats)))
+  (->> formats
+       (map #(case %
+               :italic "font-style: italic;"
+               :bold "font-weight: bold;"
+               :underline "text-decoration: line-through;"))
+       (apply str)))
 
 ;; TODO: these can be moved to viewmodel NS
 (defn vm-span->dom
