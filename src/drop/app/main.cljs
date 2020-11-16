@@ -53,7 +53,7 @@
   "Convert viewmodel to DOM element."
   [viewmodel]
   (str "<div class='paragraph'>"
-       (apply str (map vm-line->dom (:lines #p viewmodel)))
+       (apply str (map vm-line->dom (:lines viewmodel)))
        "</div>"))
 
 (defn sync-dom [elem doc-state ruler]

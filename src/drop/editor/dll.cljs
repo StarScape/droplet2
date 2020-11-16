@@ -9,6 +9,7 @@
 ;;(declare prev)
 (declare insert-after)
 (declare insert-before)
+(declare make-seq)
 
 ;; entries-map :: Map (UUID -> DLLEntry)
 ;; DLLEntry :: {uuid, prev-uuid, next-uuid, value}
@@ -24,15 +25,21 @@
 
 ;; TODO: make ISeqable
 ;; TODO: make map and filterable - looks like (map) at least just uses first and rest
+
+;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
+;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
+;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
 (deftype DoublyLinkedList [entries-map first-uuid last-uuid]
   ISeq
   (-first [^DoublyLinkedList dll] (get (.-entries-map dll) (.-first-uuid dll)))
+
+  ISeqable
+  (-seq [^DoublyLinkedList dll] (make-seq dll))
 
   ICounted
   (-count [dll] (count (.-entries-map dll)))
 
   ICollection
-  ;; TODO: rewrite as calling into a insert-after function (and implement that)
   (-conj [^DoublyLinkedList dll val]
     (if (empty? (.-entries-map dll))
       (let [uuid (:uuid val), node (Node. val nil nil)]
@@ -70,17 +77,7 @@
     (some? next-uuid) (update next-uuid assoc-node :prev-uuid new-uuid)
     :always (assoc new-uuid (Node. val prev-uuid next-uuid))))
 
-;; TODO: add condition that dll cannot be empty.
-(defn insert-after
-  "Inserts `val` into the double-linked list `dll` immediately after the node with uuid = `prev-uuid`."
-  [^DoublyLinkedList dll prev-uuid val]
-  (let [next-uuid (.-next-uuid (get (.-entries-map dll) prev-uuid))
-        new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
-        new-last-uuid (if (= (.-last-uuid dll) prev-uuid)
-                        (:uuid val)
-                        (.-last-uuid dll))]
-    (DoublyLinkedList. new-entries (.-first-uuid dll) new-last-uuid)))
-
+;; TODO: add condition to both these that dll cannot be empty.
 (defn insert-before
   "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `prev-uuid`."
   [^DoublyLinkedList dll next-uuid val]
@@ -91,6 +88,16 @@
                          (.-first-uuid dll))]
     (DoublyLinkedList. new-entries new-first-uuid (.-last-uuid dll))))
 
+(defn insert-after
+  "Inserts `val` into the double-linked list `dll` immediately after the node with uuid = `prev-uuid`."
+  [^DoublyLinkedList dll prev-uuid val]
+  (let [next-uuid (.-next-uuid (get (.-entries-map dll) prev-uuid))
+        new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
+        new-last-uuid (if (= (.-last-uuid dll) prev-uuid)
+                        (:uuid val)
+                        (.-last-uuid dll))]
+    (DoublyLinkedList. new-entries (.-first-uuid dll) new-last-uuid)))
+
 (defn dll
   "Constructor for a new doubly-linked-list."
   ([]
@@ -98,9 +105,26 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
+;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
+
+(defn make-seq
+  "Makes a DLL into a seq."
+  ([^DoublyLinkedList dll] (make-seq dll ^str (.-first-uuid dll)))
+  ([^DoublyLinkedList dll uuid]
+   (lazy-seq
+    (let [entry ^Node (get (.-entries-map dll) uuid)]
+      (when entry
+        (cons (.-value entry) (make-seq dll (.-next-uuid entry))))))))
+
+;; TODO: fix conj
 (def l (dll {:uuid "1" :content "foo"} {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
 (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
 (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
+
+;; (reduce (fn [acc x] #p x nil) nil l2)
+;; (reduce (fn [dll' x] (conj dll' x)) (dll) l2)
+
+(def mine (filter #(not= "-1" (:uuid %)) l2))
 
 (.-entries-map l1)
 (.-last-uuid l1)
@@ -110,7 +134,7 @@
 (.-last-uuid l2)
 (.-first-uuid l2)
 
-(.log js/console (insert-before l "5" {:uuid "4" :content "bar"}))
+;; (.log js/console (insert-before l "5" {:uuid "4" :content "bar"}))
 
 ;; (first (dll {:uuid 1, :content "foo"}))
 ;; (assoc (dll) 1 {:uuid 1, :content "foo"})
