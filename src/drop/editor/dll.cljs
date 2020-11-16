@@ -73,7 +73,14 @@
                       (= uuid (.-first-uuid dll)) (get new-entries (.-next-uuid first)))
           new-last (cond-> last
                      (= uuid (:uuid (.-value last))) (get new-entries (.-prev-uuid last)))]
-      (DoublyLinkedList. new-entries new-first new-last))))
+      (DoublyLinkedList. new-entries new-first new-last)))
+
+  ILookup
+  (-lookup [^DoublyLinkedList dll uuid] (-lookup dll uuid nil))
+  (-lookup [^DoublyLinkedList dll uuid not-found]
+    (if-let [entry ^Node (get (.-entries-map dll) uuid)]
+      (.-value entry)
+      not-found)))
 
 (defn- assoc-node [^Node node & kvs]
   (reduce (fn [^Node new-node [k v]]
@@ -129,8 +136,8 @@
   [^DoublyLinkedList dll uuid-or-elem]
   (if-let [uuid (:uuid uuid-or-elem)]
     (next dll uuid)
-    (when-let [next-uuid (.-next-uuid (or (get (.-entries-map dll) uuid-or-elem)
-                                          (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
+    (when-let [next-uuid (.-next-uuid (get (.-entries-map dll) uuid-or-elem
+                                           (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
       (.-value (get (.-entries-map dll) next-uuid)))))
 
 (defn prev
@@ -146,8 +153,8 @@
   [^DoublyLinkedList dll uuid-or-elem]
   (if-let [uuid (:uuid uuid-or-elem)]
     (prev dll uuid)
-    (when-let [prev-uuid (.-prev-uuid (or (get (.-entries-map dll) uuid-or-elem)
-                                          (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
+    (when-let [prev-uuid (.-prev-uuid (get (.-entries-map dll) uuid-or-elem
+                                           (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
       (.-value (get (.-entries-map dll) prev-uuid)))))
 
 (defn make-seq
@@ -169,12 +176,13 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
-(comment
-  (def l (dll {:uuid "1" :content "foo"} {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
-  (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
-  (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
-  (def mine (filter #(not= "-1" (:uuid %)) l2))
+(def val1 {:uuid "1" :content "foo"})
+(def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
+(def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
+(def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
+(def mine (filter #(not= "-1" (:uuid %)) l2))
 
+(comment
   (= (into (dll) l2) l2)
 
   (.-entries-map l1)
@@ -196,4 +204,8 @@
   (prev l2 {:uuid "2"})
   (prev l2 {:uuid "-1"})
   (prev l2 "doesntexist")
+
+  (get l2 "2")
+  (get l2 "2" :floof)
+  (get l2 "12" :floof)
   )
