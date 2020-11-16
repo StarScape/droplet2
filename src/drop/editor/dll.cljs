@@ -13,6 +13,7 @@
 
 ;; entries-map :: Map (UUID -> DLLEntry)
 ;; DLLEntry :: {uuid, prev-uuid, next-uuid, value}
+
 ;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 
 (deftype Node [^obj value ^string prev-uuid ^string next-uuid]
@@ -36,8 +37,6 @@
 ;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
-
-;; TODO: implement (contains?)
 (deftype DoublyLinkedList [entries-map first-uuid last-uuid]
   IEquiv
   (-equiv [^DoublyLinkedList dll other]
@@ -80,7 +79,14 @@
   (-lookup [^DoublyLinkedList dll uuid not-found]
     (if-let [entry ^Node (get (.-entries-map dll) uuid)]
       (.-value entry)
-      not-found)))
+      not-found))
+
+  #_IPrintWithWriter
+  #_(-pr-writer [dll writer opts]
+    (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
+    (-write writer ", first-uuid: ") (-write writer (.-first-uuid dll))
+    (-write writer ", last-uuid: ") (-write writer (.-last-uuid dll))
+    (-write writer "}")))
 
 (defn- assoc-node [^Node node & kvs]
   (reduce (fn [^Node new-node [k v]]
@@ -176,6 +182,7 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
+;; TODO: write tests
 (def val1 {:uuid "1" :content "foo"})
 (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
 (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
@@ -184,15 +191,6 @@
 
 (comment
   (= (into (dll) l2) l2)
-
-  (.-entries-map l1)
-  (.-last-uuid l1)
-  (.-first-uuid l1)
-
-  (.-entries-map l2)
-  (.-last-uuid l2)
-  (.-first-uuid l2)
-
   (empty? (dll))
 
   (next l2 "1")
@@ -208,4 +206,5 @@
   (get l2 "2")
   (get l2 "2" :floof)
   (get l2 "12" :floof)
-  )
+
+  (.-entries-map (dissoc l2 "1")))
