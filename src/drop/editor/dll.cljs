@@ -36,6 +36,8 @@
 ;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
+
+;; TODO: implement (contains?)
 (deftype DoublyLinkedList [entries-map first-uuid last-uuid]
   IEquiv
   (-equiv [^DoublyLinkedList dll other]
@@ -114,6 +116,40 @@
                         (.-last-uuid dll))]
     (DoublyLinkedList. new-entries (.-first-uuid dll) new-last-uuid)))
 
+(defn next
+  "Get successive item in the doubly-linked list given either a UUID of a
+   node or the value at that node. For example:
+   ```
+   ;; Both these work equivalently:
+   (let [val1 {:uuid \"1\" :val :foo}, val2 {:uuid \"2\" :val :bar}]
+     (next (dll val1 val2) \"1\")    ; => {:uuid \"2\" :val :bar}
+     (next (dll val2 val2) val1))  ; => {:uuid \"2\" :val :bar}
+   ```
+   Returns `nil` if there is no next element."
+  [^DoublyLinkedList dll uuid-or-elem]
+  (if-let [uuid (:uuid uuid-or-elem)]
+    (next dll uuid)
+    (when-let [next-uuid (.-next-uuid (or (get (.-entries-map dll) uuid-or-elem)
+                                          (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
+      (.-value (get (.-entries-map dll) next-uuid)))))
+
+(defn prev
+  "Get previous item in the doubly-linked list given either a UUID of a
+   node or the value at that node. For example:
+   ```
+   ;; Both these work equivalently:
+   (let [val1 {:uuid \"1\" :val :foo}, val2 {:uuid \"2\" :val :bar}]
+     (prev (dll val1 val2) \"2\")    ; => {:uuid \"1\" :val :foo}
+     (prev (dll val2 val2) val2))  ; => {:uuid \"1\" :val :foo}
+   ```
+   Returns `nil` if there is no previous element."
+  [^DoublyLinkedList dll uuid-or-elem]
+  (if-let [uuid (:uuid uuid-or-elem)]
+    (prev dll uuid)
+    (when-let [prev-uuid (.-prev-uuid (or (get (.-entries-map dll) uuid-or-elem)
+                                          (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
+      (.-value (get (.-entries-map dll) prev-uuid)))))
+
 (defn make-seq
   "Makes a DLL into a seq."
   ([^DoublyLinkedList dll]
@@ -150,4 +186,14 @@
   (.-first-uuid l2)
 
   (empty? (dll))
+
+  (next l2 "1")
+  (next l2 {:uuid "1"})
+  (next l2 {:uuid "5"})
+  (next l2 "doesntexist")
+
+  (prev l2 "2")
+  (prev l2 {:uuid "2"})
+  (prev l2 {:uuid "-1"})
+  (prev l2 "doesntexist")
   )
