@@ -13,6 +13,7 @@
 
 ;; entries-map :: Map (UUID -> DLLEntry)
 ;; DLLEntry :: {uuid, prev-uuid, next-uuid, value}
+;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 
 (deftype Node [^obj value ^string prev-uuid ^string next-uuid]
   IEquiv
@@ -31,9 +32,6 @@
    (-write writer ", prev-uuid: ") (-write writer (.-prev-uuid n))
    (-write writer ", next-uuid: ") (-write writer (.-next-uuid n))
    (-write writer "}")))
-
-;; TODO: make ISeqable
-;; TODO: make map and filterable - looks like (map) at least just uses first and rest
 
 ;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
@@ -116,47 +114,40 @@
                         (.-last-uuid dll))]
     (DoublyLinkedList. new-entries (.-first-uuid dll) new-last-uuid)))
 
-(defn dll
-  "Constructor for a new doubly-linked-list."
-  ([]
-   (DoublyLinkedList. {} nil nil))
-  ([& xs]
-   (reduce (fn [dll x] (conj dll x)) (dll) xs)))
-
-;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
-
 (defn make-seq
   "Makes a DLL into a seq."
-  ([^DoublyLinkedList dll] (make-seq dll ^str (.-first-uuid dll)))
+  ([^DoublyLinkedList dll]
+   (if (empty? (.-entries-map dll))
+     nil
+     (make-seq dll ^str (.-first-uuid dll))))
   ([^DoublyLinkedList dll uuid]
    (lazy-seq
     (let [entry ^Node (get (.-entries-map dll) uuid)]
       (when entry
         (cons (.-value entry) (make-seq dll (.-next-uuid entry))))))))
 
-;; TODO: fix conj
-(def l (dll {:uuid "1" :content "foo"} {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
-(def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
-(def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
+(defn dll
+  "Constructor for a doubly-linked-list."
+  ([]
+   (DoublyLinkedList. {} nil nil))
+  ([& xs]
+   (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
-;; (reduce (fn [acc x] #p x nil) nil l2)
-;; (reduce (fn [dll' x] (conj dll' x)) (dll) l2)
+(comment
+  (def l (dll {:uuid "1" :content "foo"} {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
+  (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
+  (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
+  (def mine (filter #(not= "-1" (:uuid %)) l2))
 
-(def mine (filter #(not= "-1" (:uuid %)) l2))
+  (= (into (dll) l2) l2)
 
-(= (into (dll) l2) l2)
+  (.-entries-map l1)
+  (.-last-uuid l1)
+  (.-first-uuid l1)
 
-(.-entries-map l1)
-(.-last-uuid l1)
-(.-first-uuid l1)
+  (.-entries-map l2)
+  (.-last-uuid l2)
+  (.-first-uuid l2)
 
-(.-entries-map l2)
-(.-last-uuid l2)
-(.-first-uuid l2)
-
-;; (.log js/console (insert-before l "5" {:uuid "4" :content "bar"}))
-
-;; (first (dll {:uuid 1, :content "foo"}))
-;; (assoc (dll) 1 {:uuid 1, :content "foo"})
-
-;; INext
+  (empty? (dll))
+  )
