@@ -15,6 +15,15 @@
 ;; DLLEntry :: {uuid, prev-uuid, next-uuid, value}
 
 (deftype Node [^obj value ^string prev-uuid ^string next-uuid]
+  IEquiv
+  (-equiv [^Node node other]
+    (if (instance? Node other)
+      (and
+       (= (.-value node) (.-value ^Node other))
+       (= (.-prev-uuid node) (.-prev-uuid ^Node other))
+       (= (.-next-uuid node) (.-next-uuid ^Node other)))
+      false))
+
   ;; Implement pretty-printing for easier debugging
   IPrintWithWriter
   (-pr-writer [n writer opts]
@@ -30,6 +39,15 @@
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
 (deftype DoublyLinkedList [entries-map first-uuid last-uuid]
+  IEquiv
+  (-equiv [^DoublyLinkedList dll other]
+    (if (instance? DoublyLinkedList other)
+      (and
+       (= (.-entries-map dll) (.-entries-map ^DoublyLinkedList other))
+       (= (.-first-uuid dll) (.-first-uuid ^DoublyLinkedList other))
+       (= (.-last-uuid dll) (.-last-uuid ^DoublyLinkedList other)))
+      false))
+
   ISeq
   (-first [^DoublyLinkedList dll] (get (.-entries-map dll) (.-first-uuid dll)))
 
@@ -125,6 +143,8 @@
 ;; (reduce (fn [dll' x] (conj dll' x)) (dll) l2)
 
 (def mine (filter #(not= "-1" (:uuid %)) l2))
+
+(= (into (dll) l2) l2)
 
 (.-entries-map l1)
 (.-last-uuid l1)
