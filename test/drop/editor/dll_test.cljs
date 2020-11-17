@@ -139,5 +139,10 @@
   (is (= val4 (get l "5")))
   (is (= :default (get l "4" :default))))
 
+(deftest dissoc-test
+  (is (= (dissoc l "1") (dll val2 val3 val4)))
+  (is (= (dissoc l "5") (dll val1 val2 val3)))
+  (is (= (dissoc l "doesntexist") l)))
+
 ;; TODO: test dissoc
 ;; TODO: test conj and (into) on DLL

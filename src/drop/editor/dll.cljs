@@ -1,12 +1,13 @@
 (ns drop.editor.dll
   ;; TODO: more detailed description
   "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs."
-  (:refer-clojure :exclude [last next]))
+  (:refer-clojure :exclude [last next remove]))
 
 ;;(declare first)
 ;;(declare last)
 ;;(declare next)
 ;;(declare prev)
+(declare remove)
 (declare insert-after)
 (declare insert-before)
 (declare make-seq)
@@ -64,15 +65,7 @@
       (insert-after dll (.-last-uuid dll) val)))
 
   IMap
-  (-dissoc [^DoublyLinkedList dll uuid]
-    (let [new-entries (dissoc (.-entries-map dll) uuid)
-          first ^Node (get (.-entries-map dll) (.-first-uuid dll))
-          last ^Node (get (.-entries-map dll) (.-last-uuid dll))
-          new-first (cond-> first
-                      (= uuid (.-first-uuid dll)) (get new-entries (.-next-uuid first)))
-          new-last (cond-> last
-                     (= uuid (:uuid (.-value last))) (get new-entries (.-prev-uuid last)))]
-      (DoublyLinkedList. new-entries new-first new-last)))
+  (-dissoc [^DoublyLinkedList dll uuid] (remove dll uuid))
 
   ILookup
   (-lookup [^DoublyLinkedList dll uuid] (-lookup dll uuid nil))
@@ -88,7 +81,16 @@
     (-write writer ", last-uuid: ") (-write writer (.-last-uuid dll))
     (-write writer "}")))
 
-(defn- assoc-node [^Node node & kvs]
+(defn- assoc-node
+  "Helper function for creating a new [[Node]] based on the value of an old one.
+   Takes keywords for the keys and works the same way you would expect assoc to
+   on a normal map, for example:
+   ```
+   ; creates a new Node with identical to some-node
+   ; but with the value of prev-uuid set to 12
+   (assoc-node some-node :prev-uuid \"12\")
+   ```"
+  [^Node node & kvs]
   (reduce (fn [^Node new-node [k v]]
             (case k
               :value (Node. v (.-prev-uuid new-node) (.-next-uuid new-node))
@@ -109,6 +111,18 @@
     :always (assoc new-uuid (Node. val prev-uuid next-uuid))))
 
 ;; TODO: add condition to both these that dll cannot be empty.
+(defn- make-seq
+  "Makes a DLL into a seq."
+  ([^DoublyLinkedList dll]
+   (if (empty? (.-entries-map dll))
+     nil
+     (make-seq dll ^str (.-first-uuid dll))))
+  ([^DoublyLinkedList dll uuid]
+   (lazy-seq
+    (let [entry ^Node (get (.-entries-map dll) uuid)]
+      (when entry
+        (cons (.-value entry) (make-seq dll (.-next-uuid entry))))))))
+
 (defn insert-before
   "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `prev-uuid`."
   [^DoublyLinkedList dll next-uuid val]
@@ -128,6 +142,27 @@
                         (:uuid val)
                         (.-last-uuid dll))]
     (DoublyLinkedList. new-entries (.-first-uuid dll) new-last-uuid)))
+
+(defn remove
+  "Removes the node with `uuid` from the list. Calling (dissoc) on the DLL works identically"
+  [^DoublyLinkedList dll uuid]
+  (if-let [node ^Node (get (.-entries-map dll) uuid)]
+    (let [entries (.-entries-map dll)
+          new-entries (cond-> entries
+                        true (dissoc uuid)
+                        (some? (.-prev-uuid node)) (update (.-prev-uuid node) assoc-node :next-uuid (.-next-uuid node))
+                        (some? (.-next-uuid node)) (update (.-next-uuid node) assoc-node :prev-uuid (.-prev-uuid node)))
+          first ^Node (get entries (.-first-uuid dll))
+          last ^Node (get entries (.-last-uuid dll))
+          new-first (if (= uuid (.-first-uuid dll))
+                    ;; TODO: replace with uuid macro
+                      (:uuid (.-value (get new-entries (.-next-uuid first))))
+                      (:uuid (.-value first)))
+          new-last (if (= uuid (:uuid (.-value last)))
+                     (:uuid (.-value (get new-entries (.-prev-uuid last))))
+                     (:uuid (.-value last)))]
+      (DoublyLinkedList. new-entries new-first new-last))
+    dll))
 
 (defn next
   "Get successive item in the doubly-linked list given either a UUID of a
@@ -162,18 +197,6 @@
     (when-let [prev-uuid (.-prev-uuid (get (.-entries-map dll) uuid-or-elem
                                            #_(throw (str "ERROR: No item in list with UUID of " uuid-or-elem))))]
       (.-value (get (.-entries-map dll) prev-uuid)))))
-
-(defn make-seq
-  "Makes a DLL into a seq."
-  ([^DoublyLinkedList dll]
-   (if (empty? (.-entries-map dll))
-     nil
-     (make-seq dll ^str (.-first-uuid dll))))
-  ([^DoublyLinkedList dll uuid]
-   (lazy-seq
-    (let [entry ^Node (get (.-entries-map dll) uuid)]
-      (when entry
-        (cons (.-value entry) (make-seq dll (.-next-uuid entry))))))))
 
 (defn dll
   "Constructor for a doubly-linked-list."
