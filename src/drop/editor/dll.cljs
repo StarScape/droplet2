@@ -143,7 +143,7 @@
   (if-let [uuid (:uuid uuid-or-elem)]
     (next dll uuid)
     (when-let [next-uuid (.-next-uuid (get (.-entries-map dll) uuid-or-elem
-                                           (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
+                                           #_(throw (str "ERROR: No item in list with UUID of " uuid-or-elem))))]
       (.-value (get (.-entries-map dll) next-uuid)))))
 
 (defn prev
@@ -160,7 +160,7 @@
   (if-let [uuid (:uuid uuid-or-elem)]
     (prev dll uuid)
     (when-let [prev-uuid (.-prev-uuid (get (.-entries-map dll) uuid-or-elem
-                                           (throw (str "ERROR: No item in list with UUID of: " uuid-or-elem))))]
+                                           #_(throw (str "ERROR: No item in list with UUID of " uuid-or-elem))))]
       (.-value (get (.-entries-map dll) prev-uuid)))))
 
 (defn make-seq

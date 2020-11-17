@@ -3,7 +3,10 @@
             [drop.editor.dll :as dll :refer [dll]]))
 
 (def val1 {:uuid "1" :content "foo"})
-(def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
+(def val2 {:uuid "2" :content "bar"})
+(def val3 {:uuid "3" :content "bizz"})
+(def val4 {:uuid "5" :content "bang"})
+(def l (dll val1 val2 val3 val4))
 (def l1 (dll/insert-before l "5" {:uuid "4" :content "bar"}))
 (def l2 (dll/insert-before l "1" {:uuid "-1" :content "pre"}))
 
@@ -97,6 +100,32 @@
                 {:uuid "2" :content "bar"}
                 {:uuid "3" :content "bizz"})))
     (is (= l1 (dll/insert-before l "5" {:uuid "4" :content "bar"})))))
+
+(deftest next-test
+  (testing "works with UUIDs"
+    (is (= (dll/next l "1") val2))
+    (is (= (dll/next l "2") val3))
+    (is (= (dll/next l "3") val4))
+    (is (= (dll/next l "5") nil))
+    (is (thrown? js/Error (= (dll/next l "4") nil))))
+
+  (testing "works with elements of list"
+    (is (= val4 (->> (dll/next l val1)
+                     (dll/next l)
+                     (dll/next l))))))
+
+(deftest prev-test
+  (testing "works with UUIDs"
+    (is (= (dll/prev l "1") nil))
+    (is (= (dll/prev l "2") val1))
+    (is (= (dll/prev l "3") val2))
+    (is (= (dll/prev l "5") val3))
+    (is (thrown? js/Error (= (dll/prev l "4") nil))))
+
+  (testing "works with elements of list"
+    (is (= val1 (->> (dll/prev l val4)
+                     (dll/prev l)
+                     (dll/prev l))))))
 
 ;; TODO: test (get) on DLL
 ;; TODO: test next and prev
