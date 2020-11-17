@@ -28,6 +28,23 @@
       (is (= "a" (.-first-uuid d)))
       (is (= "c" (.-last-uuid d))))))
 
+(deftest insert-before-test
+  (is (= (dll/insert-before l "1" {:uuid "-1" :content "pre"})
+         (dll {:uuid "-1" :content "pre"}
+              {:uuid "1" :content "foo"}
+              {:uuid "2" :content "bar"}
+              {:uuid "3" :content "bizz"}
+              {:uuid "5" :content "bang"})))
+
+  (is (= (dll/insert-before l "5" {:uuid "4" :content "buzz"})
+         (dll {:uuid "1" :content "foo"}
+              {:uuid "2" :content "bar"}
+              {:uuid "3" :content "bizz"}
+              {:uuid "4" :content "buzz"}
+              {:uuid "5" :content "bang"})))
+
+  (is (thrown? js/Error (dll/insert-before l "-1" {:uuid "-2" :content "WUT"}))))
+
 ;; TODO: test insert-before
 ;; TODO: test insert-after
 ;; TODO: test calling (seq) on DLL (can also test map and filter at same time)
