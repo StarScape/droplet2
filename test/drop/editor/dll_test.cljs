@@ -127,8 +127,12 @@
                      (dll/prev l)
                      (dll/prev l))))))
 
+(deftest empty-test
+  (is (empty? (dll)))
+  (is #_:clj-kondo/ignore (not (empty? (dll {:uuid "1" :val "somethin"}))))
+  (is (seq (dll {:uuid "1" :val "somethin"}))))
+
 ;; TODO: test (get) on DLL
-;; TODO: test next and prev
 ;; TODO: test dissoc
 ;; TODO: test (empty?) on DLL
 ;; TODO: test conj and (into) on DLL
