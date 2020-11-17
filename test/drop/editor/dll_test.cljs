@@ -62,11 +62,28 @@
 
   (is (thrown? js/Error (dll/insert-after l "100" {:uuid "101" :content "WUT"}))))
 
-;; TODO: test calling (seq) on DLL (can also test map and filter at same time)
+(deftest seq-test
+  (testing "produces a seq correctly"
+    (is (= (seq l) (seq [{:uuid "1" :content "foo"}
+                         {:uuid "2" :content "bar"}
+                         {:uuid "3" :content "bizz"}
+                         {:uuid "5" :content "bang"}]))))
+
+  (testing "can filter and map correctly"
+    (is (= (map #(update % :content str " EDITED") l)
+           (seq [{:uuid "1" :content "foo EDITED"}
+                 {:uuid "2" :content "bar EDITED"}
+                 {:uuid "3" :content "bizz EDITED"}
+                 {:uuid "5" :content "bang EDITED"}])))
+    (is (= (filter #(not= "1" (:uuid %)) l)
+           (seq [{:uuid "2" :content "bar"}
+                 {:uuid "3" :content "bizz"}
+                 {:uuid "5" :content "bang"}])))))
+
 ;; TODO: test equiv
 ;; TODO: test (count) on DLL
 ;; TODO: test (get) on DLL
 ;; TODO: test next and prev
 ;; TODO: test dissoc
 ;; TODO: test (empty?) on DLL
-;; TODO: test (into) on DLL
+;; TODO: test conj and (into) on DLL
