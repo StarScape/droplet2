@@ -85,8 +85,19 @@
   (is (= 5 (count l1)))
   (is (= 5 (count l2))))
 
-;; TODO: test equiv
-;; TODO: test (count) on DLL
+(deftest equiv-test
+  (testing "empty DLLs equal"
+    (is (= (dll) (dll))))
+
+  (testing "equivalent DLLs equal"
+    (is (= (dll {:uuid "1" :content "foo"}
+                {:uuid "2" :content "bar"}
+                {:uuid "3" :content "bizz"})
+           (dll {:uuid "1" :content "foo"}
+                {:uuid "2" :content "bar"}
+                {:uuid "3" :content "bizz"})))
+    (is (= l1 (dll/insert-before l "5" {:uuid "4" :content "bar"})))))
+
 ;; TODO: test (get) on DLL
 ;; TODO: test next and prev
 ;; TODO: test dissoc
