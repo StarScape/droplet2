@@ -80,6 +80,11 @@
                  {:uuid "3" :content "bizz"}
                  {:uuid "5" :content "bang"}])))))
 
+(deftest count-test
+  (is (= 4 (count l)))
+  (is (= 5 (count l1)))
+  (is (= 5 (count l2))))
+
 ;; TODO: test equiv
 ;; TODO: test (count) on DLL
 ;; TODO: test (get) on DLL
