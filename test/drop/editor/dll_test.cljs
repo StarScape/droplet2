@@ -45,8 +45,23 @@
 
   (is (thrown? js/Error (dll/insert-before l "-1" {:uuid "-2" :content "WUT"}))))
 
-;; TODO: test insert-before
-;; TODO: test insert-after
+(deftest insert-after-test
+  (is (= (dll/insert-after l "1" {:uuid "1.5" :content "inserted"})
+         (dll {:uuid "1" :content "foo"}
+              {:uuid "1.5" :content "inserted"}
+              {:uuid "2" :content "bar"}
+              {:uuid "3" :content "bizz"}
+              {:uuid "5" :content "bang"})))
+
+  (is (= (dll/insert-after l "5" {:uuid "6" :content "post"})
+         (dll {:uuid "1" :content "foo"}
+              {:uuid "2" :content "bar"}
+              {:uuid "3" :content "bizz"}
+              {:uuid "5" :content "bang"}
+              {:uuid "6" :content "post"})))
+
+  (is (thrown? js/Error (dll/insert-after l "100" {:uuid "101" :content "WUT"}))))
+
 ;; TODO: test calling (seq) on DLL (can also test map and filter at same time)
 ;; TODO: test equiv
 ;; TODO: test (count) on DLL
