@@ -132,7 +132,12 @@
   (is #_:clj-kondo/ignore (not (empty? (dll {:uuid "1" :val "somethin"}))))
   (is (seq (dll {:uuid "1" :val "somethin"}))))
 
-;; TODO: test (get) on DLL
+(deftest get-test
+  (is (= val1 (get l "1")))
+  (is (= val2 (get l "2")))
+  (is (= val3 (get l "3")))
+  (is (= val4 (get l "5")))
+  (is (= :default (get l "4" :default))))
+
 ;; TODO: test dissoc
-;; TODO: test (empty?) on DLL
 ;; TODO: test conj and (into) on DLL
