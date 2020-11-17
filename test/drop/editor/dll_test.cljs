@@ -144,5 +144,12 @@
   (is (= (dissoc l "5") (dll val1 val2 val3)))
   (is (= (dissoc l "doesntexist") l)))
 
-;; TODO: test dissoc
-;; TODO: test conj and (into) on DLL
+(deftest conj-test
+  (testing "conj works"
+    (is (= (conj l {:uuid "6" :content "post"})
+           (dll val1 val2 val3 val4 {:uuid "6" :content "post"})))
+    (is (= (conj (dll) {:uuid "6" :content "post"})
+           (dll {:uuid "6" :content "post"}))))
+
+  (testing "calling (into) on DLL works"
+    (is (= (into [] l) [val1 val2 val3 val4]))))

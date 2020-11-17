@@ -148,14 +148,14 @@
   [^DoublyLinkedList dll uuid]
   (if-let [node ^Node (get (.-entries-map dll) uuid)]
     (let [entries (.-entries-map dll)
+          first ^Node (get entries (.-first-uuid dll))
+          last ^Node (get entries (.-last-uuid dll))
           new-entries (cond-> entries
                         true (dissoc uuid)
                         (some? (.-prev-uuid node)) (update (.-prev-uuid node) assoc-node :next-uuid (.-next-uuid node))
                         (some? (.-next-uuid node)) (update (.-next-uuid node) assoc-node :prev-uuid (.-prev-uuid node)))
-          first ^Node (get entries (.-first-uuid dll))
-          last ^Node (get entries (.-last-uuid dll))
           new-first (if (= uuid (.-first-uuid dll))
-                    ;; TODO: replace with uuid macro
+                      ;; TODO: replace with uuid macro
                       (:uuid (.-value (get new-entries (.-next-uuid first))))
                       (:uuid (.-value first)))
           new-last (if (= uuid (:uuid (.-value last)))
