@@ -153,3 +153,11 @@
 
   (testing "calling (into) on DLL works"
     (is (= (into [] l) [val1 val2 val3 val4]))))
+
+(deftest first-test
+  (is (= (dll/first l) val1))
+  (is (= (dll/first (dll)) nil)))
+
+(deftest last-test
+  (is (= (dll/last l) val4))
+  (is (= (dll/last (dll)) nil)))

@@ -1,14 +1,15 @@
 (ns drop.editor.dll
   ;; TODO: more detailed description
   "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs."
-  (:refer-clojure :exclude [last next remove])
+  (:refer-clojure :exclude [first last next remove])
   (:require-macros [drop.editor.dll :refer [node-uuid]]))
 
-;;(declare first)
-;;(declare last)
-;;(declare next)
-;;(declare prev)
+(declare first)
+(declare last)
+(declare next)
+(declare prev)
 (declare remove)
+(declare dll)
 (declare insert-after)
 (declare insert-before)
 (declare make-seq)
@@ -111,7 +112,6 @@
     (some? next-uuid) (update next-uuid assoc-node :prev-uuid new-uuid)
     :always (assoc new-uuid (Node. val prev-uuid next-uuid))))
 
-;; TODO: add condition to both these that dll cannot be empty.
 (defn- make-seq
   "Makes a DLL into a seq."
   ([^DoublyLinkedList dll]
@@ -124,9 +124,11 @@
       (when entry
         (cons (.-value entry) (make-seq dll (.-next-uuid entry))))))))
 
+;; TODO: add condition to both these that dll cannot be empty.
 (defn insert-before
   "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `prev-uuid`."
   [^DoublyLinkedList dll next-uuid val]
+  {:pre [(seq dll)]}
   (let [prev-uuid (.-prev-uuid (get (.-entries-map dll) next-uuid))
         new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
         new-first-uuid (if (= (.-first-uuid dll) next-uuid)
@@ -137,6 +139,7 @@
 (defn insert-after
   "Inserts `val` into the double-linked list `dll` immediately after the node with uuid = `prev-uuid`."
   [^DoublyLinkedList dll prev-uuid val]
+  {:pre [(seq dll)]}
   (let [next-uuid (.-next-uuid (get (.-entries-map dll) prev-uuid))
         new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
         new-last-uuid (if (= (.-last-uuid dll) prev-uuid)
@@ -198,6 +201,18 @@
                                            #_(throw (str "ERROR: No item in list with UUID of " uuid-or-elem))))]
       (.-value (get (.-entries-map dll) prev-uuid)))))
 
+(defn first
+  "Returns first element in DLL."
+  [^DoublyLinkedList dll]
+  (if-let [first-node ^Node (get (.-entries-map dll) (.-first-uuid dll))]
+    (.-value first-node)))
+
+(defn last
+  "Returns last element in DLL."
+  [^DoublyLinkedList dll]
+  (if-let [first-node ^Node (get (.-entries-map dll) (.-last-uuid dll))]
+    (.-value first-node)))
+
 (defn dll
   "Constructor for a doubly-linked-list."
   ([]
@@ -205,13 +220,18 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
-(def val1 {:uuid "1" :content "foo"})
-(def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
-(def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
-(def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
-(def mine (filter #(not= "-1" (:uuid %)) l2))
-
 (comment
+  (def val1 {:uuid "1" :content "foo"})
+  (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
+  (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
+  (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
+  (def mine (filter #(not= "-1" (:uuid %)) l2))
+
+  (first l)
+  (last l)
+  (first (dll))
+  (last (dll))
+
   (= (into (dll) l2) l2)
   (empty? (dll))
 
