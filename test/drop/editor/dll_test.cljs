@@ -161,3 +161,10 @@
 (deftest last-test
   (is (= (dll/last l) val4))
   (is (= (dll/last (dll)) nil)))
+
+(deftest rest-test
+  (is (= (rest l) (seq [val2 val3 val4])))
+  (is (= (rest (dll)) ()))
+
+  ;; Can we destructure it properly?
+  (is (= [val2 val1] (let [[a b] l] [b a]))))

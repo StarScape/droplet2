@@ -52,22 +52,26 @@
 (declare make-seq)
 (declare dll)
 
+;; TODO: I totally did not realize this, but inside a deftype declaration you can just reference fields
+;; by their names, similar to Java, without any (.-whatever this) business. This stuff can probably be
+;; cleaned up in light of that...
+
 (deftype Node [^obj value ^string prev-uuid ^string next-uuid]
   IEquiv
   (-equiv [^Node node other]
     (if (instance? Node other)
       (and
-       (= (.-value node) (.-value ^Node other))
-       (= (.-prev-uuid node) (.-prev-uuid ^Node other))
-       (= (.-next-uuid node) (.-next-uuid ^Node other)))
+       (= value (.-value ^Node other))
+       (= prev-uuid (.-prev-uuid ^Node other))
+       (= next-uuid (.-next-uuid ^Node other)))
       false))
 
   ;; Implement pretty-printing for easier debugging
   IPrintWithWriter
   (-pr-writer [n writer opts]
-   (-write writer "#Node{value: ") (-write writer (.-value n))
-   (-write writer ", prev-uuid: ") (-write writer (.-prev-uuid n))
-   (-write writer ", next-uuid: ") (-write writer (.-next-uuid n))
+   (-write writer "#Node{value: ") (-write writer value)
+   (-write writer ", prev-uuid: ") (-write writer prev-uuid)
+   (-write writer ", next-uuid: ") (-write writer next-uuid)
    (-write writer "}")))
 
 ;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
@@ -80,26 +84,30 @@
   (-equiv [^DoublyLinkedList dll other]
     (if (instance? DoublyLinkedList other)
       (and
-       (= (.-entries-map dll) (.-entries-map ^DoublyLinkedList other))
-       (= (.-first-uuid dll) (.-first-uuid ^DoublyLinkedList other))
-       (= (.-last-uuid dll) (.-last-uuid ^DoublyLinkedList other)))
+       (= entries-map (.-entries-map ^DoublyLinkedList other))
+       (= first-uuid (.-first-uuid ^DoublyLinkedList other))
+       (= last-uuid (.-last-uuid ^DoublyLinkedList other)))
       false))
 
   ISeq
   (-first [^DoublyLinkedList dll] (first dll))
+  (-rest [^DoublyLinkedList dll]
+    (if (seq entries-map)
+      (make-seq dll (.-next-uuid (get entries-map first-uuid)))
+      ()))
 
   ISeqable
   (-seq [^DoublyLinkedList dll] (make-seq dll))
 
   ICounted
-  (-count [dll] (count (.-entries-map dll)))
+  (-count [dll] (count entries-map))
 
   ICollection
   (-conj [^DoublyLinkedList dll val]
-    (if (empty? (.-entries-map dll))
+    (if (empty? entries-map)
       (let [uuid (:uuid val), node (Node. val nil nil)]
         (DoublyLinkedList. {(:uuid val) node} uuid uuid))
-      (insert-after dll (.-last-uuid dll) val)))
+      (insert-after dll last-uuid val)))
 
   IMap
   (-dissoc [^DoublyLinkedList dll uuid] (remove dll uuid))
@@ -107,7 +115,7 @@
   ILookup
   (-lookup [^DoublyLinkedList dll uuid] (-lookup dll uuid nil))
   (-lookup [^DoublyLinkedList dll uuid not-found]
-    (if-let [entry ^Node (get (.-entries-map dll) uuid)]
+    (if-let [entry ^Node (get entries-map uuid)]
       (.-value entry)
       not-found))
 
@@ -155,9 +163,8 @@
      (make-seq dll ^str (.-first-uuid dll))))
   ([^DoublyLinkedList dll uuid]
    (lazy-seq
-    (let [entry ^Node (get (.-entries-map dll) uuid)]
-      (when entry
-        (cons (.-value entry) (make-seq dll (.-next-uuid entry))))))))
+    (when-let [entry ^Node (get (.-entries-map dll) uuid)]
+      (cons (.-value entry) (make-seq dll (.-next-uuid entry)))))))
 
 ;; TODO: add condition to both these that dll cannot be empty.
 (defn insert-before
@@ -255,12 +262,19 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
+
 (comment
   (def val1 {:uuid "1" :content "foo"})
   (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
   (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
   (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
   (def mine (filter #(not= "-1" (:uuid %)) l2))
+
+  (rest (dll))
+  (rest l)
+
+  (let [[a b] l]
+    #{a b})
 
   (first l)
   (last l)
