@@ -26,7 +26,6 @@
 (defrecord Line [spans start-offset end-offset width])
 (defrecord Span [text formats start-offset width])
 
-
 ;; TODO: is it worth replacing the reliance on CharRuler with a simple function `(measure)` that wraps it?
 
 (defn empty-span [] (->Span "" #{} 0 0))

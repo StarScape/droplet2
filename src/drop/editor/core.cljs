@@ -3,6 +3,12 @@
             [drop.editor.selection :as sel :refer [Selection selection]]
             [drop.editor.vec-utils :as vec-utils]))
 
+;; ==============================================
+;; |                                            |
+;; |   TODO: change paragraph list to use DLL   |
+;; |                                            |
+;; ==============================================
+
 ;; TODO: spec all this out. Also learn spec :)
 
 ;; TODO: I think it might be beneficial to not return vectors of runs/paragraphs,
@@ -238,9 +244,7 @@
   [runs offset]
   (let [run-end-offsets (set (reductions + (map text-len runs)))
         ;; runs-len (reduce + (map text-len runs))
-        offset-fn (if (run-end-offsets offset)
-                    before-offset
-                    at-offset)
+        offset-fn (if (run-end-offsets offset) before-offset at-offset)
 
         ;; Split the run at the caret position
         [target-run-idx target-run-offset] (offset-fn runs offset)
@@ -248,10 +252,10 @@
         [target-before target-after] (split target-run target-run-offset)
 
         ;; Get runs before and after the run that the caret is inside of
-        runs-before (vec (take target-run-idx runs))
-        runs-after (vec (drop (inc target-run-idx) runs))
+        runs-before (take target-run-idx runs)
+        runs-after (drop (inc target-run-idx) runs)
 
-        before (conj runs-before target-before)
+        before (conj (vec runs-before) target-before)
         after (into [target-after] runs-after)]
     (mapv optimize-runs [before after])))
 
@@ -396,39 +400,6 @@
   (remove-format
    ([p format] (update p :runs (partial map #(remove-format % format))))
    ([p sel format] (update-selected-runs p sel #(remove-format % format)))))
-
-#_(defn shared-formats
-   "Returns the set of all the formats shared by each run that is inside (wholly or
-   partially) the selection. Will return an empty set if there are no formats shared."
-   ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
-   ([para sel]
-    (let [runs (:runs para)
-          [start-run-idx _] (at-offset runs (-> sel :start :offset))
-          [end-run-idx _] (before-offset runs (-> sel :end :offset))
-          selected-runs (subvec runs start-run-idx (inc end-run-idx))]
-      (->> selected-runs
-           (map :formats)
-           (apply set/intersection)))))
-
-#_(defn toggle-format
-  "Either applies the selected format to the selection (if the selected text
-   does not already have that format) or removes it (if the selected text **does**
-   have that format)."
-  [para sel format]
-  (let [[before in-selection after]
-        (separate-selected (:runs para) sel)
-
-        common-formats
-        (->> in-selection (map :formats) (apply set/intersection))
-
-        selected-runs-toggled
-        (if (contains? common-formats format)
-          (mapv #(remove-format % format) in-selection)
-          (mapv #(apply-format % format) in-selection))
-
-        new-runs
-        (optimize-runs (concat before selected-runs-toggled after))]
-    (assoc para :runs new-runs)))
 
 ;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs
@@ -618,6 +589,7 @@
 
 (defn doc-shared-formats [doc sel]
   (if (sel/single-paragraph? sel)
+    ;; TODO: it is probably worth having a (get-paragraph) function that takes a Document and UUID
     (shared-formats ((:children doc) (-> sel :start :paragraph)) sel)
     (->> (selected-content doc sel)
          (map shared-formats)
