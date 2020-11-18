@@ -1,23 +1,56 @@
 (ns drop.editor.dll
-  ;; TODO: more detailed description
-  "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs."
+  "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs.
+   The central problem here is that for our paragraph list, we need a few things:
+
+   1. An efficient way to get the the next or previous paragraph from the list, given a paragraph.
+      This is used when keying up/down between paragraphs, among other things.
+   2. An efficient way to *random-access* a paragraph. When it's DOM node is clicked, for example.
+   3. Efficient access to both the first and last paragraph, for jump to start/end.
+   4. Efficient removal of paragraph or paragraphs at an arbitrary point in the list.
+   5. The list must be *ordered.*
+   6. Ideally, we do not want the indexes for accessing a paragraph to get invalidated across
+      versions, provided that paragraph is still present. We need this so that event listeners
+      set on <p> elements in the view can know which paragraphs to modify in the model, without
+      having to reset event listeners for every single DOM element each time we change the list.
+
+   Any one of these is trivial, but getting all of them at once is hard. #1, #2, and #3 are easy
+   with a vector or an array. #4 is possible with finger trees or RRB vectors. #5 is a property
+   of any list type. #6 is impossible using numeric indexing, as removing a paragraph would invalidate
+   the indexes of any paragraph(s) after it. It could be achieved with a map of UUIDs -> Paragraphs,
+   but this would get rid of properties #1, #3, and #5.
+
+   Maintaining a doubly-linked list of paragraphs, along with a hashmap of UUIDs -> Nodes could
+   *almost* get us what we want, but a traditional doubly-linked list cannot be made fully-persistent
+   in the way a singly-linked list can, at least without making every operation O(n). However, if we
+   swap the `prev` and `next` pointers on each node and instead use UUIDs referencing the previous and
+   next nodes, and maintain a map of UUIDs -> Nodes, it can be made into a functional version of a DLL.
+
+   You don't really need to be aware of most of these details in order to write code that uses the DLL
+   data structure in this namespace. All you really need to know are the public functions it exposes:
+   `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
+   `dll`. Aside from that DLLs behave basically like other Clojure collections: you can call `conj`,
+   `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and from other types
+   using `into`.
+
+   They are also decoupled from the rest of the code -- there's no reason you couldn't put something
+   other than paragraphs inside a DLL, though it's doubtful you'd need those specific set of properties
+   in any other application (but hey, maybe).
+
+   The only catch is that every item inserted must have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
+   will work, but `(dll {:val 1})` will throw an error."
   (:refer-clojure :exclude [first last next remove])
   (:require-macros [drop.editor.dll :refer [node-uuid]]))
 
+;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 (declare first)
 (declare last)
 (declare next)
 (declare prev)
 (declare remove)
-(declare dll)
 (declare insert-after)
 (declare insert-before)
 (declare make-seq)
-
-;; entries-map :: Map (UUID -> DLLEntry)
-;; DLLEntry :: {uuid, prev-uuid, next-uuid, value}
-
-;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
+(declare dll)
 
 (deftype Node [^obj value ^string prev-uuid ^string next-uuid]
   IEquiv
@@ -40,7 +73,9 @@
 ;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
-(deftype DoublyLinkedList [entries-map first-uuid last-uuid]
+(deftype DoublyLinkedList [entries-map ; map of (UUID -> DLLEntry)
+                           first-uuid
+                           last-uuid]
   IEquiv
   (-equiv [^DoublyLinkedList dll other]
     (if (instance? DoublyLinkedList other)
@@ -51,7 +86,7 @@
       false))
 
   ISeq
-  (-first [^DoublyLinkedList dll] (get (.-entries-map dll) (.-first-uuid dll)))
+  (-first [^DoublyLinkedList dll] (first dll))
 
   ISeqable
   (-seq [^DoublyLinkedList dll] (make-seq dll))
