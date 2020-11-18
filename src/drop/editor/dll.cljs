@@ -1,7 +1,8 @@
 (ns drop.editor.dll
   ;; TODO: more detailed description
   "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs."
-  (:refer-clojure :exclude [last next remove]))
+  (:refer-clojure :exclude [last next remove])
+  (:require-macros [drop.editor.dll :refer [node-uuid]]))
 
 ;;(declare first)
 ;;(declare last)
@@ -155,12 +156,11 @@
                         (some? (.-prev-uuid node)) (update (.-prev-uuid node) assoc-node :next-uuid (.-next-uuid node))
                         (some? (.-next-uuid node)) (update (.-next-uuid node) assoc-node :prev-uuid (.-prev-uuid node)))
           new-first (if (= uuid (.-first-uuid dll))
-                      ;; TODO: replace with uuid macro
-                      (:uuid (.-value (get new-entries (.-next-uuid first))))
-                      (:uuid (.-value first)))
+                      (node-uuid (get new-entries (.-next-uuid first)))
+                      (node-uuid first))
           new-last (if (= uuid (:uuid (.-value last)))
-                     (:uuid (.-value (get new-entries (.-prev-uuid last))))
-                     (:uuid (.-value last)))]
+                     (node-uuid (get new-entries (.-prev-uuid last)))
+                     (node-uuid last))]
       (DoublyLinkedList. new-entries new-first new-last))
     dll))
 
@@ -205,7 +205,6 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
-;; TODO: write tests
 (def val1 {:uuid "1" :content "foo"})
 (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
 (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
