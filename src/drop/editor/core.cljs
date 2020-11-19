@@ -1,5 +1,6 @@
 (ns drop.editor.core
   (:require [clojure.set :as set]
+            [drop.editor.dll :as dll :refer [dll]]
             [drop.editor.selection :as sel :refer [Selection selection]]
             [drop.editor.vec-utils :as vec-utils]))
 
@@ -162,7 +163,7 @@
 ;;                        ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defrecord Paragraph [runs]
+(defrecord Paragraph [uuid runs]
   TextContainer
   (text-len [p] (reduce #(+ %1 (text-len %2)) 0 (:runs p))))
 
@@ -171,9 +172,13 @@
 (defn paragraph
   "Creates a new paragraph."
   ([runs]
-   (->Paragraph (optimize-runs runs)))
+   (->Paragraph (random-uuid) (optimize-runs runs)))
   ([]
-   (->Paragraph [(run)])))
+   (->Paragraph (random-uuid) [(run)]))
+
+  ;; This arity is mostly for testing (to make it easier to track that the UUID remains what it should)
+  ([uuid runs]
+   (->Paragraph uuid (optimize-runs runs))))
 
 ;; Paragraph helper functions
 (defn optimize-runs
@@ -422,7 +427,7 @@
   ([children]
    (->Document children))
   ([]
-   (->Document [(paragraph)])))
+   (->Document (dll))))
 
 ;; Document helper functions
 (defn- split-paragraph

@@ -39,9 +39,9 @@
 (def doc (document [p1 p2]))
 
 (def long-doc (document [(paragraph [(run "foo1" #{:italic})])
-                           (paragraph [(run "foo2" #{:bold})])
-                           (paragraph [(run "foo3" #{:underline})])
-                           (paragraph [(run "foo4" #{:strike})])]))
+                         (paragraph [(run "foo2" #{:bold})])
+                         (paragraph [(run "foo3" #{:underline})])
+                         (paragraph [(run "foo4" #{:strike})])]))
 
 (deftest insert-test
   (testing "runs"
@@ -291,9 +291,9 @@
 
 (deftest shared-formats-test
   (let [formats-doc (document [(paragraph [(run "foo1" #{:italic})
-                                             (run "foo2" #{:italic :bold})
-                                             (run "foo3" #{:bold})])
-                                 (paragraph [(run "bar1" #{:italic :bold :underline})])])]
+                                           (run "foo2" #{:italic :bold})
+                                           (run "foo3" #{:bold})])
+                               (paragraph [(run "bar1" #{:italic :bold :underline})])])]
     (testing "works inside same paragraph"
       (is (= #{:italic} (c/shared-formats formats-doc (selection [0 0] [0 8]))))
       (is (= #{:italic :bold} (c/shared-formats formats-doc (selection [0 4] [0 8]))))

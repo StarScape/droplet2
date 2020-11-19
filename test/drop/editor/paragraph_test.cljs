@@ -16,13 +16,13 @@
   (let [runs-rendered (apply str (map basic-run-render (:runs p)))]
     (str "<p>" runs-rendered "</p>")))
 
-(def para (paragraph [(run "Foobar 1." #{:bold})
-                      (run " Foobar 2.")
-                      (run " Foobar 3." #{:italic})]))
+(def para (paragraph "p" [(run "Foobar 1." #{:bold})
+                          (run " Foobar 2.")
+                          (run " Foobar 3." #{:italic})]))
 
-(def simplep (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar3" #{:italic})]))
+(def simplep (paragraph "s"[(run "foobar1" #{:bold})
+                            (run "goobar2")
+                            (run "hoobar3" #{:italic})]))
 
 (deftest optimize-runs-test
   (testing "deletes and combines unnecessary runs"
@@ -60,66 +60,59 @@
              "<p><bold>Foobar 1.</bold> Foobar 1.5. Foobar 2.<italic> Foobar 3.</italic></p>"))))
 
   (testing "in middle of run with different formatting"
-    (let [p (c/insert simplep (selection [simplep 13]) (run "bizzbuzz" #{:italic}))]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar" #{})
-                         (run "bizzbuzz" #{:italic})
-                         (run "2" #{})
-                         (run "hoobar3" #{:italic})])))))
+    (let [p (c/insert simplep (selection ["s" 13]) (run "bizzbuzz" #{:italic}))]
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})
+                               (run "goobar" #{})
+                               (run "bizzbuzz" #{:italic})
+                               (run "2" #{})
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "at start of paragraph"
-    (let [p (c/insert simplep (selection [simplep 0]) (run "pre" #{:underline}))]
-      (is (= p
-             (paragraph [(run "pre" #{:underline})
-                         (run "foobar1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar3" #{:italic})])))))
+    (let [p (c/insert simplep (selection ["s" 0]) (run "pre" #{:underline}))]
+      (is (= p (paragraph "s" [(run "pre" #{:underline})
+                               (run "foobar1" #{:bold})
+                               (run "goobar2")
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "at end of paragraph"
-    (let [sel (selection [simplep (c/text-len simplep)])
+    (let [sel (selection ["s" (c/text-len simplep)])
           p (c/insert simplep sel (run "post"))]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar3" #{:italic})
-                         (run "post" #{})]))))))
+      (is (= p (paragraph "s"[(run "foobar1" #{:bold})
+                              (run "goobar2")
+                              (run "hoobar3" #{:italic})
+                              (run "post" #{})]))))))
 
 (deftest delete-single-test
   (testing "at beginning of paragraph"
-    (let [p (c/delete simplep (selection [simplep 0]))]
+    (let [p (c/delete simplep (selection ["s" 0]))]
       (is (= p simplep))))
 
   (testing "in middle of paragraph"
-    (let [p (c/delete simplep (selection [simplep 11]))]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "gooar2")
-                         (run "hoobar3" #{:italic})])))))
+    (let [p (c/delete simplep (selection ["s" 11]))]
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})
+                               (run "gooar2")
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "end of run"
-    (let [p (c/delete simplep (selection [simplep 14]))]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar")
-                         (run "hoobar3" #{:italic})])))))
+    (let [p (c/delete simplep (selection ["s" 14]))]
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})
+                               (run "goobar")
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "end of paragraph"
-    (let [sel (selection [simplep (c/text-len simplep)])
+    (let [sel (selection ["s" (c/text-len simplep)])
           p (c/delete simplep sel)]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar" #{:italic})])))))
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})
+                               (run "goobar2")
+                               (run "hoobar" #{:italic})])))))
 
   (testing "single character run"
-    (let [custom (paragraph [(run "aaa" #{:italic})
-                             (run "b")
-                             (run "ccc" #{:bold})])
-          p (c/delete custom (selection [custom 4]))]
-      (is (= p
-             (paragraph [(run "aaa" #{:italic})
-                         (run "ccc" #{:bold})])))))
+    (let [custom (paragraph "c" [(run "aaa" #{:italic})
+                                 (run "b")
+                                 (run "ccc" #{:bold})])
+          p (c/delete custom (selection ["c" 4]))]
+      (is (= p (paragraph "c" [(run "aaa" #{:italic})
+                               (run "ccc" #{:bold})])))))
 
   (testing "errors"
     (comment "TODO")))
@@ -129,107 +122,101 @@
 
 (deftest delete-range-test
   (testing "whole paragraph"
-    (let [sel (selection [simplep 0] [simplep (c/text-len simplep)])
+    (let [sel (selection ["s" 0] [simplep (c/text-len simplep)])
           p (c/delete simplep sel)]
-      (is (= p (paragraph [(run "")])))))
+      (is (= p (paragraph "s" [(run "")])))))
 
   (testing "whole first run"
-    (let [sel (selection [simplep 0] [simplep 7])
+    (let [sel (selection ["s" 0] ["s" 7])
           p (c/delete simplep sel)]
-      (is (= p
-             (paragraph [(run "goobar2")
-                         (run "hoobar3" #{:italic})])))))
+      (is (= p (paragraph "s" [(run "goobar2")
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "partial first run, from beginning"
-    (let [sel (selection [simplep 0] [simplep 6])
+    (let [sel (selection ["s" 0] ["s" 6])
           p (c/delete simplep sel)]
-      (is (= p
-             (paragraph [(run "1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar3" #{:italic})])))))
+      (is (= p (paragraph "s" [(run "1" #{:bold})
+                               (run "goobar2")
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "partial first run, from middle"
-    (let [sel (selection [simplep 1] [simplep 6])
+    (let [sel (selection ["s" 1] ["s" 6])
           p (c/delete simplep sel)]
-      (is (= p
-             (paragraph [(run "f1" #{:bold})
-                         (run "goobar2")
-                         (run "hoobar3" #{:italic})])))))
+      (is (= p (paragraph "s" [(run "f1" #{:bold})
+                               (run "goobar2")
+                               (run "hoobar3" #{:italic})])))))
   (testing "whole run in middle of paragraph"
-    (let [sel (selection [simplep 7] [simplep 14])
+    (let [sel (selection ["s" 7] ["s" 14])
           p (c/delete simplep sel)]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "hoobar3" #{:italic})])))))
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "partial run in middle of paragraph"
-    (let [sel (selection [simplep 8] [simplep 13])
+    (let [sel (selection ["s" 8] ["s" 13])
           p (c/delete simplep sel)]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "g2")
-                         (run "hoobar3" #{:italic})])))))
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})
+                               (run "g2")
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "whole last run"
-    (let [sel (selection [simplep 14] [simplep (c/text-len simplep)])
+    (let [sel (selection ["s" 14] ["s" (c/text-len simplep)])
           p (c/delete simplep sel)]
-      (is (= p
-             (paragraph [(run "foobar1" #{:bold})
-                         (run "goobar2")]))))))
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})
+                               (run "goobar2")]))))))
 
 (deftest shared-formats-test
   (testing "with a shared format across many runs"
-    (let [p (paragraph [(run "a", #{:italic :bold})
-                        (run "b", #{:italic :underline})
-                        (run "c", #{:italic :strikethrough})
-                        (run "d", #{:italic})])]
+    (let [p (paragraph "123" [(run "a", #{:italic :bold})
+                              (run "b", #{:italic :underline})
+                              (run "c", #{:italic :strikethrough})
+                              (run "d", #{:italic})])]
       (is (= #{:italic}
-             (c/shared-formats p (selection [p 0] [p (c/text-len p)]))))))
+             (c/shared-formats p (selection ["123" 0] ["123" (c/text-len p)]))))))
 
   (testing "with a no shared formats"
-    (let [p (paragraph [(run "a", #{:italic :bold})
-                        (run "b", #{:italic :underline})
-                        (run "c", #{:strikethrough})
-                        (run "d", #{:italic})])]
+    (let [p (paragraph "123" [(run "a", #{:italic :bold})
+                              (run "b", #{:italic :underline})
+                              (run "c", #{:strikethrough})
+                              (run "d", #{:italic})])]
       (is (= #{}
-             (c/shared-formats p (selection [p 0] [p (c/text-len p)]))))))
+             (c/shared-formats p (selection ["123" 0] ["123" (c/text-len p)]))))))
 
   (testing "single run"
-    (let [p (paragraph [(run "a", #{:italic :bold})
-                        (run "b", #{:italic :underline})
-                        (run "c", #{:strikethrough})
-                        (run "d", #{:italic})])]
+    (let [p (paragraph "123" [(run "a", #{:italic :bold})
+                              (run "b", #{:italic :underline})
+                              (run "c", #{:strikethrough})
+                              (run "d", #{:italic})])]
       (is (= #{:italic :bold}
-             (c/shared-formats p (selection [p 0] [p 1]))))))
+             (c/shared-formats p (selection ["123" 0] ["123" 1]))))))
 
   (testing "two runs"
-    (let [p (paragraph [(run "aa", #{:italic :bold})
-                        (run "bb", #{:italic :underline})
-                        (run "cc", #{:strikethrough})
-                        (run "dd", #{:italic})])]
+    (let [p (paragraph "123" [(run "aa", #{:italic :bold})
+                              (run "bb", #{:italic :underline})
+                              (run "cc", #{:strikethrough})
+                              (run "dd", #{:italic})])]
       (is (= #{:italic}
-             (c/shared-formats p (selection [p 0] [p 3]))
-             (c/shared-formats p (selection [p 0] [p 4]))))))
+             (c/shared-formats p (selection ["123" 0] ["123" 3]))
+             (c/shared-formats p (selection ["123" 0] ["123" 4]))))))
 
   (testing "single-arity version selections whole paragraph"
-    (let [p (paragraph [(run "aa", #{:italic :bold})
-                        (run "bb", #{:italic :underline})
-                        (run "cc", #{:italic :strikethrough})
-                        (run "dd", #{:italic})])]
+    (let [p (paragraph "123" [(run "aa", #{:italic :bold})
+                              (run "bb", #{:italic :underline})
+                              (run "cc", #{:italic :strikethrough})
+                              (run "dd", #{:italic})])]
       (is (= #{:italic}
-             (c/shared-formats p (selection [p 0] [p 3]))
-             (c/shared-formats p (selection [p 0] [p 4])))))))
+             (c/shared-formats p (selection ["123" 0] ["123" 3]))
+             (c/shared-formats p (selection ["123" 0] ["123" 4])))))))
 
 ;; TODO: test for selected-content
 
 (deftest delete-after-test
   (testing "beginning of paragraph"
     (let [p (c/delete-after simplep 0)]
-      (is (= p (paragraph [(run "")])))))
+      (is (= p (paragraph "s" [(run "")])))))
 
   (testing "middle of paragraph"
     (let [p (c/delete-after simplep 7)]
-      (is (= p (paragraph [(run "foobar1" #{:bold})])))))
+      (is (= p (paragraph "s" [(run "foobar1" #{:bold})])))))
 
   (testing "end of paragraph"
     (let [p (c/delete-after simplep 21)]
@@ -242,12 +229,12 @@
 
   (testing "middle of paragraph"
     (let [p (c/delete-before simplep 7)]
-      (is (= p (paragraph [(run "goobar2" #{})
-                           (run "hoobar3" #{:italic})])))))
+      (is (= p (paragraph "s" [(run "goobar2" #{})
+                               (run "hoobar3" #{:italic})])))))
 
   (testing "end of paragraph"
     (let [p (c/delete-before simplep 21)]
-      (is (= p (paragraph [(run "")]))))))
+      (is (= p (paragraph "s" [(run "")]))))))
 
 ;; TODO: finish this test
 ;; (deftest toggle-format-test
@@ -260,16 +247,16 @@
 ;;       (is (= #{:})))))
 
 (deftest char-at-test
-  (let [mypara (paragraph [(run "foo")])]
-    (is (= "f" (c/char-at mypara (selection [-1 0]))))
-    (is (= "o" (c/char-at mypara (selection [-1 1]))))
-    (is (= "o" (c/char-at mypara (selection [-1 2]))))
-    (is (thrown? js/Error (c/char-at mypara (selection [-1 3]))))))
+  (let [mypara (paragraph "123" [(run "foo")])]
+    (is (= "f" (c/char-at mypara (selection ["123" 0]))))
+    (is (= "o" (c/char-at mypara (selection ["123" 1]))))
+    (is (= "o" (c/char-at mypara (selection ["123" 2]))))
+    (is (thrown? js/Error (c/char-at mypara (selection ["123" 3]))))))
 
 (deftest char-before-test
-  (let [mypara (paragraph [(run "foo")])]
-    (is (= "\n" (c/char-before mypara (selection [-1 0]))))
-    (is (= "f" (c/char-before mypara (selection [-1 1]))))
-    (is (= "o" (c/char-before mypara (selection [-1 2]))))
-    (is (= "o" (c/char-before mypara (selection [-1 3]))))
-    (is (thrown? js/Error (c/char-before mypara (selection [-1 4]))))))
+  (let [mypara (paragraph "123" [(run "foo")])]
+    (is (= "\n" (c/char-before mypara (selection ["123" 0]))))
+    (is (= "f" (c/char-before mypara (selection ["123" 1]))))
+    (is (= "o" (c/char-before mypara (selection ["123" 2]))))
+    (is (= "o" (c/char-before mypara (selection ["123" 3]))))
+    (is (thrown? js/Error (c/char-before mypara (selection ["123" 4]))))))
