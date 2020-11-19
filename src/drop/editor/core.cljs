@@ -294,33 +294,30 @@
 ;; TODO: these might stand some mild testing
 (defmethod insert-start [Paragraph PersistentVector]
   [para runs]
-  (insert para (selection [-1 0]) runs))
+  (insert para (selection [(:uuid para) 0]) runs))
 
 (defmethod insert-start [Paragraph Run]
   [para run]
-  (insert para (selection [-1 0]) run))
+  (insert para (selection [(:uuid para) 0]) run))
 
 (defmethod insert-end [Paragraph PersistentVector]
   [para runs]
-  (insert para (selection [-1 (text-len para)]) runs))
+  (insert para (selection [(:uuid para) (text-len para)]) runs))
 
 (defmethod insert-end [Paragraph Run]
   [para run]
-  (insert para (selection [-1 (text-len para)]) run))
+  (insert para (selection [(:uuid para) (text-len para)]) run))
 
 (defn- paragraph-single-delete [para sel]
   (if (zero? (sel/caret sel))
     para
     (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
-          new-run (-> (nth (:runs para) run-idx)
-                      (delete run-offset))
+          new-run (delete ((:runs para) run-idx) run-offset)
           new-runs (assoc (:runs para) run-idx new-run)]
       (assoc para :runs (optimize-runs new-runs)))))
 
 (defn- paragraph-range-delete [para sel]
   (let [runs (:runs para)
-        ;; [start-idx start-offset] (at-offset runs (-> sel :start :offset))
-        ;; [end-idx end-offset] (at-offset runs (-> sel :end :offset))
         [before _] (split-runs runs (-> sel :start :offset))
         [_ after] (split-runs runs (-> sel :end :offset))
         new-runs (optimize-runs (concat before after))]
@@ -338,12 +335,12 @@
   (let [para-len (text-len para)]
     (if (= offset para-len)
       para
-      (delete para (selection [-1 offset] [-1 para-len])))))
+      (delete para (selection [(:uuid para) offset] [(:uuid para) para-len])))))
 
 (defn delete-before
   "Removes everything in paragraph `para` before the provided offset."
   [para offset]
-  (delete para (selection [-1 0] [-1 offset])))
+  (delete para (selection [(:uuid para) 0] [(:uuid para) offset])))
 
 (defn update-selected-runs
   "Returns a new paragraph with f applied to each run inside the selection."
@@ -369,7 +366,7 @@
   (selected-content [para sel] (second (separate-selected (:runs para) sel)))
 
   (shared-formats
-   ([para] (shared-formats para (selection [-1 0] [-1 (text-len para)])))
+   ([para] (shared-formats para (selection [(:uuid para) 0] [(:uuid para) (text-len para)])))
    ([para sel]
     (let [runs (:runs para)
           [start-run-idx _] (at-offset runs (-> sel :start :offset))
@@ -612,11 +609,11 @@
           end-para (children end-para-idx)
           new-start-para (format-fn
                           start-para
-                          (selection [-1 (-> sel :start :offset)] [-1 (text-len start-para)])
+                          (selection [(:uuid start-para) (-> sel :start :offset)] [(:uuid start-para) (text-len start-para)])
                           format)
           new-end-para (format-fn
                         end-para
-                        (selection [-1 0] [-1 (-> sel :end :offset)])
+                        (selection [(:uuid end-para) 0] [(:uuid end-para) (-> sel :end :offset)])
                         format)
           inbetween-paras (subvec (selected-content doc sel) (inc start-para-idx) end-para-idx)
           inbetween-paras-new (map #(format-fn % format) inbetween-paras)
