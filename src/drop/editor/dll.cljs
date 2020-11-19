@@ -30,7 +30,7 @@
    `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
    `dll`. Aside from that DLLs behave basically like other Clojure collections: you can call `conj`,
    `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and from other types
-   using `into`.
+   using `into`. Destructuring and all your favorite Clojure goodies work as expected.
 
    They are also decoupled from the rest of the code -- there's no reason you couldn't put something
    other than paragraphs inside a DLL, though it's doubtful you'd need those specific set of properties
@@ -267,8 +267,10 @@
   (if-let [first-node ^Node (get (.-entries-map dll) (.-last-uuid dll))]
     (.-value first-node)))
 
+;; TODO: make invariant that items must have UUID property
 (defn dll
-  "Constructor for a doubly-linked-list."
+  "Constructor for a doubly-linked-list, optionally taking a list of
+   items to insert. Note each item must have a :uuid property."
   ([]
    (DoublyLinkedList. {} nil nil))
   ([& xs]

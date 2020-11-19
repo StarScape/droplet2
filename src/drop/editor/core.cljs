@@ -430,6 +430,7 @@
 (defn- split-paragraph
   "Splits the selected paragraph at the (single) selection and returns the two halves."
   [doc sel]
+  ;; TODO: the two new halves are assigned 2 new UUIDs, should that happen?
   (map paragraph (-> (:children doc)
                      (get (-> sel :start :paragraph))
                      (get :runs)
@@ -437,12 +438,13 @@
 
 (defn- merge-paragraph-with-previous
   "Returns a new doc with the paragraph at `para-idx` merged into the one before it."
-  [doc para-idx]
+  [doc para-uuid]
   (let [children (:children doc)
-        para (nth children para-idx)
-        prev (nth children (dec para-idx))
+        para (get children para-uuid)
+        prev (dll/prev children para-uuid)
         merged (insert-end prev (:runs para))
-        new-children (vec-utils/replace-range children (dec para-idx) para-idx merged)]
+        new-children (-> children (dissoc para) (assoc (:uuid prev) merged))
+        #_(vec-utils/replace-range children (dec para-idx) para-idx merged)]
     (assoc doc :children new-children)))
 
 (defn- replace-paragraph-with
@@ -628,6 +630,7 @@
   Selectable
   (char-at [doc sel] (char-at ((:children doc) (sel/start-para sel)) sel))
   (char-before [doc sel] (char-before ((:children doc) (sel/start-para sel)) sel))
+  ;; TODO: how to handle UUIDs with this?
   (selected-content [doc sel] (doc-selected-content doc sel))
   (shared-formats [doc sel] (doc-shared-formats doc sel))
   (toggle-format [doc sel format] (doc-toggle-format doc sel format)))
