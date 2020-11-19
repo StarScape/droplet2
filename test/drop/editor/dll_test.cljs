@@ -168,3 +168,9 @@
 
   ;; Can we destructure it properly?
   (is (= [val2 val1] (let [[a b] l] [b a]))))
+
+(deftest assoc-test
+  (is (= (assoc l "2" {:uuid "2" :content "oyeah"})
+         (dll val1 {:uuid "2" :content "oyeah"} val3 val4)))
+  (is (= (update l "2" #(assoc % :content "baybee"))
+         (dll val1 {:uuid "2" :content "baybee"} val3 val4))))

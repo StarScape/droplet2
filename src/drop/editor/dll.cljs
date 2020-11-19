@@ -49,8 +49,10 @@
 (declare remove)
 (declare insert-after)
 (declare insert-before)
-(declare make-seq)
 (declare dll)
+
+(declare make-seq)
+(declare assoc-node)
 
 ;; TODO: I totally did not realize this, but inside a deftype declaration you can just reference fields
 ;; by their names, similar to Java, without any (.-whatever this) business. This stuff can probably be
@@ -111,6 +113,14 @@
 
   IMap
   (-dissoc [^DoublyLinkedList dll uuid] (remove dll uuid))
+
+  IAssociative
+  (-assoc [^DoublyLinkedList dll k v]
+    (if (= k (:uuid v))
+      (DoublyLinkedList. (update entries-map k #(assoc-node % :value v)) first-uuid last-uuid)
+      (throw (js/Error. "Attempt to change the UUID of an item in the DLL with (assoc)! This will break things!"))))
+  (-contains-key? [^DoublyLinkedList dll k]
+    (contains? entries-map k))
 
   ILookup
   (-lookup [^DoublyLinkedList dll uuid] (-lookup dll uuid nil))
@@ -262,13 +272,15 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
-
 (comment
   (def val1 {:uuid "1" :content "foo"})
   (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
   (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
   (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
   (def mine (filter #(not= "-1" (:uuid %)) l2))
+
+  (.-entries-map (assoc l "2" {:uuid "2" :content "oyeah"}))
+  (.-entries-map (update l "2" (fn [x] {:uuid (:uuid x) :content "baybee"})))
 
   (rest (dll))
   (rest l)
