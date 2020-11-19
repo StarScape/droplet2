@@ -117,8 +117,10 @@
   IAssociative
   (-assoc [^DoublyLinkedList dll k v]
     (if (= k (:uuid v))
-      (DoublyLinkedList. (update entries-map k #(assoc-node % :value v)) first-uuid last-uuid)
-      (throw (js/Error. "Attempt to change the UUID of an item in the DLL with (assoc)! This will break things!"))))
+      (if (contains? entries-map k)
+        (DoublyLinkedList. (update entries-map k #(assoc-node % :value v)) first-uuid last-uuid)
+        (throw (js/Error. "Attempting (assoc) a DLL key that does not exist.")))
+      (throw (js/Error. "Attempting to change the UUID of an item in the DLL with (assoc)! This will break things!"))))
   (-contains-key? [^DoublyLinkedList dll k]
     (contains? entries-map k))
 
