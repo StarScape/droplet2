@@ -142,7 +142,8 @@
 (deftest dissoc-test
   (is (= (dissoc l "1") (dll val2 val3 val4)))
   (is (= (dissoc l "5") (dll val1 val2 val3)))
-  (is (= (dissoc l "doesntexist") l)))
+  (is (= (dissoc l "doesntexist") l))
+  (is (= (dissoc (dll {:uuid "123" :content "foo"}) "123") (dll))))
 
 (deftest conj-test
   (testing "conj works"
@@ -179,3 +180,59 @@
   (testing "fails when trying to change the uuid or access an element that doesn't exist"
     (is (thrown? js/Error (assoc l "2" {:uuid "3" :content "nope"})))
     (is (thrown? js/Error (assoc l "55" {:uuid "55" :content "nope"})))))
+
+(deftest insert-all-after-test
+  (is (= (dll/insert-all-after l "5" [{:uuid "6" :content "post1"} {:uuid "7" :content "post2"}])
+         (dll val1 val2 val3 val4 {:uuid "6" :content "post1"} {:uuid "7" :content "post2"})))
+  (is (= (dll/insert-all-after l "3" [{:uuid "6" :content "post1"} {:uuid "7" :content "post2"}])
+         (dll val1 val2 val3 {:uuid "6" :content "post1"} {:uuid "7" :content "post2"} val4)))
+  (is (= (dll/insert-all-after l "1" [{:uuid "6" :content "post1"} {:uuid "7" :content "post2"}])
+         (dll val1 {:uuid "6" :content "post1"} {:uuid "7" :content "post2"} val2 val3 val4))))
+
+#_(deftest insert-all-before-test
+  (is (= (dll/insert-all-after l "5" [{:uuid "6" :content "post1"} {:uuid "7" :content "post2"}])
+         (dll val1 val2 val3 val4 {:uuid "6" :content "post1"} {:uuid "7" :content "post2"})))
+  (is (= (dll/insert-all-after l "3" [{:uuid "6" :content "post1"} {:uuid "7" :content "post2"}])
+         (dll val1 val2 val3 {:uuid "6" :content "post1"} {:uuid "7" :content "post2"} val4)))
+  (is (= (dll/insert-all-after l "1" [{:uuid "6" :content "post1"} {:uuid "7" :content "post2"}])
+         (dll val1 {:uuid "6" :content "post1"} {:uuid "7" :content "post2"} val2 val3 val4))))
+
+(deftest remove-all-test
+  (is (= (dll/remove-all l "1" "5") (dll)))
+  (is (= (dll/remove-all l "1" "3") (dll val4)))
+  (is (= (dll/remove-all l "2" "3") (dll val1 val4)))
+  (is (= (dll/remove-all l "3" "3") (dll val1 val2 val4)))
+  (is (= (dll/remove-all l "1" "2") (dll val3 val4))))
+
+(deftest replace-all-test
+  (testing "replacing everything"
+    (is (= (dll/replace-all l "1" "5" [{:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}])
+           (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"})))
+    (is (= (dll/replace-all l "1" "5" (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
+           (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"})))
+    (is (= (dll/replace-all l "1" "5" {:uuid "#1" :content "CHANGED"})
+           (dll {:uuid "#1" :content "CHANGED"}))))
+
+  (testing "replacing in middle"
+    (is (= (dll/replace-all l "2" "3" [{:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}])
+           (dll val1 {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"} val4)))
+    (is (= (dll/replace-all l "2" "3" (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
+           (dll val1 {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"} val4)))
+    (is (= (dll/replace-all l "2" "3" {:uuid "#1" :content "CHANGED"})
+           (dll val1 {:uuid "#1" :content "CHANGED"} val4))))
+
+  (testing "replacing from start to middle"
+    (is (= (dll/replace-all l "1" "3" [{:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}])
+           (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"} val4)))
+    (is (= (dll/replace-all l "1" "3" (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
+           (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"} val4)))
+    (is (= (dll/replace-all l "1" "3" {:uuid "#1" :content "CHANGED"})
+           (dll {:uuid "#1" :content "CHANGED"} val4))))
+
+  (testing "replacing from middle to end"
+    (is (= (dll/replace-all l "2" "5" [{:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}])
+           (dll val1 {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"})))
+    (is (= (dll/replace-all l "2" "5" (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
+           (dll val1 {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"})))
+    (is (= (dll/replace-all l "2" "5" {:uuid "#1" :content "CHANGED"})
+           (dll val1 {:uuid "#1" :content "CHANGED"})))))

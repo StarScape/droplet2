@@ -422,7 +422,10 @@
 (defn document
   "Creates a new document."
   ([children]
-   (->Document children))
+   (if (= (type children) dll/DoublyLinkedList)
+     (->Document children)
+     ;; TODO: test
+     (->Document (into (dll) children))))
   ([]
    (->Document (dll))))
 
@@ -451,6 +454,7 @@
   "Returns a new doc with the paragraph at `para-idx` replaced with
    `content`, which can be either a paragraph or a list of paragraphs."
   [doc para-idx content]
+  ;; TODO: make DLL version of replace-range (replace-all/replace-between maybe?)
   (update doc :children #(vec-utils/replace-range % para-idx para-idx content)))
 
 (defn- insert-into-single-paragraph

@@ -28,9 +28,9 @@
    You don't really need to be aware of most of these details in order to write code that uses the DLL
    data structure in this namespace. All you really need to know are the public functions it exposes:
    `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
-   `dll`. Aside from that DLLs behave basically like other Clojure collections: you can call `conj`,
-   `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and from other types
-   using `into`. Destructuring and all your favorite Clojure goodies work as expected.
+   `dll` (plus some friends). Aside from that DLLs behave basically like other Clojure collections: you
+   can call `conj`, `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and
+   from other types using `into`. Destructuring and all your favorite Clojure goodies work as expected.
 
    They are also decoupled from the rest of the code -- there's no reason you couldn't put something
    other than paragraphs inside a DLL, though it's doubtful you'd need those specific set of properties
@@ -49,6 +49,7 @@
 (declare remove)
 (declare insert-after)
 (declare insert-before)
+(declare replace-all)
 (declare dll)
 
 (declare make-seq)
@@ -82,6 +83,8 @@
 (deftype DoublyLinkedList [entries-map ; map of (UUID -> DLLEntry)
                            first-uuid
                            last-uuid]
+  ISequential
+
   IEquiv
   (-equiv [^DoublyLinkedList dll other]
     (if (instance? DoublyLinkedList other)
@@ -182,7 +185,7 @@
 (defn insert-before
   "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `prev-uuid`."
   [^DoublyLinkedList dll next-uuid val]
-  {:pre [(seq dll)]}
+  {:pre [(seq dll) (contains? dll next-uuid)]}
   (let [prev-uuid (.-prev-uuid (get (.-entries-map dll) next-uuid))
         new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
         new-first-uuid (if (= (.-first-uuid dll) next-uuid)
@@ -193,13 +196,36 @@
 (defn insert-after
   "Inserts `val` into the double-linked list `dll` immediately after the node with uuid = `prev-uuid`."
   [^DoublyLinkedList dll prev-uuid val]
-  {:pre [(seq dll)]}
+  {:pre [(seq dll) (contains? dll prev-uuid)]}
   (let [next-uuid (.-next-uuid (get (.-entries-map dll) prev-uuid))
         new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
         new-last-uuid (if (= (.-last-uuid dll) prev-uuid)
                         (:uuid val)
                         (.-last-uuid dll))]
     (DoublyLinkedList. new-entries (.-first-uuid dll) new-last-uuid)))
+
+;; TODO: is this needed?
+#_(defn insert-all-before
+  "Inserts all items in list `xs` directly before the node with uuid == `next-uuid`"
+  [dll next-uuid xs]
+  {:pre [(seq dll)
+         (contains? dll next-uuid)
+         (sequential? xs)]}
+  (if (empty? xs)
+    dll
+    (let [x (clojure.core/first xs)]
+      (recur (insert-before dll next-uuid x) (:uuid x) (rest xs)))))
+
+(defn insert-all-after
+  "Inserts all items in list `xs` directly after the node with uuid == `prev-uuid`"
+  [dll prev-uuid xs]
+  {:pre [(seq dll)
+         (contains? dll prev-uuid)
+         (sequential? xs)]}
+  (if (empty? xs)
+    dll
+    (let [x (clojure.core/first xs)]
+      (recur (insert-after dll prev-uuid x) (:uuid x) (rest xs)))))
 
 (defn remove
   "Removes the node with `uuid` from the list. Calling (dissoc) on the DLL works identically"
@@ -212,14 +238,51 @@
                         true (dissoc uuid)
                         (some? (.-prev-uuid node)) (update (.-prev-uuid node) assoc-node :next-uuid (.-next-uuid node))
                         (some? (.-next-uuid node)) (update (.-next-uuid node) assoc-node :prev-uuid (.-prev-uuid node)))
-          new-first (if (= uuid (.-first-uuid dll))
-                      (node-uuid (get new-entries (.-next-uuid first)))
-                      (node-uuid first))
-          new-last (if (= uuid (:uuid (.-value last)))
-                     (node-uuid (get new-entries (.-prev-uuid last)))
-                     (node-uuid last))]
+          new-first (cond
+                      (empty? new-entries) nil
+                      (= uuid (.-first-uuid dll)) (node-uuid (get new-entries (.-next-uuid first)))
+                      :else (node-uuid first))
+          new-last (cond
+                     (empty? new-entries) nil
+                     (= uuid (:uuid (.-value last))) (node-uuid (get new-entries (.-prev-uuid last)))
+                     :else (node-uuid last))]
       (DoublyLinkedList. new-entries new-first new-last))
     dll))
+
+(defn remove-all
+  "Removes all the items between the nodes with uuid1 and uuid2 (both **inclusive**)."
+  [dll uuid1 uuid2]
+  {:pre [(contains? dll uuid1) (contains? dll uuid2)]}
+  (let [first-removed (remove dll uuid1)]
+    (if (= uuid1 uuid2)
+      first-removed
+      (recur first-removed (:uuid (next dll uuid1)) uuid2))))
+
+(defn replace-all
+  "Replaces all the nodes between uuid1 and uuid2 (both inclusive) with
+   the supplied item or list of items. Example:
+   ```
+   (def lst (dll {:uuid 1, :val :a} {:uuid 2, :val :b} {:uuid 3, :val :c } {:uuid 4, :val :d}))
+   (replace-all lst 2 3 {:uuid 12, :val :e})
+
+   => (dll {:uuid 1, :val :a} {:uuid 12, :val :e} {:uuid 4, :val :d})
+   (replace-all lst 2 3 [{:uuid 12, :val :e} {:uuid 13 :val :f}])
+
+   => (dll {:uuid 1, :val :a} {:uuid 12, :val :e} {:uuid 13, :val :f} {:uuid 4, :val :d})
+   ```"
+  [dll uuid1 uuid2 to-insert]
+  (let [removed (remove-all dll uuid1 uuid2)
+        node-before (prev dll uuid1)
+        node-after (next dll uuid2)
+        insert (cond
+                 node-before #(insert-after removed (:uuid node-before) %)
+                 node-after #(insert-before removed (:uuid node-after) %)
+                 :else #(conj removed %))]
+    (if (sequential? to-insert)
+      (let [first (clojure.core/first to-insert)]
+        (-> (insert first)
+            (insert-all-after (:uuid first) (rest to-insert))))
+      (insert to-insert))))
 
 (defn next
   "Get successive item in the doubly-linked list given either a UUID of a
@@ -251,8 +314,7 @@
   [^DoublyLinkedList dll uuid-or-elem]
   (if-let [uuid (:uuid uuid-or-elem)]
     (prev dll uuid)
-    (when-let [prev-uuid (.-prev-uuid (get (.-entries-map dll) uuid-or-elem
-                                           #_(throw (str "ERROR: No item in list with UUID of " uuid-or-elem))))]
+    (when-let [prev-uuid (.-prev-uuid (get (.-entries-map dll) uuid-or-elem))]
       (.-value (get (.-entries-map dll) prev-uuid)))))
 
 (defn first
@@ -282,6 +344,9 @@
   (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
   (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
   (def mine (filter #(not= "-1" (:uuid %)) l2))
+
+  (def a (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
+  (replace-all l "1" "5" a)
 
   (.-entries-map (assoc l "2" {:uuid "2" :content "oyeah"}))
   (.-entries-map (update l "2" (fn [x] {:uuid (:uuid x) :content "baybee"})))
