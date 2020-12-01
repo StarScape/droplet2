@@ -77,6 +77,8 @@
    (-write writer ", next-uuid: ") (-write writer next-uuid)
    (-write writer "}")))
 
+;; TODO: implement IFn for lookup (like maps and vectors)
+
 ;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
@@ -134,12 +136,16 @@
       (.-value entry)
       not-found))
 
+  IFn
+  (-invoke [^DoublyLinkedList dll uuid] (-lookup dll uuid))
+  (-invoke [^DoublyLinkedList dll uuid not-found] (-lookup dll uuid not-found))
+
   #_IPrintWithWriter
   #_(-pr-writer [dll writer opts]
-    (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
-    (-write writer ", first-uuid: ") (-write writer (.-first-uuid dll))
-    (-write writer ", last-uuid: ") (-write writer (.-last-uuid dll))
-    (-write writer "}")))
+                (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
+                (-write writer ", first-uuid: ") (-write writer (.-first-uuid dll))
+                (-write writer ", last-uuid: ") (-write writer (.-last-uuid dll))
+                (-write writer "}")))
 
 (defn- assoc-node
   "Helper function for creating a new [[Node]] based on the value of an old one.
@@ -183,7 +189,7 @@
 
 ;; TODO: add condition to both these that dll cannot be empty.
 (defn insert-before
-  "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `prev-uuid`."
+  "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `next-uuid`."
   [^DoublyLinkedList dll next-uuid val]
   {:pre [(seq dll) (contains? dll next-uuid)]}
   (let [prev-uuid (.-prev-uuid (get (.-entries-map dll) next-uuid))

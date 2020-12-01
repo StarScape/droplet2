@@ -236,3 +236,10 @@
            (dll val1 {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"})))
     (is (= (dll/replace-range l "2" "5" {:uuid "#1" :content "CHANGED"})
            (dll val1 {:uuid "#1" :content "CHANGED"})))))
+
+(deftest ifn-test
+  (testing "invoking a DLL as a function does lookup, same as vector or map"
+    (is (= (l "1") val1))
+    (is (identical? (l "1") val1))
+    (is (= (l "2") val2))
+    (is (identical? (l "2") val2))))

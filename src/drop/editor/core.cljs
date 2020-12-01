@@ -170,7 +170,7 @@
 (declare optimize-runs) ;; Forward declare for use in `paragraph` function.
 
 (defn paragraph
-  "Creates a new paragraph."
+  "Creates a new paragraph. If no UUID is supplied a random one is created."
   ([runs]
    (->Paragraph (random-uuid) (optimize-runs runs)))
   ([]
@@ -451,20 +451,19 @@
     (assoc doc :children new-children)))
 
 (defn- replace-paragraph-with
-  "Returns a new doc with the paragraph at `para-idx` replaced with
+  "Returns a new doc with the paragraph having `uuid` replaced with
    `content`, which can be either a paragraph or a list of paragraphs."
-  [doc para-idx content]
-  ;; TODO: make DLL version of replace-range (replace-all/replace-between maybe?)
-  (update doc :children #(vec-utils/replace-range % para-idx para-idx content)))
+  [doc uuid content]
+  (update doc :children #(dll/replace-range % uuid uuid content)))
 
 (defn- insert-into-single-paragraph
   "Helper function. For document inserts where we only have to worry about a single paragraph,
    meaning we can basically just delegate to the paragraph insert function and replace the paragraph."
   [doc sel run]
-  (let [target-idx (-> sel :start :paragraph)
-        target-para (nth (:children doc) target-idx)
+  (let [target-uuid (-> sel :start :paragraph)
+        target-para (get (:children doc) target-uuid)
         new-para (insert target-para sel run)]
-    (assoc-in doc [:children target-idx] new-para)))
+    (assoc-in doc [:children target-uuid] new-para)))
 
 ;; TODO: switch this to a faster concat using the rrb library
 (defn- insert-paragraphs-into-doc
@@ -472,8 +471,8 @@
    The selection MUST be a single-selection. This is just a helper and
    it's assumed any deleting of a range selection has already been done."
   [doc sel paragraphs]
-  (let [target-para-idx (-> sel :start :paragraph)
-        target-para ((:children doc) target-para-idx)
+  (let [target-para-uuid (-> sel :start :paragraph)
+        target-para (get (:children doc) target-para-uuid)
         sel-caret (sel/caret sel)
 
         first-paragraph
@@ -486,20 +485,20 @@
             (delete-before sel-caret)
             (insert-start (:runs (peek paragraphs))))
 
+        ;; TODO: optimize for case where `paragraphs` is DLL?
         in-between-paragraphs
-        (subvec paragraphs 1 (dec (count paragraphs)))
+        (->> paragraphs (drop 1) (drop-last 1))
 
         all-modified-paragraphs
         (flatten [first-paragraph in-between-paragraphs last-paragraph])
 
         new-children
-        (vec-utils/replace-range (:children doc)
-                                 target-para-idx
-                                 target-para-idx
-                                 all-modified-paragraphs)]
+        (dll/replace-range (:children doc) target-para-uuid target-para-uuid all-modified-paragraphs)]
     (assoc doc :children new-children)))
 
 ;; Document main operations
+
+;; TODO: make method instance with DLL as third param
 ;; TODO: could we make the delete-before-moving on logic here a little more elegant with a `cond->` form?
 (defmethod insert [Document Selection PersistentVector]
   [doc sel runs-or-paras]
@@ -526,35 +525,33 @@
   (insert-into-single-paragraph doc sel (run text)))
 
 (defn insert-paragraph-before
-  "Inserts an empty paragraph into the document immediately before the paragraph at position `index`."
-  [doc index]
-  #_(update doc :children #(vec-utils/replace-range % index index [(paragraph) (% index)]))
-  (replace-paragraph-with doc index [(paragraph) ((:children doc) index)]))
+  "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`."
+  [doc uuid]
+  (dll/insert-before doc uuid (paragraph)))
 
 (defn insert-paragraph-after
-  "Inserts an empty paragraph into the document immediately after the paragraph at position `index`."
-  [doc index]
-  #_(update doc :children #(vec-utils/replace-range % index index [(% index) (paragraph)]))
-  (replace-paragraph-with doc index [((:children doc) index) (paragraph)]))
+  "Inserts an empty paragraph into the document immediately after the paragraph with UUID `uuid`."
+  [doc uuid]
+  (dll/insert-after doc uuid (paragraph)))
 
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
-    (if (zero? (sel/start-para sel))
+    (if (= (-> doc :children dll/first :uuid) (sel/start-para sel))
       doc
       (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
-    (update-in doc [:children (sel/start-para sel)] #(delete % sel))))
+    (update-in doc [:children (sel/start-para sel)] delete sel)))
 
 (defn- doc-range-delete [doc sel]
-  (let [startp-idx (-> sel :start :paragraph)
-        endp-idx (-> sel :end :paragraph)
+  (let [startp-uuid (-> sel :start :paragraph)
+        endp-uuid (-> sel :end :paragraph)
         children (:children doc)
         ;; Replace one paragraph if start and end in the same paragraph, or all of them if not.
-        new-para (if (= startp-idx endp-idx)
-                   (delete ((:children doc) startp-idx) sel)
+        new-para (if (= startp-uuid endp-uuid)
+                   (delete ((:children doc) startp-uuid) sel)
                    (merge-paragraphs
-                    (delete-after (children startp-idx) (-> sel :start :offset))
-                    (delete-before (children endp-idx) (-> sel :end :offset))))
-        new-children (vec-utils/replace-range children startp-idx endp-idx new-para)]
+                    (delete-after (children startp-uuid) (-> sel :start :offset))
+                    (delete-before (children endp-uuid) (-> sel :end :offset))))
+        new-children (dll/replace-range children startp-uuid endp-uuid new-para)]
     (assoc doc :children new-children)))
 
 (defmethod delete [Document Selection]
