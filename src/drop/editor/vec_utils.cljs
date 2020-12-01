@@ -1,5 +1,6 @@
 (ns drop.editor.vec-utils)
 
+;; TODO: can be deleted now that core is using DLL structure
 (defn replace-range
   "Replaces contents of `v` between indexes `start` and `end` (both inclusive) with the contents of `items`.
    If `end` if omitted it will replace everything after `start`.

@@ -49,7 +49,7 @@
 (declare remove)
 (declare insert-after)
 (declare insert-before)
-(declare replace-all)
+(declare replace-range)
 (declare dll)
 
 (declare make-seq)
@@ -258,15 +258,15 @@
       first-removed
       (recur first-removed (:uuid (next dll uuid1)) uuid2))))
 
-(defn replace-all
+(defn replace-range
   "Replaces all the nodes between uuid1 and uuid2 (both inclusive) with
    the supplied item or list of items. Example:
    ```
    (def lst (dll {:uuid 1, :val :a} {:uuid 2, :val :b} {:uuid 3, :val :c } {:uuid 4, :val :d}))
-   (replace-all lst 2 3 {:uuid 12, :val :e})
+   (replace-range lst 2 3 {:uuid 12, :val :e})
 
    => (dll {:uuid 1, :val :a} {:uuid 12, :val :e} {:uuid 4, :val :d})
-   (replace-all lst 2 3 [{:uuid 12, :val :e} {:uuid 13 :val :f}])
+   (replace-range lst 2 3 [{:uuid 12, :val :e} {:uuid 13 :val :f}])
 
    => (dll {:uuid 1, :val :a} {:uuid 12, :val :e} {:uuid 13, :val :f} {:uuid 4, :val :d})
    ```"
@@ -346,7 +346,7 @@
   (def mine (filter #(not= "-1" (:uuid %)) l2))
 
   (def a (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
-  (replace-all l "1" "5" a)
+  (replace-range l "1" "5" a)
 
   (.-entries-map (assoc l "2" {:uuid "2" :content "oyeah"}))
   (.-entries-map (update l "2" (fn [x] {:uuid (:uuid x) :content "baybee"})))
