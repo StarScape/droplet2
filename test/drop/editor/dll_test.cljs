@@ -156,6 +156,13 @@
   (testing "calling (into) on DLL works"
     (is (= (into [] l) [val1 val2 val3 val4]))))
 
+(deftest prepend-test
+  (testing "prepending works on a populated list"
+    (is (= (dll/prepend l {:uuid "-1"}) (dll {:uuid "-1"} val1 val2 val3 val4))))
+
+  (testing "works on an empty list"
+    (is (= (dll/prepend (dll) val1) (dll val1)))))
+
 (deftest first-test
   (is (= (dll/first l) val1))
   (is (= (dll/first (dll)) nil)))
@@ -245,14 +252,8 @@
     (is (= (l "2") val2))
     (is (identical? (l "2") val2))))
 
-;; (def val1 {:uuid "1" :content "foo"})
-;; (def val2 {:uuid "2" :content "bar"})
-;; (def val3 {:uuid "3" :content "bizz"})
-;; (def before-val {:uuid "4" :content "bar"})
-;; (def val4 {:uuid "5" :content "bang"})
-
 (deftest between-test
-  (is (= true (empty? (dll/between l "1" "2"))))
+  (is (empty? (dll/between l "1" "2")))
   (is (= (dll val2 val3 before-val) (dll/between l1 "1" "5")))
   (is (= (dll val2 val3) (dll/between l1 "1" "4")))
   (is (= (dll val2) (dll/between l1 "1" "3")))

@@ -231,6 +231,13 @@
     (let [x (clojure.core/first xs)]
       (recur (insert-after dll prev-uuid x) (:uuid x) (rest xs)))))
 
+(defn prepend
+  "Inserts `val` into `dll` at the beginning of the list."
+  [dll val]
+  (if (empty? dll)
+    (conj dll val)
+    (insert-before dll (:uuid (first dll)) val)))
+
 (defn remove
   "Removes the node with `uuid` from the list. Calling (dissoc) on the DLL works identically"
   [^DoublyLinkedList dll uuid]

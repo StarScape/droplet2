@@ -588,10 +588,9 @@
         end-para ((:children doc) end-para-uuid)]
     (if (sel/single-paragraph? sel)
       (selected-content ((:children doc) start-para-uuid) sel)
-      (flatten [(delete-before start-para (-> sel :start :offset))
-                ;; TODO: implement between/sublist operation for DLL
-                (subvec (:children doc) (inc start-para-uuid) end-para-uuid)
-                (delete-after end-para (-> sel :end :offset))]))))
+      (-> (dll/between (:children doc) start-para-uuid end-para-uuid)
+          (dll/prepend (delete-before start-para (-> sel :start :offset)))
+          (dll/conj (delete-after end-para (-> sel :end :offset)))))))
 
 (defn doc-shared-formats [doc sel]
   (if (sel/single-paragraph? sel)
