@@ -566,8 +566,8 @@
    Creates a new paragraph in the appropriate position in the doc."
   [doc sel]
   (let [caret (sel/caret sel)
-        para-idx (-> sel :start :paragraph)
-        para ((:children doc) para-idx)]
+        para-uuid (-> sel :start :paragraph)
+        para ((:children doc) para-uuid)]
     (cond
       (= caret 0)
       (insert-paragraph-before doc (-> sel :start :paragraph))
@@ -577,20 +577,21 @@
 
       :else
       (let [[para1 para2] (split-paragraph doc sel)]
-        (replace-paragraph-with doc para-idx [para1 (paragraph) para2])))))
+        (replace-paragraph-with doc para-uuid [para1 (paragraph) para2])))))
 
 ;; TODO: move to block below?
 (defn doc-selected-content
   [doc sel]
-  (let [start-para-idx (-> sel :start :paragraph)
-        start-para ((:children doc) start-para-idx)
-        end-para-idx (-> sel :end :paragraph)
-        end-para ((:children doc) end-para-idx)]
+  (let [start-para-uuid (-> sel :start :paragraph)
+        start-para ((:children doc) start-para-uuid)
+        end-para-uuid (-> sel :end :paragraph)
+        end-para ((:children doc) end-para-uuid)]
     (if (sel/single-paragraph? sel)
-      (selected-content ((:children doc) start-para-idx) sel)
-      ((comp vec flatten) [(delete-before start-para (-> sel :start :offset))
-                           (subvec (:children doc) (inc start-para-idx) end-para-idx)
-                           (delete-after end-para (-> sel :end :offset))]))))
+      (selected-content ((:children doc) start-para-uuid) sel)
+      (flatten [(delete-before start-para (-> sel :start :offset))
+                ;; TODO: implement between/sublist operation for DLL
+                (subvec (:children doc) (inc start-para-uuid) end-para-uuid)
+                (delete-after end-para (-> sel :end :offset))]))))
 
 (defn doc-shared-formats [doc sel]
   (if (sel/single-paragraph? sel)

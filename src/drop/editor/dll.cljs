@@ -77,8 +77,6 @@
    (-write writer ", next-uuid: ") (-write writer next-uuid)
    (-write writer "}")))
 
-;; TODO: implement IFn for lookup (like maps and vectors)
-
 ;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
@@ -290,6 +288,14 @@
             (insert-all-after (:uuid first) (rest to-insert))))
       (insert to-insert))))
 
+(defn between
+  "Returns a sub-list of all the nodes between (but not including) `uuid1` and `uuid2`."
+  [list uuid1 uuid2]
+  (loop [item (next list uuid1), items (dll)]
+    (if (= (:uuid item) uuid2)
+      items
+      (recur (next list item) (conj items item)))))
+
 (defn next
   "Get successive item in the doubly-linked list given either a UUID of a
    node or the value at that node. For example:
@@ -344,9 +350,12 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
+(def val1 {:uuid "1" :content "foo"})
+(def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
+
+(empty? (between l "1" "2"))
+
 (comment
-  (def val1 {:uuid "1" :content "foo"})
-  (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
   (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
   (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
   (def mine (filter #(not= "-1" (:uuid %)) l2))

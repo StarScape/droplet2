@@ -6,8 +6,9 @@
 (def val2 {:uuid "2" :content "bar"})
 (def val3 {:uuid "3" :content "bizz"})
 (def val4 {:uuid "5" :content "bang"})
+(def before-val {:uuid "4" :content "bar"})
 (def l (dll val1 val2 val3 val4))
-(def l1 (dll/insert-before l "5" {:uuid "4" :content "bar"}))
+(def l1 (dll/insert-before l "5" before-val))
 (def l2 (dll/insert-before l "1" {:uuid "-1" :content "pre"}))
 
 (deftest initialize-test
@@ -243,3 +244,16 @@
     (is (identical? (l "1") val1))
     (is (= (l "2") val2))
     (is (identical? (l "2") val2))))
+
+;; (def val1 {:uuid "1" :content "foo"})
+;; (def val2 {:uuid "2" :content "bar"})
+;; (def val3 {:uuid "3" :content "bizz"})
+;; (def before-val {:uuid "4" :content "bar"})
+;; (def val4 {:uuid "5" :content "bang"})
+
+(deftest between-test
+  (is (= true (empty? (dll/between l "1" "2"))))
+  (is (= (dll val2 val3 before-val) (dll/between l1 "1" "5")))
+  (is (= (dll val2 val3) (dll/between l1 "1" "4")))
+  (is (= (dll val2) (dll/between l1 "1" "3")))
+  (is (= (dll val3 before-val) (dll/between l1 "2" "5"))))
