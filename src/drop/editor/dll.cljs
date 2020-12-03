@@ -295,6 +295,11 @@
             (insert-all-after (:uuid first) (rest to-insert))))
       (insert to-insert))))
 
+(defn replace-between
+  "Same as `replace-range`, but **not** inclusive for either end."
+  [dll uuid1 uuid2 to-insert]
+  (replace-range dll (:uuid (next dll uuid1)) (:uuid (prev dll uuid2)) to-insert))
+
 (defn between
   "Returns a sub-list of all the nodes between (but not including) `uuid1` and `uuid2`."
   [list uuid1 uuid2]

@@ -560,7 +560,6 @@
     (doc-single-delete doc sel)
     (doc-range-delete doc sel)))
 
-;; TODO: implement
 (defn enter
   "Equivalent to what happens when the user hits the enter button.
    Creates a new paragraph in the appropriate position in the doc."
@@ -590,7 +589,7 @@
       (selected-content ((:children doc) start-para-uuid) sel)
       (-> (dll/between (:children doc) start-para-uuid end-para-uuid)
           (dll/prepend (delete-before start-para (-> sel :start :offset)))
-          (dll/conj (delete-after end-para (-> sel :end :offset)))))))
+          (conj (delete-after end-para (-> sel :end :offset)))))))
 
 (defn doc-shared-formats [doc sel]
   (if (sel/single-paragraph? sel)
@@ -606,10 +605,10 @@
     (let [children (:children doc)
           common-formats (shared-formats doc sel)
           format-fn (if (common-formats format) remove-format apply-format)
-          start-para-idx (-> sel :start :paragraph)
-          end-para-idx (-> sel :end :paragraph)
-          start-para (children start-para-idx)
-          end-para (children end-para-idx)
+          start-para-uuid (-> sel :start :paragraph)
+          end-para-uuid (-> sel :end :paragraph)
+          start-para (children start-para-uuid)
+          end-para (children end-para-uuid)
           new-start-para (format-fn
                           start-para
                           (selection [(:uuid start-para) (-> sel :start :offset)] [(:uuid start-para) (text-len start-para)])
@@ -618,12 +617,12 @@
                         end-para
                         (selection [(:uuid end-para) 0] [(:uuid end-para) (-> sel :end :offset)])
                         format)
-          inbetween-paras (subvec (selected-content doc sel) (inc start-para-idx) end-para-idx)
+          inbetween-paras (dll/between (selected-content doc sel) start-para-uuid end-para-uuid)
           inbetween-paras-new (map #(format-fn % format) inbetween-paras)
           new-children (-> children
-                           (assoc start-para-idx new-start-para)
-                           (assoc end-para-idx new-end-para)
-                           (vec-utils/replace-range (inc start-para-idx) (dec end-para-idx) inbetween-paras-new))]
+                           (assoc start-para-uuid new-start-para)
+                           (assoc end-para-uuid new-end-para)
+                           (dll/replace-between start-para-uuid end-para-uuid inbetween-paras-new))]
       (assoc doc :children new-children))))
 
 ;; TODO: should the functions be inlined here?
@@ -667,7 +666,7 @@
 ;; (toggle-format doc (selection [0 0] [0 2]) :italic)
 ;; (doc-toggle-format long-doc (selection [0 0] [1 4]) :italic)
 
-;; (doc-selected-content doc (selection [0 3] [0 14]))
+(doc-selected-content doc (selection [0 3] [0 14]))
 ;; (selected-content doc (selection [0 3] [1 3]))
 
 ;; (doc-shared-formats doc (selection [0 0] [0 8]))

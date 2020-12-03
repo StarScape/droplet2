@@ -1,6 +1,7 @@
 (ns drop.editor.navigation
   (:require [clojure.string :as str]
             [drop.editor.core :as core]
+            [drop.editor.dll :as dll]
             [drop.editor.selection :as sel :refer [selection caret smart-collapse]]))
 
 ;; Some helpers and useful primitives ;;
@@ -159,19 +160,23 @@
   Navigable
   (next-word [doc sel]
     (let [collapsed (smart-collapse sel)
-          para-idx (sel/start-para collapsed)
-          para ((:children doc) para-idx)]
+          para-uuid (sel/start-para collapsed)
+          para ((:children doc) para-uuid)]
       (if (and (= (sel/caret collapsed) (core/text-len para))
-               (not= para-idx (-> doc :children count dec)))
-        (selection [(inc para-idx) 0])
+               (not= para (dll/last (:children doc))))
+        ;; TODO: can change to a call to (start) once that is implemented
+        (selection [(:uuid (dll/next (:children doc) para)), 0])
         (next-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
   (prev-word [doc sel]
     (let [collapsed (smart-collapse sel)
-          para-idx (sel/start-para collapsed)
-          para ((:children doc) para-idx)]
-      (if (and (= 0 (sel/caret collapsed)) (not= 0 para-idx))
-        (selection [(dec para-idx) (core/text-len ((:children doc) (dec para-idx)))])
+          para-uuid (sel/start-para collapsed)
+          para ((:children doc) para-uuid)]
+      (if (and (= 0 (sel/caret collapsed))
+               (not= para (dll/first (:children doc))))
+        ;; TODO: can change to a call to (end) once that is implemented
+        (let [prev-para (dll/prev (:children doc) para)]
+          (selection [(:uuid prev-para), (core/text-len prev-para)]))
         (prev-word ((:children doc) (sel/start-para collapsed)) collapsed)))))
 
 
