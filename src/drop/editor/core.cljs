@@ -346,8 +346,9 @@
   "Returns a new paragraph with f applied to each run inside the selection."
   [para sel f]
   (let [[before selected after] (separate-selected (:runs para) sel)
-        selected-updated (map f selected)]
-    (paragraph (flatten [before selected-updated after]))))
+        new-runs (-> [before (map f selected) after]
+                     flatten vec optimize-runs)]
+    (assoc para :runs new-runs)))
 
 ;; TODO: write tests for Selectable functions
 (extend-type Paragraph
@@ -407,6 +408,7 @@
 (defn merge-paragraphs
   "Merges the two paragraphs."
   [p1 p2]
+  ;; TODO TODO TODO!!! : what should the pid be?
   (paragraph (concat (:runs p1) (:runs p2))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -617,12 +619,14 @@
                         end-para
                         (selection [(:uuid end-para) 0] [(:uuid end-para) (-> sel :end :offset)])
                         format)
-          inbetween-paras (dll/between (selected-content doc sel) start-para-uuid end-para-uuid)
-          inbetween-paras-new (map #(format-fn % format) inbetween-paras)
+          ;; in-between-paras (subvec (selected-content doc sel) (inc start-para-idx) end-para-idx)
+          in-between-paras (dll/between (:children doc) start-para-uuid end-para-uuid)
+          in-between-paras-new (map #(format-fn % format) in-between-paras)
           new-children (-> children
                            (assoc start-para-uuid new-start-para)
                            (assoc end-para-uuid new-end-para)
-                           (dll/replace-between start-para-uuid end-para-uuid inbetween-paras-new))]
+                           (dll/replace-between start-para-uuid end-para-uuid in-between-paras-new))]
+      (empty? in-between-paras)
       (assoc doc :children new-children))))
 
 ;; TODO: should the functions be inlined here?

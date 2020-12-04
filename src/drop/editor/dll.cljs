@@ -186,6 +186,7 @@
       (cons (.-value entry) (make-seq dll (.-next-uuid entry)))))))
 
 ;; TODO: add condition to both these that dll cannot be empty.
+;; TODO: add condition to all insert methods that the UUID cannot already exist
 (defn insert-before
   "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `next-uuid`."
   [^DoublyLinkedList dll next-uuid val]
@@ -295,10 +296,15 @@
             (insert-all-after (:uuid first) (rest to-insert))))
       (insert to-insert))))
 
+;; TODO: TESTME!
 (defn replace-between
   "Same as `replace-range`, but **not** inclusive for either end."
   [dll uuid1 uuid2 to-insert]
-  (replace-range dll (:uuid (next dll uuid1)) (:uuid (prev dll uuid2)) to-insert))
+  ;; TODO: clean...
+  (let [first-uuid (:uuid (next dll uuid1))]
+    (if (= first-uuid uuid2)
+      dll
+      (replace-range dll (:uuid (next dll uuid1)) (:uuid (prev dll uuid2)) to-insert))))
 
 (defn between
   "Returns a sub-list of all the nodes between (but not including) `uuid1` and `uuid2`."

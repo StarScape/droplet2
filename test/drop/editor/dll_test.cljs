@@ -153,8 +153,10 @@
     (is (= (conj (dll) {:uuid "6" :content "post"})
            (dll {:uuid "6" :content "post"}))))
 
-  (testing "calling (into) on DLL works"
-    (is (= (into [] l) [val1 val2 val3 val4]))))
+  (testing "(into) works with DLL"
+    (is (= (into [] l) [val1 val2 val3 val4]))
+    (is (= (into (dll) [{:uuid 1}, {:uuid 2}, {:uuid 3}])
+           (dll {:uuid 1}, {:uuid 2}, {:uuid 3})))))
 
 (deftest prepend-test
   (testing "prepending works on a populated list"
