@@ -207,12 +207,12 @@
   (is (= (dll/insert-all-after l "1" [{:uuid "6" :content "post1"} {:uuid "7" :content "post2"}])
          (dll val1 {:uuid "6" :content "post1"} {:uuid "7" :content "post2"} val2 val3 val4))))
 
-(deftest remove-all-test
-  (is (= (dll/remove-all l "1" "5") (dll)))
-  (is (= (dll/remove-all l "1" "3") (dll val4)))
-  (is (= (dll/remove-all l "2" "3") (dll val1 val4)))
-  (is (= (dll/remove-all l "3" "3") (dll val1 val2 val4)))
-  (is (= (dll/remove-all l "1" "2") (dll val3 val4))))
+(deftest remove-range-test
+  (is (= (dll/remove-range l "1" "5") (dll)))
+  (is (= (dll/remove-range l "1" "3") (dll val4)))
+  (is (= (dll/remove-range l "2" "3") (dll val1 val4)))
+  (is (= (dll/remove-range l "3" "3") (dll val1 val2 val4)))
+  (is (= (dll/remove-range l "1" "2") (dll val3 val4))))
 
 (deftest replace-range-test
   (testing "replacing everything"

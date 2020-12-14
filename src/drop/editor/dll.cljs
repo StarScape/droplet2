@@ -266,7 +266,7 @@
     dll))
 
 ;; TODO: rename to (remove-range)
-(defn remove-all
+(defn remove-range
   "Removes all the items between the nodes with uuid1 and uuid2 (both **inclusive**)."
   [dll uuid1 uuid2]
   {:pre [(contains? dll uuid1) (contains? dll uuid2)]}
@@ -288,7 +288,7 @@
    => (dll {:uuid 1, :val :a} {:uuid 12, :val :e} {:uuid 13, :val :f} {:uuid 4, :val :d})
    ```"
   [dll uuid1 uuid2 to-insert]
-  (let [removed (remove-all dll uuid1 uuid2)
+  (let [removed (remove-range dll uuid1 uuid2)
         node-before (prev dll uuid1)
         node-after (next dll uuid2)
         insert (cond
