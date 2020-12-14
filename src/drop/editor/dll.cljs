@@ -261,6 +261,7 @@
       (DoublyLinkedList. new-entries new-first new-last))
     dll))
 
+;; TODO: rename to (remove-range)
 (defn remove-all
   "Removes all the items between the nodes with uuid1 and uuid2 (both **inclusive**)."
   [dll uuid1 uuid2]

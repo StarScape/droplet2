@@ -409,7 +409,7 @@
   "Merges the two paragraphs."
   [p1 p2]
   ;; TODO TODO TODO!!! : what should the pid be?
-  (paragraph (concat (:runs p1) (:runs p2))))
+  (paragraph (:uuid p1) (vec (concat (:runs p1) (:runs p2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -448,7 +448,7 @@
         para (get children para-uuid)
         prev (dll/prev children para-uuid)
         merged (insert-end prev (:runs para))
-        new-children (-> children (dissoc para) (assoc (:uuid prev) merged))
+        new-children (-> children (dissoc para-uuid) (assoc (:uuid prev) merged))
         #_(vec-utils/replace-range children (dec para-idx) para-idx merged)]
     (assoc doc :children new-children)))
 
@@ -485,15 +485,19 @@
         last-paragraph
         (-> target-para
             (delete-before sel-caret)
-            (insert-start (:runs (peek paragraphs))))
+            (insert-start (:runs (peek paragraphs)))
+            ;; needs a new UUID
+            (assoc :uuid (random-uuid)))
 
         ;; TODO: optimize for case where `paragraphs` is DLL?
         in-between-paragraphs
         (->> paragraphs (drop 1) (drop-last 1))
 
+        ;; New paragraphs taking the place of target-para
         all-modified-paragraphs
         (flatten [first-paragraph in-between-paragraphs last-paragraph])
 
+        ;; TODO: this is what's brokie :)
         new-children
         (dll/replace-range (:children doc) target-para-uuid target-para-uuid all-modified-paragraphs)]
     (assoc doc :children new-children)))
@@ -529,16 +533,16 @@
 (defn insert-paragraph-before
   "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`."
   [doc uuid]
-  (dll/insert-before doc uuid (paragraph)))
+  (replace-paragraph-with doc uuid [(paragraph) ((:children doc) uuid)]))
 
 (defn insert-paragraph-after
   "Inserts an empty paragraph into the document immediately after the paragraph with UUID `uuid`."
   [doc uuid]
-  (dll/insert-after doc uuid (paragraph)))
+  (replace-paragraph-with doc uuid [((:children doc) uuid) (paragraph)]))
 
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
-    (if (= (-> doc :children dll/first :uuid) (sel/start-para sel))
+    (if (= (sel/start-para sel) (-> doc :children dll/first :uuid))
       doc
       (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
     (update-in doc [:children (sel/start-para sel)] delete sel)))
@@ -549,7 +553,7 @@
         children (:children doc)
         ;; Replace one paragraph if start and end in the same paragraph, or all of them if not.
         new-para (if (= startp-uuid endp-uuid)
-                   (delete ((:children doc) startp-uuid) sel)
+                   (delete (children startp-uuid) sel)
                    (merge-paragraphs
                     (delete-after (children startp-uuid) (-> sel :start :offset))
                     (delete-before (children endp-uuid) (-> sel :end :offset))))

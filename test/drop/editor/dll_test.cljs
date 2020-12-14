@@ -245,7 +245,15 @@
     (is (= (dll/replace-range l "2" "5" (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
            (dll val1 {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"})))
     (is (= (dll/replace-range l "2" "5" {:uuid "#1" :content "CHANGED"})
-           (dll val1 {:uuid "#1" :content "CHANGED"})))))
+           (dll val1 {:uuid "#1" :content "CHANGED"}))))
+  
+  (testing "replacing just one node (uuid1 == uuid2)"
+    (is (= (dll/replace-range l "2" "2" [{:uuid "a", :content "a"}, {:uuid "b", :content "b"}])
+           (dll val1 {:uuid "a", :content "a"} {:uuid "b", :content "b"} val3 val4)))
+    (is (= (dll/replace-range l "1" "1" [{:uuid "a", :content "a"}, {:uuid "b", :content "b"}])
+           (dll {:uuid "a", :content "a"} {:uuid "b", :content "b"} val2 val3 val4)))
+    (is (= (dll/replace-range l "5" "5" [{:uuid "a", :content "a"}, {:uuid "b", :content "b"}])
+           (dll val1 val2 val3 {:uuid "a", :content "a"} {:uuid "b", :content "b"})))))
 
 (deftest ifn-test
   (testing "invoking a DLL as a function does lookup, same as vector or map"
