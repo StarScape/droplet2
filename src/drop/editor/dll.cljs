@@ -134,6 +134,10 @@
       (.-value entry)
       not-found))
 
+  IStack
+  (-peek [^DoublyLinkedList dll] (last dll))
+  (-pop [^DoublyLinkedList dll] (remove dll (:uuid (last dll))))
+
   IFn
   (-invoke [^DoublyLinkedList dll uuid] (-lookup dll uuid))
   (-invoke [^DoublyLinkedList dll uuid not-found] (-lookup dll uuid not-found))

@@ -246,7 +246,7 @@
            (dll val1 {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"})))
     (is (= (dll/replace-range l "2" "5" {:uuid "#1" :content "CHANGED"})
            (dll val1 {:uuid "#1" :content "CHANGED"}))))
-  
+
   (testing "replacing just one node (uuid1 == uuid2)"
     (is (= (dll/replace-range l "2" "2" [{:uuid "a", :content "a"}, {:uuid "b", :content "b"}])
            (dll val1 {:uuid "a", :content "a"} {:uuid "b", :content "b"} val3 val4)))

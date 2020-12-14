@@ -497,22 +497,30 @@
         all-modified-paragraphs
         (flatten [first-paragraph in-between-paragraphs last-paragraph])
 
-        ;; TODO: this is what's brokie :)
         new-children
         (dll/replace-range (:children doc) target-para-uuid target-para-uuid all-modified-paragraphs)]
     (assoc doc :children new-children)))
 
 ;; Document main operations
 
-;; TODO: make method instance with DLL as third param
-;; TODO: could we make the delete-before-moving on logic here a little more elegant with a `cond->` form?
-(defmethod insert [Document Selection PersistentVector]
+;; TODO: cleanup m8
+(defn- doc-insert-list
   [doc sel runs-or-paras]
   (if (sel/single? sel)
     (condp = (type (first runs-or-paras))
       Run (insert-into-single-paragraph doc sel runs-or-paras)
       Paragraph (insert-paragraphs-into-doc doc sel runs-or-paras))
     (insert (delete doc sel) (sel/collapse-start sel) runs-or-paras)))
+
+;; TODO: make method instance with DLL as third param
+;; TODO: could we make the delete-before-moving on logic here a little more elegant with a `cond->` form?
+(defmethod insert [Document Selection PersistentVector]
+  [doc sel runs-or-paras]
+  (doc-insert-list doc sel runs-or-paras))
+
+(defmethod insert [Document Selection dll/DoublyLinkedList]
+  [doc sel runs-or-paras]
+  (doc-insert-list doc sel runs-or-paras))
 
 (defmethod insert [Document Selection Paragraph]
   [doc sel para]

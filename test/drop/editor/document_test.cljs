@@ -1,7 +1,8 @@
 (ns drop.editor.document-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [drop.editor.selection :as sel :refer [selection]]
-            [drop.editor.core :as c :refer [run paragraph document]]))
+            [drop.editor.core :as c :refer [run paragraph document]]
+            [drop.editor.dll :as dll :refer [dll]]))
 
 ;; Because checking equivalence on a bunch of nested records is a ROYAL pain in the ass,
 ;; I invented a sort of custom version of Hiccup[1] for represented documents with paragraphs
@@ -101,7 +102,20 @@
              [:run "buzz" :bold]]
             [:p
              [:run "aaabbbcccddd"]]]
-           (convert-doc (c/insert doc (selection ["p1" 10]) to-insert)))))
+           (convert-doc (c/insert doc (selection ["p1" 10]) to-insert))))
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "inserted paragraph 1"]]
+            [:p
+             [:run "inserted paragraph 2"]]
+            [:p
+             [:run "inserted paragraph 3"]
+             [:run "buzz" :bold]]
+            [:p
+             [:run "aaabbbcccddd"]]]
+           (convert-doc (c/insert doc (selection ["p1" 10]) (into (dll) to-insert))))))
 
   (testing "multi-paragraph insert at the start of a paragraph"
     (is (= [[:p
@@ -112,7 +126,16 @@
             [:p [:run "inserted paragraph 1"]]
             [:p [:run "inserted paragraph 2"]]
             [:p [:run "inserted paragraph 3aaabbbcccddd"]]]
-           (convert-doc (c/insert doc (selection ["p2" 0]) to-insert)))))
+           (convert-doc (c/insert doc (selection ["p2" 0]) to-insert))))
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "inserted paragraph 1"]]
+            [:p [:run "inserted paragraph 2"]]
+            [:p [:run "inserted paragraph 3aaabbbcccddd"]]]
+           (convert-doc (c/insert doc (selection ["p2" 0]) (into (dll) to-insert))))))
 
   (testing "multi-paragraph insert at the end of a paragraph"
     (is (= [[:p
@@ -124,7 +147,17 @@
             [:p [:run "inserted paragraph 2"]]
             [:p [:run "inserted paragraph 3"]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/insert doc (selection ["p1" 14]) to-insert)))))
+           (convert-doc (c/insert doc (selection ["p1" 14]) to-insert))))
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]
+             [:run "inserted paragraph 1"]]
+            [:p [:run "inserted paragraph 2"]]
+            [:p [:run "inserted paragraph 3"]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (c/insert doc (selection ["p1" 14]) (into (dll) to-insert))))))
 
   (testing "inserting a plain string"
     (is (= [[:p
