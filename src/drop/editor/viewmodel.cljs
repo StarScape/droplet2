@@ -21,7 +21,7 @@
             ["./CharRuler" :refer (CharRuler fakeRuler)]
             [drop.editor.core :as c]))
 
-(defrecord DocumentViewModel [paragraphs container-width])
+;; (defrecord DocumentViewModel [paragraphs container-width])
 (defrecord ParagraphViewModel [lines paragraph container-width])
 (defrecord Line [spans start-offset end-offset width])
 (defrecord Span [text formats start-offset width])
@@ -133,8 +133,14 @@
   [para width ruler]
   (->ParagraphViewModel (lineify (:runs para) width ruler) para width))
 
-;; TODO: probs not necessary...
-;; (defn from-doc
-;;   "Convert [[Document]] to ViewModel."
-;;   [doc width ruler]
-;;   (->DocumentViewModel (mapv #(from-para % width ruler) (:children doc)) width))
+;; TODO: testme
+(defn from-doc
+  "Takes a [[Document]], converts each of its [[Paragraph]]s to [[ParagraphViewModel]]s,
+   and returns a map of UUIDs -> ParagraphViewModels."
+  [doc width ruler]
+  (loop [paragraphs (:children doc), uuids->vms {}]
+    (if (empty? paragraphs)
+      uuids->vms
+      (let [p (first paragraphs)
+            vm (from-para p width ruler)]
+        (recur (rest paragraphs) (assoc uuids->vms (:uuid p) vm))))))

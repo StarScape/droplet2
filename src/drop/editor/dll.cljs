@@ -30,7 +30,8 @@
    `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
    `dll` (plus some friends). Aside from that DLLs behave basically like other Clojure collections: you
    can call `conj`, `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and
-   from other types using `into`. Destructuring and all your favorite Clojure goodies work as expected.
+   from other sequential types using `into`. Destructuring and all your favorite Clojure goodies work as
+   expected.
 
    They are also decoupled from the rest of the code -- there's no reason you couldn't put something
    other than paragraphs inside a DLL, though it's doubtful you'd need those specific set of properties

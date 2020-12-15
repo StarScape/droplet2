@@ -1,8 +1,7 @@
 (ns drop.editor.core
   (:require [clojure.set :as set]
             [drop.editor.dll :as dll :refer [dll]]
-            [drop.editor.selection :as sel :refer [Selection selection]]
-            [drop.editor.vec-utils :as vec-utils]))
+            [drop.editor.selection :as sel :refer [Selection selection]]))
 
 ;; ==============================================
 ;; |                                            |
@@ -20,6 +19,7 @@
 
 ;; This protocol could stand a better name if we're honest
 (defprotocol TextContainer
+  ;; TODO: rename this to len? or implement (count)...
   (text-len [this] "Returns the number of chars in container (run/paragraph)."))
 
 (defprotocol Formattable
@@ -408,7 +408,6 @@
 (defn merge-paragraphs
   "Merges the two paragraphs."
   [p1 p2]
-  ;; TODO TODO TODO!!! : what should the pid be?
   (paragraph (:uuid p1) (vec (concat (:runs p1) (:runs p2)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -424,10 +423,15 @@
 (defn document
   "Creates a new document."
   ([children]
-   (if (= (type children) dll/DoublyLinkedList)
-     (->Document children)
+   (cond
      ;; TODO: test
-     (->Document (into (dll) children))))
+     (= (type children) dll/DoublyLinkedList)
+     (->Document children)
+
+     (sequential? children)
+     (->Document (into (dll) children))
+
+     :else (throw "Error: non-sequence supplied as `children` to `document` constructor.")))
   ([]
    (->Document (dll))))
 
@@ -448,8 +452,7 @@
         para (get children para-uuid)
         prev (dll/prev children para-uuid)
         merged (insert-end prev (:runs para))
-        new-children (-> children (dissoc para-uuid) (assoc (:uuid prev) merged))
-        #_(vec-utils/replace-range children (dec para-idx) para-idx merged)]
+        new-children (-> children (dissoc para-uuid) (assoc (:uuid prev) merged))]
     (assoc doc :children new-children)))
 
 (defn- replace-paragraph-with
