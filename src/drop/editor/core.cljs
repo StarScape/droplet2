@@ -644,6 +644,16 @@
       (empty? in-between-paras)
       (assoc doc :children new-children))))
 
+(defn first-para?
+  "Returns true if the supplied Paragraph is the first paragraph in the Document."
+  [doc para]
+  (= para (dll/first (:children doc))))
+
+(defn last-para?
+  "Returns true if the supplied Paragraph is the last paragraph in the Document."
+  [doc para]
+  (= para (dll/last (:children doc))))
+
 ;; TODO: should the functions be inlined here?
 (extend-type Document
   Selectable

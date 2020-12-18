@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             [drop.editor.core :as core]
             [drop.editor.dll :as dll]
-            [drop.editor.selection :as sel :refer [selection caret smart-collapse]]))
+            [drop.editor.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
 ;; Some helpers and useful primitives ;;
 
@@ -123,14 +123,27 @@
         :else
         (back-until-non-word text start-offset)))))
 
+;; TODO: should there be selection functions? Can be copied from JS implementation.
+;; UPDATE: I think this is a good idea and don't see why not.
 (defprotocol Navigable
   "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new Selection."
-  ;; (start [this sel] "Go to start of paragraph or document.")
-  ;; (end [this sel] "Go to end of paragraph or document.")
-  ;; (next-char [this sel] "Move forward by 1 character.")
-  ;; (prev-char [this sel] "Move backward by 1 character.")
+  (start
+   [this]
+   "Go to start of Paragraph or Document.")
 
-  ;; TODO: should there be selection functions? Can be copied from JS implementation.
+  (end
+   [this]
+   "Go to end of Paragraph or Document.")
+
+  (next-char
+   [this sel]
+   "Move forward by 1 character, or returns the same selection if not possible.
+    Equivalent to pressing the right arrow on the keyboard.")
+
+  (prev-char
+   [this sel]
+   "Move backward by 1 character, or return the same selection if not possible.
+    Equivalent to pressing the left arrow on the keyboard.")
 
   (next-word
     [this sel]
@@ -144,6 +157,24 @@
 
 (extend-type core/Paragraph
   Navigable
+  (start [para]
+    (selection [(:uuid para) 0]))
+
+  (end [para]
+    (selection [(:uuid para) (core/text-len para)]))
+
+  (next-char [para sel]
+    (cond
+      (range? sel) (sel/collapse-end sel)
+      (and (single? sel) (< (caret sel) (core/text-len para))) (sel/shift-single sel 1)
+      :else sel))
+
+  (prev-char [para sel]
+    (cond
+      (range? sel) (sel/collapse-start sel)
+      (and (single? sel) (pos? (caret sel))) (sel/shift-single sel -1)
+      :else sel))
+
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           collapsed (smart-collapse sel)
@@ -158,6 +189,33 @@
 
 (extend-type core/Document
   Navigable
+  (start [doc]
+    (selection [(:uuid (dll/first (:children doc))) 0]))
+
+  (end [doc]
+    (let [last-para (dll/last (:children doc))]
+      (selection [(:uuid last-para) (core/text-len last-para)])))
+
+  (next-char [doc sel]
+    (if (range? sel)
+      (sel/collapse-end sel)
+      (let [para ((:children doc) (-> sel :start :paragraph))]
+        (if (= (caret sel) (core/text-len para))
+          (if (core/last-para? doc para)
+            sel
+            (start (dll/next (:children doc) para)))
+          (next-char para sel)))))
+
+  (prev-char [doc sel]
+    (if (range? sel)
+      (sel/collapse-start sel)
+      (let [para ((:children doc) (-> sel :start :paragraph))]
+        (if (zero? (caret sel))
+          (if (core/first-para? doc para)
+            sel
+            (end (dll/prev (:children doc) para)))
+          (prev-char para sel)))))
+
   (next-word [doc sel]
     (let [collapsed (smart-collapse sel)
           para-uuid (sel/start-para collapsed)

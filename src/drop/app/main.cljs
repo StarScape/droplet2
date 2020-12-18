@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [drop.editor.core :as c]
             [drop.editor.selection :as sel]
+            [drop.editor.navigation :as nav]
             [drop.editor.viewmodel :as vm]
             ["/drop/editor/CharRuler" :refer (CharRuler)]))
 
@@ -105,7 +106,8 @@
                 (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
 
 (def doc-state (atom {:doc (c/document [test-para])
-                      :selection (sel/selection [(:uuid test-para) 0] [(:uuid test-para) 179])
+                      :selection (sel/selection [(:uuid test-para) 0])
+                      ;; TODO: just change to a DLL of viewmodels
                       :pids->viewmodels {(:uuid test-para) (vm/from-para test-para 200 ruler)}}))
 
 (defn sync-dom [elem doc-state ruler]
@@ -115,11 +117,21 @@
         vm-paras (map #(vm/from-para % 200 ruler) (:children doc))]
     (set! (.-innerHTML elem) (vm-paras->dom vm-paras sel))))
 
+(defn interceptor [state e]
+  (case (.-code e)
+    "ArrowLeft" (update state :selection #(nav/prev-char (:doc state) %))
+    "ArrowRight" (update state :selection #(nav/next-char (:doc state) %))
+    state))
+
 (defn main []
+  (.addEventListener js/document "keydown"
+    (fn [e]
+      (reset! doc-state (interceptor @doc-state e))
+      (sync-dom fake-editor doc-state ruler)))
   (sync-dom fake-editor doc-state ruler))
 
 (defn ^:dev/after-load reload []
-  (main))
+  (sync-dom fake-editor doc-state ruler))
 
 ;; TODO: handle left and right events
 ;; TODO: handle up and down events

@@ -1,6 +1,6 @@
 (ns drop.editor.navigation-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.navigation :as nav :refer [next-word prev-word next-word-offset prev-word-offset]]
+            [drop.editor.navigation :as nav :refer [next-char prev-char next-word prev-word next-word-offset prev-word-offset]]
             [drop.editor.core :as core]
             [drop.editor.selection :as sel :refer [caret selection]]))
 
@@ -8,6 +8,18 @@
 (def para (core/paragraph "p1" [(core/run test-str)]))
 
 (def doc (core/document [para, (core/paragraph "p2" [(core/run "foo bar?")])]))
+
+(deftest start-test
+  (testing "works for paragraphs"
+    (is (= (selection ["p1" 0]) (nav/start para))))
+  (testing "works for documents"
+    (is (= (selection ["p1" 0]) (nav/start doc)))))
+
+(deftest end-test
+  (testing "works for paragraphs"
+    (is (= (selection ["p1" (core/text-len para)]) (nav/end para))))
+  (testing "works for documents"
+    (is (= (selection ["p2" 8]) (nav/end doc)))))
 
 (deftest next-word-paragraph-test
   (testing "starting from word-char goes to end of that word"
@@ -106,6 +118,54 @@
 
   (testing "prev-word from offset 0 of first paragraph should return itself"
     (is (= (selection ["p1" 0]) (prev-word doc (selection ["p1" 0]))))))
+
+(deftest next-char-paragraph-test
+  (testing "works under normal circumstances"
+    (is (= 1 (caret (next-char para (selection ["p1" 0])))))
+    (is (= 80 (caret (next-char para (selection ["p1" 79]))))))
+
+  (testing "returns original selection when at end of paragraph"
+    (is (= 80 (caret (next-char para (selection ["p1" 80]))))))
+
+  (testing "collapses to end if passed a range selection"
+    (is (= 33 (caret (next-char para (selection ["p1" 1] ["p1" 33])))))))
+
+(deftest prev-char-paragraph-test
+  (testing "works under normal circumstances"
+    (is (= 4 (caret (prev-char para (selection ["p1" 5])))))
+    (is (= 0 (caret (prev-char para (selection ["p1" 1]))))))
+
+  (testing "returns original selection when at start of paragraph"
+    (is (= 0 (caret (prev-char para (selection ["p1" 0]))))))
+
+  (testing "collapses to start if passed a range selection"
+    (is (= 1 (caret (prev-char para (selection ["p1" 1] ["p1" 33])))))))
+
+(deftest next-char-doc-test
+  (testing "works under normal circumstances"
+    (is (= 1 (caret (next-char doc (selection ["p1" 0]))))))
+
+  (testing "returns start of next paragraph when at end of paragraph"
+    (is (= (selection ["p2" 0]) (next-char doc (selection ["p1" (core/text-len para)])))))
+
+  (testing "returns same selection when at end of LAST paragraph in document"
+    (is (= (selection ["p2" 8]) (next-char doc (selection ["p2" 8])))))
+
+  (testing "collapses to end when passed a range selection"
+    (is (= (selection ["p1" 7]) (next-char doc (selection ["p1" 0] ["p1" 7]))))))
+
+(deftest prev-char-doc-test
+  (testing "works under normal circumstances"
+    (is (= 1 (caret (prev-char doc (selection ["p1" 2]))))))
+
+  (testing "returns end of previous paragraph when at start of paragraph"
+    (is (= (selection ["p1" (core/text-len para)]) (prev-char doc (selection ["p2" 0])))))
+
+  (testing "returns same selection when at start of FIRST paragraph in document"
+    (is (= (selection ["p1" 0]) (prev-char doc (selection ["p1" 0])))))
+
+  (testing "collapses to start when passed a range selection"
+    (is (= (selection ["p1" 1]) (prev-char doc (selection ["p1" 1] ["p1" 7]))))))
 
 (deftest hyphen-back-and-forth-test
   (let [text "word1 a-very-long-hyphenated-word word2"]
