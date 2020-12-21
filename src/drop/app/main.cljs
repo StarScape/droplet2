@@ -117,23 +117,39 @@
         vm-paras (map #(vm/from-para % 200 ruler) (:children doc))]
     (set! (.-innerHTML elem) (vm-paras->dom vm-paras sel))))
 
-(defn interceptor [state e]
-  (case (.-code e)
-    "ArrowLeft" (update state :selection #(nav/prev-char (:doc state) %))
-    "ArrowRight" (update state :selection #(nav/next-char (:doc state) %))
-    state))
+(defn parse-event [e]
+  (let [modifiers (cond-> (transient [])
+                    (.-ctrlKey e) (conj! "ctrl")
+                    (.-altKey e) (conj! "alt")
+                    (.-shiftKey e) (conj! "shift")
+                    true (persistent!))
+        key (case (.-key e)
+              "ArrowLeft" "left"
+              "ArrowRight" "right"
+              "ArrowUp" "up"
+              "ArrowDown" "down"
+              (-> (.-key e) .toLowerCase keyword))]
+    (->> (conj modifiers key)
+         (str/join "+")
+         (keyword))))
+
+(def interceptors
+  {:left (fn [state e]
+           (update state :selection #(nav/prev-char (:doc state) %)))
+   :right (fn [state e]
+            (update state :selection #(nav/next-char (:doc state) %)))})
 
 (defn main []
   (.addEventListener js/document "keydown"
     (fn [e]
-      (reset! doc-state (interceptor @doc-state e))
+      (when-let [interceptor-fn (get interceptors (parse-event e))]
+        (reset! doc-state (interceptor-fn @doc-state e)))
       (sync-dom fake-editor doc-state ruler)))
   (sync-dom fake-editor doc-state ruler))
 
 (defn ^:dev/after-load reload []
   (sync-dom fake-editor doc-state ruler))
 
-;; TODO: handle left and right events
 ;; TODO: handle up and down events
 ;; TODO: Handle shifting selection left/right
 ;; TODO: Handle shifting selection up/down
