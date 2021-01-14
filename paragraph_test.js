@@ -94,8 +94,6 @@ const getCaretPx = (selection, line, ruler) => {
 // Useful for up/down caret operations.
 // As with all viewmodel operations, the returned offset is relative to the *paragraph*, not the line.
 const getNearestLineOffsetToPixel = (line, px, ruler) => {
-  const lineEnd = line.offset + line.length
-
   let currentOffset = line.offset
   let currentOffsetPx = 0
   let prevDelta = Infinity

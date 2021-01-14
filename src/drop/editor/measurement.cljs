@@ -28,20 +28,7 @@
   ([elem cache text]
    (measure elem cache text #{}))
   ([elem cache text formats]
-  ;;  #p text
    (let [formats-hash (hash (seq formats))]
-     (when (= text "typing a bunch of random stuff")
-       #p formats
-       #_#p (map (fn [char]
-                 (let [cache-key (str char "-" (hash formats))
-                       cache-val (aget cache cache-key)]
-                   (if cache-val
-                     (str char "[" formats-hash "]" "-" cache-val)
-                     (do
-                       (apply-css elem formats)
-                       (set! (.-innerHTML elem) char)
-                       (str char "[" formats-hash "]" "-" (aset cache cache-key (.. elem (getBoundingClientRect) -width)))))))
-               text))
      (->> text
           (map (fn [char]
                  (let [cache-key (str char "-" formats-hash)
@@ -75,7 +62,7 @@
   (let [cache #js {}
         elem (create-elem font-size font-family)]
     (.. js/document -body (appendChild elem))
-    (fn [& args] (apply measure (concat [elem cache] #p args)))))
+    (fn [& args] (apply measure (concat [elem cache] args)))))
 
 (defn ruler-for-elem
   "Returns a measurement function for the given DOM element."
