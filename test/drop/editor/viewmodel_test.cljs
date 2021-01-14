@@ -1,7 +1,7 @@
 (ns drop.editor.viewmodel-test
-  (:require ["./CharRuler" :refer (fakeRuler)]
-            [cljs.test :include-macros true :refer [is deftest testing]]
+  (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [drop.editor.core :as c]
+            [drop.editor.measurement :refer [fake-measure-fn]]
             [drop.editor.viewmodel :as vm]))
 
 (defn unrecord
@@ -24,14 +24,14 @@
 
 (deftest lineify-test
   (testing "works with an empty run"
-    (is (= (unrecord (vm/lineify [(c/run "")] 300 fakeRuler))
+    (is (= (unrecord (vm/lineify [(c/run "")] 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 0
              :width 0
              :spans []}])))
 
   (testing "works with a run that fits on just one line"
-    (is (= (unrecord (vm/lineify [(c/run "foobar")] 300 fakeRuler))
+    (is (= (unrecord (vm/lineify [(c/run "foobar")] 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 6
              :width 60
@@ -41,7 +41,7 @@
                       :width 60}]}])))
 
   (testing "works with a big long run"
-    (is (= (unrecord (vm/lineify runs 300 fakeRuler))
+    (is (= (unrecord (vm/lineify runs 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 29
              :width 290
@@ -65,7 +65,7 @@
                       :width 200}]}])))
 
   (testing "works with a bunch of small runs"
-    (is (= (unrecord (vm/lineify runs-formatted 300 fakeRuler))
+    (is (= (unrecord (vm/lineify runs-formatted 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 29
              :width 290

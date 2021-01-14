@@ -1,6 +1,7 @@
 node_modules/
 .shadow-cljs/
 .calva/
+.clj-kondo/
 
 # System Files
 .DS_Store
