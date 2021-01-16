@@ -112,6 +112,18 @@
         (sel/set-single selection next-line-offset))
       selection)))
 
+(defn up
+  "Move the caret up into the next line. Returns a new selection."
+  [{:keys [viewmodels] :as doc-state} measure-fn]
+  (let [selection (sel/smart-collapse (:selection doc-state))
+        line (line-with-caret viewmodels selection)
+        prev-line (line-above-caret viewmodels selection)]
+    (if prev-line
+      (let [caret-offset-px (caret-px selection line measure-fn)
+            next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
+        (sel/set-single selection next-line-offset))
+      selection)))
+
 ;; main
 
 (defn parse-event [e]
@@ -158,7 +170,9 @@
    :right (fn [state _e]
             (update state :selection #(nav/next-char (:doc state) %)))
    :down (fn [state _e]
-           (update state :selection #(down state measure-fn)))})
+           (update state :selection #(down state measure-fn)))
+   :up (fn [state _e]
+         (update state :selection #(up state measure-fn)))})
 
 (defn main []
   (.addEventListener js/document "keydown"
