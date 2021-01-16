@@ -7,123 +7,6 @@
             [drop.editor.measurement :refer [ruler-for-elem]]
             [drop.editor.viewmodel :as vm]))
 
-;; up/down nonsense
-(defn split-span
-  "Splits the span into two at the paragraph offset, and return a vector of [before, after]."
-  [span offset]
-  (let [diff (- offset (:start-offset span))
-        before (.substring (:text span) 0 diff)
-        after (.substring (:text span) diff)]
-    [(assoc span :text before), (assoc span :text after)]))
-
-(defn spans-before-offset
-  "Returns all spans in the line before the given paragraph offset."
-  [line offset]
-  (reduce (fn [spans-before, span]
-            (let [span-end-offset (+ (count (:text span)) (:start-offset span))]
-              (cond
-                (<= span-end-offset offset)
-                (conj spans-before span)
-
-                (and (<= (:start-offset span) offset) (< offset span-end-offset))
-                (conj spans-before (nth (split-span span offset) 0))
-
-                :else
-                (reduced spans-before))))
-          [] (:spans line)))
-
-(defn caret-line-idx
-  "Returns index of the viewmodel line with the text caret inside of it."
-  [viewmodels selection]
-  {:pre [(sel/single? selection)]}
-  (let [caret (sel/caret selection)
-        vm (viewmodels (-> selection :start :paragraph))
-        within-line? #(and (>= caret (:start-offset %)) (< caret (:end-offset %)))
-        at-para-end? #(and (= caret (:end-offset %)) (= caret (c/text-len (:paragraph vm))))
-        lines (:lines vm)]
-    (loop [i 0]
-      (when (> i (count lines)) (throw "Did not find line with caret inside it!"))
-
-      (if (or (within-line? (lines i))
-              (at-para-end? (lines i)))
-        i
-        (recur (inc i))))))
-
-(defn line-with-caret
-  "Returns the line in the viewmodel with the caret inside of it."
-  [viewmodels selection]
-  ((:lines (viewmodels (-> selection :start :paragraph))) (caret-line-idx viewmodels selection)))
-
-(defn line-above-caret
-  "Returns the line in the viewmodel immediately above the line with the caret inside of it.
-   If there is no line above the current line, returns null."
-  [viewmodels selection]
-  (let [lines (:lines (viewmodels (-> selection :start :paragraph)))
-        line-idx (dec (caret-line-idx viewmodels selection))]
-    (get lines line-idx)))
-
-(defn line-below-caret
-  "Returns the line in the viewmodel immediately above the line with the caret inside of it.
-   If there is no line above the current line, returns null."
-  [viewmodels selection]
-  (let [lines (:lines (viewmodels (-> selection :start :paragraph)))
-        line-idx (inc (caret-line-idx viewmodels selection))]
-    (get lines line-idx)))
-
-(defn caret-px
-  "Returns the horizontal offset of the text caret from the document's edge, in pixels."
-  [selection line measure-fn]
-  (let [spans-before-caret (spans-before-offset line (sel/caret selection))]
-    (reduce (fn [width span]
-              (+  width (measure-fn (:text span) (:formats span))))
-            0 spans-before-caret)))
-
-(defn chars-and-formats [span] (map #(hash-map :char %, :formats (:formats span)) (:text span)))
-
-(defn nearest-line-offset-to-pixel
-  [line target-px measure-fn]
-  (let [chars-with-formats (->> (:spans line)
-                                (map chars-and-formats (:spans line))
-                                (flatten))]
-    (loop [i 0
-           offset (:start-offset line)
-           offset-px 0
-           prev-delta ##Inf]
-      (if (= i (count chars-with-formats))
-        (:end-offset line)
-        (let [{:keys [char formats]} (nth chars-with-formats i)
-              delta (js/Math.abs (- offset-px target-px))]
-          (if (> delta prev-delta)
-            (dec offset)
-            (recur (inc i)
-                   (inc offset)
-                   (+ offset-px (measure-fn char formats))
-                   delta)))))))
-
-(defn down
-  "Move the caret down into the next line. Returns a new selection."
-  [{:keys [viewmodels] :as doc-state} measure-fn]
-  (let [selection (sel/smart-collapse (:selection doc-state))
-        line (line-with-caret viewmodels selection)
-        next-line (line-below-caret viewmodels selection)]
-    (if next-line
-      (let [caret-offset-px (caret-px selection line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel next-line caret-offset-px measure-fn)]
-        (sel/set-single selection next-line-offset))
-      selection)))
-
-(defn up
-  "Move the caret up into the next line. Returns a new selection."
-  [{:keys [viewmodels] :as doc-state} measure-fn]
-  (let [selection (sel/smart-collapse (:selection doc-state))
-        line (line-with-caret viewmodels selection)
-        prev-line (line-above-caret viewmodels selection)]
-    (if prev-line
-      (let [caret-offset-px (caret-px selection line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
-        (sel/set-single selection next-line-offset))
-      selection)))
-
 ;; main
 
 (defn parse-event [e]
@@ -170,9 +53,9 @@
    :right (fn [state _e]
             (update state :selection #(nav/next-char (:doc state) %)))
    :down (fn [state _e]
-           (update state :selection #(down state measure-fn)))
+           (update state :selection #(view/down state measure-fn)))
    :up (fn [state _e]
-         (update state :selection #(up state measure-fn)))})
+         (update state :selection #(view/up state measure-fn)))})
 
 (defn main []
   (.addEventListener js/document "keydown"
@@ -186,7 +69,6 @@
 (defn ^:dev/after-load reload []
   (sync-dom fake-editor doc-state measure-fn))
 
-;; TODO: handle up and down events
 ;; TODO: Handle shifting selection left/right
 ;; TODO: Handle shifting selection up/down
 ;; TODO: handle input and deletion
