@@ -47,15 +47,22 @@
         vm-paras (map #(vm/from-para % 200 measure-fn) (:children doc))]
     (set! (.-innerHTML elem) (view/vm-paras->dom vm-paras sel))))
 
+;; TODO: test to make sure all of these work correctly with multiple paragraphs
 (def interceptors
   {:left (fn [state _e]
            (update state :selection #(nav/prev-char (:doc state) %)))
+   :ctrl+left (fn [state _e]
+                (update state :selection #(nav/prev-word (:doc state) %)))
    :shift+left (fn [state _e]
                  (update state :selection #(nav/shift+left (:doc state) #p (:selection state))))
+
    :right (fn [state _e]
             (update state :selection #(nav/next-char (:doc state) %)))
+   :ctrl+right (fn [state _e]
+                (update state :selection #(nav/next-word (:doc state) %)))
    :shift+right (fn [state _e]
                   (update state :selection #(nav/shift+right (:doc state) (:selection state))))
+
    :down (fn [state _e]
            (update state :selection #(view/down state measure-fn)))
    :up (fn [state _e]
