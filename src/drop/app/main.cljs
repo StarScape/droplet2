@@ -28,17 +28,20 @@
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))
 (def measure-fn (ruler-for-elem fake-editor))
-(def test-para
+(def para1
   (c/paragraph [(c/run "Hello world, this is an example of a paragraph ")
                 (c/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                 (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
+(def para2
+  (c/paragraph [(c/run "And this is paragraph numero dos.")]))
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
-(def doc-state (atom {:doc (c/document [test-para])
-                      :selection (sel/selection [(:uuid test-para) 0])
-                      ;; TODO: just change to a DLL of viewmodels
-                      :viewmodels {(:uuid test-para) (vm/from-para test-para 200 measure-fn)}}))
+(def doc-state (atom {:doc (c/document [para1 para2])
+                      :selection (sel/selection [(:uuid para1) 0])
+                      ;; TODO: just change to a DLL of viewmodels?
+                      :viewmodels {(:uuid para1) (vm/from-para para1 200 measure-fn)
+                                   (:uuid para2) (vm/from-para para2 200 measure-fn)}}))
 
 (defn sync-dom [elem doc-state measure-fn]
   (let [state @doc-state
@@ -48,13 +51,14 @@
     (set! (.-innerHTML elem) (view/vm-paras->dom vm-paras sel))))
 
 ;; TODO: test to make sure all of these work correctly with multiple paragraphs
+;; TODO: change to a reg-interceptors! function call.
 (def interceptors
   {:left (fn [state _e]
            (update state :selection #(nav/prev-char (:doc state) %)))
    :ctrl+left (fn [state _e]
                 (update state :selection #(nav/prev-word (:doc state) %)))
    :shift+left (fn [state _e]
-                 (update state :selection #(nav/shift+left (:doc state) #p (:selection state))))
+                 (update state :selection #(nav/shift+left (:doc state) (:selection state))))
 
    :right (fn [state _e]
             (update state :selection #(nav/next-char (:doc state) %)))

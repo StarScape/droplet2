@@ -4,14 +4,16 @@
             [drop.editor.selection :as sel]
             [drop.editor.core :as c]))
 
+
 (def caret-elem "<span class='text-caret'></span>")
 
-(defn- caret-in-span? [span selection]
+(defn- caret-in-span? [span pid selection]
   (let [span-start (:start-offset span)
         span-end (+ (:start-offset span) (count (:text span)))
         caret (sel/caret selection)]
-    (or (and (>= caret span-start)
-             (< caret span-end)))))
+    (and (= pid (sel/caret-para selection))
+         (>= caret span-start)
+         (< caret span-end))))
 
 (defn- <span>
   "Returns a DOM string of a <span> element with `text` inside it.
@@ -38,7 +40,7 @@
   ;; is nice I guess, but it feels a lot like writing a special case implicitly but still
   ;; actually depending on it in practice.
   (if-not (or (= pid (-> selection :start :paragraph))
-              (= pid (-> selection :start :paragraph)))
+              (= pid (-> selection :end :paragraph)))
     ["", "", (:text span)]
     (let [text (:text span)
           start (- (-> selection :start :offset) (:start-offset span))
@@ -47,44 +49,64 @@
 
 (defn vm-span->dom
   "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background."
-  [span pid para-length selection]
-  (let [format-classes (formats->classes (:formats span))
-        [before-sel, inside-sel, after-sel] (split-span span pid selection)
-        span-end-offset (+ (:start-offset span) (count (:text span)))]
-    (str (<span> before-sel format-classes)
-         (when (and (:backwards? selection) (caret-in-span? span selection))
-           caret-elem)
-         (<span> inside-sel (conj format-classes "range-selection"))
-         (when (or (and (not (:backwards? selection))
-                        (caret-in-span? span selection))
-                   ;; Handle case where caret is at the end of para (caret == len of paragraph)
-                   (= (sel/caret selection) para-length span-end-offset))
-           caret-elem)
-         (<span> after-sel format-classes))))
+  [span selection pid para-length in-selection?]
+  (let [format-classes (formats->classes (:formats span))]
+    (if in-selection?
+      (let [[before-sel, inside-sel, after-sel] (split-span span pid selection)
+            span-end-offset (+ (:start-offset span) (count (:text span)))]
+        (str (<span> before-sel format-classes)
+
+             (when (and (:backwards? selection) (caret-in-span? span pid selection))
+               caret-elem)
+
+             (<span> inside-sel (conj format-classes "range-selection"))
+
+             (when (or (and (caret-in-span? span pid selection)
+                            (not (:backwards? selection)))
+                       ;; Handle case where caret is at the end of para (caret == len of paragraph)
+                       (and (= (sel/caret selection) para-length span-end-offset)
+                            (= (sel/caret-para selection) pid)))
+               caret-elem)
+
+             (<span> after-sel format-classes)))
+      (<span> (:text span) format-classes))))
 
 (defn vm-line->dom
   "Convert viewmodel line to DOM element."
-  [line pid para-length selection]
+  [line selection pid para-length in-selection?]
   (str "<div class='line'>"
-       (apply str (map #(vm-span->dom % pid para-length selection) (:spans line)))
+       (apply str (map #(vm-span->dom % selection pid para-length in-selection?) (:spans line)))
        "</div>"))
 
 (defn vm-para->dom
   "Convert viewmodel to DOM element."
-  [viewmodel selection]
+  [viewmodel selection in-selection?]
   (let [pid (-> viewmodel :paragraph :uuid)
         para-length (c/text-len (:paragraph viewmodel))]
     (str "<div class='paragraph'>"
-         (apply str (map #(vm-line->dom % pid para-length selection) (:lines viewmodel)))
+         (apply str (map #(vm-line->dom % selection pid para-length in-selection?) (:lines viewmodel)))
          "</div>")))
 
 (defn vm-paras->dom
   "Convert the list of [[ParagraphViewModel]]s to DOM elements.
    Selection is provided in order to render the caret and highlighted text."
   [vm-paras selection]
-  (str "<div class='document'>"
-       (apply str (map #(vm-para->dom % selection) vm-paras))
-       "</div>"))
+  (let [selection-ongoing? (volatile! false)]
+    (str "<div class='document'>"
+         (apply str
+           (map (fn [vm-para]
+                  ;; Little state here, but it's not the worst.
+                  ;; Set selection-ongoing? to true when the selection starts,
+                  ;; and to false once the selection ends.
+                  (when (= (-> vm-para :paragraph :uuid) (-> selection :start :paragraph))
+                    (vreset! selection-ongoing? true))
+                  (let [dom-string (vm-para->dom vm-para selection @selection-ongoing?)]
+                    (when (= (-> vm-para :paragraph :uuid) (-> selection :end :paragraph))
+                      (vreset! selection-ongoing? false))
+
+                    dom-string))
+                 vm-paras))
+         "</div>")))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they

@@ -269,6 +269,7 @@
 
   ;; TODO: write tests for these at some point.
   Selectable
+  ;; TODO: fix these with multiple paragraphs
   (shift+right [doc sel]
     (let [para ((:children doc) (sel/caret-para sel))]
       (if (and (:backwards? sel) (sel/range? sel))
