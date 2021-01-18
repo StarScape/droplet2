@@ -1,4 +1,10 @@
 (ns drop.editor.navigation
+  "Functions for modifying navigating around the document by modifying selections.
+   Note that everything in here is pure -- functions take Documents/Paragraphs and a
+   selection, and return a new selection.
+
+   Also, nothing here should be dependent on the viewmodel or the DOM. Things that have to
+   be aware of either of those should go in the `view` namespace."
   (:require [clojure.string :as str]
             [drop.editor.core :as core]
             [drop.editor.dll :as dll]
@@ -155,6 +161,30 @@
     "Returns selection after jumping to the start of the previous word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
 
+(defprotocol Selectable
+  "Methods for expanding and contracting selections."
+  (shift+right
+    [this sel]
+    "If selection is not backwards, returns a new selection with the right side expanded by 1.
+    If the selection *is* backwards, will *contract* the *left* side of the selection. In other
+    words, equivalent to the behavior of pressing shift+right.")
+
+  (shift+left
+    [this sel]
+    "If selection is not backwards, returns a new selection with the right side contracted by 1.
+    If the selection *is* backwards, will *expand* the *left* side of the selection. In other
+    words, equivalent to the behavior of pressing shift+left.")
+
+  (ctrl+shift+right
+    [this sel]
+    "Expands or contracts the caret side of the selection by a word, depending if the selection is
+    forwards or backwards, respectively. Equivalent to the behavior of pressing ctrl+shift+right.")
+
+  (ctrl+shift+left
+    [this sel]
+    "Expands or contracts the caret side of the selection by a word, depending if the selection is
+    backwards or forwards respectively. Equivalent to the behavior of pressing ctrl+shift+left."))
+
 (extend-type core/Paragraph
   Navigable
   (start [para]
@@ -235,7 +265,30 @@
         ;; TODO: can change to a call to (end) once that is implemented
         (let [prev-para (dll/prev (:children doc) para)]
           (selection [(:uuid prev-para), (core/text-len prev-para)]))
-        (prev-word ((:children doc) (sel/start-para collapsed)) collapsed)))))
+        (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
+
+  ;; TODO: write tests for these at some point.
+  Selectable
+  (shift+right [doc sel]
+    (let [para ((:children doc) (sel/caret-para sel))]
+      (if (and (:backwards? sel) (sel/range? sel))
+        (sel/shift-caret sel 1)
+        (if (and (core/last-para? doc para)
+                 (= (sel/caret sel) (core/text-len para)))
+          sel
+          (sel/shift-caret sel 1)))))
+
+  (shift+left [doc sel]
+    (let [para ((:children doc) (sel/caret-para sel))]
+      (if (and (not (:backwards? sel)) (sel/range? sel))
+        (sel/shift-end sel -1)
+        (if (and (core/first-para? doc para)
+                 (zero? (sel/caret sel)))
+          sel
+          (sel/shift-start sel -1)))))
+
+  ;; TODO: ctrl+shift+left and ctrl+shift+right
+  )
 
 
 (comment

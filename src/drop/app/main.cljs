@@ -50,8 +50,12 @@
 (def interceptors
   {:left (fn [state _e]
            (update state :selection #(nav/prev-char (:doc state) %)))
+   :shift+left (fn [state _e]
+                 (update state :selection #(nav/shift+left (:doc state) #p (:selection state))))
    :right (fn [state _e]
             (update state :selection #(nav/next-char (:doc state) %)))
+   :shift+right (fn [state _e]
+                  (update state :selection #(nav/shift+right (:doc state) (:selection state))))
    :down (fn [state _e]
            (update state :selection #(view/down state measure-fn)))
    :up (fn [state _e]
@@ -71,4 +75,9 @@
 
 ;; TODO: Handle shifting selection left/right
 ;; TODO: Handle shifting selection up/down
-;; TODO: handle input and deletion
+;; TODO: Handle ctrl+left and ctrl+right
+;; TODO: Handle ctrl+shift+left and ctrl+shift+right
+;; TODO: Handle input and deletion
+;; TODO: Handle clicking
+;; TODO: Handle drag selection (selection/expand-to function maybe?)
+;; TODO: Handle enter

@@ -24,6 +24,13 @@
     (-> sel :start :offset)
     (-> sel :end :offset)))
 
+(defn caret-para
+  "Returns the UUID of the paragraph that the caret is inside of."
+  [sel]
+  (if (:backwards? sel)
+    (-> sel :start :paragraph)
+    (-> sel :end :paragraph)))
+
 (defn start-para
   "Shortcut for (-> sel :start :paragraph) for a single selection."
   [sel]
@@ -59,24 +66,30 @@
       (assoc-in [:start :offset] offset)
       (assoc-in [:end :offset] offset)))
 
-;; TODO: Should these be shift-left and shift-right and work differently?
-
-(defn expand-left
-  "Expands the left side of the selection by `n` characters (can be positive or negative).
+(defn shift-start
+  "Expands or contracts the left side of the selection by `n` characters (can be positive or negative).
    If selection is not a range-selection it is made one. Note that the returned selection
    will always be `backwards?`."
   [sel n]
-  {:pre  [(when (single? sel) (>= n 0))]
+  {:pre [(if (single? sel) (<= n 0) true)]
    :post [(>= (-> % :start :offset) 0)]}
-  (-> sel (update-in [:start :offset] - n) (assoc :backwards? true)))
+  (-> sel (update-in [:start :offset] + n) (assoc :backwards? true)))
 
-(defn expand-right
-  "Expands the left side of the selection by `n` characters (can be positive or negative).
+(defn shift-end
+  "Expands or contracts the right side of the selection by `n` characters (can be positive or negative).
    If selection is not a range-selection it is made one. Note that the returned selection
-   will always be `backwards?`."
+   will always be forwards."
   [sel n]
-  {:pre  [(when (single? sel) (>= n 0))]}
   (-> sel (update-in [:end :offset] + n) (assoc :backwards? false)))
+
+(defn shift-caret
+  "Moves the side of the selection with the caret on it by `n` characters. The other side
+   (the anchor) **remains unchanged.** If selection is not a range it will be made one, and
+   the *right side* will be the one shifted."
+  [sel n]
+  (if (and (range? sel) (:backwards? sel))
+    (shift-start sel n)
+    (shift-end sel n)))
 
 (defn collapse-start
   "Returns a new single-selection at the start of the selection"
