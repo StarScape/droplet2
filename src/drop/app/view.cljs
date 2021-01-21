@@ -2,7 +2,8 @@
   "Functions for converting from viewmodels to DOM elements (in the form of strings)."
   (:require [clojure.string :as str]
             [drop.editor.selection :as sel]
-            [drop.editor.core :as c]))
+            [drop.editor.core :as c]
+            [drop.editor.dll :as dll]))
 
 
 (def caret-elem "<span class='text-caret'></span>")
@@ -205,26 +206,59 @@
                    (+ offset-px (measure-fn char formats))
                    delta)))))))
 
+;; TODO: I think these two functions could be moved to the `events` namespace (once it's created),
+;; and we could just keep the helper functions it calls here, or better yet, move them into the
+;; measurement namespace.
+;;
+;; TODO: these would both be much more elegant if we kept a DLL of the viewmodels instead
 (defn down
   "Move the caret down into the next line. Returns a new selection."
-  [{:keys [viewmodels] :as doc-state} measure-fn]
+  [{:keys [doc viewmodels] :as doc-state} measure-fn]
   (let [selection (sel/smart-collapse (:selection doc-state))
+        para-uuid (sel/caret-para selection)
+        viewmodel (get viewmodels para-uuid)
         line (line-with-caret viewmodels selection)
-        next-line (line-below-caret viewmodels selection)]
+
+        ; last line in para?
+        last-line? (= line (peek (:lines viewmodel)))
+        next-line (if (not last-line?)
+                    (line-below-caret viewmodels selection)
+                    (-> (:children doc)
+                        (dll/next para-uuid)
+                        (:uuid)
+                        (viewmodels)
+                        (:lines)
+                        (first)))
+        new-uuid (if last-line?
+                   (:uuid (dll/next (:children doc) para-uuid))
+                   para-uuid)]
     (if next-line
       (let [caret-offset-px (caret-px selection line measure-fn)
             next-line-offset (nearest-line-offset-to-pixel next-line caret-offset-px measure-fn)]
-        (sel/set-single selection next-line-offset))
+        (sel/selection [new-uuid next-line-offset]))
       selection)))
 
 (defn up
   "Move the caret up into the next line. Returns a new selection."
-  [{:keys [viewmodels] :as doc-state} measure-fn]
+  [{:keys [doc viewmodels] :as doc-state} measure-fn]
   (let [selection (sel/smart-collapse (:selection doc-state))
+        para-uuid (sel/caret-para selection)
+        viewmodel (get viewmodels para-uuid)
         line (line-with-caret viewmodels selection)
-        prev-line (line-above-caret viewmodels selection)]
+        first-line? (= line (first (:lines viewmodel)))
+        prev-line (if (not first-line?)
+                    (line-above-caret viewmodels selection)
+                    (-> (:children doc)
+                        (dll/prev para-uuid)
+                        (:uuid)
+                        (viewmodels)
+                        (:lines)
+                        (peek)))
+        new-uuid (if first-line?
+                   (:uuid (dll/prev (:children doc) para-uuid))
+                   para-uuid)]
     (if prev-line
       (let [caret-offset-px (caret-px selection line measure-fn)
             next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
-        (sel/set-single selection next-line-offset))
+        (sel/selection [new-uuid next-line-offset]))
       selection)))

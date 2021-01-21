@@ -84,6 +84,12 @@
 (defn ^:dev/after-load reload []
   (sync-dom fake-editor doc-state measure-fn))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; TODO: continue fixing stuff that's broken with two paragraphs
+; make shift+left and shift+right work
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; TODO: Handle shifting selection left/right
 ;; TODO: Handle shifting selection up/down
 ;; TODO: Handle ctrl+left and ctrl+right
