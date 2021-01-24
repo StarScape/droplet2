@@ -267,26 +267,61 @@
           (selection [(:uuid prev-para), (core/text-len prev-para)]))
         (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
-  ;; TODO: write tests for these at some point.
+  ;; TODO: It's possible these can be cleaned up, but *write tests* before
+  ;; trying to make them more elegant. That will make it a lot easier to prove
+  ;; easily that I'm not breaking them every time I switch an if around or something.
   Selectable
-  ;; TODO: fix these with multiple paragraphs
   (shift+right [doc sel]
-    (let [para ((:children doc) (sel/caret-para sel))]
+    (let [para ((:children doc) (sel/caret-para sel))
+          para-length (core/text-len para)
+          next-para (dll/next (:children doc) para)]
       (if (and (:backwards? sel) (sel/range? sel))
-        (sel/shift-caret sel 1)
-        (if (and (core/last-para? doc para)
-                 (= (sel/caret sel) (core/text-len para)))
+        (cond
+          (= (sel/caret sel) para-length)
+          (assoc sel :start {:offset 0, :paragraph (:uuid next-para)})
+
+          :else
+          (sel/shift-caret sel 1))
+        (cond
+          (and (core/last-para? doc para)
+               (= (sel/caret sel) para-length))
           sel
+
+          (= (sel/caret sel) para-length)
+          (assoc sel :end {:offset 0, :paragraph (:uuid next-para)})
+
+          :else
           (sel/shift-caret sel 1)))))
 
   (shift+left [doc sel]
-    (let [para ((:children doc) (sel/caret-para sel))]
-      (if (and (not (:backwards? sel)) (sel/range? sel))
-        (sel/shift-end sel -1)
-        (if (and (core/first-para? doc para)
-                 (zero? (sel/caret sel)))
+    (let [para ((:children doc) (sel/caret-para sel))
+          prev-para (dll/prev (:children doc) para)]
+      (if (sel/single? sel)
+        (cond
+          (and (core/first-para? doc para)
+               (zero? (sel/caret sel)))
           sel
-          (sel/shift-start sel -1)))))
+
+          (zero? (sel/caret sel))
+          (assoc sel
+                 :start {:offset (core/text-len prev-para) :paragraph (:uuid prev-para)}
+                 :backwards? true)
+
+          :else
+          (sel/shift-start sel -1))
+        (cond
+          (and (core/first-para? doc para)
+               (zero? (sel/caret sel)))
+          sel
+
+          (zero? (sel/caret sel))
+          (let [side (if (:backwards? sel) :start :end)]
+            (assoc sel side {:offset (core/text-len prev-para)
+                             :paragraph (:uuid prev-para)}))
+
+
+          :else
+          (sel/shift-caret sel -1)))))
 
   ;; TODO: ctrl+shift+left and ctrl+shift+right
   )

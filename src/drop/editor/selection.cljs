@@ -57,7 +57,6 @@
    :post [(nat-int? (caret %))]}
   (selection [paragraph (+ n offset)]))
 
-;; TODO: change name to shift-caret?
 (defn set-single
   "Sets a single-selection to a given offset."
   [sel offset]

@@ -5,7 +5,6 @@
             [drop.editor.core :as c]
             [drop.editor.dll :as dll]))
 
-
 (def caret-elem "<span class='text-caret'></span>")
 
 (defn- caret-in-span? [span pid selection]
@@ -35,7 +34,7 @@
    everything inside the selection, and everything after the end of the selection.
    If any of those don't make sense (i.e. the whole span is inside the selection, or
    none of it is), empty strings will be returned."
-  [span pid selection]
+  [span pid selection selection-ongoing?]
   ;; Maybe get rid of this if-not and add an explicit case in vm-span->dom for whether
   ;; or not the span interesects with any part of the selection? The "fall-through" here
   ;; is nice I guess, but it feels a lot like writing a special case implicitly but still
@@ -44,70 +43,97 @@
               (= pid (-> selection :end :paragraph)))
     ["", "", (:text span)]
     (let [text (:text span)
-          start (- (-> selection :start :offset) (:start-offset span))
-          end (- (-> selection :end :offset) (:start-offset span))]
+          p1 (-> selection :start :paragraph)
+          p2 (-> selection :end :paragraph)
+          start (if (and (= pid p1) (not selection-ongoing?))
+                  (- (-> selection :start :offset) (:start-offset span))
+                  0)
+          end (if (= pid p2)
+                (- (-> selection :end :offset) (:start-offset span))
+                (count text))]
       [(.substring text 0 start), (.substring text start end), (.substring text end)])))
 
 (defn vm-span->dom
   "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background."
-  [span selection pid para-length in-selection?]
-  (let [format-classes (formats->classes (:formats span))]
-    (if in-selection?
-      (let [[before-sel, inside-sel, after-sel] (split-span span pid selection)
-            span-end-offset (+ (:start-offset span) (count (:text span)))]
-        (str (<span> before-sel format-classes)
+  [span selection pid para-length selection-ongoing?]
+  (let [format-classes (formats->classes (:formats span))
+        [before-sel, inside-sel, after-sel] (split-span span pid selection selection-ongoing?)
+        span-end-offset (+ (:start-offset span) (count (:text span)))
+        start-in-span? (and (= pid (-> selection :start :paragraph))
+                            (>= (:start-offset span) (-> selection :start :offset)))
+        end-in-span? (and (= pid (-> selection :end :paragraph))
+                            (< span-end-offset (-> selection :end :offset)))
+        still-ongoing? (and (not end-in-span?)
+                            (or start-in-span? selection-ongoing?))]
+    [(str (<span> before-sel format-classes)
 
-             (when (and (:backwards? selection) (caret-in-span? span pid selection))
-               caret-elem)
+          (when (and (:backwards? selection) (caret-in-span? span pid selection))
+            caret-elem)
 
-             (<span> inside-sel (conj format-classes "range-selection"))
+          (<span> inside-sel (conj format-classes "range-selection"))
 
-             (when (or (and (caret-in-span? span pid selection)
-                            (not (:backwards? selection)))
-                       ;; Handle case where caret is at the end of para (caret == len of paragraph)
-                       (and (= (sel/caret selection) para-length span-end-offset)
-                            (= (sel/caret-para selection) pid)))
-               caret-elem)
+          (when (or (and (caret-in-span? span pid selection)
+                         (not (:backwards? selection)))
+                    ;; Handle case where caret is at the end of para (caret == len of paragraph)
+                    (and (= (sel/caret selection) para-length span-end-offset)
+                         (= (sel/caret-para selection) pid)))
+            caret-elem)
 
-             (<span> after-sel format-classes)))
-      (<span> (:text span) format-classes))))
+          (<span> after-sel format-classes))
+     still-ongoing?]))
 
 (defn vm-line->dom
   "Convert viewmodel line to DOM element."
-  [line selection pid para-length in-selection?]
-  (str "<div class='line'>"
-       (apply str (map #(vm-span->dom % selection pid para-length in-selection?) (:spans line)))
-       "</div>"))
+  [line selection pid para-length selection-ongoing?]
+  (loop [rendered-spans ""
+         spans (:spans line)
+         selection-ongoing? selection-ongoing?]
+    (if (empty? spans)
+      [(str "<div class='paragraph'>"
+           rendered-spans
+           "</div>"),
+       selection-ongoing?]
+      (let [span (first spans)
+            [rendered, ongoing?] (vm-span->dom span selection pid para-length selection-ongoing?)]
+        (recur (str rendered-spans rendered)
+               (rest spans)
+               ongoing?)))))
 
 (defn vm-para->dom
   "Convert viewmodel to DOM element."
-  [viewmodel selection in-selection?]
+  [viewmodel selection selection-ongoing?]
   (let [pid (-> viewmodel :paragraph :uuid)
         para-length (c/text-len (:paragraph viewmodel))]
-    (str "<div class='paragraph'>"
-         (apply str (map #(vm-line->dom % selection pid para-length in-selection?) (:lines viewmodel)))
-         "</div>")))
+    (loop [rendered-lines ""
+           lines (:lines viewmodel)
+           selection-ongoing? selection-ongoing?]
+      (if (empty? lines)
+        [(str "<div class='paragraph'>"
+             rendered-lines
+             "</div>"),
+         selection-ongoing?]
+        (let [line (first lines)
+              [rendered, ongoing?] (vm-line->dom line selection pid para-length selection-ongoing?)]
+          (recur (str rendered-lines rendered)
+                 (rest lines)
+                 ongoing?))))))
 
 (defn vm-paras->dom
   "Convert the list of [[ParagraphViewModel]]s to DOM elements.
    Selection is provided in order to render the caret and highlighted text."
   [vm-paras selection]
-  (let [selection-ongoing? (volatile! false)]
-    (str "<div class='document'>"
-         (apply str
-           (map (fn [vm-para]
-                  ;; Little state here, but it's not the worst.
-                  ;; Set selection-ongoing? to true when the selection starts,
-                  ;; and to false once the selection ends.
-                  (when (= (-> vm-para :paragraph :uuid) (-> selection :start :paragraph))
-                    (vreset! selection-ongoing? true))
-                  (let [dom-string (vm-para->dom vm-para selection @selection-ongoing?)]
-                    (when (= (-> vm-para :paragraph :uuid) (-> selection :end :paragraph))
-                      (vreset! selection-ongoing? false))
-
-                    dom-string))
-                 vm-paras))
-         "</div>")))
+  (loop [rendered-paras ""
+         vm-paras vm-paras
+         selection-ongoing? false]
+    (if (empty? vm-paras)
+      (str "<div class='document'>"
+           rendered-paras
+           "</div>")
+      (let [vm-para (first vm-paras)
+            [rendered, ongoing?] (vm-para->dom vm-para selection selection-ongoing?)]
+        (recur (str rendered-paras rendered)
+               (rest vm-paras)
+               ongoing?)))))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they
