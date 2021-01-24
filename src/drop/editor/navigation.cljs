@@ -102,7 +102,7 @@
         :else
         (until-non-word text start-offset)))))
 
-(defn- prev-word-offset
+(defn prev-word-offset
   "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]

@@ -6,8 +6,8 @@
 
 (def test-str "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")
 (def para (core/paragraph "p1" [(core/run test-str)]))
-
-(def doc (core/document [para, (core/paragraph "p2" [(core/run "foo bar?")])]))
+(def para2 (core/paragraph "p2" [(core/run "foo bar?")]))
+(def doc (core/document [para, para2]))
 
 (deftest start-test
   (testing "works for paragraphs"
@@ -166,6 +166,41 @@
 
   (testing "collapses to start when passed a range selection"
     (is (= (selection ["p1" 1]) (prev-char doc (selection ["p1" 1] ["p1" 7]))))))
+
+(deftest shift+right
+  ;; Forward selection
+  (testing "works with single selection"
+    (is (= (selection ["p1" 0] ["p1" 1] false)
+           (nav/shift+right doc (selection ["p1" 0])))))
+  (testing "works with forwards range selection"
+    (is (= (selection ["p1" 1] ["p1" 3] false)
+           (nav/shift+right doc (selection ["p1" 1] ["p1" 2])))))
+  (testing "works with forwards range selection across paragraphs"
+    (is (= (selection ["p1" 10] ["p2" 0])
+           (nav/shift+right doc (selection ["p1" 10] ["p1" (core/text-len para)])))))
+  (testing "won't let you go past end of last paragraph"
+    (is (= (selection ["p1" 10] ["p2" (core/text-len para2)])
+           (nav/shift+right doc (selection ["p1" 10] ["p2" (core/text-len para2)]))))
+    (is (= (selection ["p2" 0] ["p2" (core/text-len para2)])
+           (nav/shift+right doc (selection ["p2" 0] ["p2" (core/text-len para2)]))))
+    (is (= (selection ["p2" (core/text-len para2)])
+           (nav/shift+right doc (selection ["p2" (core/text-len para2)])))))
+  (testing "works with selecting to end of para with forwards range selection"
+    (is (= (selection ["p1" 0] ["p1" (core/text-len para)] false)
+           (nav/shift+right doc (selection ["p1" 0] ["p1" (dec (core/text-len para))])))))
+
+  ;; Backwards selection
+  (testing "works with backwards range"
+    (is (= (selection ["p1" 2] ["p1" 10] true)
+           (nav/shift+right doc (selection ["p1" 1] ["p1" 10] true)))))
+  (testing "works with collapsing a backwards range selection once it becomes single again"
+    (is (= (selection ["p1" 2] ["p1" 2] false)
+           (nav/shift+right doc (selection ["p1" 1] ["p1" 2] true)))))
+  (testing "works across paragraphs"
+    (is (= (selection ["p2" 0] ["p2" 5] true)
+           (nav/shift+right doc (selection ["p1" (core/text-len para)] ["p2" 5] true))))
+    (is (= (selection ["p1" 10] ["p2" 5] true)
+           (nav/shift+right doc (selection ["p1" 9] ["p2" 5] true))))))
 
 (deftest hyphen-back-and-forth-test
   (let [text "word1 a-very-long-hyphenated-word word2"]

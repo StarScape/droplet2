@@ -54,7 +54,7 @@
   "Shift a single-selection by `n` characters (can be positive or negative)."
   [{{paragraph :paragraph offset :offset} :start :as sel} n]
   {:pre [(single? sel)]
-   :post [(nat-int? (caret %))]}
+   :post [(single? %), (nat-int? (caret %))]}
   (selection [paragraph (+ n offset)]))
 
 (defn set-single
@@ -65,21 +65,30 @@
       (assoc-in [:start :offset] offset)
       (assoc-in [:end :offset] offset)))
 
+(defn correct-orientation
+  "Sets the selection's :backwards? field to false if it is a single selection."
+  [sel]
+  (if (single? sel)
+    (assoc sel :backwards? false)
+    sel))
+
 (defn shift-start
   "Expands or contracts the left side of the selection by `n` characters (can be positive or negative).
-   If selection is not a range-selection it is made one. Note that the returned selection
-   will always be `backwards?`."
+   If selection is not a range-selection it is made one."
   [sel n]
   {:pre [(if (single? sel) (<= n 0) true)]
    :post [(>= (-> % :start :offset) 0)]}
-  (-> sel (update-in [:start :offset] + n) (assoc :backwards? true)))
+  (-> sel
+      (update-in [:start :offset] + n)
+      (correct-orientation)))
 
 (defn shift-end
   "Expands or contracts the right side of the selection by `n` characters (can be positive or negative).
-   If selection is not a range-selection it is made one. Note that the returned selection
-   will always be forwards."
+   If selection is not a range-selection it is made one."
   [sel n]
-  (-> sel (update-in [:end :offset] + n) (assoc :backwards? false)))
+  (-> sel
+      (update-in [:end :offset] + n)
+      (correct-orientation)))
 
 (defn shift-caret
   "Moves the side of the selection with the caret on it by `n` characters. The other side
