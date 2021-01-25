@@ -74,21 +74,23 @@
 
 (defn shift-start
   "Expands or contracts the left side of the selection by `n` characters (can be positive or negative).
-   If selection is not a range-selection it is made one."
+   If selection is not a range-selection it is made one. Note the returned selection will always be backwards,
+   unless it is a single selection."
   [sel n]
   {:pre [(if (single? sel) (<= n 0) true)]
    :post [(>= (-> % :start :offset) 0)]}
   (-> sel
       (update-in [:start :offset] + n)
+      (assoc :backwards? true)
       (correct-orientation)))
 
 (defn shift-end
   "Expands or contracts the right side of the selection by `n` characters (can be positive or negative).
-   If selection is not a range-selection it is made one."
+   If selection is not a range-selection it is made one. Note the returned selection will always be forwards."
   [sel n]
   (-> sel
       (update-in [:end :offset] + n)
-      (correct-orientation)))
+      (assoc :backwards? false)))
 
 (defn shift-caret
   "Moves the side of the selection with the caret on it by `n` characters. The other side

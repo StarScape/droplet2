@@ -170,37 +170,82 @@
 (deftest shift+right
   ;; Forward selection
   (testing "works with single selection"
-    (is (= (selection ["p1" 0] ["p1" 1] false)
-           (nav/shift+right doc (selection ["p1" 0])))))
+    (is (= (nav/shift+right doc (selection ["p1" 0]))
+           (selection ["p1" 0] ["p1" 1] false))))
+
   (testing "works with forwards range selection"
-    (is (= (selection ["p1" 1] ["p1" 3] false)
-           (nav/shift+right doc (selection ["p1" 1] ["p1" 2])))))
+    (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 2]))
+           (selection ["p1" 1] ["p1" 3] false))))
+
   (testing "works with forwards range selection across paragraphs"
-    (is (= (selection ["p1" 10] ["p2" 0])
-           (nav/shift+right doc (selection ["p1" 10] ["p1" (core/text-len para)])))))
+    (is (= (nav/shift+right doc (selection ["p1" 10] ["p1" (core/text-len para)]))
+           (selection ["p1" 10] ["p2" 0]))))
+
   (testing "won't let you go past end of last paragraph"
-    (is (= (selection ["p1" 10] ["p2" (core/text-len para2)])
-           (nav/shift+right doc (selection ["p1" 10] ["p2" (core/text-len para2)]))))
-    (is (= (selection ["p2" 0] ["p2" (core/text-len para2)])
-           (nav/shift+right doc (selection ["p2" 0] ["p2" (core/text-len para2)]))))
-    (is (= (selection ["p2" (core/text-len para2)])
-           (nav/shift+right doc (selection ["p2" (core/text-len para2)])))))
+    (is (= (nav/shift+right doc (selection ["p1" 10] ["p2" (core/text-len para2)]))
+           (selection ["p1" 10] ["p2" (core/text-len para2)])))
+    (is (= (nav/shift+right doc (selection ["p2" 0] ["p2" (core/text-len para2)]))
+           (selection ["p2" 0] ["p2" (core/text-len para2)])))
+    (is (= (nav/shift+right doc (selection ["p2" (core/text-len para2)]))
+           (selection ["p2" (core/text-len para2)]))))
+
   (testing "works with selecting to end of para with forwards range selection"
-    (is (= (selection ["p1" 0] ["p1" (core/text-len para)] false)
-           (nav/shift+right doc (selection ["p1" 0] ["p1" (dec (core/text-len para))])))))
+    (is (= (nav/shift+right doc (selection ["p1" 0] ["p1" (dec (core/text-len para))]))
+           (selection ["p1" 0] ["p1" (core/text-len para)] false))))
 
   ;; Backwards selection
   (testing "works with backwards range"
-    (is (= (selection ["p1" 2] ["p1" 10] true)
-           (nav/shift+right doc (selection ["p1" 1] ["p1" 10] true)))))
+    (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 10] true))
+           (selection ["p1" 2] ["p1" 10] true))))
+
   (testing "works with collapsing a backwards range selection once it becomes single again"
-    (is (= (selection ["p1" 2] ["p1" 2] false)
-           (nav/shift+right doc (selection ["p1" 1] ["p1" 2] true)))))
+    (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 2] true))
+           (selection ["p1" 2] ["p1" 2] false))))
+
   (testing "works across paragraphs"
-    (is (= (selection ["p2" 0] ["p2" 5] true)
-           (nav/shift+right doc (selection ["p1" (core/text-len para)] ["p2" 5] true))))
-    (is (= (selection ["p1" 10] ["p2" 5] true)
-           (nav/shift+right doc (selection ["p1" 9] ["p2" 5] true))))))
+    (is (= (nav/shift+right doc (selection ["p1" (core/text-len para)] ["p2" 5] true))
+           (selection ["p2" 0] ["p2" 5] true)))
+    (is (= (nav/shift+right doc (selection ["p1" 9] ["p2" 5] true))
+           (selection ["p1" 10] ["p2" 5] true)))))
+
+(deftest shift+left
+  ;; Forward selection
+  (testing "works with single selection"
+    (is (= (nav/shift+left doc (selection ["p1" 2]))
+           (selection ["p1" 1] ["p1" 2] true)))
+    (is (= (nav/shift+left doc (selection ["p2" 0]))
+           (selection ["p1" (core/text-len para)] ["p2" 0] true))))
+
+  (testing "works with forwards range selection"
+    (is (= (nav/shift+left doc (selection ["p1" 1] ["p1" 5]))
+           (selection ["p1" 1] ["p1" 4]))))
+
+  (testing "collapses a forward range selection correctly when it has a length of 1"
+    (is (= (nav/shift+left doc (selection ["p1" 1] ["p1" 2]))
+           (selection ["p1" 1]))))
+
+  (testing "won't let you go past beginning of first paragraph"
+    (is (= (nav/shift+left doc (selection ["p1" 0]))
+           (selection ["p1" 0])))
+    (is (= (nav/shift+left doc (selection ["p1" 0] ["p1" 10] true))
+           (selection ["p1" 0] ["p1" 10] true))))
+
+  (testing "works across paragraphs with forwards selection"
+    (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 0]))
+           (selection ["p1" 10] ["p1" (core/text-len para)])))
+    (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 5]))
+           (selection ["p1" 10] ["p2" 4]))))
+
+  ;; Backwards selection
+  (testing "works with backwards range selection"
+    (is (= (nav/shift+left doc (selection ["p1" 1] ["p1" 10] true))
+           (selection ["p1" 0] ["p1" 10] true))))
+
+  (testing "works with backwards range selection across paragraphs"
+    (is (= (nav/shift+left doc (selection ["p2" 0] ["p2" 5] true))
+           (selection ["p1" (core/text-len para)] ["p2" 5] true)))
+    (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 5] true))
+           (selection ["p1" 9] ["p2" 5] true)))))
 
 (deftest hyphen-back-and-forth-test
   (let [text "word1 a-very-long-hyphenated-word word2"]
