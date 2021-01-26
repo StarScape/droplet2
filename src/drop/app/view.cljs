@@ -306,13 +306,13 @@
 (defn shift+up
   "Move the caret up into the next line. Returns a new selection."
   [{:keys [selection] :as doc-state} measure-fn]
-  (let [up-selection #p (up doc-state measure-fn)
-        ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
+  ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
+  (let [up-selection (up doc-state measure-fn)
+        para (sel/caret-para up-selection)
         offset (sel/caret up-selection)
-        para (sel/caret-para up-selection)]
-    (cond-> selection
-      :always
-      (assoc :start {:offset offset, :paragraph para} :backwards? true)
-
-      (not (:backwards? selection))
-      (assoc :end (:start selection)))))
+        up-caret {:paragraph para, :offset offset}]
+    (if (and (not (:backwards? selection)) (sel/range? selection))
+      (if (and (< offset (-> selection :start :offset)) (= para (-> selection :start :paragraph)))
+        (assoc selection :start up-caret, :end (:start selection), :backwards? true)
+        (assoc selection :end up-caret, :backwards? false))
+      (assoc selection :start up-caret, :backwards? true))))
