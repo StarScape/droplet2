@@ -323,6 +323,17 @@
           :else
           (sel/shift-caret sel -1)))))
 
+  (ctrl+shift+right [doc sel]
+    (let [next-word-sel (next-word doc sel)
+          new-caret {:paragraph (sel/caret-para next-word-sel)
+                     :offset (sel/caret next-word-sel)}]
+      (if (and (:backwards? sel) (sel/range? sel))
+        (if (and (< (:offset new-caret) (-> sel :end :offset))
+                 (= (:paragraph new-caret) (-> sel :end :paragraph)))
+          (assoc sel :start new-caret)
+          (assoc sel :start (:end sel), :end new-caret, :backwards? false))
+        (assoc sel :end new-caret, :backwards? false))))
+
   ;; TODO: ctrl+shift+left and ctrl+shift+right
   )
 

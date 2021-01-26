@@ -66,6 +66,8 @@
                  (update state :selection #(nav/next-word (:doc state) %)))
    :shift+right (fn [state _e]
                   (update state :selection #(nav/shift+right (:doc state) (:selection state))))
+   :ctrl+shift+right (fn [state _e]
+                       (update state :selection #(nav/ctrl+shift+right (:doc state) (:selection state))))
 
    :down (fn [state _e]
            (update state :selection #(view/down state measure-fn)))
@@ -88,10 +90,9 @@
 (defn ^:dev/after-load reload []
   (sync-dom fake-editor doc-state measure-fn))
 
-;; TODO: Handle shift+up and shift+down
-;; TODO: Handle ctrl+left and ctrl+right
 ;; TODO: Handle ctrl+shift+left and ctrl+shift+right
 ;; TODO: Handle input and deletion
 ;; TODO: Handle clicking
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)
 ;; TODO: Handle enter
+;; TODO: Make sure everything still works with 3 paragraphs
