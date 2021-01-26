@@ -184,13 +184,13 @@
 (defn line-with-caret
   "Returns the line in the viewmodel with the caret inside of it."
   [viewmodels selection]
-  ((:lines (viewmodels (-> selection :start :paragraph))) (caret-line-idx viewmodels selection)))
+  ((:lines (viewmodels (sel/caret-para selection))) (caret-line-idx viewmodels selection)))
 
 (defn line-above-caret
   "Returns the line in the viewmodel immediately above the line with the caret inside of it.
    If there is no line above the current line, returns null."
   [viewmodels selection]
-  (let [lines (:lines (viewmodels (-> selection :start :paragraph)))
+  (let [lines (:lines (viewmodels (sel/caret-para selection)))
         line-idx (dec (caret-line-idx viewmodels selection))]
     (get lines line-idx)))
 
@@ -198,7 +198,7 @@
   "Returns the line in the viewmodel immediately above the line with the caret inside of it.
    If there is no line above the current line, returns null."
   [viewmodels selection]
-  (let [lines (:lines (viewmodels (-> selection :start :paragraph)))
+  (let [lines (:lines (viewmodels (sel/caret-para selection)))
         line-idx (inc (caret-line-idx viewmodels selection))]
     (get lines line-idx)))
 
@@ -264,20 +264,6 @@
         (sel/selection [new-uuid next-line-offset]))
       selection)))
 
-(defn shift+down
-  "Move the caret down into the next line. Returns a new selection."
-  [{:keys [selection] :as doc-state} measure-fn]
-  (let [down-selection (down doc-state measure-fn)
-        ;; TODO: go to end of line if down-selection == selection
-        offset (sel/caret down-selection)
-        para (sel/caret-para down-selection)]
-    (cond-> selection
-      :always
-      (assoc :end {:offset offset, :paragraph para} :backwards? false)
-
-      (and (sel/range? selection) (:backwards? selection))
-      (assoc :start (:end selection)))))
-
 (defn up
   "Move the caret up into the next line. Returns a new selection."
   [{:keys [doc viewmodels] :as doc-state} measure-fn]
@@ -302,3 +288,31 @@
             next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
         (sel/selection [new-uuid next-line-offset]))
       selection)))
+
+(defn shift+down
+  "Move the caret down into the next line. Returns a new selection."
+  [{:keys [selection] :as doc-state} measure-fn]
+  ;; TODO: go to end of line if down-selection == selection (aka it's the last para)
+  (let [down-selection (down doc-state measure-fn)
+        para (sel/caret-para down-selection)
+        offset (sel/caret down-selection)
+        down-caret {:paragraph para, :offset offset}]
+    (if (and (:backwards? selection) (sel/range? selection))
+      (if (and (< offset (-> selection :end :offset)) (= para (-> selection :end :paragraph)))
+        (assoc selection :start down-caret, :backwards? true)
+        (assoc selection :start (:end selection), :end down-caret, :backwards? false))
+      (assoc selection :end down-caret, :backwards? false))))
+
+(defn shift+up
+  "Move the caret up into the next line. Returns a new selection."
+  [{:keys [selection] :as doc-state} measure-fn]
+  (let [up-selection #p (up doc-state measure-fn)
+        ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
+        offset (sel/caret up-selection)
+        para (sel/caret-para up-selection)]
+    (cond-> selection
+      :always
+      (assoc :start {:offset offset, :paragraph para} :backwards? true)
+
+      (not (:backwards? selection))
+      (assoc :end (:start selection)))))

@@ -29,11 +29,11 @@
 (def hidden-input (.querySelector js/document "#hidden-input"))
 (def measure-fn (ruler-for-elem fake-editor))
 (def para1
-  (c/paragraph [(c/run "Hello world, this is an example of a paragraph ")
-                (c/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
-                (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
+  (c/paragraph "p1" [(c/run "Hello world, this is an example of a paragraph ")
+                     (c/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
+                     (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
 (def para2
-  (c/paragraph [(c/run "And this is paragraph numero dos.")]))
+  (c/paragraph "p2" [(c/run "And this is paragraph numero dos.")]))
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
@@ -63,7 +63,7 @@
    :right (fn [state _e]
             (update state :selection #(nav/next-char (:doc state) %)))
    :ctrl+right (fn [state _e]
-                (update state :selection #(nav/next-word (:doc state) %)))
+                 (update state :selection #(nav/next-word (:doc state) %)))
    :shift+right (fn [state _e]
                   (update state :selection #(nav/shift+right (:doc state) (:selection state))))
 
@@ -72,7 +72,9 @@
    :shift+down (fn [state _e]
                  (update state :selection #(view/shift+down state measure-fn)))
    :up (fn [state _e]
-         (update state :selection #(view/up state measure-fn)))})
+         (update state :selection #(view/up state measure-fn)))
+   :shift+up (fn [state _e]
+               (update state :selection #(view/shift+up state measure-fn)))})
 
 (defn main []
   (.addEventListener js/document "keydown"
