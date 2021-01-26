@@ -264,6 +264,20 @@
         (sel/selection [new-uuid next-line-offset]))
       selection)))
 
+(defn shift+down
+  "Move the caret down into the next line. Returns a new selection."
+  [{:keys [selection] :as doc-state} measure-fn]
+  (let [down-selection (down doc-state measure-fn)
+        ;; TODO: go to end of line if down-selection == selection
+        offset (sel/caret down-selection)
+        para (sel/caret-para down-selection)]
+    (cond-> selection
+      :always
+      (assoc :end {:offset offset, :paragraph para} :backwards? false)
+
+      (and (sel/range? selection) (:backwards? selection))
+      (assoc :start (:end selection)))))
+
 (defn up
   "Move the caret up into the next line. Returns a new selection."
   [{:keys [doc viewmodels] :as doc-state} measure-fn]

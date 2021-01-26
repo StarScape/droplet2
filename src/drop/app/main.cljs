@@ -69,6 +69,8 @@
 
    :down (fn [state _e]
            (update state :selection #(view/down state measure-fn)))
+   :shift+down (fn [state _e]
+                 (update state :selection #(view/shift+down state measure-fn)))
    :up (fn [state _e]
          (update state :selection #(view/up state measure-fn)))})
 
