@@ -129,8 +129,10 @@
         :else
         (back-until-non-word text start-offset)))))
 
-;; TODO: should there be selection functions? Can be copied from JS implementation.
-;; UPDATE: I think this is a good idea and don't see why not.
+;; TODO: Something to think about for the future -- add functions for navigating between
+;; clauses, sentences, and paragraphs. Tentative keybinds for this: ctrl+)/ctrl+(, ctrl+]/ctrl+[,
+;; and ctrl+}, ctrl+{, respectively.
+
 (defprotocol Navigable
   "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new Selection."
   (start
@@ -334,8 +336,16 @@
           (assoc sel :start (:end sel), :end new-caret, :backwards? false))
         (assoc sel :end new-caret, :backwards? false))))
 
-  ;; TODO: ctrl+shift+left and ctrl+shift+right
-  )
+  (ctrl+shift+left [doc sel]
+    (let [prev-word-sel (prev-word doc sel)
+          new-caret {:paragraph (sel/caret-para prev-word-sel)
+                     :offset (sel/caret prev-word-sel)}]
+      (if (or (sel/single? sel) (and (:backwards? sel) (sel/range? sel)))
+        (assoc sel :start new-caret, :backwards? true)
+        (if (and (< (:offset new-caret) (-> sel :start :offset))
+                 (= (:paragraph new-caret) (-> sel :start :paragraph)))
+          (assoc sel :start new-caret, :end (:start sel), :backwards? true)
+          (assoc sel :end new-caret, :backwards? false))))))
 
 
 (comment

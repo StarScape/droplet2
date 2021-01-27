@@ -59,6 +59,8 @@
                 (update state :selection #(nav/prev-word (:doc state) %)))
    :shift+left (fn [state _e]
                  (update state :selection #(nav/shift+left (:doc state) (:selection state))))
+   :ctrl+shift+left (fn [state _e]
+                      (update state :selection #(nav/ctrl+shift+left (:doc state) (:selection state))))
 
    :right (fn [state _e]
             (update state :selection #(nav/next-char (:doc state) %)))
@@ -90,7 +92,6 @@
 (defn ^:dev/after-load reload []
   (sync-dom fake-editor doc-state measure-fn))
 
-;; TODO: Handle ctrl+shift+left and ctrl+shift+right
 ;; TODO: Handle input and deletion
 ;; TODO: Handle clicking
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)
