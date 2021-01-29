@@ -20,8 +20,9 @@
    representation between the model and the view, not because it's directly inspired by any of the MVC/psuedo-MVC
    frameworks that also happen to use that term."
   (:require [clojure.string :as str]
-            [drop.editor.measurement :refer [fake-measure-fn]]
-            [drop.editor.core :as c]))
+            [drop.editor.dll :as dll :refer [dll]]
+            [drop.editor.core :as c]
+            [drop.editor.measurement :refer [fake-measure-fn]]))
 
 ;; It is worth noting that this is some of my least favorite code in the whole project.
 ;; So if any unsuspecting soul happens to look at this someday, don't judge me too hard --
@@ -149,3 +150,10 @@
       (let [p (first paragraphs)
             vm (from-para p width measure-fn)]
         (recur (rest paragraphs) (assoc uuids->vms (:uuid p) vm))))))
+
+#_(defn from-doc
+  "Takes a [[Document]], converts each of its [[Paragraph]]s to [[ParagraphViewModel]]s,
+   and returns a a [[DLL]] of ParagraphViewModels."
+  [doc width measure-fn]
+  (dll)
+  #_(from-para p width measure-fn))

@@ -118,6 +118,9 @@
                  (rest lines)
                  ongoing?))))))
 
+;; TODO: rathering than returning all these tuples of [rendered, selection-ongoing?],
+;; would this be made better by the introduction of a dynamic var?
+
 (defn vm-paras->dom
   "Convert the list of [[ParagraphViewModel]]s to DOM elements.
    Selection is provided in order to render the caret and highlighted text."

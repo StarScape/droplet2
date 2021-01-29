@@ -356,13 +356,13 @@
 (defn first
   "Returns first element in DLL."
   [^DoublyLinkedList dll]
-  (if-let [first-node ^Node (get (.-entries-map dll) (.-first-uuid dll))]
+  (when-let [first-node ^Node (get (.-entries-map dll) (.-first-uuid dll))]
     (.-value first-node)))
 
 (defn last
   "Returns last element in DLL."
   [^DoublyLinkedList dll]
-  (if-let [first-node ^Node (get (.-entries-map dll) (.-last-uuid dll))]
+  (when-let [first-node ^Node (get (.-entries-map dll) (.-last-uuid dll))]
     (.-value first-node)))
 
 ;; TODO: make invariant that items must have UUID property
