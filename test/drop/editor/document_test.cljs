@@ -183,7 +183,7 @@
 
 (deftest delete-single-test
   (testing "does nothing at beginning of doc"
-    (is (= doc (c/delete doc (selection ["p1" 0])))))
+    (is (= doc (first (c/delete doc (selection ["p1" 0]))))))
 
   (testing "deletes single char in middle of paragraph"
     (is (= [[:p
@@ -192,7 +192,7 @@
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/delete doc (selection ["p1" 1]))))))
+           (convert-doc (first (c/delete doc (selection ["p1" 1])))))))
 
   (testing "deletes single char at end of paragraph"
     (is (= [[:p
@@ -201,7 +201,7 @@
              [:run "bizz" :italic]
              [:run "buz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/delete doc (selection ["p1" 14]))))))
+           (convert-doc (first (c/delete doc (selection ["p1" 14])))))))
 
   (testing "merges paragraphs when backspacing from start of paragraph that is not first"
     (is (= [[:p
@@ -210,7 +210,7 @@
              [:run "bizz" :italic]
              [:run "buzz" :bold]
              [:run "aaabbbcccddd"]]]
-           (convert-doc (c/delete doc (selection ["p2" 0]))))))
+           (convert-doc (first (c/delete doc (selection ["p2" 0])))))))
 
   (testing "deletes single char as normal at end of the paragraph"
     (is (= [[:p
@@ -219,7 +219,7 @@
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccdd"]]]
-           (convert-doc (c/delete doc (selection ["p2" 12])))))))
+           (convert-doc (first (c/delete doc (selection ["p2" 12]))))))))
 
 (deftest delete-range-test
   (testing "deletes from start of paragraph"
@@ -228,32 +228,40 @@
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/delete doc (selection ["p1" 0] ["p1" 3]))))))
+           (convert-doc (first (c/delete doc (selection ["p1" 0] ["p1" 3])))))))
+
+  (testing "deletes from start of paragraph backwards"
+    (is (= [[:p
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]]
+           (convert-doc (first (c/delete doc (selection ["p1" 0] ["p1" 3] true)))))))
 
   (testing "deletes up to end of paragraph"
     (is (= [[:p [:run "foo" :italic]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/delete doc (selection ["p1" 3] ["p1" 14]))))))
+           (convert-doc (first (c/delete doc (selection ["p1" 3] ["p1" 14])))))))
 
   (testing "deletes whole paragraph"
     (is (= [[:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/delete doc (selection ["p1" 0] ["p2" 0]))))))
+           (convert-doc (first (c/delete doc (selection ["p1" 0] ["p2" 0])))))))
 
   (testing "merges start and ending paragraphs when deleting across paragraphs"
     (is (= [[:p
              [:run "foo" :italic]
              [:run "bbbcccddd"]]]
-           (convert-doc (c/delete doc (selection ["p1" 3] ["p2" 3]))))))
+           (convert-doc (first (c/delete doc (selection ["p1" 3] ["p2" 3])))))))
 
   (testing "merges start and ending paragraphs when deleting across more than 2 paragraphs"
     (is (= [[:p
              [:run "foo1" :italic]
              [:run "foo4" :strike]]]
-           (convert-doc (c/delete long-doc (selection ["d1" 4] ["d4" 0]))))))
+           (convert-doc (first (c/delete long-doc (selection ["d1" 4] ["d4" 0])))))))
 
   (testing "deletes whole document"
     (is (= [[:p [:run ""]]]
-           (convert-doc (c/delete doc (selection ["p1" 0] ["p2" 12])))))))
+           (convert-doc (first (c/delete doc (selection ["p1" 0] ["p2" 12]))))))))
 
 (deftest enter-test
   (testing "works at start of paragraph"

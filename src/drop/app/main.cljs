@@ -71,6 +71,9 @@
                    new-doc (c/insert doc selection text)
                    new-selection (sel/shift-single selection (count text))]
                (assoc state :doc new-doc :selection new-selection)))
+   :delete (fn [{:keys [doc selection] :as state} _e]
+             (let [[new-doc, new-sel] (c/delete doc selection)]
+               (assoc state :doc new-doc :selection new-sel)))
 
    :left (fn [state _e]
            (update state :selection #(nav/prev-char (:doc state) %)))
@@ -114,6 +117,7 @@
     (fn [e]
       (case (.-inputType e)
         "insertText" (fire-interceptor (:insert interceptors) @doc-state e)
+        "deleteContentBackward" (fire-interceptor (:delete interceptors) @doc-state e)
         nil)))
 
   (sync-dom @doc-state fake-editor))
@@ -126,3 +130,5 @@
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)
 ;; TODO: Handle enter
 ;; TODO: Make sure everything still works with 3 paragraphs
+
+;; TODO: update everything to return a DocChange object (significant)

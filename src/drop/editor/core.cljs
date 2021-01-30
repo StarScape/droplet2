@@ -406,9 +406,12 @@
 
 ;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs
-  "Merges the two paragraphs."
-  [p1 p2]
-  (paragraph (:uuid p1) (vec (concat (:runs p1) (:runs p2)))))
+  "Merges the two paragraphs. By default new paragraph will have the UUID of `p1`.
+   Optionally takes a third parameter to set the UUID to whatever you want."
+  ([p1 p2 uuid]
+   (paragraph uuid (vec (concat (:runs p1) (:runs p2)))))
+  ([p1 p2]
+   (merge-paragraphs p1 p2 (:uuid p1))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                       ;;
@@ -513,7 +516,7 @@
     (condp = (type (first runs-or-paras))
       Run (insert-into-single-paragraph doc sel runs-or-paras)
       Paragraph (insert-paragraphs-into-doc doc sel runs-or-paras))
-    (insert (delete doc sel) (sel/collapse-start sel) runs-or-paras)))
+    (insert (first (delete doc sel)) (sel/collapse-start sel) runs-or-paras)))
 
 ;; TODO: make method instance with DLL as third param
 ;; TODO: could we make the delete-before-moving on logic here a little more elegant with a `cond->` form?
@@ -529,13 +532,13 @@
   [doc sel para]
   (if (sel/single? sel)
     (insert-into-single-paragraph doc sel (:runs para))
-    (insert-into-single-paragraph (delete doc sel) (sel/collapse-start sel) (:runs para))))
+    (insert-into-single-paragraph (first (delete doc sel)) (sel/collapse-start sel) (:runs para))))
 
 (defmethod insert [Document Selection Run]
   [doc sel r]
   (if (sel/single? sel)
     (insert-into-single-paragraph doc sel r)
-    (insert-into-single-paragraph (delete doc sel) (sel/collapse-start sel) r)))
+    (insert-into-single-paragraph (first (delete doc sel)) (sel/collapse-start sel) r)))
 
 (defmethod insert [Document Selection js/String]
   [doc sel text]
@@ -554,9 +557,13 @@
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
     (if (= (sel/start-para sel) (-> doc :children dll/first :uuid))
-      doc
-      (merge-paragraph-with-previous doc (-> sel :start :paragraph)))
-    (update-in doc [:children (sel/start-para sel)] delete sel)))
+      [doc, sel]
+      (let [uuid (sel/caret-para sel)
+            prev-para (dll/prev (:children doc) uuid)]
+        [(merge-paragraph-with-previous doc uuid)
+         (selection [(:uuid prev-para), (text-len prev-para)])]))
+    [(update-in doc [:children (sel/start-para sel)] delete sel)
+     (sel/shift-single sel -1)]))
 
 (defn- doc-range-delete [doc sel]
   (let [startp-uuid (-> sel :start :paragraph)
@@ -568,9 +575,12 @@
                    (merge-paragraphs
                     (delete-after (children startp-uuid) (-> sel :start :offset))
                     (delete-before (children endp-uuid) (-> sel :end :offset))))
+        ;; new-sel (if (= startp-uuid endp-uuid))
         new-children (dll/replace-range children startp-uuid endp-uuid new-para)]
-    (assoc doc :children new-children)))
+    [(assoc doc :children new-children)
+     (sel/collapse-start sel)]))
 
+;; TODO: switch this over to returning a document change object
 (defmethod delete [Document Selection]
   [doc sel]
   (if (sel/single? sel)
