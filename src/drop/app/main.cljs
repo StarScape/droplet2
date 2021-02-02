@@ -9,6 +9,11 @@
 
 ;; main
 
+;; TODO: this can be changed to a `find-interceptor` function that takes
+;; an event and a map of all the interceptors and returns one if it exists
+;; or null otherwise (maybe a no-op otherwise?). This will also give us more
+;; flexibility in defining how events cascade (if at all?) and allow modifier
+;; keys to be written in any order.
 (defn parse-event [e]
   (let [modifiers (cond-> (transient [])
                     (.-ctrlKey e) (conj! "ctrl")
@@ -42,8 +47,6 @@
                       :selection (sel/selection [(:uuid para1) 0])
                       ;; TODO: just change to a DLL of viewmodels?
                       :viewmodels (vm/from-doc initial-doc 200 measure-fn)}))
-
-;; TODO: fix rendering of empty paragraph
 
 (defn sync-dom
   [{:keys [viewmodels doc selection] :as _doc-state} root-elem]
@@ -109,9 +112,9 @@
     (fn [_e]
       (.focus hidden-input)))
 
-  (.addEventListener js/document "keydown"
+  (.addEventListener hidden-input "keydown"
     (fn [e]
-      (when-let [interceptor-fn (get interceptors #p (parse-event e))]
+      (when-let [interceptor-fn (get interceptors (parse-event e))]
         (.preventDefault e)
         (fire-interceptor interceptor-fn @doc-state e))))
 
@@ -127,10 +130,9 @@
 (defn ^:dev/after-load reload []
   (sync-dom @doc-state fake-editor))
 
-;; TODO: Handle input and deletion
+;; TODO: render "nub" whenever an empty paragraph is inside selection
 ;; TODO: Handle clicking
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)
-;; TODO: Handle enter
 ;; TODO: Make sure everything still works with 3 paragraphs
 
-;; TODO: update everything to return a DocChange object (significant)
+;; TODO: update everything to return a doc change object (significant)

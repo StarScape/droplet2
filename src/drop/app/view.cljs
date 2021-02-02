@@ -21,6 +21,7 @@
    Used as a helper function by vm-span->dom."
   [text classes]
   (if (empty? text)
+    ;; TODO: should we return an empty <span> instead?
     ""
     (str "<span class='span " (str/join " " classes) "'>"
          text
