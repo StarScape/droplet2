@@ -272,7 +272,7 @@
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/enter doc (selection ["p1" 0]))))))
+           (convert-doc (first (c/enter doc (selection ["p1" 0])))))))
 
   (testing "works at end of paragraph"
     (is (= [[:p
@@ -282,17 +282,16 @@
              [:run "buzz" :bold]]
             [:p [:run ""]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/enter doc (selection ["p1" 14]))))))
+           (convert-doc (first (c/enter doc (selection ["p1" 14])))))))
 
   (testing "works in middle of paragraph"
     (is (= [[:p [:run "foo" :italic]]
-            [:p [:run ""]]
             [:p
              [:run "bar" :bold :italic]
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (c/enter doc (selection ["p1" 3]))))))
+           (convert-doc (first (c/enter doc (selection ["p1" 3])))))))
 
   (testing "works at end of doc"
     (is (= [[:p
@@ -302,7 +301,17 @@
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]
             [:p [:run ""]]]
-           (convert-doc (c/enter doc (selection ["p2" 12])))))))
+           (convert-doc (first (c/enter doc (selection ["p2" 12])))))))
+
+  (testing "works with range selection"
+    (is (= [[:p
+             [:run "foo" :italic]
+             [:run "bar" :bold :italic]
+             [:run "bizz" :italic]
+             [:run "buzz" :bold]]
+            [:p [:run "aaabbbcccddd"]]
+            [:p [:run ""]]]
+           (convert-doc (first (c/enter doc (selection ["p2" 12]))))))))
 
 (deftest selected-content-test
   (testing "returns list of runs when passed selection within one paragraph"

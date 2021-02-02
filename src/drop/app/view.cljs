@@ -18,7 +18,7 @@
 (defn- <span>
   "Returns a DOM string of a <span> element with `text` inside it.
    Will return an empty string if there is no text.
-   Used as a helper function by vm-span->dom"
+   Used as a helper function by vm-span->dom."
   [text classes]
   (if (empty? text)
     ""
@@ -89,9 +89,9 @@
          spans (:spans line)
          selection-ongoing? selection-ongoing?]
     (if (empty? spans)
-      [(str "<div class='paragraph'>"
-           rendered-spans
-           "</div>"),
+      [(str "<div class='line'>"
+            rendered-spans
+            "</div>"),
        selection-ongoing?]
       (let [span (first spans)
             [rendered, ongoing?] (vm-span->dom span selection pid para-length selection-ongoing?)]
@@ -109,8 +109,8 @@
            selection-ongoing? selection-ongoing?]
       (if (empty? lines)
         [(str "<div class='paragraph'>"
-             rendered-lines
-             "</div>"),
+              rendered-lines
+              "</div>")
          selection-ongoing?]
         (let [line (first lines)
               [rendered, ongoing?] (vm-line->dom line selection pid para-length selection-ongoing?)]

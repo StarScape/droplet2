@@ -36,7 +36,7 @@
 (defrecord Span [text formats start-offset width])
 
 (defn empty-span [] (->Span "" #{} 0 0))
-(defn empty-line [] (->Line [] 0 0 0))
+(defn empty-line [] (->Line [(empty-span)] 0 0 0))
 
 (defn get-words
   "Splits string `s` into a vector of words."
@@ -50,16 +50,21 @@
         offset (if prev-span
                  (+ (count (:text prev-span)) (:start-offset prev-span))
                  (:start-offset line))
-        span' (assoc span :start-offset offset)]
-    (-> line
+        span' (assoc span :start-offset offset)
+        ;; If there is an empty span hanging on the line, trim it off
+        line-cleaned (cond-> line
+                       (and prev-span (empty? (:text prev-span)))
+                       (update :spans pop))]
+    (-> line-cleaned
         (update :spans conj span')
         (update :width + (:width span'))
         (update :end-offset + (count (:text span'))))))
 
-(defn line-after
-  "Returns a new empty line with offsets set to immediately after `prev-line`."
-  [prev-line]
-  (->Line [] (:end-offset prev-line) (:end-offset prev-line) 0))
+(defn add-line
+  "Adds a new empty line to the vector of lines, returning the new list."
+  [lines]
+  (let [prev-line (or (peek lines) (empty-line))]
+    (conj lines (->Line [] (:end-offset prev-line) (:end-offset prev-line) 0))))
 
 (defn max-words
   "Takes the maximum number of words from string `src` without exceeding `space-left`,
@@ -70,7 +75,7 @@
     (let [next-word (first words)
           new-text (str out next-word)
           new-width (measure-fn (.trim new-text) formats)]
-      (if (and (not-empty words)
+      (if (and (seq words)
                (<= (int new-width) space-left))
         (recur new-text (rest words))
         [out (apply str words)]))))
@@ -79,10 +84,10 @@
   (max-words "the second line now. " #{} 300 fake-measure-fn)
   (max-words "foobar bizz buzz hello hello a goodbye" #{} 300 fake-measure-fn))
 
-;; TODO: rename to `max-span-from-run` or something similar.
-(defn add-max-to-span
-  "Adds as many words to `span` as it can without exceeding the width of `space-left`,
-   then returns the span and a run with the text that would not fit (if any)."
+(defn max-span-from-run
+  "Constructs a span of as many of the words from `run` as it can without exceeding
+   the width of `space-left`, then returns the span and a run with the text that would
+   not fit (if any)."
   [run space-left measure-fn]
   (let [span (->Span "" (:formats run) 0 0)
         [span-text, remaining-text] (max-words (:text run) (:formats run) space-left measure-fn)]
@@ -90,27 +95,27 @@
      (c/run remaining-text (:formats run))]))
 
 (comment
-  (add-max-to-span (c/run "foobar bizz buzz hello hello goodbye") 300 fake-measure-fn)
-  (add-max-to-span (c/run "foobar bizz buzz hello hello a goodbye") 300 fake-measure-fn) ; be sure and test this
-  (add-max-to-span (c/run "foobar bizz buzz hello hello a goodbye") 10 fake-measure-fn) ; be sure and test this
-  (add-max-to-span (c/run "the second line now. ") 300 fake-measure-fn))
+  (max-span-from-run (c/run "foobar bizz buzz hello hello goodbye") 300 fake-measure-fn)
+  (max-span-from-run (c/run "foobar bizz buzz hello hello a goodbye") 300 fake-measure-fn) ; be sure and test this
+  (max-span-from-run (c/run "foobar bizz buzz hello hello a goodbye") 10 fake-measure-fn) ; be sure and test this
+  (max-span-from-run (c/run "the second line now. ") 300 fake-measure-fn))
 
 (defn add-max-to-lines
   "Adds the maximum amount of chars from `run` onto the last line in `line`, adding
    an extra line to the end of lines if necessary. Returns updated list of lines, and
    a run with text that did not fit on line (can be empty), as a pair."
   [lines run width measure-fn]
-  (let [last-line (peek lines)
-        space-left (- width (:width last-line))
-        [new-span, remaining] (add-max-to-span run space-left measure-fn)]
-    [(as-> lines lines'
-       (if (not-empty (:text new-span))
-         (update lines' (dec (count lines')) add-span new-span)
-         lines')
-       (if (not-empty (:text remaining))
-         (conj lines' (line-after (peek lines')))
-         lines'))
-     remaining]))
+  (let [space-left (- width (:width (peek lines)))
+        [new-span, remaining] (max-span-from-run run space-left measure-fn)
+        new-lines (cond-> lines
+                    ;; If any words were able to fit, put them on the line
+                    (seq (:text new-span))
+                    (update (dec (count lines)) add-span new-span)
+
+                    ;; If there is any remaining text that would not fit, add a new line
+                    (seq (:text remaining))
+                    (add-line))]
+    [new-lines, remaining]))
 
 (comment
   (add-max-to-lines [(empty-line)] (c/run "foobar bizz buzz hello hello goodbye") 300 fake-measure-fn)
@@ -125,10 +130,11 @@
   ([lines runs width measure-fn]
    (if (empty? runs)
      lines
-     (let [[lines' leftover] (add-max-to-lines lines (first runs) width measure-fn)
+     (let [[new-lines, leftover] (add-max-to-lines lines (first runs) width measure-fn)
            remaining-runs (cond->> (rest runs)
-                            (not-empty (:text leftover)) (cons leftover))]
-       (recur lines' remaining-runs width measure-fn)))))
+                            (seq (:text leftover))
+                            (cons leftover))]
+       (recur new-lines remaining-runs width measure-fn)))))
 
 (comment
   (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fake-measure-fn)

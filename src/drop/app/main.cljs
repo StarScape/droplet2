@@ -20,7 +20,7 @@
               "ArrowRight" "right"
               "ArrowUp" "up"
               "ArrowDown" "down"
-              (-> (.-key e) .toLowerCase keyword))]
+              (-> (.-key e) .toLowerCase))]
     (->> (conj modifiers key)
          (str/join "+")
          (keyword))))
@@ -37,23 +37,22 @@
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
-(def initial-doc (c/document [para1 para2]))
+(def initial-doc (c/document [para1 (c/paragraph) para2]))
 (def doc-state (atom {:doc initial-doc
                       :selection (sel/selection [(:uuid para1) 0])
                       ;; TODO: just change to a DLL of viewmodels?
                       :viewmodels (vm/from-doc initial-doc 200 measure-fn)}))
 
-;; TODO: first order of business for tomorrow is to switch :viewmodels to a DLL,
-;; and then automatically sync them each time an interceptor is called. Fix the bug with input
+;; TODO: fix rendering of empty paragraph
 
 (defn sync-dom
-  [{:keys [viewmodels doc selection] :as doc-state} root-elem]
+  [{:keys [viewmodels doc selection] :as _doc-state} root-elem]
   (let [vm-paras (map #(get viewmodels (:uuid %)) (:children doc))
         rendered (view/vm-paras->dom vm-paras selection)]
     (set! (.-innerHTML root-elem) rendered)))
 
 (defn fire-interceptor
-  "Calls the interceptors with the provided args."
+  "Calls the interceptor with the provided args."
   [interceptor-fn state e]
   (let [old-state @doc-state
         changed (interceptor-fn state e)
@@ -74,6 +73,9 @@
    :delete (fn [{:keys [doc selection] :as state} _e]
              (let [[new-doc, new-sel] (c/delete doc selection)]
                (assoc state :doc new-doc :selection new-sel)))
+   :enter (fn [{:keys [doc selection] :as state} _e]
+            (let [[new-doc, new-sel] (c/enter doc selection)]
+             (assoc state :doc new-doc :selection new-sel)))
 
    :left (fn [state _e]
            (update state :selection #(nav/prev-char (:doc state) %)))
@@ -109,7 +111,7 @@
 
   (.addEventListener js/document "keydown"
     (fn [e]
-      (when-let [interceptor-fn (get interceptors (parse-event e))]
+      (when-let [interceptor-fn (get interceptors #p (parse-event e))]
         (.preventDefault e)
         (fire-interceptor interceptor-fn @doc-state e))))
 

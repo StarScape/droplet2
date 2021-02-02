@@ -28,7 +28,7 @@
            [{:start-offset 0
              :end-offset 0
              :width 0
-             :spans []}])))
+             :spans [{:text "", :formats #{}, :start-offset 0, :width 0}]}])))
 
   (testing "works with a run that fits on just one line"
     (is (= (unrecord (vm/lineify [(c/run "foobar")] 300 fake-measure-fn))

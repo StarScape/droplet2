@@ -545,14 +545,20 @@
   (insert-into-single-paragraph doc sel (run text)))
 
 (defn insert-paragraph-before
-  "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`."
-  [doc uuid]
-  (replace-paragraph-with doc uuid [(paragraph) ((:children doc) uuid)]))
+  "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.
+   Optionally takes a UUID to assign to the new paragraph."
+  ([doc uuid new-para-uuid]
+   (replace-paragraph-with doc uuid [(assoc (paragraph) :uuid new-para-uuid) ((:children doc) uuid)]))
+  ([doc uuid]
+   (insert-paragraph-before doc uuid (random-uuid))))
 
 (defn insert-paragraph-after
-  "Inserts an empty paragraph into the document immediately after the paragraph with UUID `uuid`."
-  [doc uuid]
-  (replace-paragraph-with doc uuid [((:children doc) uuid) (paragraph)]))
+  "Inserts an empty paragraph into the document immediately after the paragraph with UUID `uuid`.
+   Optionally takes a UUID to assign to the new paragraph."
+  ([doc uuid new-para-uuid]
+   (replace-paragraph-with doc uuid [((:children doc) uuid) (assoc (paragraph) :uuid new-para-uuid)]))
+  ([doc uuid]
+   (insert-paragraph-after doc uuid (random-uuid))))
 
 (defn- doc-single-delete [doc sel]
   (if (zero? (sel/caret sel))
@@ -592,18 +598,23 @@
    Creates a new paragraph in the appropriate position in the doc."
   [doc sel]
   (let [caret (sel/caret sel)
-        para-uuid (-> sel :start :paragraph)
-        para ((:children doc) para-uuid)]
-    (cond
-      (= caret 0)
-      (insert-paragraph-before doc (-> sel :start :paragraph))
+        uuid (-> sel :start :paragraph)
+        para ((:children doc) uuid)]
+    (if (sel/range? sel)
+      (let [[new-doc, new-sel] (delete doc sel)]
+        (enter new-doc new-sel))
+      (cond
+        (= caret 0)
+        [(insert-paragraph-before doc uuid), sel]
 
-      (= caret (text-len para))
-      (insert-paragraph-after doc (-> sel :start :paragraph))
+        (= caret (text-len para))
+        (let [new-uuid (random-uuid)]
+          [(insert-paragraph-after doc uuid new-uuid), (selection [new-uuid 0])])
 
-      :else
-      (let [[para1 para2] (split-paragraph doc sel)]
-        (replace-paragraph-with doc para-uuid [para1 (paragraph) para2])))))
+        :else
+        (let [[para1 para2] (split-paragraph doc sel)]
+          [(replace-paragraph-with doc uuid [para1 para2]),
+           (selection [(:uuid para2) 0])])))))
 
 ;; TODO: move to block below?
 (defn doc-selected-content
