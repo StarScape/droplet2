@@ -15,26 +15,28 @@
          (>= caret span-start)
          (< caret span-end))))
 
-(defn- <span>
-  "Returns a DOM string of a <span> element with `text` inside it.
-   Will return an empty string if there is no text.
-   Used as a helper function by vm-span->dom."
-  [text classes]
-  (if (empty? text)
-    ;; TODO: should we return an empty <span> instead?
-    ""
-    (str "<span class='span " (str/join " " classes) "'>"
-         text
-         "</span>")))
-
 (defn formats->classes [formats]
   (map #(str (name %) "-format") formats))
+
+(defn- <span>
+  "Returns a DOM string of a <span> element with `text` inside it.
+   Will return an empty string if text is nil. Used as a helper function
+   by vm-span->dom."
+  [text classes]
+  (if (nil? text)
+    ""
+    (str "<span class='span " (str/join " " classes) "'>"
+         ;; If text is an empty string, add a space.
+         ;; This will only ever happen in the case of an empty paragraph.
+         (or (not-empty text) " ")
+         "</span>")))
 
 (defn split-span
   "Splits the span into three strings: everything before the start of the selection,
    everything inside the selection, and everything after the end of the selection.
+   Returns a map of each with keys :before-sel, :inside-sel, :after-sel.
    If any of those don't make sense (i.e. the whole span is inside the selection, or
-   none of it is), empty strings will be returned."
+   none of it is), those fields will be nil."
   [span pid selection selection-ongoing?]
   ;; Maybe get rid of this if-not and add an explicit case in vm-span->dom for whether
   ;; or not the span interesects with any part of the selection? The "fall-through" here
@@ -42,7 +44,9 @@
   ;; actually depending on it in practice.
   (if-not (or (= pid (-> selection :start :paragraph))
               (= pid (-> selection :end :paragraph)))
-    ["", "", (:text span)]
+    (if selection-ongoing?
+      {:inside-sel (:text span)}
+      {:after-sel (:text span)})
     (let [text (:text span)
           p1 (-> selection :start :paragraph)
           p2 (-> selection :end :paragraph)
@@ -52,20 +56,34 @@
           end (if (= pid p2)
                 (- (-> selection :end :offset) (:start-offset span))
                 (count text))]
-      [(.substring text 0 start), (.substring text start end), (.substring text end)])))
+      {:before-sel (not-empty (.substring text 0 start))
+       :inside-sel (not-empty (.substring text start end))
+       :after-sel (not-empty (.substring text end))})))
 
 (defn vm-span->dom
   "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background."
   [span selection pid para-length selection-ongoing?]
-  (let [format-classes (formats->classes (:formats span))
-        [before-sel, inside-sel, after-sel] (split-span span pid selection selection-ongoing?)
-        span-end-offset (+ (:start-offset span) (count (:text span)))
-        start-in-span? (and (= pid (-> selection :start :paragraph))
-                            (>= (:start-offset span) (-> selection :start :offset)))
-        end-in-span? (and (= pid (-> selection :end :paragraph))
-                            (< span-end-offset (-> selection :end :offset)))
-        still-ongoing? (and (not end-in-span?)
-                            (or start-in-span? selection-ongoing?))]
+  (let [format-classes
+        (formats->classes (:formats span))
+
+        {:keys [before-sel, inside-sel, after-sel]}
+        (split-span span pid selection selection-ongoing?)
+
+        span-end-offset
+        (+ (:start-offset span) (count (:text span)))
+
+        start-in-span?
+        (and (= pid (-> selection :start :paragraph))
+             (>= (:start-offset span) (-> selection :start :offset)))
+
+        end-in-span?
+        (or (and (= pid (-> selection :end :paragraph))
+                 (< (-> selection :end :offset) span-end-offset))
+            (= span-end-offset (-> selection :end :offset) para-length))
+
+        still-ongoing?
+        (or (and selection-ongoing? (not end-in-span?))
+            (and start-in-span? (not end-in-span?)))]
     [(str (<span> before-sel format-classes)
 
           (when (and (:backwards? selection) (caret-in-span? span pid selection))
@@ -143,7 +161,7 @@
 ;; up/down have to be handled a little differently than other events because they
 ;; are depedent on where the document is split into lines.
 
-;; TODO: delete this and use split-span above.
+;; TODO: delete this and use split-span above (somehow - unify the two abstracshuns if possible).
 (defn split-span2
   "Splits the span into two at the paragraph offset, and return a vector of [before, after]."
   [span offset]

@@ -38,7 +38,7 @@
                      (c/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                      (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
 (def para2
-  (c/paragraph "p2" [(c/run "And this is paragraph numero dos.")]))
+  (c/paragraph "p3" [(c/run "And this is paragraph numero dos.")]))
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
