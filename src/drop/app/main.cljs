@@ -130,7 +130,9 @@
 (defn ^:dev/after-load reload []
   (sync-dom @doc-state fake-editor))
 
-;; TODO: render "nub" whenever an empty paragraph is inside selection
+;; TODO: fix bug - if you position the cursor just before "Hmmmm..." and shift-down into the third para,
+;; the nub is not rendered correctly
+
 ;; TODO: Handle clicking
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)
 ;; TODO: Make sure everything still works with 3 paragraphs
