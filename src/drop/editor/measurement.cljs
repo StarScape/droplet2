@@ -38,7 +38,6 @@
                      (do
                        (apply-css elem formats)
                        (set! (.-innerHTML elem) char)
-                       (set! js/fuck cache)
                        (aset cache cache-key (.. elem (getBoundingClientRect) -width)))))))
           (reduce +)))))
 

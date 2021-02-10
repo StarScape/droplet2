@@ -135,9 +135,9 @@
    Selection is provided in order to render the caret and highlighted text."
   [vm-paras selection]
   (binding [*selection-ongoing?* false]
-   (str "<div class='document'>"
-        (apply str (map #(vm-para->dom % selection) vm-paras))
-        "</div>")))
+    (str "<div class='document'>"
+         (apply str (map #(vm-para->dom % selection) vm-paras))
+         "</div>")))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they
