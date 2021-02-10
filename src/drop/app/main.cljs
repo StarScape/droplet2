@@ -37,14 +37,14 @@
   (c/paragraph "p1" [(c/run "Hello world, this is an example of a paragraph ")
                      (c/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                      (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
-(def para2
+(def para3
   (c/paragraph "p3" [(c/run "And this is paragraph numero dos.")]))
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
-(def initial-doc (c/document [para1 (c/paragraph) para2]))
+(def initial-doc (c/document [para1 (c/paragraph) para3]))
 (def doc-state (atom {:doc initial-doc
-                      :selection (sel/selection [(:uuid para1) 0])
+                      :selection (sel/selection [(:uuid para1) 170] [(:uuid para3) 5])
                       ;; TODO: just change to a DLL of viewmodels?
                       :viewmodels (vm/from-doc initial-doc 200 measure-fn)}))
 
@@ -130,8 +130,9 @@
 (defn ^:dev/after-load reload []
   (sync-dom @doc-state fake-editor))
 
-;; TODO: fix bug - if you position the cursor just before "Hmmmm..." and shift-down into the third para,
-;; the nub is not rendered correctly
+;; TODO: another bug - if you go to the end of the paragraph and hold down 'a' (or any key) it will freeze the editor.
+;; It appears that it is causing a stack overflow, probably because it is failing to ever add a word to the line as the
+;; single word is too large.
 
 ;; TODO: Handle clicking
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)

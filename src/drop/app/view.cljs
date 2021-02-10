@@ -82,12 +82,14 @@
 
         start-in-span?
         (and (= pid (-> selection :start :paragraph))
-             (>= (:start-offset span) (-> selection :start :offset)))
+             (>= (-> selection :start :offset) (:start-offset span))
+             (< (-> selection :start :offset) span-end-offset))
 
         end-in-span?
         (or (and (= pid (-> selection :end :paragraph))
                  (< (-> selection :end :offset) span-end-offset))
-            (= span-end-offset (-> selection :end :offset) para-length))
+            (and (= pid (-> selection :end :paragraph))
+                 (= span-end-offset (-> selection :end :offset) para-length)))
 
         still-ongoing?
         (or (and *selection-ongoing?* (not end-in-span?))
@@ -122,6 +124,8 @@
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
         para-length (c/text-len (:paragraph viewmodel))]
+    ; #p (:paragraph viewmodel)
+    ; #p *selection-ongoing?*
     (str "<div class='paragraph'>"
          (apply str (map #(vm-line->dom % selection pid para-length) lines))
          "</div>")))
@@ -130,9 +134,10 @@
   "Convert the list of [[ParagraphViewModel]]s to DOM elements.
    Selection is provided in order to render the caret and highlighted text."
   [vm-paras selection]
-  (str "<div class='document'>"
-       (apply str (map #(vm-para->dom % selection) vm-paras))
-       "</div>"))
+  (binding [*selection-ongoing?* false]
+   (str "<div class='document'>"
+        (apply str (map #(vm-para->dom % selection) vm-paras))
+        "</div>")))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they
