@@ -34,11 +34,11 @@
 (def hidden-input (.querySelector js/document "#hidden-input"))
 (def measure-fn (ruler-for-elem fake-editor))
 (def para1
-  (c/paragraph "p1" [(c/run "Hello world, this is an example of a paragraph ")
+  (c/paragraph (uuid "p1") [(c/run "Hello world, this is an example of a paragraph ")
                      (c/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                      (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
 (def para3
-  (c/paragraph "p3" [(c/run "And this is paragraph numero dos.")]))
+  (c/paragraph (uuid "p3") [(c/run "And this is paragraph numero dos.")]))
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
@@ -55,20 +55,25 @@
     (set! (.-innerHTML root-elem) rendered)))
 
 (defn fire-interceptor
-  "Calls the interceptor with the provided args."
-  [interceptor-fn state e]
+  "Calls the interceptor with the provided args (typically
+   state and the event object) and re-synces the DOM."
+  [interceptor-fn & args]
   (let [old-state @doc-state
-        changed (interceptor-fn state e)
+        changed (apply interceptor-fn args)
         doc (get changed :doc (:doc old-state))
         new-state (-> (merge old-state changed)
                       (assoc :viewmodels (vm/from-doc doc 200 measure-fn)))]
     (reset! doc-state new-state)
     (sync-dom @doc-state fake-editor)))
 
-;; TODO: test to make sure all of these work correctly with multiple paragraphs
 ;; TODO: change to a reg-interceptors! function call.
 (def interceptors
-  {:insert (fn [{:keys [doc selection] :as state} e]
+  {:click (fn [state clicked-elem e]
+            (let [clicked-para-vm (get-in state [:viewmodels (uuid (.-id clicked-elem))])
+                  new-sel (view/click e clicked-elem clicked-para-vm measure-fn)]
+              (assoc state :selection new-sel)))
+
+   :insert (fn [{:keys [doc selection] :as state} e]
              (let [text (.-data e)
                    new-doc (c/insert doc selection text)
                    new-selection (sel/shift-single selection (count text))]
@@ -109,8 +114,16 @@
 
 (defn main []
   (.addEventListener fake-editor "click"
-    (fn [_e]
-      (.focus hidden-input)))
+    (fn [e]
+      (.focus hidden-input)
+      (let [find-first #(first (filter %1 %2))
+            para-in-path (find-first #(= "paragraph" (.-className %)) (.-path e))
+            clicked-para para-in-path
+            ; TODO: handle case where you click above the first paragraph or below the last paragraph
+            #_(let [uuid (-> @doc-state :doc :children (peek) :uuid)]
+              (.getElementById js/document uuid))]
+        (when clicked-para
+          (fire-interceptor (:click interceptors) @doc-state clicked-para e)))))
 
   (.addEventListener hidden-input "keydown"
     (fn [e]
@@ -130,7 +143,6 @@
 (defn ^:dev/after-load reload []
   (sync-dom @doc-state fake-editor))
 
-;; TODO: Handle clicking
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)
 ;; TODO: Make sure everything still works with 3 paragraphs
 

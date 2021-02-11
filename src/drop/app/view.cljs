@@ -126,7 +126,7 @@
         para-length (c/text-len (:paragraph viewmodel))]
     ; #p (:paragraph viewmodel)
     ; #p *selection-ongoing?*
-    (str "<div class='paragraph'>"
+    (str "<div class='paragraph' id='" (:uuid (:paragraph viewmodel)) "'>"
          (apply str (map #(vm-line->dom % selection pid para-length) lines))
          "</div>")))
 
@@ -320,3 +320,29 @@
         (assoc selection :start up-caret, :end (:start selection), :backwards? true)
         (assoc selection :end up-caret, :backwards? false))
       (assoc selection :start up-caret, :backwards? true))))
+
+(defn calc-line-height
+  "Returns the actual *rendered* line height given a paragraph DOM element, in pixels."
+  [paragraph-dom-elem]
+  (let [first-dom-line (.querySelector paragraph-dom-elem ".line")]
+    (-> first-dom-line
+        (js/getComputedStyle)
+        (.getPropertyValue "height")
+        (js/parseFloat))))
+
+(defn click
+  ""
+  [e dom-elem {:keys [lines paragraph]} measure-fn]
+  (let [line-height (calc-line-height dom-elem)
+        dom-elem-rect (.getBoundingClientRect dom-elem)
+        px (- (.-clientX e) (.-x dom-elem-rect))
+        py (- (.-clientY e) (.-y dom-elem-rect))
+        line (cond
+               (< py 0) (first lines)
+               (> py (.-height dom-elem-rect)) (peek lines)
+               :else (nth lines (int (/ py line-height))))
+        offset (cond
+                 (< px 0) (:start-offset line)
+                 (> px (.-width dom-elem-rect)) (:end-offset line)
+                 :else (nearest-line-offset-to-pixel line px measure-fn))]
+    (sel/selection [(:uuid paragraph) offset])))
