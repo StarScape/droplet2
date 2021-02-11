@@ -106,7 +106,30 @@
                      {:text "now."
                       :formats #{:underline}
                       :start-offset 76
-                      :width 40}]}]))))
+                      :width 40}]}])))
+
+  (testing "works with a word too large to fit on a line"
+    (is (= (unrecord (vm/lineify [(c/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 fake-measure-fn))
+           [{:spans [{:text "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                      :formats #{}
+                      :start-offset 0
+                      :width 300}]
+             :start-offset 0
+             :end-offset 30
+             :width 300}
+            {:spans [{:text "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                      :formats #{}
+                      :start-offset 30
+                      :width 300}]
+             :start-offset 30
+             :end-offset 60, :width 300}
+            {:spans [{:text "aaaaaaaaaa"
+                      :formats #{}
+                      :start-offset 60
+                      :width 100}]
+             :start-offset 60
+             :end-offset 70
+             :width 100}]))))
 
 #_[(c/run "foobar bizz " #{})
  (c/run "buzz hello hello goodbye. And " #{:italic})
