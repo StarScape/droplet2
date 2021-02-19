@@ -162,6 +162,6 @@
   (sync-dom @doc-state fake-editor))
 
 ;; TODO: Handle drag selection (selection/expand-to function maybe?)
-;; TODO: Make sure everything still works with 3 paragraphs
+;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
 
 ;; TODO: update everything to return a doc change object (significant)
