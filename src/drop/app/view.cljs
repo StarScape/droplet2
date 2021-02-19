@@ -5,6 +5,15 @@
             [drop.editor.core :as c]
             [drop.editor.dll :as dll]))
 
+;; Utility functions
+(defn match-elem-in-path
+  "Returns the first element in the event's path that satisfies the given selector string
+   (e.g. '.someClass'), or null if one is not found. Will throw a SYNTAX_ERR if the selector
+   string is invalid."
+  [e selector-string]
+  (letfn [(selector-matches? [elem sstring]
+            (when (.-matches elem) (.matches elem sstring)))]
+    (first (filter #(selector-matches? % selector-string) (.-path e)))))
 
 ;; Dynamic var to indicate whether the selection is still ongoing.
 ;; This is something we need to keep track of between paragraphs
@@ -144,6 +153,9 @@
 ;; are depedent on where the document is split into lines.
 
 ;; TODO: delete this and use split-span above (somehow - unify the two abstracshuns if possible).
+;; A thought on how to do that: instead returns a map with keys :before, :after, and optionally
+;; :inside, and simply test for the existence of :inside in split-span - in this function it can
+;; be assumed it doesn't exist, since we're splitting at a single offset.
 (defn split-span2
   "Splits the span into two at the paragraph offset, and return a vector of [before, after]."
   [span offset]
@@ -325,16 +337,23 @@
   "Returns the actual *rendered* line height given a paragraph DOM element, in pixels."
   [paragraph-dom-elem]
   (let [first-dom-line (.querySelector paragraph-dom-elem ".line")]
+    (when (nil? first-dom-line)
+      (throw "Error in calc-line-height: the provided paragraph DOM element has no lines! This should never happen."))
+
     (-> first-dom-line
         (js/getComputedStyle)
         (.getPropertyValue "height")
         (js/parseFloat))))
 
 (defn click
-  ""
-  [e dom-elem {:keys [lines paragraph]} measure-fn]
-  (let [line-height (calc-line-height dom-elem)
-        dom-elem-rect (.getBoundingClientRect dom-elem)
+  "Returns a new selection set to where a click occured.
+   e: MouseEvent of click
+   paragraph-dom-elem: the DOM element of the paragraph clicked
+   viewmodel: the viewmodel associated with that paragraph
+   measure-fn: measure-fn for the document at the current font and font-size"
+  [e paragraph-dom-elem {:keys [lines paragraph] :as viewmodel} measure-fn]
+  (let [line-height (calc-line-height paragraph-dom-elem)
+        dom-elem-rect (.getBoundingClientRect paragraph-dom-elem)
         px (- (.-clientX e) (.-x dom-elem-rect))
         py (- (.-clientY e) (.-y dom-elem-rect))
         line (cond
@@ -346,3 +365,38 @@
                  (> px (.-width dom-elem-rect)) (:end-offset line)
                  :else (nearest-line-offset-to-pixel line px measure-fn))]
     (sel/selection [(:uuid paragraph) offset])))
+
+;; TODO: change this to handle mousevents that are outside the paragraph.
+(defn- mouse-event->selection
+  "Takes a MouseEvent object and the collection of viewmodels and, if its clientX and clientY
+   are inside a paragraph, returns a single selection set to the paragraph and offset where the
+   mouse pointer is at. If the mouse event was not inside a paragraph, returns nil."
+  [event viewmodels measure-fn]
+  (when-let [paragraph-elem (match-elem-in-path event ".paragraph")]
+    ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
+    ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
+    ; will still be valid, however, so we can just grab the current element like this.
+    (let [paragraph-elem (.getElementById js/document (.-id paragraph-elem))
+          vm (get viewmodels (uuid (.-id paragraph-elem)))
+          sel (click event paragraph-elem vm measure-fn)]
+      sel)))
+
+(defn- drag-direction
+  [started-at currently-at]
+  (if (= (sel/caret-para started-at) (sel/caret-para currently-at))
+    (if (> (sel/caret currently-at) (sel/caret started-at))
+      :forward
+      :backward)
+    (throw "AH IT BURNS!")))
+
+(defn drag
+  [mousedown-event mousemove-event {:keys [viewmodels] :as doc-state} measure-fn]
+  (let [started-at (mouse-event->selection mousedown-event viewmodels measure-fn)
+        currently-at (mouse-event->selection mousemove-event viewmodels measure-fn)
+        dir (drag-direction started-at currently-at)]
+    (if (= dir :forward)
+      (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
+                     [(sel/caret-para currently-at) (sel/caret currently-at)])
+      (sel/selection [(sel/caret-para currently-at) (sel/caret currently-at)]
+                     [(sel/caret-para started-at) (sel/caret started-at)]
+                     true))))

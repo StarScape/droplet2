@@ -28,16 +28,16 @@
    You don't really need to be aware of most of these details in order to write code that uses the DLL
    data structure in this namespace. All you really need to know are the public functions it exposes:
    `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
-   `dll` (plus some friends). Aside from that DLLs behave basically like other Clojure collections: you
+   `dll` (plus some friends). Aside from that, DLLs behave basically like other Clojure collections: you
    can call `conj`, `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and
    from other sequential types using `into`. Destructuring and all your favorite Clojure goodies work as
    expected.
 
    They are also decoupled from the rest of the code -- there's no reason you couldn't put something
    other than paragraphs inside a DLL, though it's doubtful you'd need those specific set of properties
-   in any other application (but hey, maybe).
+   for any other use (but hey, maybe).
 
-   The only catch is that every item inserted must have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
+   The only catch is that every item inserted MUST have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
    will work, but `(dll {:val 1})` will throw an error."
   (:refer-clojure :exclude [first last next remove])
   (:require-macros [drop.editor.dll :refer [node-uuid]]))

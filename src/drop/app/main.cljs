@@ -72,6 +72,8 @@
             (let [clicked-para-vm (get-in state [:viewmodels (uuid (.-id clicked-elem))])
                   new-sel (view/click e clicked-elem clicked-para-vm measure-fn)]
               (assoc state :selection new-sel)))
+   :drag (fn [state mousedown-event mousemove-event]
+           (update state :selection #(view/drag mousedown-event mousemove-event state measure-fn)))
 
    :insert (fn [{:keys [doc selection] :as state} e]
              (let [text (.-data e)
@@ -112,18 +114,33 @@
    :shift+up (fn [state _e]
                (update state :selection #(view/shift+up state measure-fn)))})
 
+;; Handle case of: click, hold, type some stuff, THEN release
+
 (defn main []
-  (.addEventListener fake-editor "click"
-    (fn [e]
-      (.focus hidden-input)
-      (let [find-first #(first (filter %1 %2))
-            para-in-path (find-first #(= "paragraph" (.-className %)) (.-path e))
-            clicked-para para-in-path
-            ; TODO: handle case where you click above the first paragraph or below the last paragraph
-            #_(let [uuid (-> @doc-state :doc :children (peek) :uuid)]
-              (.getElementById js/document uuid))]
-        (when clicked-para
-          (fire-interceptor (:click interceptors) @doc-state clicked-para e)))))
+  (let [clicked? (atom false)
+        mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
+    (.addEventListener fake-editor "mousedown"
+      (fn [e]
+        (.preventDefault e)
+        (.focus hidden-input)
+        ; TODO: handle case where you click above the first paragraph or below the last paragraph
+        ; UPDATE: I think we can do this by switching this call to match-elem-in-path below to
+        ;         a call to mousevent->selection and generalizing that function so that it works
+        ;         even if you click off the side/top/bottom. This block below could like be shifted
+        ;         up into the interceptor as well.
+        (when-let [clicked-para (view/match-elem-in-path e ".paragraph")]
+          (reset! clicked? true)
+          (reset! mousedown-event e)
+          (fire-interceptor (:click interceptors) @doc-state clicked-para e))))
+
+    (.addEventListener js/window "mousemove"
+      (fn [e]
+        (when @clicked?
+          (fire-interceptor (:drag interceptors) @doc-state @mousedown-event e))))
+
+    (.addEventListener js/window "mouseup"
+      (fn [_e]
+        (reset! clicked? false))))
 
   (.addEventListener hidden-input "keydown"
     (fn [e]
@@ -133,6 +150,7 @@
 
   (.addEventListener hidden-input "beforeinput"
     (fn [e]
+      (println "hello?")
       (case (.-inputType e)
         "insertText" (fire-interceptor (:insert interceptors) @doc-state e)
         "deleteContentBackward" (fire-interceptor (:delete interceptors) @doc-state e)
