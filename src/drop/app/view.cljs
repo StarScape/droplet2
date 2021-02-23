@@ -345,17 +345,19 @@
         (.getPropertyValue "height")
         (js/parseFloat))))
 
-(defn click
-  "Returns a new selection set to where a click occured.
-   e: MouseEvent of click
-   paragraph-dom-elem: the DOM element of the paragraph clicked
-   viewmodel: the viewmodel associated with that paragraph
-   measure-fn: measure-fn for the document at the current font and font-size"
-  [e paragraph-dom-elem {:keys [lines paragraph] :as viewmodel} measure-fn]
+(defn clicked-location
+  "Returns a new single selection set to where a click occured within a paragraph.
+   Parameters:
+
+   - client-x, client-y: x and y of the click relative to browser viewport
+   - paragraph-dom-elem: DOM element of the paragraph clicked
+   - viewmodel: viewmodel associated with that paragraph
+   - measure-fn: measure-fn for the document at the current font and font-size"
+  [client-x client-y paragraph-dom-elem {:keys [lines paragraph]} measure-fn]
   (let [line-height (calc-line-height paragraph-dom-elem)
         dom-elem-rect (.getBoundingClientRect paragraph-dom-elem)
-        px (- (.-clientX e) (.-x dom-elem-rect))
-        py (- (.-clientY e) (.-y dom-elem-rect))
+        px (- client-x (.-x dom-elem-rect))
+        py (- client-y (.-y dom-elem-rect))
         line (cond
                (< py 0) (first lines)
                (> py (.-height dom-elem-rect)) (peek lines)
@@ -366,34 +368,62 @@
                  :else (nearest-line-offset-to-pixel line px measure-fn))]
     (sel/selection [(:uuid paragraph) offset])))
 
+(defn find-overlapping-paragraph
+  [client-y paragraphs]
+  (let [para->bounds (fn [{:keys [uuid]}]
+                       (let [bounding-rect (.getBoundingClientRect (.getElementById js/document (str uuid)))]
+                         {:uuid uuid
+                          :top (.-top bounding-rect)
+                          :bottom (.-bottom bounding-rect)}))
+        first-para-bounds (-> paragraphs first para->bounds)
+        last-para-bounds (-> paragraphs peek para->bounds)]
+    (cond
+      (< client-y (:top first-para-bounds))
+      (-> paragraphs first :uuid)
+
+      (> client-y (:bottom last-para-bounds))
+      (-> paragraphs peek :uuid)
+
+      :else
+      (let [pbounds (map para->bounds paragraphs)
+            overlaps? #(<= (:top %) client-y (:bottom %))]
+        (-> (filter overlaps? pbounds)
+            (first)
+            :uuid)))))
+
 ;; TODO: change this to handle mousevents that are outside the paragraph.
-(defn- mouse-event->selection
+(defn mouse-event->selection
   "Takes a MouseEvent object and the collection of viewmodels and, if its clientX and clientY
    are inside a paragraph, returns a single selection set to the paragraph and offset where the
    mouse pointer is at. If the mouse event was not inside a paragraph, returns nil."
-  [event viewmodels measure-fn]
-  (when-let [paragraph-elem (match-elem-in-path event ".paragraph")]
-    ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
-    ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
-    ; will still be valid, however, so we can just grab the current element like this.
-    (let [paragraph-elem (.getElementById js/document (.-id paragraph-elem))
-          vm (get viewmodels (uuid (.-id paragraph-elem)))
-          sel (click event paragraph-elem vm measure-fn)]
-      sel)))
+  [event {:keys [viewmodels doc]} measure-fn]
+  (let [paragraph-in-path (match-elem-in-path event ".paragraph")
+        paragraph-uuid (if paragraph-in-path
+                         (.-id paragraph-in-path)
+                         (find-overlapping-paragraph (.-y event) (:children doc)))
+        ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
+        ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
+        ; will still be valid, however, so we can just grab the current element like this.
+        paragraph-elem (.getElementById js/document paragraph-uuid)
+        vm (get viewmodels (uuid (.-id paragraph-elem)))
+        sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]
+    sel))
 
 (defn- drag-direction
-  [started-at currently-at]
+  [started-at currently-at mousedown-event mousemove-event]
   (if (= (sel/caret-para started-at) (sel/caret-para currently-at))
     (if (> (sel/caret currently-at) (sel/caret started-at))
       :forward
       :backward)
-    (throw "AH IT BURNS!")))
+    (if (pos? (- (.-y mousemove-event) (.-y mousedown-event)))
+      :forward
+      :backward)))
 
 (defn drag
-  [mousedown-event mousemove-event {:keys [viewmodels] :as doc-state} measure-fn]
-  (let [started-at (mouse-event->selection mousedown-event viewmodels measure-fn)
-        currently-at (mouse-event->selection mousemove-event viewmodels measure-fn)
-        dir (drag-direction started-at currently-at)]
+  [mousedown-event mousemove-event doc-state measure-fn]
+  (let [started-at (mouse-event->selection mousedown-event doc-state measure-fn)
+        currently-at (mouse-event->selection mousemove-event doc-state measure-fn)
+        dir (drag-direction started-at currently-at mousedown-event mousemove-event)]
     (if (= dir :forward)
       (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
                      [(sel/caret-para currently-at) (sel/caret currently-at)])

@@ -68,9 +68,8 @@
 
 ;; TODO: change to a reg-interceptors! function call.
 (def interceptors
-  {:click (fn [state clicked-elem e]
-            (let [clicked-para-vm (get-in state [:viewmodels (uuid (.-id clicked-elem))])
-                  new-sel (view/click e clicked-elem clicked-para-vm measure-fn)]
+  {:click (fn [state e]
+            (let [new-sel (view/mouse-event->selection e state measure-fn)]
               (assoc state :selection new-sel)))
    :drag (fn [state mousedown-event mousemove-event]
            (update state :selection #(view/drag mousedown-event mousemove-event state measure-fn)))
@@ -117,21 +116,16 @@
 ;; Handle case of: click, hold, type some stuff, THEN release
 
 (defn main []
-  (let [clicked? (atom false)
+  (let [clicked? (atom false :validator boolean?)
         mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
     (.addEventListener fake-editor "mousedown"
       (fn [e]
         (.preventDefault e)
         (.focus hidden-input)
-        ; TODO: handle case where you click above the first paragraph or below the last paragraph
-        ; UPDATE: I think we can do this by switching this call to match-elem-in-path below to
-        ;         a call to mousevent->selection and generalizing that function so that it works
-        ;         even if you click off the side/top/bottom. This block below could like be shifted
-        ;         up into the interceptor as well.
-        (when-let [clicked-para (view/match-elem-in-path e ".paragraph")]
-          (reset! clicked? true)
-          (reset! mousedown-event e)
-          (fire-interceptor (:click interceptors) @doc-state clicked-para e))))
+
+        (reset! clicked? true)
+        (reset! mousedown-event e)
+        (fire-interceptor (:click interceptors) @doc-state e)))
 
     (.addEventListener js/window "mousemove"
       (fn [e]
@@ -150,7 +144,6 @@
 
   (.addEventListener hidden-input "beforeinput"
     (fn [e]
-      (println "hello?")
       (case (.-inputType e)
         "insertText" (fire-interceptor (:insert interceptors) @doc-state e)
         "deleteContentBackward" (fire-interceptor (:delete interceptors) @doc-state e)
@@ -161,7 +154,7 @@
 (defn ^:dev/after-load reload []
   (sync-dom @doc-state fake-editor))
 
-;; TODO: Handle drag selection (selection/expand-to function maybe?)
+;; TODO: Optimize drag selection :)
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
 
 ;; TODO: update everything to return a doc change object (significant)
