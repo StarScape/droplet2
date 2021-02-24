@@ -360,7 +360,7 @@
         py (- client-y (.-y dom-elem-rect))
         line (cond
                (< py 0) (first lines)
-               (> py (.-height dom-elem-rect)) (peek lines)
+               (>= py (.-height dom-elem-rect)) (peek lines)
                :else (nth lines (int (/ py line-height))))
         offset (cond
                  (< px 0) (:start-offset line)
@@ -369,7 +369,9 @@
     (sel/selection [(:uuid paragraph) offset])))
 
 (defn find-overlapping-paragraph
-  [client-y paragraphs]
+  "Finds paragraph that client-y is overlapping with in the y-axis and returns its UUID."
+  [paragraphs client-y prev-event]
+  ;; (println "Finding overlap!")
   (let [para->bounds (fn [{:keys [uuid]}]
                        (let [bounding-rect (.getBoundingClientRect (.getElementById js/document (str uuid)))]
                          {:uuid uuid
@@ -384,30 +386,60 @@
       (> client-y (:bottom last-para-bounds))
       (-> paragraphs peek :uuid)
 
+      ;; TODO: one way to further optimize this would be to cache the last drag event
+      ;; and use that. I have a feeling that might be more trouble than its worth though,
+      ;; unless we actually start to notice real perf problems with this.
+
+      ;; Find paragraph that client-y is overlapping with in the y axis
       :else
-      (let [pbounds (map para->bounds paragraphs)
-            overlaps? #(<= (:top %) client-y (:bottom %))]
-        (-> (filter overlaps? pbounds)
-            (first)
-            :uuid)))))
+      (let [overlaps? #(<= (:top %) client-y (:bottom %))
+            prev-para (match-elem-in-path prev-event ".paragraph")
+            ;; Start searching at either the paragraph the
+            ;; previous event took place in, or the first one
+            start-uuid #p (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs)))
+            advance #p (if (and prev-para (neg? (- client-y (.-y prev-event))))
+                         dll/prev
+                         dll/next)]
+        ;; TODO: okay, definitely some errors here...
+        (loop [p (get paragraphs start-uuid)]
+          (when (nil? p) (throw "I don't think this should ever happen..."))
+
+          (if (overlaps? (para->bounds p))
+            (:uuid p)
+            (recur (advance paragraphs p))))))))
 
 ;; TODO: change this to handle mousevents that are outside the paragraph.
 (defn mouse-event->selection
   "Takes a MouseEvent object and the collection of viewmodels and, if its clientX and clientY
    are inside a paragraph, returns a single selection set to the paragraph and offset where the
-   mouse pointer is at. If the mouse event was not inside a paragraph, returns nil."
-  [event {:keys [viewmodels doc]} measure-fn]
-  (let [paragraph-in-path (match-elem-in-path event ".paragraph")
-        paragraph-uuid (if paragraph-in-path
-                         (.-id paragraph-in-path)
-                         (find-overlapping-paragraph (.-y event) (:children doc)))
+   mouse pointer is at.
+
+   If the mouse is *outside* any paragraph, it will return whatever paragraph is closest.
+   For example, clicking off the right of a paragraph P (not actually inside of it) will return
+   a selection inside of P with the offset set to the end of the line you clicked to the right of.
+   Likewise, clicking above or below the first or line paragraphs will return selections in the first
+   or last lines, respectively, with an offset based on the x coordinate of the mouse.
+
+   Optionally, this function takes a `last-para` function, which is the last [[Paragraph]] that the mouse is
+   *known* to have passed through. This is due to a limitation of the DOM (and how we handle events): If
+   the MouseEvent does not have a '.paragraph' element in its event path, the only way to figure out the
+   nearest paragraph is to get its bounding rect and compare. We don't want to have to search through the
+   entire list of paragraphs and figure out which one is intersecting the mouse, so instead we can pass in
+   a paragraph to start searching at."
+  ([event {:keys [viewmodels doc]} measure-fn last-event]
+   (let [paragraph-in-path (match-elem-in-path event ".paragraph")
+         paragraph-uuid (if paragraph-in-path
+                          (.-id paragraph-in-path)
+                          (find-overlapping-paragraph (:children doc) (.-y event) last-event))
         ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
         ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
         ; will still be valid, however, so we can just grab the current element like this.
-        paragraph-elem (.getElementById js/document paragraph-uuid)
-        vm (get viewmodels (uuid (.-id paragraph-elem)))
-        sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]
-    sel))
+         paragraph-elem (.getElementById js/document paragraph-uuid)
+         vm (get viewmodels (uuid (.-id paragraph-elem)))
+         sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]
+     sel))
+  ([event doc-state measure-fn]
+   (mouse-event->selection event doc-state measure-fn nil)))
 
 (defn- drag-direction
   [started-at currently-at mousedown-event mousemove-event]
@@ -422,7 +454,7 @@
 (defn drag
   [mousedown-event mousemove-event doc-state measure-fn]
   (let [started-at (mouse-event->selection mousedown-event doc-state measure-fn)
-        currently-at (mouse-event->selection mousemove-event doc-state measure-fn)
+        currently-at (mouse-event->selection mousemove-event doc-state measure-fn mousedown-event)
         dir (drag-direction started-at currently-at mousedown-event mousemove-event)]
     (if (= dir :forward)
       (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]

@@ -155,6 +155,7 @@
   (sync-dom @doc-state fake-editor))
 
 ;; TODO: Optimize drag selection :)
+;; TODO: Handle adding tabs at beginning of paragraph (naive is probably fine for now)
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
 
 ;; TODO: update everything to return a doc change object (significant)
