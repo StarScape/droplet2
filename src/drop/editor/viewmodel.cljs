@@ -41,7 +41,7 @@
 (defn get-words
   "Splits string `s` into a vector of words."
   [s]
-  (str/split s #"(\s+)"))
+  (str/split s #"( )+"))
 
 (defn add-span
   "Adds the span to the given line and updates the line's width."
@@ -87,7 +87,7 @@
   (loop [words-fit "", words (get-words src)]
     (let [next-word (first words)
           new-text (str words-fit next-word)
-          new-width (measure-fn (.trim new-text) formats)]
+          new-width (measure-fn (.trimEnd new-text) formats)]
       (cond
         (and (seq words) (<= (int new-width) width-left))
         (recur new-text (rest words))
@@ -150,16 +150,17 @@
 
 (defn lineify
   "Convert vector of runs to a vector of lines, with no line exceeding `width`.
-   Consuming APIs shouldn't use this directly, see instead `from-para`."
+   Consuming code shouldn't use this directly, see instead `from-para`."
   ([runs width measure-fn]
    (lineify [(empty-line)] runs width measure-fn))
-  ([lines runs width measure-fn]
-   (if (empty? runs)
+  ([lines [run & runs] width measure-fn]
+   (if-not run
      lines
-     (let [[new-lines, leftover] (add-max-to-last-line lines (first runs) width measure-fn)
-           remaining-runs (cond->> (rest runs)
-                            (seq (:text leftover))
-                            (cons leftover))]
+     (let [[new-lines, leftover] (add-max-to-last-line lines run width measure-fn)
+           remaining-runs (cond->> runs
+                            ;; if there is leftover text that didn't fit on the
+                            ;; line, add it back to the list of runs for the next line
+                            (seq (:text leftover)) (cons leftover))]
        (recur new-lines remaining-runs width measure-fn)))))
 
 (comment

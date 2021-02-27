@@ -7,8 +7,6 @@
             [drop.editor.measurement :refer [ruler-for-elem]]
             [drop.editor.viewmodel :as vm]))
 
-;; main
-
 ;; TODO: this can be changed to a `find-interceptor` function that takes
 ;; an event and a map of all the interceptors and returns one if it exists
 ;; or null otherwise (maybe a no-op otherwise?). This will also give us more
@@ -25,6 +23,7 @@
               "ArrowRight" "right"
               "ArrowUp" "up"
               "ArrowDown" "down"
+              "Tab" "tab"
               (-> (.-key e) .toLowerCase))]
     (->> (conj modifiers key)
          (str/join "+")
@@ -85,6 +84,10 @@
    :enter (fn [{:keys [doc selection] :as state} _e]
             (let [[new-doc, new-sel] (c/enter doc selection)]
              (assoc state :doc new-doc :selection new-sel)))
+   :tab (fn [{:keys [doc selection] :as state} _e]
+          (let [new-doc (c/insert doc selection "\u2003")
+                new-selection (sel/shift-single selection 1)]
+            (assoc state :doc new-doc :selection new-selection)))
 
    :left (fn [state _e]
            (update state :selection #(nav/prev-char (:doc state) %)))
@@ -154,7 +157,6 @@
 (defn ^:dev/after-load reload []
   (sync-dom @doc-state fake-editor))
 
-;; TODO: Optimize drag selection :)
 ;; TODO: Handle adding tabs at beginning of paragraph (naive is probably fine for now)
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
 
