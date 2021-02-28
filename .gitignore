@@ -6,7 +6,7 @@ node_modules/
 .clj-kondo/
 .clj-kondo/cache/
 .clj-kondo/.cache/
-.lsp/sqlite.*.db
+.lsp/
 
 # System Files
 .DS_Store

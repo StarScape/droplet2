@@ -55,7 +55,7 @@
 
 (defn fire-interceptor
   "Calls the interceptor with the provided args (typically
-   state and the event object) and re-synces the DOM."
+   state and the Event object) and re-synces the DOM."
   [interceptor-fn & args]
   (let [old-state @doc-state
         changed (apply interceptor-fn args)
@@ -157,7 +157,6 @@
 (defn ^:dev/after-load reload []
   (sync-dom @doc-state fake-editor))
 
-;; TODO: Handle adding tabs at beginning of paragraph (naive is probably fine for now)
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
 
 ;; TODO: update everything to return a doc change object (significant)

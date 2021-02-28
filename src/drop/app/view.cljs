@@ -248,7 +248,7 @@
                    (+ offset-px (measure-fn char formats))
                    delta)))))))
 
-;; TODO: I think these two functions could be moved to the `events` namespace (once it's created),
+;; TODO: I think these functions could be moved to the `events` namespace (once it's created),
 ;; and we could just keep the helper functions it calls here, or better yet, move them into the
 ;; measurement namespace.
 ;;
