@@ -75,7 +75,7 @@
                                (run "hoobar3" #{:italic})])))))
 
   (testing "at end of paragraph"
-    (let [sel (selection ["s" (c/text-len simplep)])
+    (let [sel (selection ["s" (c/len simplep)])
           p (c/insert simplep sel (run "post"))]
       (is (= p (paragraph "s"[(run "foobar1" #{:bold})
                               (run "goobar2")
@@ -100,7 +100,7 @@
                                (run "hoobar3" #{:italic})])))))
 
   (testing "end of paragraph"
-    (let [sel (selection ["s" (c/text-len simplep)])
+    (let [sel (selection ["s" (c/len simplep)])
           p (c/delete simplep sel)]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "goobar2")
@@ -122,7 +122,7 @@
 
 (deftest delete-range-test
   (testing "whole paragraph"
-    (let [sel (selection ["s" 0] [simplep (c/text-len simplep)])
+    (let [sel (selection ["s" 0] [simplep (c/len simplep)])
           p (c/delete simplep sel)]
       (is (= p (paragraph "s" [(run "")])))))
 
@@ -159,7 +159,7 @@
                                (run "hoobar3" #{:italic})])))))
 
   (testing "whole last run"
-    (let [sel (selection ["s" 14] ["s" (c/text-len simplep)])
+    (let [sel (selection ["s" 14] ["s" (c/len simplep)])
           p (c/delete simplep sel)]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "goobar2")]))))))
@@ -171,7 +171,7 @@
                               (run "c", #{:italic :strikethrough})
                               (run "d", #{:italic})])]
       (is (= #{:italic}
-             (c/shared-formats p (selection ["123" 0] ["123" (c/text-len p)]))))))
+             (c/shared-formats p (selection ["123" 0] ["123" (c/len p)]))))))
 
   (testing "with a no shared formats"
     (let [p (paragraph "123" [(run "a", #{:italic :bold})
@@ -179,7 +179,7 @@
                               (run "c", #{:strikethrough})
                               (run "d", #{:italic})])]
       (is (= #{}
-             (c/shared-formats p (selection ["123" 0] ["123" (c/text-len p)]))))))
+             (c/shared-formats p (selection ["123" 0] ["123" (c/len p)]))))))
 
   (testing "single run"
     (let [p (paragraph "123" [(run "a", #{:italic :bold})

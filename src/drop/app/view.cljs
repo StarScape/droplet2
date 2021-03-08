@@ -132,7 +132,7 @@
   [viewmodel selection]
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
-        para-length (c/text-len (:paragraph viewmodel))]
+        para-length (c/len (:paragraph viewmodel))]
     ; #p (:paragraph viewmodel)
     ; #p *selection-ongoing?*
     (str "<div class='paragraph' id='" (:uuid (:paragraph viewmodel)) "'>"
@@ -187,7 +187,7 @@
   (let [caret (sel/caret selection)
         vm (viewmodels (-> selection :start :paragraph))
         within-line? #(and (>= caret (:start-offset %)) (< caret (:end-offset %)))
-        at-para-end? #(and (= caret (:end-offset %)) (= caret (c/text-len (:paragraph vm))))
+        at-para-end? #(and (= caret (:end-offset %)) (= caret (c/len (:paragraph vm))))
         lines (:lines vm)]
     (loop [i 0]
       (when (> i (count lines)) (throw "Did not find line with caret inside it!"))

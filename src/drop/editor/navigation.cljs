@@ -193,12 +193,12 @@
     (selection [(:uuid para) 0]))
 
   (end [para]
-    (selection [(:uuid para) (core/text-len para)]))
+    (selection [(:uuid para) (core/len para)]))
 
   (next-char [para sel]
     (cond
       (range? sel) (sel/collapse-end sel)
-      (and (single? sel) (< (caret sel) (core/text-len para))) (sel/shift-single sel 1)
+      (and (single? sel) (< (caret sel) (core/len para))) (sel/shift-single sel 1)
       :else sel))
 
   (prev-char [para sel]
@@ -226,13 +226,13 @@
 
   (end [doc]
     (let [last-para (dll/last (:children doc))]
-      (selection [(:uuid last-para) (core/text-len last-para)])))
+      (selection [(:uuid last-para) (core/len last-para)])))
 
   (next-char [doc sel]
     (if (range? sel)
       (sel/collapse-end sel)
       (let [para ((:children doc) (-> sel :start :paragraph))]
-        (if (= (caret sel) (core/text-len para))
+        (if (= (caret sel) (core/len para))
           (if (core/last-para? doc para)
             sel
             (start (dll/next (:children doc) para)))
@@ -252,7 +252,7 @@
     (let [collapsed (smart-collapse sel)
           para-uuid (sel/start-para collapsed)
           para ((:children doc) para-uuid)]
-      (if (and (= (sel/caret collapsed) (core/text-len para))
+      (if (and (= (sel/caret collapsed) (core/len para))
                (not= para (dll/last (:children doc))))
         ;; TODO: can change to a call to (start) once that is implemented
         (selection [(:uuid (dll/next (:children doc) para)), 0])
@@ -266,7 +266,7 @@
                (not= para (dll/first (:children doc))))
         ;; TODO: can change to a call to (end) once that is implemented
         (let [prev-para (dll/prev (:children doc) para)]
-          (selection [(:uuid prev-para), (core/text-len prev-para)]))
+          (selection [(:uuid prev-para), (core/len prev-para)]))
         (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
   ;; TODO: It's possible these can be cleaned up, but *write tests* before
@@ -275,7 +275,7 @@
   Selectable
   (shift+right [doc sel]
     (let [para ((:children doc) (sel/caret-para sel))
-          para-length (core/text-len para)
+          para-length (core/len para)
           next-para (dll/next (:children doc) para)]
       (if (and (:backwards? sel) (sel/range? sel))
         (cond
@@ -306,7 +306,7 @@
 
           (zero? (sel/caret sel))
           (assoc sel
-                 :start {:offset (core/text-len prev-para) :paragraph (:uuid prev-para)}
+                 :start {:offset (core/len prev-para) :paragraph (:uuid prev-para)}
                  :backwards? true)
 
           :else
@@ -318,7 +318,7 @@
 
           (zero? (sel/caret sel))
           (let [side (if (:backwards? sel) :start :end)]
-            (assoc sel side {:offset (core/text-len prev-para)
+            (assoc sel side {:offset (core/len prev-para)
                              :paragraph (:uuid prev-para)}))
 
 

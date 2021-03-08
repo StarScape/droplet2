@@ -20,7 +20,7 @@
 ;; This protocol could stand a better name if we're honest
 (defprotocol TextContainer
   ;; TODO: rename this to len? or implement (count)...
-  (text-len [this] "Returns the number of chars in container (run/paragraph)."))
+  (len [this] "Returns the number of chars in container (run/paragraph)."))
 
 (defprotocol Formattable
   "Primitive operations for formatting text-containers (runs, paragraphs, documents)."
@@ -77,7 +77,7 @@
 ;;; Run operations ;;;
 (defrecord Run [text formats]
   TextContainer
-  (text-len [r] (count (:text r)))
+  (len [r] (count (:text r)))
 
   Formattable
   (apply-format
@@ -109,9 +109,9 @@
   [r offset]
   (cond
     (zero? offset) [(empty-run) r]
-    (= offset (text-len r)) [r (empty-run)]
+    (= offset (len r)) [r (empty-run)]
     :else (let [text-before (.slice (:text r) 0 offset)
-                text-after (.slice (:text r) offset (text-len r))]
+                text-after (.slice (:text r) offset (len r))]
             [(run text-before (:formats r)), (run text-after (:formats r))])))
 
 ;; Range selection, remove block-selected text and then insert.
@@ -132,7 +132,7 @@
 
 (defmethod insert-end [Run js/String]
   [r text]
-  (insert r text (text-len r)))
+  (insert r text (len r)))
 
 ;; Delete between start and end
 (defmethod delete [Run js/Number js/Number]
@@ -165,7 +165,7 @@
 
 (defrecord Paragraph [uuid runs]
   TextContainer
-  (text-len [p] (reduce #(+ %1 (text-len %2)) 0 (:runs p))))
+  (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p))))
 
 (declare optimize-runs) ;; Forward declare for use in `paragraph` function.
 
@@ -217,7 +217,7 @@
         (recur
          (inc run-idx)
          (- offset sum-prev-offsets)
-         (+ sum-prev-offsets (text-len (nth runs (inc run-idx)))))))))
+         (+ sum-prev-offsets (len (nth runs (inc run-idx)))))))))
 
 (defn before-offset
   "Returns the index of the run immediately before `offset`, as well as the
@@ -236,7 +236,7 @@
         (recur
          (inc run-idx)
          (- offset sum-prev-offsets)
-         (+ sum-prev-offsets (text-len (nth runs (inc run-idx)))))))))
+         (+ sum-prev-offsets (len (nth runs (inc run-idx)))))))))
 
 ;; TODO: I think split-runs and separate-selection could be merged into one
 ;; function that takes a SELECTION, and either splits AROUND the selection (if
@@ -247,8 +247,8 @@
   "Splits runs at offset, returning a vector of [runs before, runs after].
    Will break a run apart if `offset` is inside that run."
   [runs offset]
-  (let [run-end-offsets (set (reductions + (map text-len runs)))
-        ;; runs-len (reduce + (map text-len runs))
+  (let [run-end-offsets (set (reductions + (map len runs)))
+        ;; runs-len (reduce + (map len runs))
         offset-fn (if (run-end-offsets offset) before-offset at-offset)
 
         ;; Split the run at the caret position
@@ -272,7 +272,7 @@
    core functions (see below)."
   [runs sel]
   (let [[runs-before runs-after] (split-runs runs (-> sel :start :offset))
-        runs-before-len (reduce + (map text-len runs-before))
+        runs-before-len (reduce + (map len runs-before))
         adjusted-end-offset (- (-> sel :end :offset) runs-before-len)
         [within-sel after-sel] (split-runs runs-after adjusted-end-offset)]
     [runs-before within-sel after-sel]))
@@ -302,11 +302,11 @@
 
 (defmethod insert-end [Paragraph PersistentVector]
   [para runs]
-  (insert para (selection [(:uuid para) (text-len para)]) runs))
+  (insert para (selection [(:uuid para) (len para)]) runs))
 
 (defmethod insert-end [Paragraph Run]
   [para run]
-  (insert para (selection [(:uuid para) (text-len para)]) run))
+  (insert para (selection [(:uuid para) (len para)]) run))
 
 (defn- paragraph-single-delete [para sel]
   (if (zero? (sel/caret sel))
@@ -332,7 +332,7 @@
 (defn delete-after
   "Removes everything in paragraph `para` after the provided offset."
   [para offset]
-  (let [para-len (text-len para)]
+  (let [para-len (len para)]
     (if (= offset para-len)
       para
       (delete para (selection [(:uuid para) offset] [(:uuid para) para-len])))))
@@ -367,7 +367,7 @@
   (selected-content [para sel] (second (separate-selected (:runs para) sel)))
 
   (shared-formats
-   ([para] (shared-formats para (selection [(:uuid para) 0] [(:uuid para) (text-len para)])))
+   ([para] (shared-formats para (selection [(:uuid para) 0] [(:uuid para) (len para)])))
    ([para sel]
     (let [runs (:runs para)
           [start-run-idx _] (at-offset runs (-> sel :start :offset))
@@ -421,7 +421,7 @@
 
 (defrecord Document [children]
   TextContainer
-  (text-len [doc] (reduce #(+ %1 (text-len %2)) 0 (:children doc))))
+  (len [doc] (reduce #(+ %1 (len %2)) 0 (:children doc))))
 
 (defn document
   "Creates a new document."
@@ -567,7 +567,7 @@
       (let [uuid (sel/caret-para sel)
             prev-para (dll/prev (:children doc) uuid)]
         [(merge-paragraph-with-previous doc uuid)
-         (selection [(:uuid prev-para), (text-len prev-para)])]))
+         (selection [(:uuid prev-para), (len prev-para)])]))
     [(update-in doc [:children (sel/start-para sel)] delete sel)
      (sel/shift-single sel -1)]))
 
@@ -607,7 +607,7 @@
         (= caret 0)
         [(insert-paragraph-before doc uuid), sel]
 
-        (= caret (text-len para))
+        (= caret (len para))
         (let [new-uuid (random-uuid)]
           [(insert-paragraph-after doc uuid new-uuid), (selection [new-uuid 0])])
 
@@ -649,7 +649,7 @@
           end-para (children end-para-uuid)
           new-start-para (format-fn
                           start-para
-                          (selection [(:uuid start-para) (-> sel :start :offset)] [(:uuid start-para) (text-len start-para)])
+                          (selection [(:uuid start-para) (-> sel :start :offset)] [(:uuid start-para) (len start-para)])
                           format)
           new-end-para (format-fn
                         end-para
