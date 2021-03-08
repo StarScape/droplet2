@@ -116,7 +116,7 @@
    :shift+up (fn [state _e]
                (update state :selection #(view/shift+up state measure-fn)))})
 
-;; Handle case of: click, hold, type some stuff, THEN release
+;; TODO: handle case of click, hold, type some stuff, THEN release
 
 (defn main []
   (let [clicked? (atom false :validator boolean?)
@@ -158,5 +158,6 @@
   (sync-dom @doc-state fake-editor))
 
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
+;; TODO: Handle resizing of the text area
 
 ;; TODO: update everything to return a doc change object (significant)
