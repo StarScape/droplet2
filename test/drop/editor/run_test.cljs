@@ -13,7 +13,7 @@
   (testing "with range that is whole run"
     (let [r (c/insert run1 "fizzbuzz" 0 6)]
       (is (= "fizzbuzz" (:text r)))
-      (is (= 8 (c/len r)))))
+      (is (= 8 (c/text-len r)))))
 
   (testing "single-selection at the start of a run"
     (let [r (c/insert run1 "a" 0)]
@@ -59,12 +59,3 @@
 
   (testing "backspace before beginning"
     (comment "TODO")))
-
-(deftest toggle-format-test
-  (let [test-run (c/run "foobar" #{:italic :bold})
-        toggled1 (c/toggle-format test-run :italic)
-        toggled2 (c/toggle-format test-run :bold)
-        toggled3 (c/toggle-format test-run :underline)]
-    (is (= #{:bold} (:formats toggled1)))
-    (is (= #{:italic} (:formats toggled2)))
-    (is (= #{:italic :bold :underline} (:formats toggled3)))))

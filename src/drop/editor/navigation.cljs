@@ -1,6 +1,14 @@
 (ns drop.editor.navigation
+  "Functions for modifying navigating around the document by modifying selections.
+   Note that everything in here is pure -- functions take Documents/Paragraphs and a
+   selection, and return a new selection.
+
+   Also, nothing here should be dependent on the viewmodel or the DOM. Things that have to
+   be aware of either of those should go in the `view` namespace."
   (:require [clojure.string :as str]
-            [drop.editor.core :as core :refer [caret]]))
+            [drop.editor.core :as core]
+            [drop.editor.dll :as dll]
+            [drop.editor.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
 ;; Some helpers and useful primitives ;;
 
@@ -68,10 +76,12 @@
 
 ;; Main functionality ;;
 
-
 (defn next-word-offset
-  "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection."
+  "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
   [text start-offset]
+  {:pre [(<= start-offset (.-length text))]
+   :post [(<= % (.-length text))]}
   (if (>= start-offset (count text))
     (count text)
     (let [first-char (nth text start-offset)]
@@ -92,9 +102,12 @@
         :else
         (until-non-word text start-offset)))))
 
-(defn- prev-word-offset
-  "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection."
+(defn prev-word-offset
+  "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
   [text start-offset]
+  {:pre [(<= start-offset (.-length text))]
+   :post [(<= % (.-length text))]}
   (if (<= start-offset 0)
     0
     (let [before-start (nth text (dec start-offset))]
@@ -116,39 +129,231 @@
         :else
         (back-until-non-word text start-offset)))))
 
+;; TODO: Something to think about for the future -- add functions for navigating between
+;; clauses, sentences, and paragraphs. Tentative keybinds for this: ctrl+)/ctrl+(, ctrl+]/ctrl+[,
+;; and ctrl+}, ctrl+{, respectively.
+
 (defprotocol Navigable
-  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new selection."
-  ;; (forward [this sel] "Move forward by 1 character.")
-  ;; (backward [this sel] "Move backward by 1 character.")
-  ;; (start [this sel] "Go to start of paragraph or document.")
-  ;; (end [this sel] "Go to end of paragraph or document.")
+  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new Selection."
+  (start
+   [this]
+   "Go to start of Paragraph or Document.")
+
+  (end
+   [this]
+   "Go to end of Paragraph or Document.")
+
+  (next-char
+   [this sel]
+   "Move forward by 1 character, or returns the same selection if not possible.
+    Equivalent to pressing the right arrow on the keyboard.")
+
+  (prev-char
+   [this sel]
+   "Move backward by 1 character, or return the same selection if not possible.
+    Equivalent to pressing the left arrow on the keyboard.")
 
   (next-word
     [this sel]
     "Returns selection after jumping to the end of the next word from selection `sel`.
-    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac).")
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac).")
 
   (prev-word
     [this sel]
     "Returns selection after jumping to the start of the previous word from selection `sel`.
-    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or alt+right (Mac)."))
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
 
-;; TODO: next-word and prev-word should collapse first thing
+(defprotocol Selectable
+  "Methods for expanding and contracting selections."
+  (shift+right
+    [this sel]
+    "If selection is not backwards, returns a new selection with the right side expanded by 1.
+    If the selection *is* backwards, will *contract* the *left* side of the selection. In other
+    words, equivalent to the behavior of pressing shift+right.")
+
+  (shift+left
+    [this sel]
+    "If selection is not backwards, returns a new selection with the right side contracted by 1.
+    If the selection *is* backwards, will *expand* the *left* side of the selection. In other
+    words, equivalent to the behavior of pressing shift+left.")
+
+  (ctrl+shift+right
+    [this sel]
+    "Expands or contracts the caret side of the selection by a word, depending if the selection is
+    forwards or backwards, respectively. Equivalent to the behavior of pressing ctrl+shift+right.")
+
+  (ctrl+shift+left
+    [this sel]
+    "Expands or contracts the caret side of the selection by a word, depending if the selection is
+    backwards or forwards respectively. Equivalent to the behavior of pressing ctrl+shift+left."))
 
 (extend-type core/Paragraph
   Navigable
+  (start [para]
+    (selection [(:uuid para) 0]))
+
+  (end [para]
+    (selection [(:uuid para) (core/text-len para)]))
+
+  (next-char [para sel]
+    (cond
+      (range? sel) (sel/collapse-end sel)
+      (and (single? sel) (< (caret sel) (core/text-len para))) (sel/shift-single sel 1)
+      :else sel))
+
+  (prev-char [para sel]
+    (cond
+      (range? sel) (sel/collapse-start sel)
+      (and (single? sel) (pos? (caret sel))) (sel/shift-single sel -1)
+      :else sel))
+
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
-          offset (next-word-offset text (caret sel))]
-      (core/selection [para offset])))
+          collapsed (smart-collapse sel)
+          offset (next-word-offset text (caret collapsed))]
+      (sel/set-single collapsed offset)))
 
   (prev-word [para sel]
     (let [text (apply str (map :text (:runs para)))
-          offset (prev-word-offset text (caret sel))]
-      (core/selection [para offset]))))
+          collapsed (smart-collapse sel)
+          offset (prev-word-offset text (caret collapsed))]
+      (sel/set-single collapsed offset))))
+
+(extend-type core/Document
+  Navigable
+  (start [doc]
+    (selection [(:uuid (dll/first (:children doc))) 0]))
+
+  (end [doc]
+    (let [last-para (dll/last (:children doc))]
+      (selection [(:uuid last-para) (core/text-len last-para)])))
+
+  (next-char [doc sel]
+    (if (range? sel)
+      (sel/collapse-end sel)
+      (let [para ((:children doc) (-> sel :start :paragraph))]
+        (if (= (caret sel) (core/text-len para))
+          (if (core/last-para? doc para)
+            sel
+            (start (dll/next (:children doc) para)))
+          (next-char para sel)))))
+
+  (prev-char [doc sel]
+    (if (range? sel)
+      (sel/collapse-start sel)
+      (let [para ((:children doc) (-> sel :start :paragraph))]
+        (if (zero? (caret sel))
+          (if (core/first-para? doc para)
+            sel
+            (end (dll/prev (:children doc) para)))
+          (prev-char para sel)))))
+
+  (next-word [doc sel]
+    (let [collapsed (smart-collapse sel)
+          para-uuid (sel/start-para collapsed)
+          para ((:children doc) para-uuid)]
+      (if (and (= (sel/caret collapsed) (core/text-len para))
+               (not= para (dll/last (:children doc))))
+        ;; TODO: can change to a call to (start) once that is implemented
+        (selection [(:uuid (dll/next (:children doc) para)), 0])
+        (next-word ((:children doc) (sel/start-para collapsed)) collapsed))))
+
+  (prev-word [doc sel]
+    (let [collapsed (smart-collapse sel)
+          para-uuid (sel/start-para collapsed)
+          para ((:children doc) para-uuid)]
+      (if (and (= 0 (sel/caret collapsed))
+               (not= para (dll/first (:children doc))))
+        ;; TODO: can change to a call to (end) once that is implemented
+        (let [prev-para (dll/prev (:children doc) para)]
+          (selection [(:uuid prev-para), (core/text-len prev-para)]))
+        (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
+
+  ;; TODO: It's possible these can be cleaned up, but *write tests* before
+  ;; trying to make them more elegant. That will make it a lot easier to prove
+  ;; easily that I'm not breaking them every time I switch an if around or something.
+  Selectable
+  (shift+right [doc sel]
+    (let [para ((:children doc) (sel/caret-para sel))
+          para-length (core/text-len para)
+          next-para (dll/next (:children doc) para)]
+      (if (and (:backwards? sel) (sel/range? sel))
+        (cond
+          (= (sel/caret sel) para-length)
+          (assoc sel :start {:offset 0, :paragraph (:uuid next-para)})
+
+          :else
+          (sel/shift-caret sel 1))
+        (cond
+          (and (core/last-para? doc para)
+               (= (sel/caret sel) para-length))
+          sel
+
+          (= (sel/caret sel) para-length)
+          (assoc sel :end {:offset 0, :paragraph (:uuid next-para)})
+
+          :else
+          (sel/shift-caret sel 1)))))
+
+  (shift+left [doc sel]
+    (let [para ((:children doc) (sel/caret-para sel))
+          prev-para (dll/prev (:children doc) para)]
+      (if (sel/single? sel)
+        (cond
+          (and (core/first-para? doc para)
+               (zero? (sel/caret sel)))
+          sel
+
+          (zero? (sel/caret sel))
+          (assoc sel
+                 :start {:offset (core/text-len prev-para) :paragraph (:uuid prev-para)}
+                 :backwards? true)
+
+          :else
+          (sel/shift-start sel -1))
+        (cond
+          (and (core/first-para? doc para)
+               (zero? (sel/caret sel)))
+          sel
+
+          (zero? (sel/caret sel))
+          (let [side (if (:backwards? sel) :start :end)]
+            (assoc sel side {:offset (core/text-len prev-para)
+                             :paragraph (:uuid prev-para)}))
+
+
+          :else
+          (sel/shift-caret sel -1)))))
+
+  (ctrl+shift+right [doc sel]
+    (let [next-word-sel (next-word doc sel)
+          new-caret {:paragraph (sel/caret-para next-word-sel)
+                     :offset (sel/caret next-word-sel)}]
+      (if (and (:backwards? sel) (sel/range? sel))
+        (if (and (< (:offset new-caret) (-> sel :end :offset))
+                 (= (:paragraph new-caret) (-> sel :end :paragraph)))
+          (assoc sel :start new-caret)
+          (assoc sel :start (:end sel), :end new-caret, :backwards? false))
+        (assoc sel :end new-caret, :backwards? false))))
+
+  (ctrl+shift+left [doc sel]
+    (let [prev-word-sel (prev-word doc sel)
+          new-caret {:paragraph (sel/caret-para prev-word-sel)
+                     :offset (sel/caret prev-word-sel)}]
+      (if (or (sel/single? sel) (and (:backwards? sel) (sel/range? sel)))
+        (assoc sel :start new-caret, :backwards? true)
+        (if (and (< (:offset new-caret) (-> sel :start :offset))
+                 (= (:paragraph new-caret) (-> sel :start :paragraph)))
+          (assoc sel :start new-caret, :end (:start sel), :backwards? true)
+          (assoc sel :end new-caret, :backwards? false))))))
+
 
 (comment
   (def my-par (core/paragraph [(core/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
   (prev-word-offset (apply str (map :text (:runs my-par))) 0)
   (next-word-offset (apply str (map :text (:runs my-par))) 80)
+
+  (def my-doc (core/document [my-par, (core/paragraph [(core/run "foo bar?")])]))
+  (caret (next-word my-doc (selection [1 0])))
+  (caret (prev-word my-doc (selection [0 7])))
   )

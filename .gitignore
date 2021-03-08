@@ -1,14 +1,20 @@
 node_modules/
+
+# Clojure- and editor-related files
 .shadow-cljs/
 .calva/
+.clj-kondo/
+.clj-kondo/cache/
+.clj-kondo/.cache/
+.lsp/
 
 # System Files
 .DS_Store
 Thumbs.db
 
-# Temp file I use for piping into long commit messages
+# Temp file I occasionally use for piping into long commit messages
 commit.txt
 
-# ClojureScript build directories
+# Output/build dirs
 public/js/
 out/
