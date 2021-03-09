@@ -3,7 +3,7 @@
    as well as some utilities for dealing with the editor's DOM layer in general."
   (:require [clojure.string :as str]
             [slate.selection :as sel]
-            [slate.core :as c]
+            [slate.core :as sl]
             [slate.dll :as dll]))
 
 ;; Utility functions
@@ -133,7 +133,7 @@
   [viewmodel selection]
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
-        para-length (c/len (:paragraph viewmodel))]
+        para-length (sl/len (:paragraph viewmodel))]
     ; #p (:paragraph viewmodel)
     ; #p *selection-ongoing?*
     (str "<div class='paragraph' id='" (:uuid (:paragraph viewmodel)) "'>"
@@ -188,7 +188,7 @@
   (let [caret (sel/caret selection)
         vm (viewmodels (-> selection :start :paragraph))
         within-line? #(and (>= caret (:start-offset %)) (< caret (:end-offset %)))
-        at-para-end? #(and (= caret (:end-offset %)) (= caret (c/len (:paragraph vm))))
+        at-para-end? #(and (= caret (:end-offset %)) (= caret (sl/len (:paragraph vm))))
         lines (:lines vm)]
     (loop [i 0]
       (when (> i (count lines)) (throw "Did not find line with caret inside it!"))

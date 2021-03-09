@@ -1,7 +1,7 @@
 (ns drop.app.main
   (:require [clojure.string :as str]
             [drop.app.view :as view]
-            [slate.core :as c]
+            [slate.core :as sl]
             [slate.navigation :as nav]
             [slate.selection :as sel]
             [slate.measurement :refer [ruler-for-elem]]
@@ -33,15 +33,15 @@
 (def hidden-input (.querySelector js/document "#hidden-input"))
 (def measure-fn (ruler-for-elem fake-editor))
 (def para1
-  (c/paragraph (uuid "p1") [(c/run "Hello world, this is an example of a paragraph ")
-                     (c/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
-                     (c/run "Don't know what else to say. Hmmmm..." #{:bold})]))
+  (sl/paragraph (uuid "p1") [(sl/run "Hello world, this is an example of a paragraph ")
+                     (sl/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
+                     (sl/run "Don't know what else to say. Hmmmm..." #{:bold})]))
 (def para3
-  (c/paragraph (uuid "p3") [(c/run "And this is paragraph numero dos.")]))
+  (sl/paragraph (uuid "p3") [(sl/run "And this is paragraph numero dos.")]))
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
-(def initial-doc (c/document [para1 (c/paragraph) para3]))
+(def initial-doc (sl/document [para1 (sl/paragraph) para3]))
 (def doc-state (atom {:doc initial-doc
                       :selection (sel/selection [(:uuid para1) 0])
                       ;; TODO: just change to a DLL of viewmodels?
@@ -75,17 +75,17 @@
 
    :insert (fn [{:keys [doc selection] :as state} e]
              (let [text (.-data e)
-                   new-doc (c/insert doc selection text)
+                   new-doc (sl/insert doc selection text)
                    new-selection (sel/shift-single selection (count text))]
                (assoc state :doc new-doc :selection new-selection)))
    :delete (fn [{:keys [doc selection] :as state} _e]
-             (let [[new-doc, new-sel] (c/delete doc selection)]
+             (let [[new-doc, new-sel] (sl/delete doc selection)]
                (assoc state :doc new-doc :selection new-sel)))
    :enter (fn [{:keys [doc selection] :as state} _e]
-            (let [[new-doc, new-sel] (c/enter doc selection)]
+            (let [[new-doc, new-sel] (sl/enter doc selection)]
              (assoc state :doc new-doc :selection new-sel)))
    :tab (fn [{:keys [doc selection] :as state} _e]
-          (let [new-doc (c/insert doc selection "\u2003")
+          (let [new-doc (sl/insert doc selection "\u2003")
                 new-selection (sel/shift-single selection 1)]
             (assoc state :doc new-doc :selection new-selection)))
 
