@@ -39,8 +39,7 @@
 
    The only catch is that every item inserted MUST have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
    will work, but `(dll {:val 1})` will throw an error."
-  (:refer-clojure :exclude [first last next remove])
-  (:require-macros [slate.dll :refer [node-uuid]]))
+  (:refer-clojure :exclude [first last next remove]))
 
 ;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 (declare first)
@@ -149,6 +148,8 @@
                 (-write writer ", first-uuid: ") (-write writer (.-first-uuid dll))
                 (-write writer ", last-uuid: ") (-write writer (.-last-uuid dll))
                 (-write writer "}")))
+
+(defn node-uuid [node] (:uuid (.-value node)))
 
 (defn- assoc-node
   "Helper function for creating a new [[Node]] based on the value of an old one.

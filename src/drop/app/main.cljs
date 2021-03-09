@@ -1,161 +1,31 @@
 (ns drop.app.main
-  (:require [clojure.string :as str]
-            [drop.app.view :as view]
-            [slate.core :as sl]
-            [slate.navigation :as nav]
-            [slate.selection :as sel]
-            [slate.measurement :refer [ruler-for-elem]]
-            [slate.viewmodel :as vm]))
-
-;; TODO: this can be changed to a `find-interceptor` function that takes
-;; an event and a map of all the interceptors and returns one if it exists
-;; or null otherwise (maybe a no-op otherwise?). This will also give us more
-;; flexibility in defining how events cascade (if at all?) and allow modifier
-;; keys to be written in any order.
-(defn parse-event [e]
-  (let [modifiers (cond-> (transient [])
-                    (.-ctrlKey e) (conj! "ctrl")
-                    (.-altKey e) (conj! "alt")
-                    (.-shiftKey e) (conj! "shift")
-                    :always (persistent!))
-        key (case (.-key e)
-              "ArrowLeft" "left"
-              "ArrowRight" "right"
-              "ArrowUp" "up"
-              "ArrowDown" "down"
-              "Tab" "tab"
-              (-> (.-key e) .toLowerCase))]
-    (->> (conj modifiers key)
-         (str/join "+")
-         (keyword))))
+  (:require [slate.core :as sl]
+            [slate.main :refer [init sync-dom]]
+            [slate.events :as events]))
 
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))
-(def measure-fn (ruler-for-elem fake-editor))
-(def para1
-  (sl/paragraph (uuid "p1") [(sl/run "Hello world, this is an example of a paragraph ")
-                     (sl/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
-                     (sl/run "Don't know what else to say. Hmmmm..." #{:bold})]))
-(def para3
-  (sl/paragraph (uuid "p3") [(sl/run "And this is paragraph numero dos.")]))
+(def para1 (sl/paragraph (uuid "p1")
+                         [(sl/run "Hello world, this is an example of a paragraph ")
+                          (sl/run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
+                          (sl/run "Don't know what else to say. Hmmmm..." #{:bold})]))
+
+(def para2 (sl/paragraph))
+(def para3 (sl/paragraph (uuid "p3") [(sl/run "And this is paragraph numero dos.")]))
 
 ;; TODO: maybe change this to "editor-state" and include dom references and current ruler inside it
 ;; TODO: hide this behind an initializer function which returns the shit we need and takes an elem as its argument
-(def initial-doc (sl/document [para1 (sl/paragraph) para3]))
-(def doc-state (atom {:doc initial-doc
-                      :selection (sel/selection [(:uuid para1) 0])
-                      ;; TODO: just change to a DLL of viewmodels?
-                      :viewmodels (vm/from-doc initial-doc 200 measure-fn)}))
-
-(defn sync-dom
-  [{:keys [viewmodels doc selection] :as _doc-state} root-elem]
-  (let [vm-paras (map #(get viewmodels (:uuid %)) (:children doc))
-        rendered (view/vm-paras->dom vm-paras selection)]
-    (set! (.-innerHTML root-elem) rendered)))
-
-(defn fire-interceptor
-  "Calls the interceptor with the provided args (typically
-   state and the Event object) and re-synces the DOM."
-  [interceptor-fn & args]
-  (let [old-state @doc-state
-        changed (apply interceptor-fn args)
-        doc (get changed :doc (:doc old-state))
-        new-state (-> (merge old-state changed)
-                      (assoc :viewmodels (vm/from-doc doc 200 measure-fn)))]
-    (reset! doc-state new-state)
-    (sync-dom @doc-state fake-editor)))
-
-;; TODO: change to a reg-interceptors! function call.
-(def interceptors
-  {:click (fn [state e]
-            (let [new-sel (view/mouse-event->selection e state measure-fn)]
-              (assoc state :selection new-sel)))
-   :drag (fn [state mousedown-event mousemove-event]
-           (update state :selection #(view/drag mousedown-event mousemove-event state measure-fn)))
-
-   :insert (fn [{:keys [doc selection] :as state} e]
-             (let [text (.-data e)
-                   new-doc (sl/insert doc selection text)
-                   new-selection (sel/shift-single selection (count text))]
-               (assoc state :doc new-doc :selection new-selection)))
-   :delete (fn [{:keys [doc selection] :as state} _e]
-             (let [[new-doc, new-sel] (sl/delete doc selection)]
-               (assoc state :doc new-doc :selection new-sel)))
-   :enter (fn [{:keys [doc selection] :as state} _e]
-            (let [[new-doc, new-sel] (sl/enter doc selection)]
-             (assoc state :doc new-doc :selection new-sel)))
-   :tab (fn [{:keys [doc selection] :as state} _e]
-          (let [new-doc (sl/insert doc selection "\u2003")
-                new-selection (sel/shift-single selection 1)]
-            (assoc state :doc new-doc :selection new-selection)))
-
-   :left (fn [state _e]
-           (update state :selection #(nav/prev-char (:doc state) %)))
-   :ctrl+left (fn [state _e]
-                (update state :selection #(nav/prev-word (:doc state) %)))
-   :shift+left (fn [state _e]
-                 (update state :selection #(nav/shift+left (:doc state) (:selection state))))
-   :ctrl+shift+left (fn [state _e]
-                      (update state :selection #(nav/ctrl+shift+left (:doc state) (:selection state))))
-
-   :right (fn [state _e]
-            (update state :selection #(nav/next-char (:doc state) %)))
-   :ctrl+right (fn [state _e]
-                 (update state :selection #(nav/next-word (:doc state) %)))
-   :shift+right (fn [state _e]
-                  (update state :selection #(nav/shift+right (:doc state) (:selection state))))
-   :ctrl+shift+right (fn [state _e]
-                       (update state :selection #(nav/ctrl+shift+right (:doc state) (:selection state))))
-
-   :down (fn [state _e]
-           (update state :selection #(view/down state measure-fn)))
-   :shift+down (fn [state _e]
-                 (update state :selection #(view/shift+down state measure-fn)))
-   :up (fn [state _e]
-         (update state :selection #(view/up state measure-fn)))
-   :shift+up (fn [state _e]
-               (update state :selection #(view/shift+up state measure-fn)))})
-
 ;; TODO: handle case of click, hold, type some stuff, THEN release
+(def initial-doc (sl/document [para1 para2 para3]))
+(def state (init :editor-elem fake-editor
+                 :hidden-input hidden-input
+                 :doc initial-doc))
 
 (defn main []
-  (let [clicked? (atom false :validator boolean?)
-        mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
-    (.addEventListener fake-editor "mousedown"
-      (fn [e]
-        (.preventDefault e)
-        (.focus hidden-input)
-
-        (reset! clicked? true)
-        (reset! mousedown-event e)
-        (fire-interceptor (:click interceptors) @doc-state e)))
-
-    (.addEventListener js/window "mousemove"
-      (fn [e]
-        (when @clicked?
-          (fire-interceptor (:drag interceptors) @doc-state @mousedown-event e))))
-
-    (.addEventListener js/window "mouseup"
-      (fn [_e]
-        (reset! clicked? false))))
-
-  (.addEventListener hidden-input "keydown"
-    (fn [e]
-      (when-let [interceptor-fn (get interceptors (parse-event e))]
-        (.preventDefault e)
-        (fire-interceptor interceptor-fn @doc-state e))))
-
-  (.addEventListener hidden-input "beforeinput"
-    (fn [e]
-      (case (.-inputType e)
-        "insertText" (fire-interceptor (:insert interceptors) @doc-state e)
-        "deleteContentBackward" (fire-interceptor (:delete interceptors) @doc-state e)
-        nil)))
-
-  (sync-dom @doc-state fake-editor))
+  )
 
 (defn ^:dev/after-load reload []
-  (sync-dom @doc-state fake-editor))
+  (sync-dom @state fake-editor))
 
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
 ;; TODO: Handle resizing of the text area
