@@ -41,7 +41,9 @@
 (defn get-words
   "Splits string `s` into a vector of words."
   [s]
-  (str/split s #"( )+"))
+  ;; TODO: is this the correct way to split words?
+  (str/split s #"(\s+)")
+  #_(str/split s #"( )+"))
 
 (defn add-span
   "Adds the span to the given line and updates the line's width."
