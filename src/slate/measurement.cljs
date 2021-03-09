@@ -1,4 +1,4 @@
-(ns drop.editor.measurement
+(ns slate.measurement
   "Functions for measuring the widths of text as they will appear in the actual DOM."
   (:require [clojure.string :as str]))
 

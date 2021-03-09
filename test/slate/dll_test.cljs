@@ -1,6 +1,6 @@
-(ns drop.editor.dll-test
+(ns slate.dll-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.dll :as dll :refer [dll]]))
+            [slate.dll :as dll :refer [dll]]))
 
 (def val1 {:uuid "1" :content "foo"})
 (def val2 {:uuid "2" :content "bar"})

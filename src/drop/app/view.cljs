@@ -1,9 +1,9 @@
 (ns drop.app.view
   "Functions for converting from viewmodels to DOM elements (in the form of strings)."
   (:require [clojure.string :as str]
-            [drop.editor.selection :as sel]
-            [drop.editor.core :as c]
-            [drop.editor.dll :as dll]))
+            [slate.selection :as sel]
+            [slate.core :as c]
+            [slate.dll :as dll]))
 
 ;; Utility functions
 (defn match-elem-in-path

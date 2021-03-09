@@ -1,8 +1,8 @@
-(ns drop.editor.viewmodel-test
+(ns slate.viewmodel-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.core :as c]
-            [drop.editor.measurement :refer [fake-measure-fn]]
-            [drop.editor.viewmodel :as vm]))
+            [slate.core :as c]
+            [slate.measurement :refer [fake-measure-fn]]
+            [slate.viewmodel :as vm]))
 
 (defn unrecord
   "Recursively converts records to maps inside an arbitrary structure of maps and vectors."

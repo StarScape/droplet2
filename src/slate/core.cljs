@@ -1,7 +1,7 @@
-(ns drop.editor.core
+(ns slate.core
   (:require [clojure.set :as set]
-            [drop.editor.dll :as dll :refer [dll]]
-            [drop.editor.selection :as sel :refer [Selection selection]]))
+            [slate.dll :as dll :refer [dll]]
+            [slate.selection :as sel :refer [Selection selection]]))
 
 ;; ==============================================
 ;; |                                            |

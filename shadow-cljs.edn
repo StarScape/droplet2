@@ -14,6 +14,6 @@
           :output-to "out/tests.js"
           :autorun true}
    :test-dll {:target :node-test
-              :ns-regexp "drop.editor.dll-test$"
+              :ns-regexp "slate.dll-test$"
               :output-to "out/tests2.js"
               :autorun true}}}

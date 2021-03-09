@@ -1,4 +1,4 @@
-(ns drop.editor.navigation
+(ns slate.navigation
   "Functions for modifying navigating around the document by modifying selections.
    Note that everything in here is pure -- functions take Documents/Paragraphs and a
    selection, and return a new selection.
@@ -6,9 +6,9 @@
    Also, nothing here should be dependent on the viewmodel or the DOM. Things that have to
    be aware of either of those should go in the `view` namespace."
   (:require [clojure.string :as str]
-            [drop.editor.core :as core]
-            [drop.editor.dll :as dll]
-            [drop.editor.selection :as sel :refer [selection caret smart-collapse single? range?]]))
+            [slate.core :as core]
+            [slate.dll :as dll]
+            [slate.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
 ;; Some helpers and useful primitives ;;
 

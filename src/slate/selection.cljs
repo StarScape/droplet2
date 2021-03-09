@@ -1,4 +1,4 @@
-(ns drop.editor.selection)
+(ns slate.selection)
 
 ;; TODO: docstring for Selection
 (defrecord Selection [start end backwards?])

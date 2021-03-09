@@ -1,7 +1,7 @@
-(ns drop.editor.paragraph-test
+(ns slate.paragraph-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.selection :as sel :refer [selection]]
-            [drop.editor.core :as c :refer [run paragraph]]))
+            [slate.selection :as sel :refer [selection]]
+            [slate.core :as c :refer [run paragraph]]))
 
 ;; These provide a simple way to render a paragraph as a string, thereby allowing
 ;; us to check output of `insert` in the test below without manually checking each

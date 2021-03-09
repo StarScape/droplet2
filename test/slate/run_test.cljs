@@ -1,6 +1,6 @@
-(ns drop.editor.run-test
+(ns slate.run-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.core :as c]))
+            [slate.core :as c]))
 
 (def run1 (c/run "foobar"))
 (def run2 (c/run "foo"))

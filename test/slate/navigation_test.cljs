@@ -1,8 +1,8 @@
-(ns drop.editor.navigation-test
+(ns slate.navigation-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.navigation :as nav :refer [next-char prev-char next-word prev-word next-word-offset prev-word-offset]]
-            [drop.editor.core :as core]
-            [drop.editor.selection :as sel :refer [caret selection]]))
+            [slate.navigation :as nav :refer [next-char prev-char next-word prev-word next-word-offset prev-word-offset]]
+            [slate.core :as core]
+            [slate.selection :as sel :refer [caret selection]]))
 
 (def test-str "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")
 (def para (core/paragraph "p1" [(core/run test-str)]))

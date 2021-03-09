@@ -1,11 +1,11 @@
 (ns drop.app.main
   (:require [clojure.string :as str]
             [drop.app.view :as view]
-            [drop.editor.core :as c]
-            [drop.editor.navigation :as nav]
-            [drop.editor.selection :as sel]
-            [drop.editor.measurement :refer [ruler-for-elem]]
-            [drop.editor.viewmodel :as vm]))
+            [slate.core :as c]
+            [slate.navigation :as nav]
+            [slate.selection :as sel]
+            [slate.measurement :refer [ruler-for-elem]]
+            [slate.viewmodel :as vm]))
 
 ;; TODO: this can be changed to a `find-interceptor` function that takes
 ;; an event and a map of all the interceptors and returns one if it exists

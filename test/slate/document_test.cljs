@@ -1,8 +1,8 @@
-(ns drop.editor.document-test
+(ns slate.document-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.selection :as sel :refer [selection]]
-            [drop.editor.core :as c :refer [run paragraph document]]
-            [drop.editor.dll :as dll :refer [dll]]))
+            [slate.selection :as sel :refer [selection]]
+            [slate.core :as c :refer [run paragraph document]]
+            [slate.dll :as dll :refer [dll]]))
 
 ;; Because checking equivalence on a bunch of nested records is a ROYAL pain in the ass,
 ;; I invented a sort of custom version of Hiccup[1] for represented documents with paragraphs

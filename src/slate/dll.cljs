@@ -1,4 +1,4 @@
-(ns drop.editor.dll
+(ns slate.dll
   "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs.
    The central problem here is that for our paragraph list, we need a few things:
 
@@ -40,7 +40,7 @@
    The only catch is that every item inserted MUST have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
    will work, but `(dll {:val 1})` will throw an error."
   (:refer-clojure :exclude [first last next remove])
-  (:require-macros [drop.editor.dll :refer [node-uuid]]))
+  (:require-macros [slate.dll :refer [node-uuid]]))
 
 ;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 (declare first)

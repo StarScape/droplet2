@@ -1,4 +1,4 @@
-(ns drop.editor.viewmodel
+(ns slate.viewmodel
   "The view model is an intermediate representation between the core editor data types and HTML.
    An intermediate stage is necessary because we handle the splitting of paragraphs into lines ourselves,
    rather than having the browser do it for us -- this in turn is needed because we draw our own text caret
@@ -20,9 +20,9 @@
    representation between the model and the view, not because it's directly inspired by any of the MVC/psuedo-MVC
    frameworks that also happen to use that term."
   (:require [clojure.string :as str]
-            [drop.editor.dll :as dll :refer [dll]]
-            [drop.editor.core :as c]
-            [drop.editor.measurement :refer [fake-measure-fn ruler]]))
+            [slate.dll :as dll :refer [dll]]
+            [slate.core :as c]
+            [slate.measurement :refer [fake-measure-fn ruler]]))
 
 ;; It is worth noting that this is some of my least favorite code in the whole project.
 ;; So if any unsuspecting soul happens to look at this someday, don't judge me too hard --

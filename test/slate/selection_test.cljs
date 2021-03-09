@@ -1,6 +1,6 @@
-(ns drop.editor.selection-test
+(ns slate.selection-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [drop.editor.selection :as sel :refer [selection]]))
+            [slate.selection :as sel :refer [selection]]))
 
 (def sel-single (selection [:p1 10]))
 (def sel-range (selection [:p1 10] [:p1 20]))
