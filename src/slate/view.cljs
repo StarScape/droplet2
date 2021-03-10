@@ -134,8 +134,6 @@
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
         para-length (sl/len (:paragraph viewmodel))]
-    ; #p (:paragraph viewmodel)
-    ; #p *selection-ongoing?*
     (str "<div class='paragraph' id='" (:uuid (:paragraph viewmodel)) "'>"
          (apply str (map #(vm-line->dom % selection pid para-length) lines))
          "</div>")))
@@ -397,8 +395,8 @@
             prev-para (match-elem-in-path prev-event ".paragraph")
             ;; Start searching at either the paragraph the
             ;; previous event took place in, or the first one
-            start-uuid #p (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs)))
-            advance #p (if (and prev-para (neg? (- client-y (.-y prev-event))))
+            start-uuid (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs)))
+            advance (if (and prev-para (neg? (- client-y (.-y prev-event))))
                          dll/prev
                          dll/next)]
         ;; TODO: okay, definitely some errors here...

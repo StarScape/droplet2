@@ -1,7 +1,6 @@
 (ns drop.app.main
   (:require [slate.core :as sl]
-            [slate.main :refer [init sync-dom]]
-            [slate.events :as events]))
+            [slate.main :refer [init sync-dom]]))
 
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))
