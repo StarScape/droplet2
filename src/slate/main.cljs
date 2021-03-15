@@ -1,4 +1,16 @@
-;; TODO change name to core and separate out the shits in the current core.cljs
+;; TODO: allow interceptors of the type "# " which fires when the user types a key sequence of pound then space.
+;; These need to coexist with the existing control-key oriented interceptors. I think there should be three types:
+;;
+;; 1. Keyword (e.g. :click, :ctrl+left) - the ones that currently exist
+;; 2. String (e.g. "# " or "1. ") - fires once the sequence of characters in the string is typed
+;; 3. Vectors (e.g. [:ctrl+a "1"], [:ctrl+a, :ctrl+b]) - used to mix types 1 and 2, or to create chords
+;;    out of keyboard shortcuts. This type is probably not as strictly necessary as the first two, but
+;;    it should probably be added for the sake of completeness/extensibility.
+;;
+;; Definitely implement types 1 and 2 first. I'll have to give some careful thought about the data structures I need
+;; to use to achieve this.
+
+;; TODO change name to core and separate out the stuff in the current core.cljs
 (ns slate.main
   (:require [clojure.string :as str]
             #_[slate.events :as events :refer [interceptors fire-interceptor]]
@@ -11,11 +23,11 @@
 
 (defn sync-dom
   "Brings the DOM up to date with the latest changes changes to the document.
-   Takes the editor state and the editor DOM element as arguments."
-  [{:keys [viewmodels doc selection] :as _editor-state} root-elem]
+   Takes the editor state as argument its argument."
+  [{:keys [viewmodels doc selection dom-elem] :as _editor-state}]
   (let [vm-paras (map #(get viewmodels (:uuid %)) (:children doc))
         rendered (view/vm-paras->dom vm-paras selection)]
-    (set! (.-innerHTML root-elem) rendered)))
+    (set! (.-innerHTML dom-elem) rendered)))
 
 ;; TODO NEXT: extract some of this into the events namespace
 
@@ -44,6 +56,18 @@
          (str/join "+")
          (keyword))))
 
+;; TODO: make transactions filter out certain things (like :viewmodels), and account for the :para-ids element
+(defn apply-transaction
+  "Applies the given transaction to the editor state and returns the new transaction"
+  [editor-state transaction]
+  (let [merged (merge editor-state transaction)]
+    (assoc merged :viewmodels (vm/from-doc (:doc merged) 200 (:measure-fn editor-state)))))
+
+(defn apply-transaction!
+  "Side-affecting version of `apply-transaction`. Updates the state atom directly, and also returns the new state swapped in."
+  [editor-state-atom transaction]
+  (swap! editor-state-atom apply-transaction transaction))
+
 (defn fire-interceptor
   "Calls the interceptor with the current editor state and the Event object as its args
    (and optionally, any additional args you wish to pass it) and re-synces the DOM.
@@ -51,25 +75,9 @@
    If no interceptor function is provided, the event will be parsed and the matching registered
    interceptor (if any) will be fired (TODO TODO TODO)."
   [interceptor-fn state-atom event & args]
-  (let [state @state-atom
-        ;; Interceptors return an update, not a full new editor state. TODO: transactions
-        update-object (apply interceptor-fn @state-atom event args)
-        merged (merge state update-object)
-        new-state (assoc merged :viewmodels (vm/from-doc (:doc merged) 200 (:measure-fn state)))]
-    (reset! state-atom new-state)
-    (sync-dom new-state (:dom-elem new-state))))
-
-;; TODO: allow interceptors of the type "# " which fires when the user types a key sequence of pound then space.
-;; These need to coexist with the existing control-key oriented interceptors. I think there should be three types:
-;;
-;; 1. Keyword (e.g. :click, :ctrl+left) - the ones that currently exist
-;; 2. String (e.g. "# " or "1. ") - fires once the sequence of characters in the string is typed
-;; 3. Vectors (e.g. [:ctrl+a "1"], [:ctrl+a, :ctrl+b]) - used to mix types 1 and 2, or to create chords
-;;    out of keyboard shortcuts. This type is probably not as strictly necessary as the first two, but
-;;    it should probably be added for the sake of completeness/extensibility.
-;;
-;; Definitely implement types 1 and 2 first. I'll have to give some careful thought about the data structures I need
-;; to use to achieve this.
+  (let [transaction (apply interceptor-fn @state-atom event args)
+        new-state (apply-transaction! state-atom transaction)]
+    (sync-dom new-state)))
 
 (def default-interceptors
   {:click (fn [state e]
@@ -157,10 +165,9 @@
           "deleteContentBackward" (fire-interceptor (get-interceptor :delete) editor-state-atom e)
           nil)))))
 
-
 ;; TODO: just create the hidden-elem programmatically here
 (defn init
-  "Initializes the editor surface, and returns an atom contain the editor state. This
+  "Initializes the editor surface, and returns an atom containing the editor state. This
    atom will continue to be update throughout the lifetime of the editor. Takes a series
    of keyword arguments:
 
@@ -182,6 +189,6 @@
                             :measure-fn measure-fn
                             :interceptors default-interceptors})]
     (init-default-events editor-state editor-elem hidden-input)
-    (sync-dom @editor-state editor-elem)
+    (sync-dom @editor-state)
 
     editor-state))

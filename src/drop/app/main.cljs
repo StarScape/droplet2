@@ -24,7 +24,7 @@
   )
 
 (defn ^:dev/after-load reload []
-  (sync-dom @state fake-editor))
+  (sync-dom @state))
 
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?) 
 ;; TODO: Handle resizing of the text area
