@@ -3,11 +3,12 @@
             [slate.dll :as dll :refer [dll]]
             [slate.selection :as sel :refer [Selection selection]]))
 
-;; ==============================================
-;; |                                            |
-;; |   TODO: change paragraph list to use DLL   |
-;; |                                            |
-;; ==============================================
+;; ===============================================
+;; |                                             |
+;; |   TODO: change paragraph list to use DLL?
+;; |   (Pretty sure this is already done)
+;; |                                             |
+;; ===============================================
 
 ;; TODO: spec all this out. Also learn spec :)
 

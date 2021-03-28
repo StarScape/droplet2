@@ -86,7 +86,7 @@
   ISequential
 
   IEquiv
-  (-equiv [^DoublyLinkedList dll other]
+  (-equiv [^DoublyLinkedList _dll other]
     (if (instance? DoublyLinkedList other)
       (and
        (= entries-map (.-entries-map ^DoublyLinkedList other))
@@ -105,7 +105,7 @@
   (-seq [^DoublyLinkedList dll] (make-seq dll))
 
   ICounted
-  (-count [dll] (count entries-map))
+  (-count [_dll] (count entries-map))
 
   ICollection
   (-conj [^DoublyLinkedList dll val]
@@ -118,18 +118,18 @@
   (-dissoc [^DoublyLinkedList dll uuid] (remove dll uuid))
 
   IAssociative
-  (-assoc [^DoublyLinkedList dll k v]
+  (-assoc [^DoublyLinkedList _dll k v]
     (if (= k (:uuid v))
       (if (contains? entries-map k)
         (DoublyLinkedList. (update entries-map k #(assoc-node % :value v)) first-uuid last-uuid)
         (throw (js/Error. "Attempting (assoc) a DLL key that does not exist.")))
       (throw (js/Error. "Attempting to change the UUID of an item in the DLL with (assoc)! This will break things!"))))
-  (-contains-key? [^DoublyLinkedList dll k]
+  (-contains-key? [^DoublyLinkedList _dll k]
     (contains? entries-map k))
 
   ILookup
   (-lookup [^DoublyLinkedList dll uuid] (-lookup dll uuid nil))
-  (-lookup [^DoublyLinkedList dll uuid not-found]
+  (-lookup [^DoublyLinkedList _dll uuid not-found]
     (if-let [entry ^Node (get entries-map uuid)]
       (.-value entry)
       not-found))
