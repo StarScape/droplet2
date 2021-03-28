@@ -18,7 +18,6 @@
 ;;   [:p [:run "aaabbbcccddd"]]]
 ;;
 ;; [1] https://github.com/weavejester/hiccup
-
 (defn- convert-run [r] (into [:run (:text r)] (:formats r)))
 (defn- convert-paragraph [p] (into [:p] (map convert-run (:runs p))))
 (defn- convert-doc [d] (mapv convert-paragraph (:children d)))

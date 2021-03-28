@@ -1,6 +1,5 @@
 (ns slate.events
   (:require [clojure.string :as str]
-            #_[slate.events :as events :refer [interceptors fire-interceptor]]
             [slate.core :as sl]
             [slate.editor :as editor]
             [slate.navigation :as nav]
@@ -183,7 +182,7 @@
 
 (defmethod find-interceptor js/KeyboardEvent
   [interceptor-map event]
-  (get-in interceptor-map [:shortcuts #p (parse-event event)]))
+  (get-in interceptor-map [:shortcuts (parse-event event)]))
 
 (comment
   (def sample-ints {:shortcuts {#{:ctrl :shift :a} :foo}

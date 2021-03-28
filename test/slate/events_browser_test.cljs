@@ -1,9 +1,9 @@
-(ns slate.events-test
+(ns slate.events-browser-test
   (:require [cljs.test :include-macros true :refer [is deftest]]
             [slate.events :as e :refer [reg-interceptor
-                                             parse-event
-                                             add-key-to-history
-                                             max-input-history]]))
+                                        parse-event
+                                        add-key-to-history
+                                        max-input-history]]))
 
 (def dummy-op (fn []))
 (def empty-int-map {:shortcuts {}, :completions {}})

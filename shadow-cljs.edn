@@ -1,20 +1,21 @@
 {:source-paths ["src" "test"]
- :dependencies [[hashp "0.2.0"]
-                ]
+ :dependencies [[hashp "0.2.0"]]
  :dev-http {8080 "public"}
  :nrepl {:port 3333}
  :builds
-  {:app {:output-dir "public/js"
-         :asset-path "/js" ;; NOTE: relative to server root
-         :target :browser
+  {:app {:target :browser
+         :output-dir "public/js" ;; NOTE: relative to server root
+         :asset-path "/js"
          :modules {:main {:init-fn drop.app.main/main}}
          :nrepl {:init-ns user}
          :devtools {:preloads [hashp.core]}}
-   :test {:target :node-test
-          :ns-regexp "-test$"
-          :output-to "out/tests.js"
-          :autorun true}
+   :node-test {:target :node-test
+               :ns-regexp "(?<!browser)-test$" ;; all ns's ending in '-test' but not '-browser-test'
+               :output-to "out/node_test.js"}
+   :browser-test {:target :karma
+                  :ns-regexp "-browser-test$"
+                  :output-to "out/browser_test.js"}
    :test-dll {:target :node-test
               :ns-regexp "slate.dll-test$"
-              :output-to "out/tests2.js"
+              :output-to "out/dll_test.js"
               :autorun true}}}
