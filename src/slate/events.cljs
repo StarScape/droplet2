@@ -27,7 +27,8 @@
                    new-doc (sl/insert doc selection text)
                    new-selection (sel/shift-single selection (count text))
                    new-state (assoc state :doc new-doc :selection new-selection)]
-               (cond->> new-state
+               (with-history text new-state)
+               #_(cond->> new-state
                  (pos? (.-length text)) (with-history text))))
    :delete (fn [{:keys [doc selection] :as state} _e]
              (let [[new-doc, new-sel] (sl/delete doc selection)]
@@ -94,15 +95,23 @@
           (subvec history 1))
         key))
 
-;; TODO (maybe, here for my mental posterity): this can be changed to a `find-interceptor`
-;; function that takes an event and a map of all the interceptors and returns
-;; one if it exists or null otherwise (maybe a no-op otherwise?). This will also
-;; give us more flexibility in defining how events cascade (if at all?) and allow
-;; modifier keys to be written in any order.
+(defn matching-completion?
+  "Takes the editor's interceptor map and input history, and returns
+   a matching completion interceptor if one exists, or nil otherwise."
+  [key interceptor-map history]
+  {:pre [(vector? history)]}
+  (let [completions (:completions interceptor-map)
+        path (reverse (conj history key))] ; [..., "c" "b", "a"]
+    (loop [current-level completions
+           [p & ps] path]
+      (let [next (current-level p)]
+        (if (or (nil? next) (fn? next))
+          next
+          (recur next ps))))))
 
 ;; TODO: once I incorporate automatic parsing of events, can turn this into a multimethod/protocol
 ;; and implement instances for different sublcasses of Events :)
-
+;;
 ;; TODO: make a test with Ctrl, Alt, and Shift each by themselves and with a primary key
 (defn parse-event [e]
   (let [modifiers (cond-> (transient [])

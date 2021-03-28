@@ -39,3 +39,17 @@
            (e/find-interceptor sample-ints :ctrl+shift+a)
            (e/find-interceptor sample-ints :shift+ctrl+a)))
     (is (= :bar (e/find-interceptor sample-ints "abc")))))
+
+(def comp1 (fn []))
+(def comp2 (fn []))
+(def completion-interceptors {:completions {"c" {"b" {"a" comp1, "1" comp2}}}
+                              :shortcuts {}})
+
+(deftest matching-completion-test
+  ;; "abc" and "1bc"
+  (is (= comp1 (e/matching-completion? "c" completion-interceptors ["a" "b"])))
+  (is (= comp2 (e/matching-completion? "c" completion-interceptors ["1" "b"])))
+  (is (= nil (e/matching-completion? "d" completion-interceptors ["a" "b"])))
+  (let [comp3 (fn [])
+        new-interceptors (reg-interceptor completion-interceptors "abd" comp3)]
+    (is (= comp3 (e/matching-completion? "d" new-interceptors ["a" "b"])))))

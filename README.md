@@ -6,7 +6,7 @@ Source code for the Droplet desktop app.
 
 ## Testing
 
-In order to help the tests run as fast as possible, tests which are not dependent on any browser APIs use `shadow-cljs`'s `:node-test` target, and should have a namespace name ending in `-test`. Browser-dependent tests use `:karma` and should have a namespace ending in `browser-test`. As long as you name the namespaces correctly, every test should be automatically assigned to its appropriate build group.
+In order to help the tests run as fast as possible, tests which are not dependent on any browser APIs use `shadow-cljs`'s `:node-test` target, and should have a namespace name ending in `-test`. Browser-dependent tests use `:karma` and should have a namespace ending in `browser-test`. Every test will automatically be run as either a browser or Node test based on whether it ends in `-browser-test` or just `-test`.
 
 > Note: in order for the browser tests to run correctly you will need to have the CHROME_BIN environment variable set, see [here](https://github.com/karma-runner/karma-chrome-launcher/issues/62).
 
@@ -36,7 +36,7 @@ shadow-cljs compile test-dll
 
 That build is set to autorun `:autorun true`, so there is no need for any additional step.
 
-## Output dirs
+## Output directories
 
 - Browser code is output to `public/js/`.
 - Test code it ouput to `out/`.
