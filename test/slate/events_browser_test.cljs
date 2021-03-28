@@ -1,7 +1,7 @@
 (ns slate.events-browser-test
   (:require [cljs.test :include-macros true :refer [is deftest]]
             [slate.events :as e :refer [reg-interceptor
-                                        parse-event
+                                        event->key-set
                                         add-key-to-history
                                         max-input-history]]))
 
@@ -28,8 +28,8 @@
          {"c" {"b" {"a" dummy-op}}}))
   (is (thrown? js/Error (reg-interceptor empty-int-map :ctrk+shoft+left dummy-op))))
 
-(deftest parse-event-test
-  (is (= (parse-event #js {:ctrlKey true, :shiftKey true, :key "ArrowLeft"})
+(deftest event->key-set-test
+  (is (= (event->key-set #js {:ctrlKey true, :shiftKey true, :key "ArrowLeft"})
          #{:ctrl :shift :left})))
 
 (deftest find-interceptor-test

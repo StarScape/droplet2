@@ -1,5 +1,6 @@
 (ns slate.events
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [slate.core :as sl]
             [slate.editor :as editor]
             [slate.navigation :as nav]
@@ -29,7 +30,7 @@
                    new-state (assoc state :doc new-doc :selection new-selection)]
                (with-history text new-state)
                #_(cond->> new-state
-                 (pos? (.-length text)) (with-history text))))
+                   (pos? (.-length text)) (with-history text))))
    :delete (fn [{:keys [doc selection] :as state} _e]
              (let [[new-doc, new-sel] (sl/delete doc selection)]
                (with-history :delete
@@ -86,6 +87,74 @@
 ;; Maximum number of keys typed to remember
 (def ^:const max-input-history 10)
 
+;; TODO: should this be const?
+(def modifier-keys #{"ctrl" "shift" "alt" "meta"})
+
+(def valid-interceptor-keywords
+  ^{:doc "Set of legal modifier keys and events for an interceptor pattern."}
+  (set/union modifier-keys #{"up" "down" "left" "right" "enter" "tab" "click" "drag" "insert" "delete"}))
+
+(defn valid-interceptor-key?
+  "Returns true if key (a string) is a valid interceptor key, otherwise false."
+  [key]
+  {:pre [(string? key)]}
+  (cond
+    (= 1 (count key)) true ;; Single char is just the primary key pressed
+    (valid-interceptor-keywords key) true ;; otherwise confirm it is an allowed modifier key or other event
+    :else false))
+
+(defn validate-keys
+  "Validates that every key in the interceptor pattern is a legal one. (For example, :ctrk+:shyft+a is illegal.)
+   Will throw an error if an illegal key is for in the pattern, otherwise returns the collection of keys supplied."
+  [keys]
+  (doseq [key keys]
+    (when-not (valid-interceptor-key? key)
+      (throw (js/Error. (str "Slate error: " key " is not a valid key in an interceptor!")))))
+  keys)
+
+(defn event->key-set
+  "Takes a JS event and returns a set of all the keys pressed, e.g. #{:ctrl :shift :a}."
+  [e]
+  (let [modifiers-pressed (cond-> (transient [])
+                    (.-ctrlKey e) (conj! :ctrl)
+                    (.-altKey e) (conj! :alt)
+                    (.-shiftKey e) (conj! :shift)
+                    :then (persistent!))
+        key (case (.-key e)
+              "ArrowLeft" :left
+              "ArrowRight" :right
+              "ArrowUp" :up
+              "ArrowDown" :down
+              "Tab" :tab
+              (-> (.-key e) .toLowerCase))
+        pressed-keys (cond-> modifiers-pressed
+                       (not (modifier-keys key)) (conj key))]
+    (set (map keyword pressed-keys))))
+
+(defn shortcut-pattern->key-set
+  "Transforms an interceptor pattern like `:shift+a`, `:ctrl+z`, etc into a set of all the
+   keys pressed. So for example:
+
+   ```
+   (shortcut-pattern->key-set :shift+a)
+   (shortcut-pattern->key-set :ctrl+alt+enter)
+   ```
+
+   This is necessary because we want to be able to find an interceptor for a given
+   key combination in constant time, but allow the user to describe them in any order.
+   For example, `:ctrl+shift+a` and `:shift+ctrl+a` are equivalent. Therefore we use
+   a set of all the keys pressed for indexing inside the interceptor map."
+  [pattern]
+  (->> (str/split (name pattern) "+")
+       (validate-keys)
+       (map keyword)
+       (set)))
+
+(defn completion-pattern->lookup-path
+  "TODO: add explanation of why string patterns are reversed."
+  [pattern]
+  (concat [:completions] (reverse (.split pattern ""))))
+
 (defn add-key-to-history
   "Adds the key to the vector of input history, dropping the least recent key
    typed off the history vector if necessary, and returns the new history vector."
@@ -109,81 +178,13 @@
           next
           (recur next ps))))))
 
-;; TODO: once I incorporate automatic parsing of events, can turn this into a multimethod/protocol
-;; and implement instances for different sublcasses of Events :)
-;;
-;; TODO: make a test with Ctrl, Alt, and Shift each by themselves and with a primary key
-(defn parse-event [e]
-  (let [modifiers (cond-> (transient [])
-                    (.-ctrlKey e) (conj! :ctrl)
-                    (.-altKey e) (conj! :alt)
-                    (.-shiftKey e) (conj! :shift)
-                    :then (persistent!))
-        key (case (.-key e)
-              "ArrowLeft" :left
-              "ArrowRight" :right
-              "ArrowUp" :up
-              "ArrowDown" :down
-              "Tab" :tab
-              (-> (.-key e) .toLowerCase))
-        pressed-keys (cond-> modifiers
-                       (not (#{"control" "shift" "alt" "meta"} key))
-                       (conj key))]
-    (set (map keyword pressed-keys))))
-
-(def valid-interceptor-keywords
-  ^{:doc "Set of legal modifier keys and events for an interceptor."}
-  #{"ctrl" "shift" "alt" "up" "down" "left" "right" "enter" "tab" "click" "drag" "insert" "delete"})
-
-(defn valid-interceptor-key?
-  "Returns true if key (a string) is a valid interceptor key, otherwise false."
-  [key]
-  {:pre [(string? key)]}
-  (cond
-    (= 1 (count key)) true ;; Single char is just the primary key pressed
-    (valid-interceptor-keywords key) true ;; otherwise confirm it is an allowed modifier key or other event
-    :else false))
-
-(defn validate-keys
-  "Validates that every key in the interceptor pattern is a legal one. (For example, :ctrk+:shyft+a is illegal.)
-   Will throw an error if an illegal key is for in the pattern, otherwise returns the collection of keys supplied."
-  [keys]
-  (doseq [key keys]
-    (when-not (valid-interceptor-key? key)
-      (throw (js/Error. (str "Slate error: " key " is not a validate key in an interceptor!")))))
-  keys)
-
-(defn shortcut-pattern->set
-  "Transforms an interceptor pattern like `:shift+a`, `:ctrl+z`, etc into a set of all the
-   keys pressed. So for example:
-
-   ```
-   (shortcut-pattern->set :shift+a)
-   (shortcut-pattern->set :ctrl+alt+enter)
-   ```
-
-   This is necessary because we want to be able to find an interceptor for a given
-   key combination in constant time, but allow the user to describe them in any order.
-   For example, `:ctrl+shift+a` and `:shift+ctrl+a` are equivalent. Therefore we use
-   a set of all the keys pressed for indexing inside the interceptor map."
-  [pattern]
-  (->> (str/split (name pattern) "+")
-       (validate-keys)
-       (map keyword)
-       (set)))
-
-(defn completion-pattern->lookup-path
-  "TODO: add explanation of why string patterns are reversed."
-  [pattern]
-  (concat [:completions] (reverse (.split pattern ""))))
-
 (defmulti find-interceptor
   "Given a pattern or an event, returns the interceptor associated with it, or nil if one does not exist."
   (fn [_interceptors arg] (type arg)))
 
 (defmethod find-interceptor Keyword
   [interceptor-map pattern]
-  (get-in interceptor-map [:shortcuts (shortcut-pattern->set pattern)]))
+  (get-in interceptor-map [:shortcuts (shortcut-pattern->key-set pattern)]))
 
 (defmethod find-interceptor js/String
   [interceptor-map pattern]
@@ -191,7 +192,7 @@
 
 (defmethod find-interceptor js/KeyboardEvent
   [interceptor-map event]
-  (get-in interceptor-map [:shortcuts (parse-event event)]))
+  (get-in interceptor-map [:shortcuts (event->key-set event)]))
 
 (comment
   (def sample-ints {:shortcuts {#{:ctrl :shift :a} :foo}
@@ -223,7 +224,7 @@
   [interceptors-map pattern interceptor-fn]
   (condp = (type pattern)
     Keyword (assoc-in interceptors-map
-                      [:shortcuts (shortcut-pattern->set pattern)]
+                      [:shortcuts (shortcut-pattern->key-set pattern)]
                       interceptor-fn)
     js/String (assoc-in interceptors-map
                         (completion-pattern->lookup-path pattern)
