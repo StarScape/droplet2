@@ -25,6 +25,11 @@
 ;; Interceptors are meant for extensibility, but even so, most of the default events
 ;; are implemented using them, the idea being that eating our own dogfood is the only
 ;; way to end up with a sufficiently flexible and ergonomic system.
+
+;; TODO: for interceptors that aren't dependent on the viewmodel or DOM state, there's no reason
+;; I couldn't write unit tests for them. Should probably do that, so I can quickly identify any
+;; regressions. However, probably a good idea to wait until the history system is in place and
+;; stable, so we can test the whole shebang.
 (def default-interceptors
   {:click (fn [state e]
             (let [new-sel (view/mouse-event->selection e state (:measure-fn state))]
