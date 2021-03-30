@@ -12,7 +12,7 @@
 
 ;; TODO change name to core, change name of old core to "model"
 (ns slate.main
-  (:require [slate.events :as events :refer [default-interceptors]]
+  (:require [slate.events :as events]
             [slate.editor :as editor]
             [slate.measurement :refer [ruler-for-elem]]
             [slate.navigation :as nav]
@@ -41,8 +41,8 @@
                             :hidden-input hidden-input
                             :measure-fn measure-fn
                             :input-history []
-                            :interceptors (events/reg-interceptors {} default-interceptors)})]
-    (events/init-default-events editor-state editor-elem hidden-input)
+                            :interceptors (events/interceptor-map)})]
+    (events/init-default-events editor-state)
     (editor/sync-dom @editor-state)
 
     editor-state))

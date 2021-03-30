@@ -9,9 +9,9 @@
    4. Efficient removal of paragraph or paragraphs at an arbitrary point in the list.
    5. The list must be *ordered.*
    6. Ideally, we do not want the indexes for accessing a paragraph to get invalidated across
-      versions, provided that paragraph is still present. We need this so that event listeners
-      set on <p> elements in the view can know which paragraphs to modify in the model, without
-      having to reset event listeners for every single DOM element each time we change the list.
+      versions, provided that paragraph is still present. We need this so that whenever a <p> element
+      is clicked in the DOM, we can get the paragraph model associated with it in constant time (and we need
+      to be able to do this without updating every <p>'s `id` every single time).
 
    Any one of these is trivial, but getting all of them at once is hard. #1, #2, and #3 are easy
    with a vector or an array. #4 is possible with finger trees or RRB vectors. #5 is a property
@@ -26,7 +26,7 @@
    next nodes, and maintain a map of UUIDs -> Nodes, it can be made into a functional version of a DLL.
 
    You don't really need to be aware of most of these details in order to write code that uses the DLL
-   data structure in this namespace. All you really need to know are the public functions it exposes:
+   data structure presented in this namespace. All you really need to know are the public functions it exposes:
    `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
    `dll` (plus some friends). Aside from that, DLLs behave basically like other Clojure collections: you
    can call `conj`, `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and
@@ -34,8 +34,8 @@
    expected.
 
    They are also decoupled from the rest of the code -- there's no reason you couldn't put something
-   other than paragraphs inside a DLL, though it's doubtful you'd need those specific set of properties
-   for any other use (but hey, maybe).
+   other than paragraphs inside a DLL, though it's doubtful you'd need those incredibly specific set of
+   properties for any other use (but hey, weirder things have happened).
 
    The only catch is that every item inserted MUST have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
    will work, but `(dll {:val 1})` will throw an error."
@@ -86,7 +86,7 @@
   ISequential
 
   IEquiv
-  (-equiv [^DoublyLinkedList dll other]
+  (-equiv [^DoublyLinkedList _dll other]
     (if (instance? DoublyLinkedList other)
       (and
        (= entries-map (.-entries-map ^DoublyLinkedList other))
@@ -105,7 +105,7 @@
   (-seq [^DoublyLinkedList dll] (make-seq dll))
 
   ICounted
-  (-count [dll] (count entries-map))
+  (-count [_dll] (count entries-map))
 
   ICollection
   (-conj [^DoublyLinkedList dll val]
@@ -118,18 +118,18 @@
   (-dissoc [^DoublyLinkedList dll uuid] (remove dll uuid))
 
   IAssociative
-  (-assoc [^DoublyLinkedList dll k v]
+  (-assoc [^DoublyLinkedList _dll k v]
     (if (= k (:uuid v))
       (if (contains? entries-map k)
         (DoublyLinkedList. (update entries-map k #(assoc-node % :value v)) first-uuid last-uuid)
         (throw (js/Error. "Attempting (assoc) a DLL key that does not exist.")))
       (throw (js/Error. "Attempting to change the UUID of an item in the DLL with (assoc)! This will break things!"))))
-  (-contains-key? [^DoublyLinkedList dll k]
+  (-contains-key? [^DoublyLinkedList _dll k]
     (contains? entries-map k))
 
   ILookup
   (-lookup [^DoublyLinkedList dll uuid] (-lookup dll uuid nil))
-  (-lookup [^DoublyLinkedList dll uuid not-found]
+  (-lookup [^DoublyLinkedList _dll uuid not-found]
     (if-let [entry ^Node (get entries-map uuid)]
       (.-value entry)
       not-found))
