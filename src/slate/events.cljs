@@ -7,18 +7,28 @@
             [slate.selection :as sel]
             [slate.view :as view]))
 
+;; Maximum number of keys typed to remember
+(def ^:const max-input-history 10)
+
 (declare add-key-to-history)
 
-(defn with-history
+(defn with-input-history
   "Helper for automatically adding a value to the input history. See use below in interceptors."
   [key state]
   (update state :input-history add-key-to-history key))
 
+;; TODO: can separate all the interceptors and their implementations (including those in view.cljs,
+;; which could be changed into interceptors) out into an "interceptors" namespace maybe?
+
 ;; Default set of interceptors that are added to a new editor.
+;;
+;; Interceptors are meant for extensibility, but even so, most of the default events
+;; are implemented using them, the idea being that eating our own dogfood is the only
+;; way to end up with a sufficiently flexible and ergonomic system.
 (def default-interceptors
   {:click (fn [state e]
             (let [new-sel (view/mouse-event->selection e state (:measure-fn state))]
-              (with-history :click
+              (with-input-history :click
                 (assoc state :selection new-sel))))
    :drag (fn [state mousemove-event mousedown-event]
            (update state :selection #(view/drag mousedown-event mousemove-event state (:measure-fn state))))
@@ -27,79 +37,81 @@
              (let [text (.-data e)
                    new-doc (sl/insert doc selection text)
                    new-selection (sel/shift-single selection (count text))
-                   new-state (assoc state :doc new-doc :selection new-selection)]
-               (with-history text new-state)
-               #_(cond->> new-state
-                   (pos? (.-length text)) (with-history text))))
+                   ;;  new-state (assoc state :doc new-doc :selection new-selection)
+                   input-for-history (if (= 1 (.-length text)) text :PASTE)] ;; TODO?
+               (with-input-history input-for-history
+                 (assoc state :doc new-doc :selection new-selection))))
    :delete (fn [{:keys [doc selection] :as state} _e]
              (let [[new-doc, new-sel] (sl/delete doc selection)]
-               (with-history :delete
+               (with-input-history :delete
                  (assoc state :doc new-doc :selection new-sel))))
    :enter (fn [{:keys [doc selection] :as state} _e]
             (let [[new-doc, new-sel] (sl/enter doc selection)]
-              (with-history :enter
+              (with-input-history :enter
                 (assoc state :doc new-doc :selection new-sel))))
    :tab (fn [{:keys [doc selection] :as state} _e]
           (let [new-doc (sl/insert doc selection "\u2003")
                 new-selection (sel/shift-single selection 1)]
-            (with-history :tab
+            (with-input-history :tab
               (assoc state :doc new-doc :selection new-selection))))
 
    :left (fn [state _e]
-           (with-history :left
+           (with-input-history :left
              (update state :selection #(nav/prev-char (:doc state) %))))
    :ctrl+left (fn [state _e]
-                (with-history :ctrl+left
+                (with-input-history :ctrl+left
                   (update state :selection #(nav/prev-word (:doc state) %))))
    :shift+left (fn [state _e]
-                 (with-history :shift+left
+                 (with-input-history :shift+left
                    (update state :selection #(nav/shift+left (:doc state) (:selection state)))))
    :ctrl+shift+left (fn [state _e]
-                      (with-history :ctrl+shift+left
+                      (with-input-history :ctrl+shift+left
                         (update state :selection #(nav/ctrl+shift+left (:doc state) (:selection state)))))
 
    :right (fn [state _e]
-            (with-history :right
+            (with-input-history :right
               (update state :selection #(nav/next-char (:doc state) %))))
    :ctrl+right (fn [state _e]
-                 (with-history :ctrl+right
+                 (with-input-history :ctrl+right
                    (update state :selection #(nav/next-word (:doc state) %))))
    :shift+right (fn [state _e]
-                  (with-history :shift+right
+                  (with-input-history :shift+right
                     (update state :selection #(nav/shift+right (:doc state) (:selection state)))))
    :ctrl+shift+right (fn [state _e]
-                       (with-history :ctrl+shift+right
+                       (with-input-history :ctrl+shift+right
                          (update state :selection #(nav/ctrl+shift+right (:doc state) (:selection state)))))
 
    :down (fn [state _e]
-           (with-history :down
+           (with-input-history :down
              (update state :selection #(view/down state (:measure-fn state)))))
    :shift+down (fn [state _e]
-                 (with-history :shift+down
+                 (with-input-history :shift+down
                    (update state :selection #(view/shift+down state (:measure-fn state)))))
    :up (fn [state _e]
-         (with-history :up
+         (with-input-history :up
            (update state :selection #(view/up state (:measure-fn state)))))
    :shift+up (fn [state _e]
-               (with-history :shift+up
-                 (update state :selection #(view/shift+up state (:measure-fn state)))))})
-
-;; Maximum number of keys typed to remember
-(def ^:const max-input-history 10)
+               (with-input-history :shift+up
+                 (update state :selection #(view/shift+up state (:measure-fn state)))))
+   
+   "\"" (fn [{:keys [doc selection] :as state} _e]
+          (let [new-doc (sl/insert doc selection "\"\"")
+                new-selection (sel/shift-single selection 1)]
+            (assoc state :doc new-doc :selection new-selection)))})
 
 ;; TODO: should this be const?
-(def modifier-keys #{"ctrl" "shift" "alt" "meta"})
+(def modifier-keys #{:ctrl :shift :alt :meta})
 
 (def valid-interceptor-keywords
   ^{:doc "Set of legal modifier keys and events for an interceptor pattern."}
-  (set/union modifier-keys #{"up" "down" "left" "right" "enter" "tab" "click" "drag" "insert" "delete"}))
+  (set/union modifier-keys #{:tab :right :up :delete :click :drag :down :insert :enter :left}))
 
 (defn valid-interceptor-key?
   "Returns true if key (a string) is a valid interceptor key, otherwise false."
   [key]
-  {:pre [(string? key)]}
+  {:pre [(or (keyword? key) (string? key))]}
   (cond
-    (= 1 (count key)) true ;; Single char is just the primary key pressed
+    (or (string? key) (= 1 (count (name key)))) true ;; Single char is just the primary key pressed
     (valid-interceptor-keywords key) true ;; otherwise confirm it is an allowed modifier key or other event
     :else false))
 
@@ -112,21 +124,30 @@
       (throw (js/Error. (str "Slate error: " key " is not a valid key in an interceptor!")))))
   keys)
 
+(defn event->key
+  "Returns the correct string or keyword for JS KeyboardEvent, based on how it
+   would appear in an interceptor string, e.g. `:ctrl`, `:alt`, `\"a\"`, whatever."
+  [event]
+  {:pre [(instance? js/KeyboardEvent event)]}
+  (let [k (.-key event)]
+    (case k
+      "ArrowLeft" :left
+      "ArrowRight" :right
+      "ArrowUp" :up
+      "ArrowDown" :down
+      "Tab" :tab
+      "Control" :ctrl
+      (-> k (.toLowerCase) (keyword)))))
+
 (defn event->key-set
   "Takes a JS event and returns a set of all the keys pressed, e.g. #{:ctrl :shift :a}."
   [e]
   (let [modifiers-pressed (cond-> (transient [])
-                    (.-ctrlKey e) (conj! :ctrl)
-                    (.-altKey e) (conj! :alt)
-                    (.-shiftKey e) (conj! :shift)
-                    :then (persistent!))
-        key (case (.-key e)
-              "ArrowLeft" :left
-              "ArrowRight" :right
-              "ArrowUp" :up
-              "ArrowDown" :down
-              "Tab" :tab
-              (-> (.-key e) .toLowerCase))
+                            (.-ctrlKey e) (conj! :ctrl)
+                            (.-altKey e) (conj! :alt)
+                            (.-shiftKey e) (conj! :shift)
+                            :then (persistent!))
+        key (event->key e)
         pressed-keys (cond-> modifiers-pressed
                        (not (modifier-keys key)) (conj key))]
     (set (map keyword pressed-keys))))
@@ -146,8 +167,8 @@
    a set of all the keys pressed for indexing inside the interceptor map."
   [pattern]
   (->> (str/split (name pattern) "+")
-       (validate-keys)
        (map keyword)
+       (validate-keys)
        (set)))
 
 (defn completion-pattern->lookup-path
@@ -158,19 +179,19 @@
 (defn add-key-to-history
   "Adds the key to the vector of input history, dropping the least recent key
    typed off the history vector if necessary, and returns the new history vector."
-  [history key]
-  (conj (if (< (count history) max-input-history)
-          history
-          (subvec history 1))
+  [input-history key]
+  (conj (if (< (count input-history) max-input-history)
+          input-history
+          (subvec input-history 1))
         key))
 
 (defn matching-completion?
   "Takes the editor's interceptor map and input history, and returns
    a matching completion interceptor if one exists, or nil otherwise."
-  [key interceptor-map history]
-  {:pre [(vector? history)]}
+  [key-pressed interceptor-map input-history]
+  {:pre [(vector? input-history)]}
   (let [completions (:completions interceptor-map)
-        path (reverse (conj history key))] ; [..., "c" "b", "a"]
+        path (reverse (conj input-history key-pressed))] ; [..., "c" "b", "a"]
     (loop [current-level completions
            [p & ps] path]
       (let [next (current-level p)]
@@ -186,6 +207,7 @@
   [interceptor-map pattern]
   (get-in interceptor-map [:shortcuts (shortcut-pattern->key-set pattern)]))
 
+;; TODO: needed?
 (defmethod find-interceptor js/String
   [interceptor-map pattern]
   (get-in interceptor-map (completion-pattern->lookup-path pattern)))
@@ -277,7 +299,22 @@
 
     (.addEventListener hidden-input "beforeinput"
       (fn [e]
+        ;; TODO: how to undo a completion with a backspace immediately after the completion fires?
+        ;; I think one method might be to FIRST let the normal :insert interceptor fire, THEN afterward
+        ;; fire the completion. Then a special case must be added to the :delete interceptor which undoes
+        ;; what just happened IF the last thing to happen was a completion interceptor. This would also
+        ;; necessitate that every completion add :completion or something similar to the input-history.
+        ;;
+        ;; I think it could work but I'm not yet totally sure how I feel about it. Need to think it over.
         (case (.-inputType e)
-          "insertText" (fire-interceptor (get-interceptor :insert) editor-state-atom e)
-          "deleteContentBackward" (fire-interceptor (get-interceptor :delete) editor-state-atom e)
+          "insertText"
+          (let [{:keys [interceptors input-history]} @editor-state-atom
+                completion-interceptor (when (= 1 (.. e -data -length))
+                                         (matching-completion? (.-data e) interceptors input-history))]
+            (if completion-interceptor
+              (fire-interceptor completion-interceptor editor-state-atom e)
+              (fire-interceptor (get-interceptor :insert) editor-state-atom e)))
+
+          "deleteContentBackward"
+          (fire-interceptor (get-interceptor :delete) editor-state-atom e)
           nil)))))
