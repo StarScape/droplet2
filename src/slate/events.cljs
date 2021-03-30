@@ -94,7 +94,11 @@
                (with-input-history :shift+up
                  (update state :selection #(view/shift+up state (:measure-fn state)))))
    
-   "\"" (fn [{:keys [doc selection] :as state} _e]
+   ;; This completion isn't actually done yet (the behavior is fairly complex and
+   ;; needs to work with range selection etc) just a good example interceptor for testing
+   "\"" (fn [{:keys [doc selection] :as state} _e _default-interceptor]
+          ;; TODO: add logic for only auto-surrounding at appropriate times, e.g. not when next char is
+          ;; alphanumeric, or previous is. Also add a case for range selection, and auto-surround selection if so.
           (let [new-doc (sl/insert doc selection "\"\"")
                 new-selection (sel/shift-single selection 1)]
             (assoc state :doc new-doc :selection new-selection)))})
@@ -308,12 +312,13 @@
         ;; I think it could work but I'm not yet totally sure how I feel about it. Need to think it over.
         (case (.-inputType e)
           "insertText"
-          (let [{:keys [interceptors input-history]} @editor-state-atom
+          (let [insert-interceptor (get-interceptor :insert)
+                {:keys [interceptors input-history]} @editor-state-atom
                 completion-interceptor (when (= 1 (.. e -data -length))
                                          (matching-completion? (.-data e) interceptors input-history))]
             (if completion-interceptor
-              (fire-interceptor completion-interceptor editor-state-atom e)
-              (fire-interceptor (get-interceptor :insert) editor-state-atom e)))
+              (fire-interceptor completion-interceptor editor-state-atom e insert-interceptor)
+              (fire-interceptor insert-interceptor editor-state-atom e)))
 
           "deleteContentBackward"
           (fire-interceptor (get-interceptor :delete) editor-state-atom e)

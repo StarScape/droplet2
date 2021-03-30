@@ -29,8 +29,8 @@
   (is (thrown? js/Error (reg-interceptor empty-int-map :ctrk+shoft+left dummy-op))))
 
 (deftest event->key-set-test
-  (is (= (event->key-set #js {:ctrlKey true, :shiftKey true, :key "ArrowLeft"})
-         #{:ctrl :shift :left})))
+  (let [e (js/KeyboardEvent. "my_kb_event" #js {:ctrlKey true, :shiftKey true, :key "ArrowLeft"})]
+    (is (= (event->key-set e) #{:ctrl :shift :left}))))
 
 (deftest find-interceptor-test
   (let [sample-ints {:shortcuts {#{:ctrl :shift :a} :foo}
