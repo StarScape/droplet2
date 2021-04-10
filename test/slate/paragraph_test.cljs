@@ -1,7 +1,9 @@
 (ns slate.paragraph-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [slate.selection :as sel :refer [selection]]
-            [slate.core :as sl :refer [run paragraph]]))
+            [slate.model.common :as sl]
+            [slate.model.run :as r :refer [run]]
+            [slate.model.paragraph :as p :refer [paragraph]]))
 
 ;; These provide a simple way to render a paragraph as a string, thereby allowing
 ;; us to check output of `insert` in the test below without manually checking each
@@ -37,13 +39,13 @@
                 (run "h")
                 (run "i" #{:bold})
                 (run "j")]
-          optimized (sl/optimize-runs runs)
+          optimized (p/optimize-runs runs)
           rendered (basic-paragraph-render (paragraph optimized))]
       (is (= rendered "<p><italic>ab</italic>c<bold>def</bold>gh<bold>i</bold>j</p>"))))
 
   (testing "works with one empty run"
     (let [runs [(run "" #{:bold})]
-          optimized (sl/optimize-runs runs)]
+          optimized (p/optimize-runs runs)]
       (is (= 1 (count optimized)))
       (is (= "" (-> optimized first :text)))
       (is (= #{} (-> optimized first :formats))))))
@@ -211,29 +213,29 @@
 
 (deftest delete-after-test
   (testing "beginning of paragraph"
-    (let [p (sl/delete-after simplep 0)]
+    (let [p (p/delete-after simplep 0)]
       (is (= p (paragraph "s" [(run "")])))))
 
   (testing "middle of paragraph"
-    (let [p (sl/delete-after simplep 7)]
+    (let [p (p/delete-after simplep 7)]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})])))))
 
   (testing "end of paragraph"
-    (let [p (sl/delete-after simplep 21)]
+    (let [p (p/delete-after simplep 21)]
       (is (= p simplep)))))
 
 (deftest delete-before-test
   (testing "beginning of paragraph"
-    (let [p (sl/delete-before simplep 0)]
+    (let [p (p/delete-before simplep 0)]
       (is (= p simplep))))
 
   (testing "middle of paragraph"
-    (let [p (sl/delete-before simplep 7)]
+    (let [p (p/delete-before simplep 7)]
       (is (= p (paragraph "s" [(run "goobar2" #{})
                                (run "hoobar3" #{:italic})])))))
 
   (testing "end of paragraph"
-    (let [p (sl/delete-before simplep 21)]
+    (let [p (p/delete-before simplep 21)]
       (is (= p (paragraph "s" [(run "")]))))))
 
 ;; TODO: finish this test

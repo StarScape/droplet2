@@ -1,13 +1,16 @@
 (ns slate.navigation-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [slate.navigation :as nav :refer [next-char prev-char next-word prev-word next-word-offset prev-word-offset]]
-            [slate.core :as sl]
+            [slate.model.common :as m]
+            [slate.model.run :as r]
+            [slate.model.paragraph :as p]
+            [slate.model.doc :as doc]
             [slate.selection :as sel :refer [caret selection]]))
 
 (def test-str "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")
-(def para (sl/paragraph "p1" [(sl/run test-str)]))
-(def para2 (sl/paragraph "p2" [(sl/run "foo bar?")]))
-(def doc (sl/document [para, para2]))
+(def para (p/paragraph "p1" [(r/run test-str)]))
+(def para2 (p/paragraph "p2" [(r/run "foo bar?")]))
+(def doc (doc/document [para, para2]))
 
 (deftest start-test
   (testing "works for paragraphs"
@@ -17,7 +20,7 @@
 
 (deftest end-test
   (testing "works for paragraphs"
-    (is (= (selection ["p1" (sl/len para)]) (nav/end para))))
+    (is (= (selection ["p1" (m/len para)]) (nav/end para))))
   (testing "works for documents"
     (is (= (selection ["p2" 8]) (nav/end doc)))))
 
@@ -51,7 +54,7 @@
 
 (deftest next-word-document-test
   (testing "should return the same offset as the paragraph next-word for all offsets but the last"
-    (is (->> (range (sl/len para))
+    (is (->> (range (m/len para))
              (map (fn [offset]
                     (= (caret (next-word doc (selection ["p1" offset])))
                        (caret (next-word para (selection ["p1" offset]))))))
@@ -59,7 +62,7 @@
 
   (testing "next-word from last offset in paragraph should go to first char of next paragraph"
     (is (= (selection ["p2" 0])
-           (next-word doc (selection ["p1" (sl/len para)])))))
+           (next-word doc (selection ["p1" (m/len para)])))))
 
   (testing "past end of paragraph should fail"
     (is (thrown? js/Error (next-word doc (selection ["p1" 200])))))
@@ -103,14 +106,14 @@
 
 (deftest prev-word-document-test
   (testing "should return the same offset as the paragraph prev-word for all offsets but 0"
-    (is (->> (range 1 (inc (sl/len para)))
+    (is (->> (range 1 (inc (m/len para)))
              (map (fn [offset]
                     (= (caret (prev-word doc (selection ["p1" offset])))
                        (caret (prev-word para (selection ["p1" offset]))))))
              (every? true?))))
 
   (testing "prev-word from first offset in paragraph should go to the last char of next paragraph"
-    (is (= (selection ["p1" (sl/len para)])
+    (is (= (selection ["p1" (m/len para)])
            (prev-word doc (selection ["p2" 0])))))
 
   (testing "past end of paragraph should fail"
@@ -146,7 +149,7 @@
     (is (= 1 (caret (next-char doc (selection ["p1" 0]))))))
 
   (testing "returns start of next paragraph when at end of paragraph"
-    (is (= (selection ["p2" 0]) (next-char doc (selection ["p1" (sl/len para)])))))
+    (is (= (selection ["p2" 0]) (next-char doc (selection ["p1" (m/len para)])))))
 
   (testing "returns same selection when at end of LAST paragraph in document"
     (is (= (selection ["p2" 8]) (next-char doc (selection ["p2" 8])))))
@@ -159,7 +162,7 @@
     (is (= 1 (caret (prev-char doc (selection ["p1" 2]))))))
 
   (testing "returns end of previous paragraph when at start of paragraph"
-    (is (= (selection ["p1" (sl/len para)]) (prev-char doc (selection ["p2" 0])))))
+    (is (= (selection ["p1" (m/len para)]) (prev-char doc (selection ["p2" 0])))))
 
   (testing "returns same selection when at start of FIRST paragraph in document"
     (is (= (selection ["p1" 0]) (prev-char doc (selection ["p1" 0])))))
@@ -178,20 +181,20 @@
            (selection ["p1" 1] ["p1" 3] false))))
 
   (testing "works with forwards range selection across paragraphs"
-    (is (= (nav/shift+right doc (selection ["p1" 10] ["p1" (sl/len para)]))
+    (is (= (nav/shift+right doc (selection ["p1" 10] ["p1" (m/len para)]))
            (selection ["p1" 10] ["p2" 0]))))
 
   (testing "won't let you go past end of last paragraph"
-    (is (= (nav/shift+right doc (selection ["p1" 10] ["p2" (sl/len para2)]))
-           (selection ["p1" 10] ["p2" (sl/len para2)])))
-    (is (= (nav/shift+right doc (selection ["p2" 0] ["p2" (sl/len para2)]))
-           (selection ["p2" 0] ["p2" (sl/len para2)])))
-    (is (= (nav/shift+right doc (selection ["p2" (sl/len para2)]))
-           (selection ["p2" (sl/len para2)]))))
+    (is (= (nav/shift+right doc (selection ["p1" 10] ["p2" (m/len para2)]))
+           (selection ["p1" 10] ["p2" (m/len para2)])))
+    (is (= (nav/shift+right doc (selection ["p2" 0] ["p2" (m/len para2)]))
+           (selection ["p2" 0] ["p2" (m/len para2)])))
+    (is (= (nav/shift+right doc (selection ["p2" (m/len para2)]))
+           (selection ["p2" (m/len para2)]))))
 
   (testing "works with selecting to end of para with forwards range selection"
-    (is (= (nav/shift+right doc (selection ["p1" 0] ["p1" (dec (sl/len para))]))
-           (selection ["p1" 0] ["p1" (sl/len para)] false))))
+    (is (= (nav/shift+right doc (selection ["p1" 0] ["p1" (dec (m/len para))]))
+           (selection ["p1" 0] ["p1" (m/len para)] false))))
 
   ;; Backwards selection
   (testing "works with backwards range"
@@ -203,7 +206,7 @@
            (selection ["p1" 2] ["p1" 2] false))))
 
   (testing "works across paragraphs"
-    (is (= (nav/shift+right doc (selection ["p1" (sl/len para)] ["p2" 5] true))
+    (is (= (nav/shift+right doc (selection ["p1" (m/len para)] ["p2" 5] true))
            (selection ["p2" 0] ["p2" 5] true)))
     (is (= (nav/shift+right doc (selection ["p1" 9] ["p2" 5] true))
            (selection ["p1" 10] ["p2" 5] true)))))
@@ -214,7 +217,7 @@
     (is (= (nav/shift+left doc (selection ["p1" 2]))
            (selection ["p1" 1] ["p1" 2] true)))
     (is (= (nav/shift+left doc (selection ["p2" 0]))
-           (selection ["p1" (sl/len para)] ["p2" 0] true))))
+           (selection ["p1" (m/len para)] ["p2" 0] true))))
 
   (testing "works with forwards range selection"
     (is (= (nav/shift+left doc (selection ["p1" 1] ["p1" 5]))
@@ -232,7 +235,7 @@
 
   (testing "works across paragraphs with forwards selection"
     (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 0]))
-           (selection ["p1" 10] ["p1" (sl/len para)])))
+           (selection ["p1" 10] ["p1" (m/len para)])))
     (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 5]))
            (selection ["p1" 10] ["p2" 4]))))
 
@@ -243,7 +246,7 @@
 
   (testing "works with backwards range selection across paragraphs"
     (is (= (nav/shift+left doc (selection ["p2" 0] ["p2" 5] true))
-           (selection ["p1" (sl/len para)] ["p2" 5] true)))
+           (selection ["p1" (m/len para)] ["p2" 5] true)))
     (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 5] true))
            (selection ["p1" 9] ["p2" 5] true)))))
 

@@ -1,6 +1,6 @@
 (ns slate.viewmodel-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.core :as sl]
+            [slate.model.run :as r]
             [slate.measurement :refer [fake-measure-fn]]
             [slate.viewmodel :as vm]))
 
@@ -14,24 +14,24 @@
                                    {} structure)
     :else structure))
 
-(def runs [(sl/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")])
-(def runs-formatted [(sl/run "foobar bizz " #{})
-                     (sl/run "buzz hello hello goodbye. And " #{:italic})
-                     (sl/run "this should" #{:bold})
-                     (sl/run " be " #{:bold :italic})
-                     (sl/run "on the second line " #{})
-                     (sl/run "now." #{:underline})])
+(def runs [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")])
+(def runs-formatted [(r/run "foobar bizz " #{})
+                     (r/run "buzz hello hello goodbye. And " #{:italic})
+                     (r/run "this should" #{:bold})
+                     (r/run " be " #{:bold :italic})
+                     (r/run "on the second line " #{})
+                     (r/run "now." #{:underline})])
 
 (deftest lineify-test
   (testing "works with an empty run"
-    (is (= (unrecord (vm/lineify [(sl/run "")] 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify [(r/run "")] 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 0
              :width 0
              :spans [{:text "", :formats #{}, :start-offset 0, :width 0}]}])))
 
   (testing "works with a run that fits on just one line"
-    (is (= (unrecord (vm/lineify [(sl/run "foobar")] 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify [(r/run "foobar")] 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 6
              :width 60
@@ -109,7 +109,7 @@
                       :width 40}]}])))
 
   (testing "works with a word too large to fit on a line"
-    (is (= (unrecord (vm/lineify [(sl/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify [(r/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 fake-measure-fn))
            [{:spans [{:text "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                       :formats #{}
                       :start-offset 0
@@ -131,9 +131,9 @@
              :end-offset 70
              :width 100}]))))
 
-#_[(sl/run "foobar bizz " #{})
- (sl/run "buzz hello hello goodbye. And " #{:italic})
- (sl/run "this should" #{:bold})
- (sl/run " be " #{:bold :italic})
- (sl/run "on the second line " #{})
- (sl/run "now." #{:underline})]
+#_[(r/run "foobar bizz " #{})
+ (r/run "buzz hello hello goodbye. And " #{:italic})
+ (r/run "this should" #{:bold})
+ (r/run " be " #{:bold :italic})
+ (r/run "on the second line " #{})
+ (r/run "now." #{:underline})]

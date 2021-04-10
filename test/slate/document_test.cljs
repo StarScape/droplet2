@@ -1,7 +1,10 @@
 (ns slate.document-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [slate.selection :as sel :refer [selection]]
-            [slate.core :as sl :refer [run paragraph document]]
+            [slate.model.common :as sl]
+            [slate.model.run :as r :refer [run]]
+            [slate.model.paragraph :as p :refer [paragraph]]
+            [slate.model.doc :as doc :refer [document]]
             [slate.dll :as dll :refer [dll]]))
 
 ;; Because checking equivalence on a bunch of nested records is a ROYAL pain in the ass,
@@ -271,7 +274,7 @@
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (first (sl/enter doc (selection ["p1" 0])))))))
+           (convert-doc (first (doc/enter doc (selection ["p1" 0])))))))
 
   (testing "works at end of paragraph"
     (is (= [[:p
@@ -281,7 +284,7 @@
              [:run "buzz" :bold]]
             [:p [:run ""]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (first (sl/enter doc (selection ["p1" 14])))))))
+           (convert-doc (first (doc/enter doc (selection ["p1" 14])))))))
 
   (testing "works in middle of paragraph"
     (is (= [[:p [:run "foo" :italic]]
@@ -290,7 +293,7 @@
              [:run "bizz" :italic]
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]]
-           (convert-doc (first (sl/enter doc (selection ["p1" 3])))))))
+           (convert-doc (first (doc/enter doc (selection ["p1" 3])))))))
 
   (testing "works at end of doc"
     (is (= [[:p
@@ -300,7 +303,7 @@
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]
             [:p [:run ""]]]
-           (convert-doc (first (sl/enter doc (selection ["p2" 12])))))))
+           (convert-doc (first (doc/enter doc (selection ["p2" 12])))))))
 
   (testing "works with range selection"
     (is (= [[:p
@@ -310,7 +313,7 @@
              [:run "buzz" :bold]]
             [:p [:run "aaabbbcccddd"]]
             [:p [:run ""]]]
-           (convert-doc (first (sl/enter doc (selection ["p2" 12]))))))))
+           (convert-doc (first (doc/enter doc (selection ["p2" 12]))))))))
 
 (deftest selected-content-test
   (testing "returns list of runs when passed selection within one paragraph"

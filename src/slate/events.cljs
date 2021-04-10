@@ -1,7 +1,8 @@
 (ns slate.events
   (:require [clojure.set :as set]
             [clojure.string :as str]
-            [slate.core :as sl]
+            [slate.model.common :as m]
+            [slate.model.doc :as doc]
             [slate.editor :as editor]
             [slate.navigation :as nav]
             [slate.selection :as sel]
@@ -40,22 +41,22 @@
 
    :insert (fn [{:keys [doc selection] :as state} e]
              (let [text (.-data e)
-                   new-doc (sl/insert doc selection text)
+                   new-doc (m/insert doc selection text)
                    new-selection (sel/shift-single selection (count text))
                    ;;  new-state (assoc state :doc new-doc :selection new-selection)
                    input-for-history (if (= 1 (.-length text)) text :PASTE)] ;; TODO?
                (with-input-history input-for-history
                  (assoc state :doc new-doc :selection new-selection))))
    :delete (fn [{:keys [doc selection] :as state} _e]
-             (let [[new-doc, new-sel] (sl/delete doc selection)]
+             (let [[new-doc, new-sel] (m/delete doc selection)]
                (with-input-history :delete
                  (assoc state :doc new-doc :selection new-sel))))
    :enter (fn [{:keys [doc selection] :as state} _e]
-            (let [[new-doc, new-sel] (sl/enter doc selection)]
+            (let [[new-doc, new-sel] (doc/enter doc selection)]
               (with-input-history :enter
                 (assoc state :doc new-doc :selection new-sel))))
    :tab (fn [{:keys [doc selection] :as state} _e]
-          (let [new-doc (sl/insert doc selection "\u2003")
+          (let [new-doc (m/insert doc selection "\u2003")
                 new-selection (sel/shift-single selection 1)]
             (with-input-history :tab
               (assoc state :doc new-doc :selection new-selection))))
@@ -104,7 +105,7 @@
    "\"" (fn [{:keys [doc selection] :as state} _e _default-interceptor]
           ;; TODO: add logic for only auto-surrounding at appropriate times, e.g. not when next char is
           ;; alphanumeric, or previous is. Also add a case for range selection, and auto-surround selection if so.
-          (let [new-doc (sl/insert doc selection "\"\"")
+          (let [new-doc (m/insert doc selection "\"\"")
                 new-selection (sel/shift-single selection 1)]
             (assoc state :doc new-doc :selection new-selection)))})
 

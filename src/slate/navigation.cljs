@@ -6,7 +6,10 @@
    Also, nothing here should be dependent on the viewmodel or the DOM. Things that have to
    be aware of either of those should go in the `view` namespace."
   (:require [clojure.string :as str]
-            [slate.core :as sl]
+            [slate.model.common :as m]
+            [slate.model.run :as r]
+            [slate.model.paragraph :as p :refer [Paragraph]]
+            [slate.model.doc :as doc :refer [Document]]
             [slate.dll :as dll]
             [slate.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
@@ -187,18 +190,18 @@
     "Expands or contracts the caret side of the selection by a word, depending if the selection is
     backwards or forwards respectively. Equivalent to the behavior of pressing ctrl+shift+left."))
 
-(extend-type sl/Paragraph
+(extend-type Paragraph
   Navigable
   (start [para]
     (selection [(:uuid para) 0]))
 
   (end [para]
-    (selection [(:uuid para) (sl/len para)]))
+    (selection [(:uuid para) (m/len para)]))
 
   (next-char [para sel]
     (cond
       (range? sel) (sel/collapse-end sel)
-      (and (single? sel) (< (caret sel) (sl/len para))) (sel/shift-single sel 1)
+      (and (single? sel) (< (caret sel) (m/len para))) (sel/shift-single sel 1)
       :else sel))
 
   (prev-char [para sel]
@@ -219,21 +222,21 @@
           offset (prev-word-offset text (caret collapsed))]
       (sel/set-single collapsed offset))))
 
-(extend-type sl/Document
+(extend-type Document
   Navigable
   (start [doc]
     (selection [(:uuid (dll/first (:children doc))) 0]))
 
   (end [doc]
     (let [last-para (dll/last (:children doc))]
-      (selection [(:uuid last-para) (sl/len last-para)])))
+      (selection [(:uuid last-para) (m/len last-para)])))
 
   (next-char [doc sel]
     (if (range? sel)
       (sel/collapse-end sel)
       (let [para ((:children doc) (-> sel :start :paragraph))]
-        (if (= (caret sel) (sl/len para))
-          (if (sl/last-para? doc para)
+        (if (= (caret sel) (m/len para))
+          (if (doc/last-para? doc para)
             sel
             (start (dll/next (:children doc) para)))
           (next-char para sel)))))
@@ -243,7 +246,7 @@
       (sel/collapse-start sel)
       (let [para ((:children doc) (-> sel :start :paragraph))]
         (if (zero? (caret sel))
-          (if (sl/first-para? doc para)
+          (if (doc/first-para? doc para)
             sel
             (end (dll/prev (:children doc) para)))
           (prev-char para sel)))))
@@ -252,7 +255,7 @@
     (let [collapsed (smart-collapse sel)
           para-uuid (sel/start-para collapsed)
           para ((:children doc) para-uuid)]
-      (if (and (= (sel/caret collapsed) (sl/len para))
+      (if (and (= (sel/caret collapsed) (m/len para))
                (not= para (dll/last (:children doc))))
         ;; TODO: can change to a call to (start) once that is implemented
         (selection [(:uuid (dll/next (:children doc) para)), 0])
@@ -266,7 +269,7 @@
                (not= para (dll/first (:children doc))))
         ;; TODO: can change to a call to (end) once that is implemented
         (let [prev-para (dll/prev (:children doc) para)]
-          (selection [(:uuid prev-para), (sl/len prev-para)]))
+          (selection [(:uuid prev-para), (m/len prev-para)]))
         (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
   ;; TODO: It's possible these can be cleaned up, but *write tests* before
@@ -275,7 +278,7 @@
   Selectable
   (shift+right [doc sel]
     (let [para ((:children doc) (sel/caret-para sel))
-          para-length (sl/len para)
+          para-length (m/len para)
           next-para (dll/next (:children doc) para)]
       (if (and (:backwards? sel) (sel/range? sel))
         (cond
@@ -285,7 +288,7 @@
           :else
           (sel/shift-caret sel 1))
         (cond
-          (and (sl/last-para? doc para)
+          (and (doc/last-para? doc para)
                (= (sel/caret sel) para-length))
           sel
 
@@ -300,25 +303,25 @@
           prev-para (dll/prev (:children doc) para)]
       (if (sel/single? sel)
         (cond
-          (and (sl/first-para? doc para)
+          (and (doc/first-para? doc para)
                (zero? (sel/caret sel)))
           sel
 
           (zero? (sel/caret sel))
           (assoc sel
-                 :start {:offset (sl/len prev-para) :paragraph (:uuid prev-para)}
+                 :start {:offset (m/len prev-para) :paragraph (:uuid prev-para)}
                  :backwards? true)
 
           :else
           (sel/shift-start sel -1))
         (cond
-          (and (sl/first-para? doc para)
+          (and (doc/first-para? doc para)
                (zero? (sel/caret sel)))
           sel
 
           (zero? (sel/caret sel))
           (let [side (if (:backwards? sel) :start :end)]
-            (assoc sel side {:offset (sl/len prev-para)
+            (assoc sel side {:offset (m/len prev-para)
                              :paragraph (:uuid prev-para)}))
 
 
@@ -349,11 +352,11 @@
 
 
 (comment
-  (def my-par (sl/paragraph [(sl/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
+  (def my-par (p/paragraph [(r/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
   (prev-word-offset (apply str (map :text (:runs my-par))) 0)
   (next-word-offset (apply str (map :text (:runs my-par))) 80)
 
-  (def my-doc (sl/document [my-par, (sl/paragraph [(sl/run "foo bar?")])]))
+  (def my-doc (doc/document [my-par, (p/paragraph [(r/run "foo bar?")])]))
   (caret (next-word my-doc (selection [1 0])))
   (caret (prev-word my-doc (selection [0 7])))
   )
