@@ -1,6 +1,6 @@
-(ns slate.document-test
+(ns slate.model.document-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.selection :as sel :refer [selection]]
+            [slate.model.selection :as sel :refer [selection]]
             [slate.model.common :as sl]
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]

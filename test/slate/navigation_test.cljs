@@ -5,7 +5,7 @@
             [slate.model.run :as r]
             [slate.model.paragraph :as p]
             [slate.model.doc :as doc]
-            [slate.selection :as sel :refer [caret selection]]))
+            [slate.model.selection :as sel :refer [caret selection]]))
 
 (def test-str "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")
 (def para (p/paragraph "p1" [(r/run test-str)]))

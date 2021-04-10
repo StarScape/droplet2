@@ -5,7 +5,7 @@
             [slate.model.doc :as doc]
             [slate.editor :as editor]
             [slate.navigation :as nav]
-            [slate.selection :as sel]
+            [slate.model.selection :as sel]
             [slate.view :as view]))
 
 ;; Maximum number of keys typed to remember

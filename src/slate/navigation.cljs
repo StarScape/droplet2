@@ -11,7 +11,7 @@
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.doc :as doc :refer [Document]]
             [slate.dll :as dll]
-            [slate.selection :as sel :refer [selection caret smart-collapse single? range?]]))
+            [slate.model.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
 ;; Some helpers and useful primitives ;;
 

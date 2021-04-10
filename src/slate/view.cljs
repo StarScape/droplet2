@@ -2,7 +2,7 @@
   "Functions for converting from viewmodels to DOM elements (in the form of strings),
    as well as some utilities for dealing with the editor's DOM layer in general."
   (:require [clojure.string :as str]
-            [slate.selection :as sel]
+            [slate.model.selection :as sel]
             [slate.model.common :as sl]
             [slate.dll :as dll]))
 

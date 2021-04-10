@@ -1,4 +1,4 @@
-(ns slate.run-test
+(ns slate.model.run-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [slate.model.common :as sl]
             [slate.model.run :as r]))

@@ -1,4 +1,4 @@
-(ns slate.selection)
+(ns slate.model.selection)
 
 ;; TODO: docstring for Selection
 (defrecord Selection [start end backwards?])

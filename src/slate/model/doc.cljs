@@ -19,7 +19,7 @@
                                         char-at]]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph]]
-            [slate.selection :as sel :refer [Selection]]))
+            [slate.model.selection :as sel :refer [Selection]]))
 
 (defrecord Document [children]
   TextContainer

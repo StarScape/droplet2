@@ -17,7 +17,7 @@
                                         char-before
                                         char-at]]
             [slate.model.run :as r]
-            [slate.selection :as sel :refer [Selection selection]]))
+            [slate.model.selection :as sel :refer [Selection selection]]))
 
 (declare optimize-runs)
 
