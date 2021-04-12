@@ -268,3 +268,10 @@
   (is (= (dll val2 val3) (dll/between l1 "1" "4")))
   (is (= (dll val2) (dll/between l1 "1" "3")))
   (is (= (dll val3 before-val) (dll/between l1 "2" "5"))))
+
+#_(deftest range-test
+  (is (= (dll val1 val2) (dll/range l "1" "2")))
+  (is (= (dll val1 val2 val3 before-val val4) (dll/range l1 "1" "5")))
+  (is (= (dll val1 val2 val3 before-val) (dll/range l1 "1" "4")))
+  (is (= (dll val1 val2 val3) (dll/range l1 "1" "3")))
+  (is (= (dll val2 val3 before-val val4) (dll/range l1 "2" "5"))))

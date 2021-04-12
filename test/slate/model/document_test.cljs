@@ -434,3 +434,6 @@
     (is (= "d" (sl/char-before doc (selection ["p2" 11]))))
     (is (= "d" (sl/char-before doc (selection ["p2" 12]))))
     (is (thrown? js/Error (sl/char-before doc (selection ["[2]" 13]))))))
+
+#_(deftest merge-transactions-test
+  'slate.model.doc/merge-transactions)

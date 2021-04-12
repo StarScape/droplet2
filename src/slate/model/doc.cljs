@@ -19,7 +19,10 @@
                                         char-at]]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph]]
-            [slate.model.selection :as sel :refer [Selection]]))
+            [slate.model.selection :as sel :refer [Selection]])
+  #_(:require-macros [slate.model.doc :refer [tranact->]]))
+
+(declare merge-transactions)
 
 (defrecord Document [children]
   TextContainer
@@ -43,7 +46,7 @@
 
 ;; Document helper functions
 (defn- split-paragraph
-  "Splits the selected paragraph at the (single) selection and returns the two halves."
+  "Splits the selected paragraph at the (single) selection and returns the two halves in a vector."
   [doc sel]
   ;; TODO: the two new halves are assigned 2 new UUIDs, should that happen?
   (map p/paragraph (-> (:children doc)
@@ -62,7 +65,7 @@
     (assoc doc :children new-children)))
 
 (defn- replace-paragraph-with
-  "Returns a new doc with the paragraph having `uuid` replaced with
+  "Returns a new doc with the paragraph having UUID `uuid` replaced with
    `content`, which can be either a paragraph or a list of paragraphs."
   [doc uuid content]
   (update doc :children #(dll/replace-range % uuid uuid content)))
@@ -74,16 +77,21 @@
   (let [target-uuid (-> sel :start :paragraph)
         target-para (get (:children doc) target-uuid)
         new-para (insert target-para sel run)]
-    (assoc-in doc [:children target-uuid] new-para)))
+    {:doc (assoc-in doc [:children target-uuid] new-para)
+     :selection (-> sel
+                    (sel/collapse-start)
+                    (sel/shift-single (len run)))
+     :changed-ids [target-uuid]}))
 
-;; TODO: switch this to a faster concat using the rrb library
 (defn- insert-paragraphs-into-doc
   "Helper function. Inserts multiple paragraphs into the document.
    The selection MUST be a single-selection. This is just a helper and
    it's assumed any deleting of a range selection has already been done."
   [doc sel paragraphs]
+  {:pre [(sel/single? sel)]}
   (let [target-para-uuid (-> sel :start :paragraph)
         target-para (get (:children doc) target-para-uuid)
+        last-para-uuid (random-uuid)
         sel-caret (sel/caret sel)
 
         first-paragraph
@@ -95,8 +103,7 @@
         (-> target-para
             (p/delete-before sel-caret)
             (insert-start (:runs (peek paragraphs)))
-            ;; needs a new UUID
-            (assoc :uuid (random-uuid)))
+            (assoc :uuid last-para-uuid))
 
         ;; TODO: optimize for case where `paragraphs` is DLL?
         in-between-paragraphs
@@ -108,21 +115,22 @@
 
         new-children
         (dll/replace-range (:children doc) target-para-uuid target-para-uuid all-modified-paragraphs)]
-    (assoc doc :children new-children)))
+    {:doc (assoc doc :children new-children)
+     :selection (sel/selection [last-para-uuid, (len (peek paragraphs))])
+     :changed-ids (mapv :uuid all-modified-paragraphs)}))
 
-;; Document main operations
-
-;; TODO: cleanup m8
 (defn- doc-insert-list
   [doc sel runs-or-paras]
   (if (sel/single? sel)
     (condp = (type (first runs-or-paras))
       Run (insert-into-single-paragraph doc sel runs-or-paras)
       Paragraph (insert-paragraphs-into-doc doc sel runs-or-paras))
-    (insert (first (delete doc sel)) (sel/collapse-start sel) runs-or-paras)))
+    (let [delete-transaction (delete doc sel)
+          insert-transaction (insert (:doc delete-transaction) (:selection delete-transaction) runs-or-paras)]
+      (merge-transactions delete-transaction insert-transaction))))
 
-;; TODO: make method instance with DLL as third param
-;; TODO: could we make the delete-before-moving on logic here a little more elegant with a `cond->` form?
+;; Document main operations ;;
+
 (defmethod insert [Document Selection PersistentVector]
   [doc sel runs-or-paras]
   (doc-insert-list doc sel runs-or-paras))
@@ -149,7 +157,7 @@
 
 (defn insert-paragraph-before
   "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.
-   Optionally takes a UUID to assign to the new paragraph."
+   Optionally takes a UUID to assign to the new paragraph. Returns a new document, NOT a transaction."
   ([doc uuid new-para-uuid]
    (replace-paragraph-with doc uuid [(assoc (p/paragraph) :uuid new-para-uuid) ((:children doc) uuid)]))
   ([doc uuid]
@@ -157,39 +165,46 @@
 
 (defn insert-paragraph-after
   "Inserts an empty paragraph into the document immediately after the paragraph with UUID `uuid`.
-   Optionally takes a UUID to assign to the new paragraph."
+   Optionally takes a UUID to assign to the new paragraph. Returns a new document, NOT a transaction."
   ([doc uuid new-para-uuid]
    (replace-paragraph-with doc uuid [((:children doc) uuid) (assoc (p/paragraph) :uuid new-para-uuid)]))
   ([doc uuid]
    (insert-paragraph-after doc uuid (random-uuid))))
 
 (defn- doc-single-delete [doc sel]
-  (if (zero? (sel/caret sel))
-    (if (= (sel/start-para sel) (-> doc :children dll/first :uuid))
-      [doc, sel]
-      (let [uuid (sel/caret-para sel)
-            prev-para (dll/prev (:children doc) uuid)]
-        [(merge-paragraph-with-previous doc uuid)
-         (sel/selection [(:uuid prev-para), (len prev-para)])]))
-    [(update-in doc [:children (sel/start-para sel)] delete sel)
-     (sel/shift-single sel -1)]))
+  (let [para-uuid (sel/start-para sel)]
+    (if (zero? (sel/caret sel))
+      (if (= para-uuid (-> doc :children dll/first :uuid))
+        ; First char of first paragraph, do nothing
+        {:doc doc, :selection sel}
+        ; First char of a different paragraph, merge with previous
+        (let [prev-para (dll/prev (:children doc) para-uuid)]
+          {:doc (merge-paragraph-with-previous doc para-uuid)
+           :selection (sel/selection [(:uuid prev-para), (len prev-para)])
+           :changed-ids [(:uuid prev-para) para-uuid]}))
+      ; Not the first char of the selected paragraph, normal backspace
+      {:doc (update-in doc [:children para-uuid] delete sel)
+       :selection (sel/shift-single sel -1)
+       :changed-ids []})))
 
 (defn- doc-range-delete [doc sel]
-  (let [startp-uuid (-> sel :start :paragraph)
+  (let [children (:children doc)
+        startp-uuid (-> sel :start :paragraph)
         endp-uuid (-> sel :end :paragraph)
-        children (:children doc)
         ;; Replace one paragraph if start and end in the same paragraph, or all of them if not.
         new-para (if (= startp-uuid endp-uuid)
                    (delete (children startp-uuid) sel)
                    (p/merge-paragraphs
                     (p/delete-after (children startp-uuid) (-> sel :start :offset))
                     (p/delete-before (children endp-uuid) (-> sel :end :offset))))
-        ;; new-sel (if (= startp-uuid endp-uuid))
         new-children (dll/replace-range children startp-uuid endp-uuid new-para)]
-    [(assoc doc :children new-children)
-     (sel/collapse-start sel)]))
+    {:doc (assoc doc :children new-children)
+     :selection (sel/collapse-start sel)
+     :changed-ids (-> (concat (dll/uuids-range children startp-uuid endp-uuid)
+                              (dll/uuids-range new-children startp-uuid endp-uuid))
+                      (distinct)
+                      (vec))}))
 
-;; TODO: switch this over to returning a document change object
 (defmethod delete [Document sel/Selection]
   [doc sel]
   (if (sel/single? sel)
@@ -204,20 +219,27 @@
         uuid (-> sel :start :paragraph)
         para ((:children doc) uuid)]
     (if (sel/range? sel)
-      (let [[new-doc, new-sel] (delete doc sel)]
-        (enter new-doc new-sel))
+      (let [{:keys [doc selection] :as t1} (delete doc sel)
+            t2 (enter doc selection)]
+        (merge-transactions t1 t2))
       (cond
         (= caret 0)
-        [(insert-paragraph-before doc uuid), sel]
+        (let [new-uuid (random-uuid)]
+          {:doc (insert-paragraph-before doc uuid new-uuid)
+           :selection sel
+           :changed-ids [new-uuid]})
 
         (= caret (len para))
         (let [new-uuid (random-uuid)]
-          [(insert-paragraph-after doc uuid new-uuid), (sel/selection [new-uuid 0])])
+          {:doc (insert-paragraph-after doc uuid new-uuid)
+           :selection (sel/selection [new-uuid 0])
+           :changed-ids [new-uuid]})
 
         :else
         (let [[para1 para2] (split-paragraph doc sel)]
-          [(replace-paragraph-with doc uuid [para1 para2])
-           (sel/selection [(:uuid para2) 0])])))))
+          {:doc (replace-paragraph-with doc uuid [para1 para2])
+           :selection (sel/selection [(:uuid para2) 0])
+           :changed-ids [uuid, (:uuid para1), (:uuid para2)]})))))
 
 ;; TODO: move to block below?
 (defn doc-selected-content
@@ -245,28 +267,28 @@
     (update-in doc [:children (sel/start-para sel)] #(toggle-format % sel format))
     (let [children (:children doc)
           common-formats (shared-formats doc sel)
-          format-fn (if (common-formats format) remove-format apply-format)
+          format-fn (if (contains? common-formats format) remove-format apply-format)
+
           start-para-uuid (-> sel :start :paragraph)
-          end-para-uuid (-> sel :end :paragraph)
           start-para (children start-para-uuid)
+          start-para-sel (sel/selection [(:uuid start-para) (-> sel :start :offset)] [(:uuid start-para) (len start-para)])
+          new-start-para (format-fn start-para start-para-sel format)
+
+          end-para-uuid (-> sel :end :paragraph)
           end-para (children end-para-uuid)
-          new-start-para (format-fn
-                          start-para
-                          (sel/selection [(:uuid start-para) (-> sel :start :offset)] [(:uuid start-para) (len start-para)])
-                          format)
-          new-end-para (format-fn
-                        end-para
-                        (sel/selection [(:uuid end-para) 0] [(:uuid end-para) (-> sel :end :offset)])
-                        format)
-          ;; in-between-paras (subvec (selected-content doc sel) (inc start-para-idx) end-para-idx)
+          end-para-sel (sel/selection [(:uuid end-para) 0] [(:uuid end-para) (-> sel :end :offset)])
+          new-end-para (format-fn end-para end-para-sel format)
+
           in-between-paras (dll/between (:children doc) start-para-uuid end-para-uuid)
-          in-between-paras-new (map #(format-fn % format) in-between-paras)
+          new-in-between-paras (map #(format-fn % format) in-between-paras)
+
           new-children (-> children
                            (assoc start-para-uuid new-start-para)
                            (assoc end-para-uuid new-end-para)
-                           (dll/replace-between start-para-uuid end-para-uuid in-between-paras-new))]
-      (empty? in-between-paras)
-      (assoc doc :children new-children))))
+                           (dll/replace-between start-para-uuid end-para-uuid new-in-between-paras))]
+      {:doc (assoc doc :children new-children)
+       :selection nil
+       :changed-ids (dll/uuids-range new-children start-para-uuid end-para-uuid)})))
 
 (defn first-para?
   "Returns true if the supplied Paragraph is the first paragraph in the Document."
@@ -287,3 +309,36 @@
   (selected-content [doc sel] (doc-selected-content doc sel))
   (shared-formats [doc sel] (doc-shared-formats doc sel))
   (toggle-format [doc sel format] (doc-toggle-format doc sel format)))
+
+(defn merge-transactions
+  "Takes two transactions and returns a third that combines them. The difference
+   between this and a regular `merge` is that all the changed IDs preserved, e.g.:
+
+   ```
+   (merge-transactions {:doc d1, :selection s1, :changed-ids [:p1 :p2]}
+                       {:doc d2, :changed-ids [:p3]})
+   ;; => {:doc d2, :selection s1, :changed-ids [:p1 :p2 :p3]}
+   ```"
+  [t1 t2]
+  (let [changed-ids (vec (concat (:changed-ids t1) (:changed-ids t2)))]
+    (-> (merge t1 t2)
+        (assoc :changed-ids changed-ids))))
+
+;; TODO: spec for transaction?
+
+(comment
+  (def p1 (p/paragraph [(r/run "foo" #{:italic})
+                        (r/run "bar" #{:bold :italic})
+                        (r/run "bizz" #{:italic})
+                        (r/run "buzz" #{:bold :italic})]))
+
+  (def p2 (p/paragraph [(r/run "aaa" #{:bold :italic})
+                        (r/run "bbb" #{})
+                        (r/run "ccc" #{})
+                        (r/run "ddd" #{})]))
+
+  (def doc (document [(p/paragraph "p1" [(r/run "Hello, ")])]))
+  (-> (insert-into-single-paragraph doc (sel/selection ["p1" 0] ["p1" 5]) (r/run "Goodbye"))
+      :children
+      (vec))
+  (def sel (sel/selection ["p1" 7])))

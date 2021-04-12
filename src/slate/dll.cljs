@@ -39,7 +39,7 @@
 
    The only catch is that every item inserted MUST have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
    will work, but `(dll {:val 1})` will throw an error."
-  (:refer-clojure :exclude [first last next remove]))
+  (:refer-clojure :exclude [first last next remove range]))
 
 ;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 (declare first)
@@ -173,7 +173,7 @@
    If you call this with values of `prev-uuid` and `next-uuid` that are not adjacent, you
    will die a horrible death.
 
-   Also note that this method operates on the entries-map, NOT the DLL itself."
+   Also note that this function operates on the entries-map, NOT the DLL itself."
   [entries {new-uuid :uuid :as val} prev-uuid next-uuid]
   (cond-> entries
     (some? prev-uuid) (update prev-uuid assoc-node :next-uuid new-uuid)
@@ -267,7 +267,6 @@
       (DoublyLinkedList. new-entries new-first new-last))
     dll))
 
-;; TODO: rename to (remove-range)
 (defn remove-range
   "Removes all the items between the nodes with uuid1 and uuid2 (both **inclusive**)."
   [dll uuid1 uuid2]
@@ -321,6 +320,26 @@
       items
       (recur (next list item) (conj items item)))))
 
+;; TODO: testme
+(defn range
+  "Returns a sub-list of all the nodes between (and including) `uuid1` and `uuid2`."
+  [list uuid1 uuid2]
+  (let [uuid-after-uuid2 (:uuid (next list uuid2))]
+    (loop [item (get list uuid1), items (dll)]
+      (if (= (:uuid item) uuid-after-uuid2)
+        items
+        (recur (next list item) (conj items item))))))
+
+(defn uuids-between
+  "Returns a vector of all the UUIDs between `uuid1` and `uuid2`"
+  [dll uuid1 uuid2]
+  (mapv :uuid (between dll uuid1 uuid2)))
+
+(defn uuids-range
+  "Returns a vector of all the UUIDs between `uuid1` and `uuid2` (including both `uuid1` and `uuid2`)"
+  [dll uuid1 uuid2]
+  (mapv :uuid (range dll uuid1 uuid2)))
+
 (defn next
   "Get successive item in the doubly-linked list given either a UUID of a
    node or the value at that node. For example:
@@ -332,11 +351,13 @@
    ```
    Returns `nil` if there is no next element."
   [^DoublyLinkedList dll uuid-or-elem]
+  {:pre [(instance? DoublyLinkedList dll)]}
   (if-let [uuid (:uuid uuid-or-elem)]
     (next dll uuid)
-    (when-let [next-uuid (.-next-uuid (get (.-entries-map dll) uuid-or-elem
-                                           #_(throw (str "ERROR: No item in list with UUID of " uuid-or-elem))))]
-      (.-value (get (.-entries-map dll) next-uuid)))))
+    (if-let [node (get (.-entries-map dll) uuid-or-elem)]
+      (when-let [next-uuid ^Node (.-next-uuid node)]
+        (.-value (get (.-entries-map dll) next-uuid)))
+      (throw (js/Error. (str "There is no element with UUID " uuid-or-elem))))))
 
 (defn prev
   "Get previous item in the doubly-linked list given either a UUID of a
@@ -349,20 +370,25 @@
    ```
    Returns `nil` if there is no previous element."
   [^DoublyLinkedList dll uuid-or-elem]
+  {:pre [(instance? DoublyLinkedList dll)]}
   (if-let [uuid (:uuid uuid-or-elem)]
     (prev dll uuid)
-    (when-let [prev-uuid (.-prev-uuid (get (.-entries-map dll) uuid-or-elem))]
-      (.-value (get (.-entries-map dll) prev-uuid)))))
+    (if-let [node (get (.-entries-map dll) uuid-or-elem)]
+      (when-let [prev-uuid ^Node (.-prev-uuid node)]
+        (.-value (get (.-entries-map dll) prev-uuid)))
+      (throw (js/Error. (str "There is no element with UUID " uuid-or-elem))))))
 
 (defn first
   "Returns first element in DLL."
   [^DoublyLinkedList dll]
+  {:pre [(instance? DoublyLinkedList dll)]}
   (when-let [first-node ^Node (get (.-entries-map dll) (.-first-uuid dll))]
     (.-value first-node)))
 
 (defn last
   "Returns last element in DLL."
   [^DoublyLinkedList dll]
+  {:pre [(instance? DoublyLinkedList dll)]}
   (when-let [first-node ^Node (get (.-entries-map dll) (.-last-uuid dll))]
     (.-value first-node)))
 
@@ -375,12 +401,11 @@
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
-(def val1 {:uuid "1" :content "foo"})
-(def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
-
-(empty? (between l "1" "2"))
-
 (comment
+  (def val1 {:uuid "1" :content "foo"})
+  (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
+
+  (empty? (between l "1" "2"))
   (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
   (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
   (def mine (filter #(not= "-1" (:uuid %)) l2))
