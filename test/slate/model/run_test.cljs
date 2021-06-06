@@ -8,24 +8,24 @@
 
 (deftest insert-test
   (testing "with range selection"
-    (let [r (sl/insert run1 "a" 1 3)]
+    (let [r (r/insert run1 "a" 1 3)]
       (is (= "fabar" (:text r)))))
 
   (testing "with range that is whole run"
-    (let [r (sl/insert run1 "fizzbuzz" 0 6)]
+    (let [r (r/insert run1 "fizzbuzz" 0 6)]
       (is (= "fizzbuzz" (:text r)))
       (is (= 8 (sl/len r)))))
 
   (testing "single-selection at the start of a run"
-    (let [r (sl/insert run1 "a" 0)]
+    (let [r (r/insert run1 "a" 0)]
       (is (= "afoobar" (:text r)))))
 
   (testing "single-selection in the middle of a run"
-    (let [r (sl/insert run1 "a" 2)]
+    (let [r (r/insert run1 "a" 2)]
       (is (= "foaobar" (:text r)))))
 
   (testing "single-selection at the end of run"
-    (let [r (sl/insert run1 "a" 6)]
+    (let [r (r/insert run1 "a" 6)]
       (is (= "foobara" (:text r)))))
 
   ;; TODO: illegal insert before and after run

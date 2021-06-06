@@ -37,20 +37,32 @@
   ([uuid runs]
    (->Paragraph uuid (optimize-runs runs))))
 
+(defn empty-paragraph
+  "Creates an empty paragraph, optionally taking a UUID to assign to it."
+  ([uuid]
+   (paragraph uuid [(r/run)]))
+  ([]
+   (paragraph [(r/run)])))
+
+(defn- assoc-last
+  "Replaces the last item in a vector with a new value."
+  [v new-val]
+  (assoc v (dec (count v)) new-val))
+
 ;; Paragraph helper functions
 (defn optimize-runs
   "Given a vector/seq of runs, merges adjacent runs with the same formatting, and removes
-   empty runs. Return an empty run if one is passed in, or if all runs have no content."
+   empty runs. Returns a vector. Return an empty run if one is passed in, or if all runs have
+   no content."
   [runs]
   {:post [(vector? %)]}
   (let [non-empty-runs (filterv (complement blank?) runs)]
     (if (empty? non-empty-runs)
       [(r/empty-run)]
       (reduce (fn [optimized next-run]
-                (let [top (peek optimized)]
-                  (if (= (:formats next-run) (:formats top))
-                    (-> (pop optimized)
-                        (conj (insert-end top (:text next-run))))
+                (let [last-optimized-run (peek optimized)]
+                  (if (= (:formats next-run) (:formats last-optimized-run))
+                    (assoc-last optimized (insert-end last-optimized-run (:text next-run)))
                     (conj optimized next-run))))
               (vector (first non-empty-runs))
               (subvec non-empty-runs 1)))))
@@ -137,7 +149,7 @@
     [runs-before within-sel after-sel]))
 
 ;; Main Paragraph operations
-(defmethod insert [Paragraph Selection PersistentVector]
+(defmethod insert [Paragraph Selection [r/Run]]
   [para sel runs]
   (if (sel/single? sel)
     (let [[before after] (split-runs (:runs para) (sel/caret sel))
@@ -150,8 +162,12 @@
   [para sel r]
   (insert para sel [r]))
 
+(defmethod insert [Paragraph Selection Paragraph]
+  [para sel para-to-insert]
+  (insert para sel (:runs para-to-insert)))
+
 ;; TODO: these might stand some mild testing
-(defmethod insert-start [Paragraph PersistentVector]
+(defmethod insert-start [Paragraph [r/Run]]
   [para runs]
   (insert para (selection [(:uuid para) 0]) runs))
 
@@ -159,7 +175,7 @@
   [para run]
   (insert para (selection [(:uuid para) 0]) run))
 
-(defmethod insert-end [Paragraph PersistentVector]
+(defmethod insert-end [Paragraph [r/Run]]
   [para runs]
   (insert para (selection [(:uuid para) (len para)]) runs))
 

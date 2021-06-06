@@ -5,6 +5,11 @@
   (len [this] "Returns the number of chars in container (run/paragraph).")
   (blank? [this] "Returns true if the text container is empty."))
 
+(extend-type string
+  TextContainer
+  (len [s] (count s))
+  (blank? [s] (zero? (count s))))
+
 (defprotocol Formattable
   "Primitive operations for formatting text-containers (runs, paragraphs, documents)."
   (apply-format
@@ -48,17 +53,32 @@
 
 (defn type-dispatch [& args] (mapv type args))
 
+(defn content-type [c]
+  (if (sequential? c)
+    [(type (first c))]
+    (type c)))
+
+(defn insert-dispatch [container location content]
+  [(type container), (type location), (content-type content)])
+
+(defn no-location-dispatch [container content]
+  [(type container), (content-type content)])
+
 ;; TODO: once all implementations of insert are done, there should be a HELLUVA
 ;; docstring explaining its use...the various forms it can take, etc. The goal is
 ;; for it to be "don't think about it, it just works, using this general form."
 (defmulti insert "Inserts into a Run/Paragraph/Document."
   {:arglists '([container location content-to-insert])}
-  #'type-dispatch)
+  #'insert-dispatch)
+
 (defmulti insert-start "Shortcut for insert at the start of a text container."
   {:arglists '([container content-to-insert])}
-  #'type-dispatch)
+  #'no-location-dispatch)
+
 (defmulti insert-end "Shortcut for insert at the end of a text container."
   {:arglists '([container content-to-insert])}
-  #'type-dispatch)
+  #'no-location-dispatch)
 
-(defmulti delete "Deletes from a Run/Paragraph/Document." {:arglists '([container location])} #'type-dispatch)
+(defmulti delete "Deletes from a Run/Paragraph/Document."
+  {:arglists '([container location])}
+  #'type-dispatch)

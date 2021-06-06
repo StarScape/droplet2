@@ -22,9 +22,9 @@
                           (run " Foobar 2.")
                           (run " Foobar 3." #{:italic})]))
 
-(def simplep (paragraph "s"[(run "foobar1" #{:bold})
-                            (run "goobar2")
-                            (run "hoobar3" #{:italic})]))
+(def simplep (paragraph "s" [(run "foobar1" #{:bold})
+                             (run "goobar2")
+                             (run "hoobar3" #{:italic})]))
 
 (deftest optimize-runs-test
   (testing "deletes and combines unnecessary runs"

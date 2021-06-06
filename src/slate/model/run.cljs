@@ -3,7 +3,6 @@
    This namespace contains the functions for dealing with Runs."
   (:require [slate.model.common :refer [TextContainer
                                         Formattable
-                                        insert
                                         delete
                                         insert-start
                                         insert-end
@@ -44,17 +43,17 @@
                 text-after (.slice (:text r) offset (len r))]
             [(run text-before (:formats r)), (run text-after (:formats r))])))
 
-;; Range selection, remove block-selected text and then insert.
-(defmethod insert [Run js/String js/Number js/Number]
-  [r text start end]
-  (let [before (.slice (:text r) 0 start)
-        after (.slice (:text r) end)]
-    (assoc r :text (str before text after))))
+(defn insert
+  ;; Range selection, remove block-selected text and then insert.
+  ([r text start end]
+   (let [before (.slice (:text r) 0 start)
+         after (.slice (:text r) end)]
+     (assoc r :text (str before text after))))
 
-;; Single selection insert, nothing removed.
-(defmethod insert [Run js/String js/Number]
-  [r text caret]
-  (insert r text caret caret))
+  ;; Single selection insert, nothing removed.
+  ([r text caret]
+   (assert (and (number? caret) (string? text)))
+   (insert r text caret caret)))
 
 (defmethod insert-start [Run js/String]
   [r text]

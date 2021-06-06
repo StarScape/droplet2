@@ -142,7 +142,11 @@
   (-invoke [^DoublyLinkedList dll uuid] (-lookup dll uuid))
   (-invoke [^DoublyLinkedList dll uuid not-found] (-lookup dll uuid not-found))
 
-  #_IPrintWithWriter
+  IPrintWithWriter
+  (-pr-writer [dll writer opts]
+    (-write writer "#DoublyLinkedList [")
+    (-write writer (seq dll))
+    (-write writer "]"))
   #_(-pr-writer [dll writer opts]
                 (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
                 (-write writer ", first-uuid: ") (-write writer (.-first-uuid dll))
@@ -315,10 +319,12 @@
 (defn between
   "Returns a sub-list of all the nodes between (but not including) `uuid1` and `uuid2`."
   [list uuid1 uuid2]
-  (loop [item (next list uuid1), items (dll)]
-    (if (= (:uuid item) uuid2)
-      items
-      (recur (next list item) (conj items item)))))
+  (if (= uuid1 uuid2)
+    (dll)
+    (loop [item (next list uuid1), items (dll)]
+      (if (= (:uuid item) uuid2)
+        items
+        (recur (next list item) (conj items item))))))
 
 ;; TODO: testme
 (defn range
@@ -331,14 +337,14 @@
         (recur (next list item) (conj items item))))))
 
 (defn uuids-between
-  "Returns a vector of all the UUIDs between `uuid1` and `uuid2`"
+  "Returns a lazy sequence of all the UUIDs between `uuid1` and `uuid2`"
   [dll uuid1 uuid2]
-  (mapv :uuid (between dll uuid1 uuid2)))
+  (map :uuid (between dll uuid1 uuid2)))
 
 (defn uuids-range
-  "Returns a vector of all the UUIDs between `uuid1` and `uuid2` (including both `uuid1` and `uuid2`)"
+  "Returns a lazy sequence of all the UUIDs between `uuid1` and `uuid2` (including both `uuid1` and `uuid2`)"
   [dll uuid1 uuid2]
-  (mapv :uuid (range dll uuid1 uuid2)))
+  (map :uuid (range dll uuid1 uuid2)))
 
 (defn next
   "Get successive item in the doubly-linked list given either a UUID of a
