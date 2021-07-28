@@ -131,6 +131,9 @@
              :end-offset 70
              :width 100}]))))
 
+(deftest from-para-test
+  )
+
 #_[(r/run "foobar bizz " #{})
  (r/run "buzz hello hello goodbye. And " #{:italic})
  (r/run "this should" #{:bold})

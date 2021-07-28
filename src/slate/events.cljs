@@ -14,7 +14,8 @@
 (declare add-key-to-history)
 
 (defn with-input-history
-  "Helper for automatically adding a value to the input history. See use below in interceptors."
+  "Helper for automatically adding a value to the input history. Adds the given key to the editor state's key history.
+   See use below in interceptors."
   [key state]
   (update state :input-history add-key-to-history key))
 
@@ -23,8 +24,8 @@
 
 ;; Default set of interceptors that are added to a new editor.
 ;;
-;; Interceptors are meant for extensibility, but even so, most of the default events
-;; are implemented using them, the idea being that eating our own dogfood is the only
+;; Interceptors are meant for extensibility, but most of the default events are also
+;; implemented using them, the idea being that eating our own dogfood is the only
 ;; way to end up with a sufficiently flexible and ergonomic system.
 
 ;; TODO: for interceptors that aren't dependent on the viewmodel or DOM state, there's no reason
@@ -41,12 +42,12 @@
 
    :insert (fn [{:keys [doc selection] :as state} e]
              (let [text (.-data e)
-                   new-doc (m/insert doc selection text)
-                   new-selection (sel/shift-single selection (count text))
-                   ;;  new-state (assoc state :doc new-doc :selection new-selection)
+                   transaction (m/insert doc selection text)
                    input-for-history (if (= 1 (.-length text)) text :PASTE)] ;; TODO?
-               (with-input-history input-for-history
-                 (assoc state :doc new-doc :selection new-selection))))
+               ;; TODO:
+               #_(with-input-history input-for-history
+                 (assoc state :doc new-doc :selection new-selection))
+               transaction))
    :delete (fn [{:keys [doc selection] :as state} _e]
              (let [[new-doc, new-sel] (m/delete doc selection)]
                (with-input-history :delete
@@ -99,7 +100,7 @@
    :shift+up (fn [state _e]
                (with-input-history :shift+up
                  (update state :selection #(view/shift+up state (:measure-fn state)))))
-   
+
    ;; This completion isn't actually done yet (the behavior is fairly complex and
    ;; needs to work with range selection etc) just a good example interceptor for testing
    "\"" (fn [{:keys [doc selection] :as state} _e _default-interceptor]
@@ -229,10 +230,10 @@
 (comment
   (def sample-ints {:shortcuts {#{:ctrl :shift :a} :foo}
                     :completions {"c" {"b" {"a" :bar}}}})
-  (find-interceptor :ctrl+shift+a))
+  (find-interceptor sample-ints :ctrl+shift+a))
 
-(defn fire-interceptor
-  "Calls the interceptor with the current editor state and the Event object as its args
+(defn fire-interceptor!
+  "Calls the interceptor with the current editor state and the JS `Event` object as its args
    (and optionally, any additional args you wish to pass it) and re-synces the DOM.
 
    If no interceptor function is provided, the event will be parsed and the matching registered
@@ -242,13 +243,14 @@
   ;; is less than helpful, so it's good to just give an explicit failure here instead.
   {:pre [(some? interceptor-fn) (some? state-atom)]}
   (let [transaction (apply interceptor-fn @state-atom event args)
+        ;; TODO: have to make the interceptors return transactions
         new-state (editor/apply-transaction! state-atom transaction)]
-    (editor/sync-dom new-state)))
+    (editor/sync-dom new-state transaction)))
 
 ;; TODO: add option for fallthrough? Or an option to revert to default event in a certain situation...
 (defn reg-interceptor
-  "Takes the editor's interceptor map an interceptor pattern, and an interceptor function,
-   and will return a new interceptor map with that interceptor registered.
+  "Takes the editor's interceptor map, an interceptor pattern, and an interceptor
+   function, and returns a new interceptor map with that interceptor registered.
 
    TODO: documentation on patterns.
 
@@ -275,7 +277,9 @@
   []
   (reg-interceptors {:shortcuts {}, :completions {}} default-interceptors))
 
-(defn init-default-events [editor-state-atom]
+(defn init-default-events
+  "Registers event listeners for the editor surface with their default interceptors."
+  [editor-state-atom]
   (let [get-interceptor (partial find-interceptor (:interceptors @editor-state-atom))
         {editor-elem :dom-elem
          hidden-input :hidden-input} @editor-state-atom]
@@ -289,12 +293,12 @@
 
           (reset! clicked? true)
           (reset! mousedown-event e)
-          (fire-interceptor (get-interceptor :click) editor-state-atom e)))
+          (fire-interceptor! (get-interceptor :click) editor-state-atom e)))
 
       (.addEventListener js/window "mousemove"
         (fn [e]
           (when @clicked?
-            (fire-interceptor (get-interceptor :drag) editor-state-atom e @mousedown-event))))
+            (fire-interceptor! (get-interceptor :drag) editor-state-atom e @mousedown-event))))
 
       (.addEventListener js/window "mouseup"
         (fn [_e]
@@ -305,7 +309,7 @@
         ;; TODO: check for completions here (or possibly in the :insert case below?) and if one exists fire its interceptor
         (when-let [interceptor-fn (get-interceptor e)]
           (.preventDefault e)
-          (fire-interceptor interceptor-fn editor-state-atom e))))
+          (fire-interceptor! interceptor-fn editor-state-atom e))))
 
     (.addEventListener hidden-input "beforeinput"
       (fn [e]
@@ -320,12 +324,13 @@
           "insertText"
           (let [insert-interceptor (get-interceptor :insert)
                 {:keys [interceptors input-history]} @editor-state-atom
+                ;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
                 completion-interceptor (when (= 1 (.. e -data -length))
                                          (matching-completion? (.-data e) interceptors input-history))]
             (if completion-interceptor
-              (fire-interceptor completion-interceptor editor-state-atom e insert-interceptor)
-              (fire-interceptor insert-interceptor editor-state-atom e)))
+              (fire-interceptor! completion-interceptor editor-state-atom e insert-interceptor)
+              (fire-interceptor! insert-interceptor editor-state-atom e)))
 
           "deleteContentBackward"
-          (fire-interceptor (get-interceptor :delete) editor-state-atom e)
+          (fire-interceptor! (get-interceptor :delete) editor-state-atom e)
           nil)))))

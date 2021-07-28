@@ -409,7 +409,7 @@
 
 ;; TODO: change this to handle mousevents that are outside the paragraph.
 (defn mouse-event->selection
-  "Takes a MouseEvent object and the collection of viewmodels and, if its clientX and clientY
+  "Takes a MouseEvent object and the editor state and, if its clientX and clientY
    are inside a paragraph, returns a single selection set to the paragraph and offset where the
    mouse pointer is at.
 
@@ -430,9 +430,9 @@
          paragraph-uuid (if paragraph-in-path
                           (.-id paragraph-in-path)
                           (find-overlapping-paragraph (:children doc) (.-y event) last-event))
-        ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
-        ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
-        ; will still be valid, however, so we can just grab the current element like this.
+         ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
+         ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
+         ; will still be valid, however, so we can just grab the current element like this.
          paragraph-elem (.getElementById js/document paragraph-uuid)
          vm (get viewmodels (uuid (.-id paragraph-elem)))
          sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]

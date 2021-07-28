@@ -7,8 +7,6 @@
             [slate.model.doc :as doc :refer [document]]
             [slate.dll :as dll :refer [dll]]))
 
-;; TODO next: something is broken in this file. Track it down.
-
 (def p1 (paragraph "p1" [(run "foo" #{:italic})
                          (run "bar" #{:bold :italic})
                          (run "bizz" #{:italic})
@@ -33,101 +31,79 @@
 (deftest insert-test
   (testing "insert 2 runs in middle of a paragraph"
     (is (= (sl/insert doc (selection ["p1" 3]) [(run "Hello" #{:italic}) (run "Goodbye!")])
-           {:doc (document [(paragraph "p1" [(run "fooHello" #{:italic})
-                                             (run "Goodbye!" #{})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 16])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "fooHello" #{:italic})
+                                       (run "Goodbye!" #{})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "insert single run in middle of a paragraph"
     (is (= (sl/insert doc (selection ["p1" 3]) (run "Goodbye!"))
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "Goodbye!" #{})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 11])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "Goodbye!" #{})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "insert run at start of paragraph"
     (is (= (sl/insert doc (selection ["p1" 0]) (run "Hello!"))
-           {:doc (document [(paragraph "p1" [(run "Hello!" #{})
-                                             (run "foo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 6])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "Hello!" #{})
+                                       (run "foo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "insert run at end of paragraph"
     (is (= (sl/insert doc (selection ["p2" 12]) (run "Goodbye!" #{:italic}))
-           {:doc (document [p1, (paragraph "p2" [(run "aaabbbcccddd") (run "Goodbye!" #{:italic})])])
-            :selection (selection ["p2" 20])
-            :changed-uuids #{"p2"}})))
+           (document [p1, (paragraph "p2" [(run "aaabbbcccddd") (run "Goodbye!" #{:italic})])]))))
 
   (testing "multi-paragraph insert in the middle of a single paragraph"
     (is (= (sl/insert doc (selection ["p1" 10]) to-insert)
            (sl/insert doc (selection ["p1" 10]) (into (dll) to-insert))
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "inserted paragraph 1")])
-                            (paragraph "i2" [(run "inserted paragraph 2")])
-                            (paragraph "i3" [(run "inserted paragraph 3")
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["i3" 20])
-            :changed-uuids #{"p1"}
-            :inserted-uuids #{"i2" "i3"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "inserted paragraph 1")])
+                      (paragraph "i2" [(run "inserted paragraph 2")])
+                      (paragraph "i3" [(run "inserted paragraph 3")
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "multi-paragraph insert at the start of a paragraph"
     (is (= (sl/insert doc (selection ["p2" 0]) to-insert)
            (sl/insert doc (selection ["p2" 0]) (into (dll) to-insert))
-           {:doc (document [p1
-                            (paragraph "p2" [(run "inserted paragraph 1")])
-                            (paragraph "i2" [(run "inserted paragraph 2")])
-                            (paragraph "i3" [(run "inserted paragraph 3aaabbbcccddd")])])
-            :selection (selection ["i3" 20])
-            :changed-uuids #{"p2"}
-            :inserted-uuids #{"i2" "i3"}})))
+           (document [p1
+                      (paragraph "p2" [(run "inserted paragraph 1")])
+                      (paragraph "i2" [(run "inserted paragraph 2")])
+                      (paragraph "i3" [(run "inserted paragraph 3aaabbbcccddd")])]))))
 
   (testing "multi-paragraph insert at the end of a paragraph"
     (is (= (sl/insert doc (selection ["p1" 14]) to-insert)
            (sl/insert doc (selection ["p1" 14]) (into (dll) to-insert))
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})
-                                             (run "inserted paragraph 1")])
-                            (paragraph "i2" [(run "inserted paragraph 2")])
-                            (paragraph "i3" [(run "inserted paragraph 3")])
-                            p2])
-            :selection (selection ["i3" 20])
-            :changed-uuids #{"p1"}
-            :inserted-uuids #{"i2" "i3"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})
+                                       (run "inserted paragraph 1")])
+                      (paragraph "i2" [(run "inserted paragraph 2")])
+                      (paragraph "i3" [(run "inserted paragraph 3")])
+                      p2]))))
 
   (testing "inserting a plain string"
     (is (= (sl/insert doc (selection ["p1" 3]) "inserted")
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "inserted")
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 11])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "inserted")
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "when given a range-selection, deletes before inserting"
     (is (= (sl/insert doc (selection ["p1" 1] ["p2" 11]) (run "(inserted!)" #{}))
-           {:doc (document [(paragraph "p1" [(run "f" #{:italic}), (run "(inserted!)d")])])
-            :selection (selection ["p1" 12])
-            :changed-uuids #{"p1"}
-            :deleted-uuids #{"p2"}})))
+           (document [(paragraph "p1" [(run "f" #{:italic}), (run "(inserted!)d")])]))))
 
   (testing "throws when out of range of paragraph"
     (is (thrown?
@@ -136,72 +112,58 @@
 
 (deftest delete-single-test
   (testing "does nothing at beginning of doc"
-    (is (= (sl/delete doc (selection ["p1" 0]))
-           {:doc doc
-            :selection (selection ["p1" 0])})))
+    (is (= (sl/delete doc (selection ["p1" 0])) doc)))
 
   (testing "deletes single char in middle of paragraph"
     (is (= (sl/delete doc (selection ["p1" 1]))
-           {:doc (document [(paragraph "p1" [(run "oo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 0])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "oo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "deletes single char at end of paragraph"
     (is (= (sl/delete doc (selection ["p1" 14]))
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 13])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buz" #{:bold})])
+                      p2]))))
 
   (testing "merges paragraphs when backspacing from start of paragraph that is not first"
     (is (= (sl/delete doc (selection ["p2" 0]))
-           {:doc (document [(paragraph "p1" (concat (:runs p1) (:runs p2)))])
-            :selection (selection ["p1" 14])
-            :changed-uuids #{"p1"}
-            :deleted-uuids #{"p2"}})))
+           (document [(paragraph "p1" (concat (:runs p1) (:runs p2)))]))))
 
   (testing "deletes single char as normal at end of the paragraph"
     (is (= (sl/delete doc (selection ["p2" 12]))
-           {:doc (document [p1, (paragraph "p2" [(run "aaabbbcccdd")])])
-            :selection (selection ["p2" 11])
-            :changed-uuids #{"p2"}})))
+           (document [p1, (paragraph "p2" [(run "aaabbbcccdd")])]))))
 
   (testing "does nothing when backspacing at start of first paragraph"
-    (is (= (sl/delete doc (selection ["p1" 0]))
-           {:doc doc
-            :selection (selection ["p1" 0])}))))
+    (is (= (sl/delete doc (selection ["p1" 0])) doc))))
+
+
+;; TODO: weirdly, a test seems to be failing below because delete is returning a plain map instead of a Document
+;; {:children #DoublyLinkedList [(#slate.model.paragraph.Paragraph{:uuid "p1", :runs [#slate.model.run.Run{:text "bar", :formats #{:bold :italic}} #slate.model.run.Run{:text "bizz", :formats #{:italic}} #slate.model.run.Run{:text "buzz", :formats #{:bold}}]} #slate.model.paragraph.Paragraph{:uuid "p2", :runs [#slate.model.run.Run{:text "aaabbbcccddd", :formats #{}}]})]}
+;; {:children #DoublyLinkedList [(#slate.model.paragraph.Paragraph{:uuid "p1", :runs [#slate.model.run.Run{:text "bar", :formats #{:bold :italic}} #slate.model.run.Run{:text "bizz", :formats #{:italic}} #slate.model.run.Run{:text "buzz", :formats #{:bold}}]} #slate.model.paragraph.Paragraph{:uuid "p2", :runs [#slate.model.run.Run{:text "aaabbbcccddd", :formats #{}}]})]}
 
 (deftest delete-range-test
   (testing "deletes from start of paragraph"
     (is (= (sl/delete doc (selection ["p1" 0] ["p1" 3]))
-           {:doc (document [(paragraph "p1" [(run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 0])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "deletes from start of paragraph backwards"
     (is (= (sl/delete doc (selection ["p1" 0] ["p1" 3] true))
-           {:doc (document [(paragraph "p1" [(run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 0])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "deletes up to end of paragraph"
     (is (= (sl/delete doc (selection ["p1" 3] ["p1" 14]))
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})]), p2])
-            :selection (selection ["p1" 3])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})]), p2]))))
 
   (testing "deletes whole paragraph"
     ;; This is an odd edge case, but handling it this way makes the code simpler.
@@ -209,68 +171,44 @@
     ;; of the range selection with the paragraph at the beginning of the range selection,
     ;; and gives it the UUID of the first.
     (is (= (sl/delete doc (selection ["p1" 0] ["p2" 0]))
-           {:doc (document [(assoc p2 :uuid "p1")])
-            :selection (selection ["p1" 0])
-            :changed-uuids #{"p1"}
-            :deleted-uuids #{"p2"}})))
+           (document [(assoc p2 :uuid "p1")]))))
 
   (testing "merges start and ending paragraphs when deleting across paragraphs"
     (is (= (sl/delete doc (selection ["p1" 3] ["p2" 3]))
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic}), (run "bbbcccddd")])])
-            :selection (selection ["p1" 3])
-            :changed-uuids #{"p1"}
-            :deleted-uuids #{"p2"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic}), (run "bbbcccddd")])]))))
 
   (testing "merges start and ending paragraphs when deleting across more than 2 paragraphs"
     (is (= (sl/delete long-doc (selection ["d1" 4] ["d4" 0]))
-           {:doc (document [(paragraph "d1" [(run "foo1" #{:italic}), (run "foo4" #{:strike})])])
-            :selection (selection ["d1" 4])
-            :changed-uuids #{"d1"}
-            :deleted-uuids #{"d2" "d3" "d4"}})))
+           (document [(paragraph "d1" [(run "foo1" #{:italic}), (run "foo4" #{:strike})])]))))
 
   (testing "deletes whole document"
     (is (= (sl/delete doc (selection ["p1" 0] ["p2" 12]))
-           {:doc (document [(paragraph "p1" [(run)])])
-            :selection (selection ["p1" 0])
-            :changed-uuids #{"p1"}
-            :deleted-uuids #{"p2"}}))))
+           (document [(paragraph "p1" [(run)])])))))
 
 (deftest enter-test
   (testing "works at start of paragraph"
     (is (= (doc/enter doc (selection ["p1" 0]) "e1")
-           {:doc (document [(paragraph "e1" [(run)]), p1, p2])
-            :selection (selection ["p1" 0])
-            :inserted-uuids #{"e1"}})))
+           (document [(paragraph "e1" [(run)]), p1, p2]))))
 
   (testing "works at end of paragraph"
     (is (= (doc/enter doc (selection ["p1" 14]) "e1")
-           {:doc (document [p1, (paragraph "e1" [(run)]), p2])
-            :selection (selection ["e1" 0])
-            :inserted-uuids #{"e1"}})))
+           (document [p1, (paragraph "e1" [(run)]), p2]))))
 
   (testing "works in middle of paragraph"
     (is (= (doc/enter doc (selection ["p1" 3]) "e1")
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})])
-                            (paragraph "e1" [(run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["e1" 0])
-            :changed-uuids #{"p1"}
-            :inserted-uuids #{"e1"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})])
+                      (paragraph "e1" [(run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "works at end of doc"
     (is (= (doc/enter doc (selection ["p2" 12]) "e1")
-           {:doc (document [p1, p2, (paragraph "e1" [(run)])])
-            :selection (selection ["e1" 0])
-            :inserted-uuids #{"e1"}})))
+           (document [p1, p2, (paragraph "e1" [(run)])]))))
 
   (testing "works with range selection"
     (is (= (doc/enter doc (selection ["p2" 0] ["p2" 12]) "e1")
-           {:doc (document [p1, (p/empty-paragraph "p2"), (p/empty-paragraph "e1")])
-            :selection (selection ["e1" 0])
-            :changed-uuids #{"p2"}
-            :inserted-uuids #{"e1"}}))))
+           (document [p1, (p/empty-paragraph "p2"), (p/empty-paragraph "e1")])))))
 
 (deftest selected-content-test
   (testing "returns list of runs when passed selection within one paragraph"
@@ -317,79 +255,65 @@
 (deftest toggle-format-test
   (testing "toggling single run"
     (is (= (sl/toggle-format doc (selection ["p1" 0] ["p1" 3]) :italic)
-           {:doc (document [(paragraph "p1" [(run "foo")
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 0] ["p1" 3])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "foo")
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "toggling across runs WITH shared format"
     (is (= (sl/toggle-format doc (selection ["p1" 0] ["p1" 10]) :italic)
-           {:doc (document [(paragraph "p1" [(run "foo")
-                                             (run "bar" #{:bold})
-                                             (run "bizz" #{})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 0] ["p1" 10])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "foo")
+                                       (run "bar" #{:bold})
+                                       (run "bizz" #{})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "toggling across runs WITH shared format, not on run boundaries"
     (is (= (sl/toggle-format doc (selection ["p1" 1] ["p1" 8]) :italic)
-           {:doc (document [(paragraph "p1" [(run "f" #{:italic})
-                                             (run "oo")
-                                             (run "bar" #{:bold})
-                                             (run "bi" #{})
-                                             (run "zz" #{:italic})
-                                             (run "buzz" #{:bold})])
-                            p2])
-            :selection (selection ["p1" 1] ["p1" 8])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "f" #{:italic})
+                                       (run "oo")
+                                       (run "bar" #{:bold})
+                                       (run "bi" #{})
+                                       (run "zz" #{:italic})
+                                       (run "buzz" #{:bold})])
+                      p2]))))
 
   (testing "toggling across runs WITHOUT shared format"
     (is (= (sl/toggle-format doc (selection ["p1" 0] ["p1" 14]) :italic)
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold :italic})])
-                            p2])
-            :selection (selection ["p1" 0] ["p1" 14])
-            :changed-uuids #{"p1"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold :italic})])
+                      p2]))))
 
   (testing "toggling across paragraphs WITHOUT shared format"
     (is (= (sl/toggle-format doc (selection ["p1" 0] ["p2" 12]) :italic)
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold :italic})])
-                            (paragraph "p2" [(run "aaabbbcccddd" #{:italic})])])
-            :selection (selection ["p1" 0] ["p2" 12])
-            :changed-uuids #{"p1" "p2"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold :italic})])
+                      (paragraph "p2" [(run "aaabbbcccddd" #{:italic})])]))))
 
   (testing "toggling across paragraphs WITHOUT shared format, and not landing on run boundaries"
     (is (= (sl/toggle-format doc (selection ["p1" 1] ["p2" 3]) :italic)
-           {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                             (run "bar" #{:bold :italic})
-                                             (run "bizz" #{:italic})
-                                             (run "buzz" #{:bold :italic})])
-                            (paragraph "p2" [(run "aaa" #{:italic})
-                                             (run "bbbcccddd")])])
-            :selection (selection ["p1" 1] ["p2" 3])
-            :changed-uuids #{"p1" "p2"}})))
+           (document [(paragraph "p1" [(run "foo" #{:italic})
+                                       (run "bar" #{:bold :italic})
+                                       (run "bizz" #{:italic})
+                                       (run "buzz" #{:bold :italic})])
+                      (paragraph "p2" [(run "aaa" #{:italic})
+                                       (run "bbbcccddd")])]))))
 
   (testing "toggling across paragraphs WITH shared format"
     (let [modified (-> doc
                        (update-in [:children "p1" :runs 3 :formats] conj :italic)
                        (update-in [:children "p2" :runs 0 :formats] conj :italic))]
       (is (= (sl/toggle-format modified (selection ["p1" 10] ["p2" 12]) :italic)
-             {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                               (run "bar" #{:bold :italic})
-                                               (run "bizz" #{:italic})
-                                               (run "buzz" #{:bold})])
-                              (paragraph "p2" [(run "aaabbbcccddd")])])
-              :selection (selection ["p1" 10] ["p2" 12])
-              :changed-uuids #{"p1" "p2"}})))))
+             (document [(paragraph "p1" [(run "foo" #{:italic})
+                                         (run "bar" #{:bold :italic})
+                                         (run "bizz" #{:italic})
+                                         (run "buzz" #{:bold})])
+                        (paragraph "p2" [(run "aaabbbcccddd")])]))))))
 
 (deftest char-at-test
   (testing "works in 1st paragraph"
@@ -422,16 +346,3 @@
     (is (= "d" (sl/char-before doc (selection ["p2" 11]))))
     (is (= "d" (sl/char-before doc (selection ["p2" 12]))))
     (is (thrown? js/Error (sl/char-before doc (selection ["[2]" 13]))))))
-
-(deftest merge-transactions-test
-  (testing "merge logic works as it should (merge-transactions doc for details)"
-   (= (doc/merge-transactions
-       {:deleted-uuids #{"a" "b" "g"}
-        :changed-uuids #{"c" "d" "h"}
-        :inserted-uuids #{"e" "f" "i"}}
-
-       {:deleted-uuids #{"c" "d" "e"}
-        :inserted-uuids #{"a" "b" "f"}})
-     {:deleted-uuids #{"c" "d" "g"}
-      :changed-uuids #{"a" "b" "h"}
-      :inserted-uuids #{"f" "i"}})))

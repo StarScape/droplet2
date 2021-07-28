@@ -41,6 +41,8 @@
                        (aset cache cache-key (.. elem (getBoundingClientRect) -width)))))))
           (reduce +)))))
 
+;; TODO: change names of next two functions to be `caching-measure-fn` and `caching-measure-fn-for-elem`.
+
 (defn ruler
   "Given valid CSS values for a font size and family (e.g. `12px` and `Arial`),
    returns a function that takes a string and (optionally) a list of formats,
@@ -64,7 +66,13 @@
     (fn [& args] (apply measure (concat [elem cache] args)))))
 
 (defn ruler-for-elem
-  "Returns a measurement function for the given DOM element."
+  "Returns a measurement function for the given DOM element.
+   The measurement-fn takes two parameters:
+
+   - text to measure the width of
+   - formats, a set of formats for the element
+
+   And returns the width the text will take up, in pixels."
   [elem]
   (let [style (js/getComputedStyle elem)]
     (ruler

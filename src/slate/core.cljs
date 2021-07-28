@@ -25,7 +25,7 @@
 
    Required:
    :editor-elem - The DOM element for the editor
-   :hidden-input - The hidden <input> needed by the editor to capture keystrokes
+   :hidden-input - The hidden <input> element needed by the editor to capture keystrokes
 
    Optional:
    :doc - The initial document to load into the editor (default to an empty document)
@@ -34,8 +34,9 @@
   (let [measure-fn (ruler-for-elem editor-elem)
         editor-state (atom {:doc doc
                             :selection (or selection (nav/start doc))
-                            ;; TODO: just change to a DLL of viewmodels?
                             :viewmodels (vm/from-doc doc 200 measure-fn)
+                            :history {:transactions []
+                                      :current-transaction -1}
                             :dom-elem editor-elem
                             :hidden-input hidden-input
                             :measure-fn measure-fn
