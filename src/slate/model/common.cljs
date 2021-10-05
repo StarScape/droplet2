@@ -58,8 +58,9 @@
     [(type (first c))]
     (type c)))
 
-(defn insert-dispatch [container location content]
-  [(type container), (type location), (content-type content)])
+(defn insert-dispatch [& args]
+  (conj (vec (map type (butlast args)))
+        (content-type (last args))))
 
 (defn no-location-dispatch [container content]
   [(type container), (content-type content)])
