@@ -53,7 +53,6 @@
          rendered (view/vm-paras->dom vm-paras selection)]
      (set! (.-innerHTML dom-elem) rendered)))
   ([{:keys [viewmodels doc selection dom-elem]} transaction]
-   #p "yus"
    (let [vm-paras (map #(get viewmodels (:uuid %)) (:children doc))
          rendered (view/vm-paras->dom vm-paras selection)]
      (set! (.-innerHTML dom-elem) rendered))))

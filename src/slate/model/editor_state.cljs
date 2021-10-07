@@ -33,12 +33,13 @@
 
 (defn changelist
   "Constructor for a new changelist object"
-  [base-state-hash]
-  {:base-state-hash base-state-hash
-   :resolved? false
-   :changed-uuids #{}
-   :inserted-uuids #{}
-   :deleted-uuids #{}})
+  ([_base-state-hash]
+   {:resolved? false
+    ;; :base-state-hash base-state-hash
+    :changed-uuids #{}
+    :inserted-uuids #{}
+    :deleted-uuids #{}})
+  ([] (changelist nil)))
 
 (defn editor-state
   "Creates a new EditorState object."
@@ -46,7 +47,7 @@
    (map->EditorState
     {:doc doc
      :selection selection
-     :changelist (changelist nil)})))
+     :changelist (changelist)})))
 
 (defn assoc-state
   "Works like normal assoc, but updates editor-state's changelist automatically."
@@ -242,26 +243,27 @@
 
    The purpose of this is so that we can combine many transactions, but still only rerender the document once."
   [c1 c2]
-  (let [deleted-then-inserted (set (filter #(contains? (:deleted-uuids c1) %) (:inserted-uuids c2)))
-        changed-then-deleted  (set (filter #(contains? (:changed-uuids c1) %) (:deleted-uuids c2)))
-        inserted-then-deleted (set (filter #(contains? (:inserted-uuids c1) %) (:deleted-uuids c2)))
-        inserted-then-changed (set (filter #(contains? (:inserted-uuids c1) %) (:changed-uuids c2)))
+  (if (:resolved? c1)
+    c2
+    (let [deleted-then-inserted (set (filter #(contains? (:deleted-uuids c1) %) (:inserted-uuids c2)))
+          changed-then-deleted  (set (filter #(contains? (:changed-uuids c1) %) (:deleted-uuids c2)))
+          inserted-then-deleted (set (filter #(contains? (:inserted-uuids c1) %) (:deleted-uuids c2)))
+          inserted-then-changed (set (filter #(contains? (:inserted-uuids c1) %) (:changed-uuids c2)))
 
-        new-deleted (-> (set/union (:deleted-uuids c1) (:deleted-uuids c2))
-                        (set/difference deleted-then-inserted inserted-then-deleted)
-                        (set/union changed-then-deleted))
-        new-changed (-> (set/union (:changed-uuids c1) (:changed-uuids c2))
-                        (set/difference changed-then-deleted inserted-then-changed)
-                        (set/union deleted-then-inserted))
-        new-inserted (-> (set/union (:inserted-uuids c1) (:inserted-uuids c2))
-                         (set/difference inserted-then-deleted deleted-then-inserted)
-                         (set/union inserted-then-changed))]
-    (-> (merge c1 c2 {:deleted-uuids new-deleted
-                      :changed-uuids new-changed
-                      :inserted-uuids new-inserted})
-        (remove-nil-vals-from-map))))
-
-;; TODO: spec for transaction?
+          new-deleted (-> (set/union (:deleted-uuids c1) (:deleted-uuids c2))
+                          (set/difference deleted-then-inserted inserted-then-deleted)
+                          (set/union changed-then-deleted))
+          new-changed (-> (set/union (:changed-uuids c1) (:changed-uuids c2))
+                          (set/difference changed-then-deleted inserted-then-changed)
+                          (set/union deleted-then-inserted))
+          new-inserted (-> (set/union (:inserted-uuids c1) (:inserted-uuids c2))
+                           (set/difference inserted-then-deleted deleted-then-inserted)
+                           (set/union inserted-then-changed))]
+      {:resolved? false
+     ;; :base-state-hash (:base-state-hash c1)
+       :deleted-uuids new-deleted
+       :changed-uuids new-changed
+       :inserted-uuids new-inserted})))
 
 (comment
   (def p1 (p/paragraph [(r/run "foo" #{:italic})

@@ -524,12 +524,27 @@
 (deftest merge-changelists-test
   (testing "merge logic works as it should (merge-changelists doc for details)"
     (= (state/merge-changelists
-        {:deleted-uuids #{"a" "b" "g"}
+        {:resolved? false
+         :deleted-uuids #{"a" "b" "g"}
          :changed-uuids #{"c" "d" "h"}
          :inserted-uuids #{"e" "f" "i"}}
-
-        {:deleted-uuids #{"c" "d" "e"}
+        {:resolved? false
+         :deleted-uuids #{"c" "d" "e"}
          :inserted-uuids #{"a" "b" "f"}})
-       {:deleted-uuids #{"c" "d" "g"}
+       {:resolved? false
+        :deleted-uuids #{"c" "d" "g"}
         :changed-uuids #{"a" "b" "h"}
-        :inserted-uuids #{"f" "i"}})))
+        :inserted-uuids #{"f" "i"}}))
+
+  (testing "merge logic works as it should (merge-changelists doc for details)"
+    (= (state/merge-changelists
+        {:resolved? true
+         :deleted-uuids #{"a" "b" "g"}
+         :changed-uuids #{"c" "d" "h"}
+         :inserted-uuids #{"e" "f" "i"}}
+        {:resolved? false
+         :deleted-uuids #{"c" "d" "e"}
+         :inserted-uuids #{"a" "b" "f"}})
+       {:resolved? false
+        :deleted-uuids #{"c" "d" "e"}
+        :inserted-uuids #{"a" "b" "f"}})))
