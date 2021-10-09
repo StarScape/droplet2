@@ -536,7 +536,7 @@
         :changed-uuids #{"a" "b" "h"}
         :inserted-uuids #{"f" "i"}}))
 
-  (testing "merge logic works as it should (merge-changelists doc for details)"
+  (testing "merging with a resolved list ignores merge and returns second changelist"
     (= (state/merge-changelists
         {:resolved? true
          :deleted-uuids #{"a" "b" "g"}
