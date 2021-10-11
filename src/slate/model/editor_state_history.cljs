@@ -112,7 +112,7 @@
     history))
 
 (s/fdef set-tip
-  :args (s/cat :history ::editor-state-history)
+  :args (s/cat :history ::editor-state-history :tip ::es/editor-state)
   :ret ::editor-state-history)
 
 (defn set-tip
@@ -121,7 +121,7 @@
    anything to the backstack. For adding the tip to the backstack, see `add-tip-to-backstack`."
   [history new-tip]
   (let [backstack (if (has-redo? history)
-                    (subvec history 0 (:current-state-index history))
+                    (subvec (:backstack history) 0 (inc (:current-state-index history)))
                     (:backstack history))]
     (assoc history
            :tip new-tip
