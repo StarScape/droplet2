@@ -41,7 +41,6 @@
   [{:keys [tip] :as history}]
   (-> history
       (update :backstack conj tip)
-      (update :current-state-index dec)
       (assoc :tip nil)))
 
 (s/fdef current-state

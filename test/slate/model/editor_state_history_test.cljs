@@ -17,15 +17,15 @@
                       :current-state-index 0
                       :tip nil})
            (s/valid? ::history/editor-state-history
-                     {:backstack (repeat 4 (resolved-editor-state))
+                     {:backstack (vec (repeat 4 (resolved-editor-state)))
                       :current-state-index 4
                       :tip nil})
            (s/valid? ::history/editor-state-history
-                     {:backstack (repeat 4 (resolved-editor-state))
+                     {:backstack (vec (repeat 4 (resolved-editor-state)))
                       :current-state-index 1
                       :tip (resolved-editor-state)})
            (s/valid? ::history/editor-state-history
-                     {:backstack (repeat 4 (resolved-editor-state))
+                     {:backstack (vec (repeat 4 (resolved-editor-state)))
                       :current-state-index 5
                       :tip nil})))
     (is (= true
@@ -38,10 +38,21 @@
                       :current-state-index 1
                       :tip (resolved-editor-state)})
            (s/valid? ::history/editor-state-history
-                     {:backstack (repeat 4 (resolved-editor-state))
+                     {:backstack (vec (repeat 4 (resolved-editor-state)))
                       :current-state-index 1
                       :tip nil})
            (s/valid? ::history/editor-state-history
-                     {:backstack (repeat 4 (resolved-editor-state))
+                     {:backstack (vec (repeat 4 (resolved-editor-state)))
                       :current-state-index 3
                       :tip nil})))))
+
+(deftest add-tip-to-backstack-test
+  (let [backstack (vec (repeat 4 (resolved-editor-state)))
+        tip (resolved-editor-state)]
+    (is (= (history/add-tip-to-backstack {:backstack backstack
+                                          :current-state-index 4
+                                          :tip tip})
+           {:backstack (conj backstack tip)
+            :current-state-index 4
+            :tip nil}))))
+
