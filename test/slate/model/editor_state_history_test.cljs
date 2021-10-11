@@ -23,7 +23,11 @@
            (s/valid? ::history/editor-state-history
                      {:backstack (repeat 4 (resolved-editor-state))
                       :current-state-index 1
-                      :tip (resolved-editor-state)})))
+                      :tip (resolved-editor-state)})
+           (s/valid? ::history/editor-state-history
+                     {:backstack (repeat 4 (resolved-editor-state))
+                      :current-state-index 5
+                      :tip nil})))
     (is (= true
            (s/valid? ::history/editor-state-history
                      {:backstack []
