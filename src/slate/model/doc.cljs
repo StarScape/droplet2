@@ -37,7 +37,7 @@
      (->Document (into (dll) children))
 
      :else
-     (throw "Error: non-sequence supplied as `children` to `document` constructor.")))
+     (throw "Error: non-sequence type supplied as `children` to `document` constructor.")))
   ([]
    (->Document (dll))))
 

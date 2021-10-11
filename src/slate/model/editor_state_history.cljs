@@ -1,14 +1,15 @@
 (ns slate.model.editor-state-history
   (:require [clojure.spec.alpha :as s]
-            [clojure.spec.test.alpha :as stest]))
+            [clojure.spec.test.alpha :as stest]
+            [slate.model.editor-state :as es :refer [editor-state]]))
 
-(defrecord EditorState [])
-(s/def ::editor-state #(instance? EditorState %))
 
-(s/def ::backstack (s/coll-of ::editor-state))
+
+(s/def ::editor-state-changelist-resolved (s/and ::es/editor-state
+                                                 #(-> % :changelist :resolved?)))
+(s/def ::backstack (s/coll-of ::editor-state-changelist-resolved))
 (s/def ::current-state-index nat-int?)
-#_(s/def ::current-state-index (s/or int? #(= :tip %)))
-(s/def ::tip (s/nilable ::editor-state))
+(s/def ::tip (s/nilable ::es/editor-state)) ;; TODO: should this be resolved?
 
 (s/def ::editor-state-history
   (s/and (s/keys :req-un [::backstack
@@ -31,43 +32,6 @@
                (< current-state-index expected-tip-index)
                (= current-state-index expected-tip-index))))))
 
-;; invalid
-(def ed1 {:backstack []
-          :current-state-index 0
-          :tip nil})
-(def ed2 {:backstack []
-          :current-state-index 0
-          :tip (->EditorState)})
-(def ed3 {:backstack [(->EditorState)]
-          :current-state-index 1
-          :tip (->EditorState)})
-(def ed4 {:backstack [(->EditorState) (->EditorState) (->EditorState) (->EditorState)]
-          :current-state-index 1
-          :tip nil})
-(def ed5 {:backstack [(->EditorState) (->EditorState) (->EditorState) (->EditorState)]
-          :current-state-index 3
-          :tip nil})
-;; invalid
-(def ed6 {:backstack [(->EditorState) (->EditorState) (->EditorState) (->EditorState)]
-          :current-state-index 4
-          :tip nil})
-(def ed7 {:backstack [(->EditorState) (->EditorState) (->EditorState) (->EditorState)]
-          :current-state-index 4
-          :tip (->EditorState)})
-;; invalid
-(def ed8 {:backstack [(->EditorState) (->EditorState) (->EditorState) (->EditorState)]
-          :current-state-index 1
-          :tip (->EditorState)})
-
-(s/valid? ::editor-state-history ed1)
-(s/valid? ::editor-state-history ed2)
-(s/valid? ::editor-state-history ed3)
-(s/valid? ::editor-state-history ed4)
-(s/valid? ::editor-state-history ed5)
-(s/valid? ::editor-state-history ed6)
-(s/valid? ::editor-state-history ed7)
-(s/valid? ::editor-state-history ed8)
-
 (s/fdef add-tip-to-backstack
         :args (s/cat :history ::editor-state-history)
         :ret ::editor-state-history)
@@ -82,7 +46,7 @@
 
 (s/fdef current-state
   :args (s/cat :history ::editor-state-history)
-  :ret ::editor-state)
+  :ret ::es/editor-state)
 
 (defn current-state
   "Returns the current state of `history` (the one that should currently be displayed on the screen).
@@ -94,7 +58,7 @@
 
 (s/fdef prev-state
   :args (s/cat :history ::editor-state-history)
-  :ret ::editor-state)
+  :ret ::es/editor-state)
 
 (defn prev-state
   "Returns the previous state of `history` (the one immediately preceeding the
@@ -165,4 +129,5 @@
            :backstack backstack
            :current-state-index (count backstack))))
 
+;; TODO: look into orchestra en vez de usar esto
 (stest/instrument)

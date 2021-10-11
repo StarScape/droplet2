@@ -1,5 +1,6 @@
 (ns slate.model.editor-state
   (:require [clojure.set :as set]
+            [clojure.spec.alpha :as s]
             [slate.dll :as dll :refer [dll]]
             [slate.map-utils :refer [remove-nil-vals-from-map]]
             [slate.model.common :refer [TextContainer
@@ -31,6 +32,8 @@
   (len [{:keys [doc]}] (len doc))
   (blank? [{:keys [doc]}] (blank? doc)))
 
+(s/def ::editor-state #(instance? EditorState %))
+
 (defn changelist
   "Constructor for a new changelist object"
   ([_base-state-hash]
@@ -42,12 +45,17 @@
   ([] (changelist nil)))
 
 (defn editor-state
-  "Creates a new EditorState object."
+  "Creates a new EditorState object with the given doc and selection
+   If no args supplied, creates an EditorState with an empty, single-document
+   paragraph and the selection at the start of that paragraph."
   ([doc selection]
    (map->EditorState
     {:doc doc
      :selection selection
-     :changelist (changelist)})))
+     :changelist (changelist)}))
+  ([]
+   (let [p (p/paragraph)]
+     (editor-state (d/document [p]) (sel/selection [(:uuid p) 0])))))
 
 (defn assoc-state
   "Works like normal assoc, but updates editor-state's changelist automatically."
