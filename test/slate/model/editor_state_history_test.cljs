@@ -116,4 +116,55 @@
                              :current-state-index 0
                              :tip nil}))))
 
+(deftest undo-test
+  (let [backstack (vec (repeat 4 (resolved-editor-state)))
+        tip (resolved-editor-state)]
+    (is (= (history/undo {:backstack backstack
+                          :current-state-index 4
+                          :tip tip})
+           {:backstack (conj backstack tip)
+            :current-state-index 3
+            :tip nil}))
+    (is (= (history/undo {:backstack backstack
+                          :current-state-index 3
+                          :tip nil})
+           {:backstack backstack
+            :current-state-index 2
+            :tip nil}))
+    (is (= (history/undo {:backstack backstack
+                          :current-state-index 3
+                          :tip nil})
+           {:backstack backstack
+            :current-state-index 2
+            :tip nil}))
+    (is (= (history/undo {:backstack backstack
+                          :current-state-index 0
+                          :tip nil})
+           {:backstack backstack
+            :current-state-index 0
+            :tip nil}))))
 
+(deftest redo-test
+  (let [state1 (resolved-editor-state)
+        state2 (resolved-editor-state)
+        state3 (resolved-editor-state)
+        state4 (resolved-editor-state)
+        tip (resolved-editor-state)]
+    (is (= (history/redo {:backstack [state1 state2 state3 state4]
+                          :current-state-index 3
+                          :tip nil})
+           {:backstack [state1 state2 state3 state4]
+            :current-state-index 3
+            :tip nil}))
+    (is (= (history/redo {:backstack [state1 state2 state3 state4]
+                          :current-state-index 2
+                          :tip nil})
+           {:backstack [state1 state2 state3 state4]
+            :current-state-index 3
+            :tip nil}))
+    (is (= (history/redo {:backstack [state1 state2 state3 state4]
+                          :current-state-index 4
+                          :tip tip})
+           {:backstack [state1 state2 state3 state4]
+            :current-state-index 4
+            :tip tip}))))

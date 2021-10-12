@@ -68,6 +68,20 @@
   [history]
   (get (:backstack history) (dec (:current-state-index history))))
 
+
+(s/fdef next-state
+  :args (s/cat :history ::editor-state-history)
+  :ret ::es/editor-state)
+
+(defn next-state
+  "Returns the next state of `history` (the one immediately succeeding the
+   one currently displayed on the screen). This should be used rather than
+   accessing any of the fields in the `EditorStateHistory` directly.
+
+   **Will** return nil if there is no previous state."
+  [history]
+  (get (:backstack history) (inc (:current-state-index history))))
+
 (s/fdef has-undo?
   :args (s/cat :history ::editor-state-history)
   :ret boolean?)
