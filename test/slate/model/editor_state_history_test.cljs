@@ -168,3 +168,32 @@
            {:backstack [state1 state2 state3 state4]
             :current-state-index 4
             :tip tip}))))
+
+(deftest set-tip-test
+  (let [state1 (resolved-editor-state)
+        state2 (resolved-editor-state)
+        state3 (resolved-editor-state)
+        state4 (resolved-editor-state)
+        tip (resolved-editor-state)
+        tip2 (resolved-editor-state)]
+    (is (= (history/set-tip {:backstack [state1 state2 state3 state4]
+                             :current-state-index 4
+                             :tip tip}
+                            tip2)
+           {:backstack [state1 state2 state3 state4]
+            :current-state-index 4
+            :tip tip2}))
+    (is (= (history/set-tip {:backstack [state1 state2 state3 state4]
+                             :current-state-index 3
+                             :tip nil}
+                            tip2)
+           {:backstack [state1 state2 state3 state4]
+            :current-state-index 4
+            :tip tip2}))
+    (is (= (history/set-tip {:backstack [state1 state2 state3 state4]
+                             :current-state-index 1
+                             :tip nil}
+                            tip2)
+           {:backstack [state1 state2]
+            :current-state-index 2
+            :tip tip2}))))
