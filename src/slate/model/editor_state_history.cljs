@@ -1,4 +1,6 @@
 (ns slate.model.editor-state-history
+  "The history object holds a series of successive EditorStates.
+   This namespace defines functions for manipulating such objects."
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
             [slate.model.editor-state :as es :refer [editor-state]]))
