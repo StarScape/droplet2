@@ -1,12 +1,13 @@
 (ns slate.interceptors)
 
 (defmacro interceptor
-  [{:keys [input-name include-in-history?]
-    :or {include-in-history? true}}
+  [{:keys [input-name include-in-history? no-effects?]
+    :or {include-in-history? true, no-effects? false}}
    arglist, fn-body]
   `(map->Interceptor {:input-name ~input-name
-                     :include-in-history? ~include-in-history?
-                     :interceptor-fn (fn [~@arglist] ~fn-body)}))
+                      :no-effects? ~no-effects?
+                      :include-in-history? ~include-in-history?
+                      :interceptor-fn (fn [~@arglist] ~fn-body)}))
 
 (comment
   (macroexpand
