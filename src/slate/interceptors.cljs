@@ -6,7 +6,8 @@
 
 (defrecord Interceptor [interceptor-fn
                         input-name
-                        include-in-history
+                        include-in-history?
+                        add-to-history-immediately?
                         no-effects?]
   IFn
   (-invoke [this editor-state extras event-obj]
@@ -17,18 +18,19 @@
           {:input-name :click
            :include-in-history? true}
           [editor-state full-ui-state event]
-          (prn editor-state full-ui-state event)))
-  )
+          (prn editor-state full-ui-state event))))
 
 (s/def ::pattern (s/and :string string? keyword?))
-(s/def ::interceptor-fn (f/spec :args (s/cat :state ::es/editor-state
+(s/def ::interceptor-fn (s/spec :args (s/cat :state ::es/editor-state
                                              :ui-state any?)
                                 :ret ::es/editor-state))
 (s/def ::input-name (s/nilable ::pattern))
 (s/def ::include-in-history? boolean?)
+(s/def ::add-to-history-immediately? boolean?)
 (s/def ::interceptor (s/keys :req-un [::interceptor-fn
                                       ::input-name
-                                      ::include-in-history?]
+                                      ::include-in-history?
+                                      ::add-to-history-immediately?]
                              :opt-un [::input-name]))
 (s/def ::interceptor-map (s/map-of ::pattern ::interceptor))
 
