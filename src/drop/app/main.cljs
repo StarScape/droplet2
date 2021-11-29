@@ -2,7 +2,7 @@
   (:require [slate.model.run :refer [run]]
             [slate.model.paragraph :refer [paragraph]]
             [slate.model.doc :refer [document]]
-            [slate.editor :refer [sync-dom]]
+            ;; [slate.editor :refer [sync-dom]]
             [slate.core :as sl]))
 
 (def fake-editor (.getElementById js/document "fake-editor"))
@@ -25,7 +25,8 @@
 (defn main [])
 
 (defn ^:dev/after-load reload []
-  (sync-dom @state))
+  #_(sync-dom @state)
+  )
 
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?)
 ;; TODO: Handle resizing of the text area

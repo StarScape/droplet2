@@ -1,0 +1,4 @@
+{:skip-comments true
+ :lint-as {slate.interceptors/definterceptor clojure.core/defn}
+ :linters {:unresolved-symbol {:exclude [(slate.interceptors/interceptor)
+                                         #_(slate.interceptors/definterceptor)]}}}

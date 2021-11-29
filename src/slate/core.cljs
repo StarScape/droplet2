@@ -12,6 +12,7 @@
 (ns slate.core
   "Main entrypoint for using and initializing the Slate editor."
   (:require [slate.events :as events]
+            [slate.interceptors :as interceptors]
             [slate.editor :as editor]
             [slate.measurement :refer [ruler-for-elem]]
             [slate.navigation :as nav]
@@ -35,13 +36,12 @@
         editor-state (atom {:doc doc
                             :selection (or selection (nav/start doc))
                             :viewmodels (vm/from-doc doc 200 measure-fn)
-                            :history {:transactions []
-                                      :current-transaction -1}
+                            :history (history/init)
                             :dom-elem editor-elem
                             :hidden-input hidden-input
                             :measure-fn measure-fn
                             :input-history []
-                            :interceptors (events/interceptor-map)})]
+                            :interceptors (interceptors/interceptor-map)})]
     (events/init-default-events editor-state)
     (editor/sync-dom @editor-state)
 

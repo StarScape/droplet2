@@ -1,7 +1,16 @@
 (ns slate.model.selection)
 
-;; TODO: docstring for Selection
-(defrecord Selection [start end backwards?])
+(defrecord Selection 
+  "A Selection is compose of these parts:
+
+   `:start` and `:end`: both maps containing `:paragraph`, a UUID of the paragraph
+   referenced, and `:offset`, a integer indicating how many characters into the paragraph
+   that side of the selection is. `:start` is **always** a paragraph *before* `:end` in
+   the document.
+
+   `:backwards?`: a boolean indicating if the range selection is backwards, i.e. if
+   the text caret should be visible at the start instead of the end."
+  [start end backwards?])
 
 ;; TODO: add pre conditions to enforce rules?
 (defn selection
@@ -130,5 +139,4 @@
       (collapse-start sel)
       (collapse-end sel))))
 
-;; TODO: expand-left and expand-right functions from JS implementation.
-;; (Could probably be renamed shift-left and shift-right)
+;; TODO: change :paragraph to :uuid and add a :between (set of UUIDs between :start and :end) to the Selection object

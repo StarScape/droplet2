@@ -3,7 +3,7 @@ node_modules/
 # Clojure- and editor-related files
 .shadow-cljs/
 .calva/
-.clj-kondo/
+# .clj-kondo/
 .clj-kondo/cache/
 .clj-kondo/.cache/
 .lsp/

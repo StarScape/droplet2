@@ -1,11 +1,24 @@
 (ns slate.model.editor-state-history
   "The history object holds a series of successive EditorStates.
-   This namespace defines functions for manipulating such objects."
+   This namespace defines functions for manipulating such objects.
+
+   The history consists of a few parts: the backstack (a list of EditorStates),
+   the current-state-index (which references an index into the backstack), and the
+   *tip*. The tip is also an EditorState, but represents a current state that *has
+   not yet been incorporated into the backstack*. The tip can be modified directly --
+   and doing so will not result in a new state being added to the history. If you want
+   to add the history's tip to the backstack, an explicit call to `add-tip-to-backstack`
+   is needed.
+
+   To understand the need for tip, consider the behavior of a typical text editor.
+   Not EVERY single state change is preserved. For example, if you type ten characters
+   rapidly and then pause, most editors will record this as a single level of undo.
+   The tip is essentially saying 'here is a current state of the editor which does not
+   yet merit being broken into separate levels of undo-ability.' The code in `fire-interceptor!`
+   will automatically incoporate the tip into the backstack after a certain period of inactivity"
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
             [slate.model.editor-state :as es :refer [editor-state]]))
-
-
 
 (s/def ::editor-state-changelist-resolved (s/and ::es/editor-state
                                                  #(-> % :changelist :resolved?)))
@@ -128,7 +141,8 @@
     history))
 
 (s/fdef set-tip
-  :args (s/cat :history ::editor-state-history :tip ::es/editor-state)
+  :args (s/cat :history ::editor-state-history
+               :tip ::es/editor-state)
   :ret ::editor-state-history)
 
 (defn set-tip
@@ -143,6 +157,15 @@
            :tip new-tip
            :backstack backstack
            :current-state-index (count backstack))))
+
+(s/fdef init
+  :args (s/cat :editor-state ::es/editor-state)
+  :ret ::editor-state-history)
+
+(defn init
+  "Returns a new history object with the tip set to the provided EditorState"
+  [editor-state]
+  {:tip editor-state, :backstack [], :current-state-index 0})
 
 ;; TODO: look into orchestra en vez de usar esto
 (stest/instrument)
