@@ -2,7 +2,6 @@
   (:require [clojure.set :as set]
             [clojure.spec.alpha :as s]
             [slate.dll :as dll :refer [dll]]
-            [slate.map-utils :refer [remove-nil-vals-from-map]]
             [slate.model.common :refer [TextContainer
                                         Selectable
                                         insert

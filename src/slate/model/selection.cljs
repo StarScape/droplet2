@@ -1,30 +1,37 @@
 (ns slate.model.selection)
 
 (defrecord Selection 
-  "A Selection is compose of these parts:
-
-   `:start` and `:end`: both maps containing `:paragraph`, a UUID of the paragraph
-   referenced, and `:offset`, a integer indicating how many characters into the paragraph
-   that side of the selection is. `:start` is **always** a paragraph *before* `:end` in
-   the document.
-
-   `:backwards?`: a boolean indicating if the range selection is backwards, i.e. if
-   the text caret should be visible at the start instead of the end."
   [start end backwards?])
 
 ;; TODO: add pre conditions to enforce rules?
 (defn selection
-  "Creates a new selection."
-  ([[start-paragraph start-offset] [end-paragraph end-offset] backwards?]
+  "Creates a new selection.
+
+   A Selection is composed of these parts:
+
+   - `:start` and `:end`: both maps containing `:paragraph`, a UUID of the paragraph
+   referenced, and `:offset`, a integer indicating how many characters into the paragraph
+   that side of the selection is. `:start` **always** comes *before* `:end` in the document.
+
+   - `:between`: a set of UUIDs, indicating all the paragraphs *between* the `:start` and `:end`.
+     This **can** be null/empty set, but if so, it is the responsibility of the consumer to ensure
+     that there actually are no paragraphs between `:start` and `:end`.
+
+   - `:backwards?`: a boolean indicating if the range selection is backwards, i.e. if
+   the text caret should be visible at the start instead of the end."
+  ([[start-paragraph start-offset] [end-paragraph end-offset] & {:keys [backwards? between]
+                                                                 :or {backwards? false
+                                                                      between #{}}}]
    (map->Selection {:start {:paragraph start-paragraph
                             :offset start-offset}
                     :end {:paragraph end-paragraph
                           :offset end-offset}
-                    :backwards? backwards?}))
-  ([start end]
-   (selection start end false))
+                    :backwards? backwards?
+                    :between between}))
+  #_([start end]
+   (selection start end))
   ([start]
-   (selection start start false)))
+   (selection start start)))
 
 (defn caret
   "Returns the location the caret will be rendered at."
@@ -139,4 +146,4 @@
       (collapse-start sel)
       (collapse-end sel))))
 
-;; TODO: change :paragraph to :uuid and add a :between (set of UUIDs between :start and :end) to the Selection object
+;; TODO: change :paragraph in :start and :end to :uuid

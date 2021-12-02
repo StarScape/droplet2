@@ -1,25 +1,27 @@
 (ns slate.model.selection-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.model.selection :as sel :refer [selection]]))
+            [slate.model.selection :as sel :refer [selection map->Selection]]))
 
 (def sel-single (selection [:p1 10]))
 (def sel-range (selection [:p1 10] [:p1 20]))
-(def sel-backwards (selection [:p1 10] [:p1 20] true))
+(def sel-backwards (selection [:p1 10] [:p1 20] :backwards? true))
 
 ;; Some mock paragraphs
 (deftest selection-init-test
   (testing "Basic initialization"
-    (let [sel (selection [:p1 0] [:p2 10] true)]
-      (is (= (into {} sel) {:start {:paragraph :p1, :offset 0}
-                            :end {:paragraph :p2, :offset 10}
-                            :backwards? true}))))
+    (let [sel (selection [:p1 0] [:p2 10] :backwards? true)]
+      (is (= sel (map->Selection {:start {:paragraph :p1, :offset 0}
+                                  :end {:paragraph :p2, :offset 10}
+                                  :backwards? true
+                                  :between #{}})))))
   (testing "Different ways of initializing selection"
-    (let [s1 (selection [:p1 0] [:p1 0] false)
+    (let [s1 (selection [:p1 0] [:p1 0] :backwards? false)
           s2 (selection [:p1 0] [:p1 0])
           s3 (selection [:p1 0])]
-      (is (= (into {} s1) {:start {:paragraph :p1, :offset 0}
-                           :end {:paragraph :p1, :offset 0}
-                           :backwards? false}))
+      (is (= s1(map->Selection {:start {:paragraph :p1, :offset 0}
+                              :end {:paragraph :p1, :offset 0}
+                              :backwards? false
+                              :between #{}})))
       (is (= s1 s2 s3)))))
 
 (deftest caret-test
@@ -51,5 +53,30 @@
   (let [sel (selection [:p1 10] [:p1 20])
         collapsed-start (sel/collapse-start sel)
         collapsed-end (sel/collapse-end sel)]
-    (= (sel/caret collapsed-start) 10)
-    (= (sel/caret collapsed-end) 20)))
+    (is (= (sel/caret collapsed-start) 10))
+    (is (= (sel/caret collapsed-end) 20))))
+
+(def between-sel (selection [:p1 0] [:p4 10] :between #{:p2 :p3}))
+
+(deftest between-test
+  (is (= (sel/collapse-start between-sel)
+         (map->Selection {:start {:paragraph :p1
+                                  :offset 0}
+                          :end {:paragraph :p1
+                                :offset 0}
+                          :backwards? false
+                          :between #{}})))
+  (is (= (sel/collapse-end between-sel)
+         (map->Selection {:start {:paragraph :p4
+                                  :offset 10}
+                          :end {:paragraph :p4
+                                :offset 10}
+                          :backwards? false
+                          :between #{}})))
+  (is (= (sel/smart-collapse between-sel)
+         (map->Selection {:start {:paragraph :p4
+                                  :offset 10}
+                          :end {:paragraph :p4
+                                :offset 10}
+                          :backwards? false
+                          :between #{}}))))

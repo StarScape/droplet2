@@ -13,7 +13,6 @@
   "Main entrypoint for using and initializing the Slate editor."
   (:require [slate.events :as events]
             [slate.interceptors :as interceptors]
-            [slate.editor :as editor]
             [slate.measurement :refer [ruler-for-elem]]
             [slate.navigation :as nav]
             [slate.viewmodel :as vm]))
