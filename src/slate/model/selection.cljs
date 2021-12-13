@@ -71,6 +71,14 @@
   [sel]
   (= (-> sel :start :paragraph) (-> sel :end :paragraph)))
 
+(defn add-to-between
+  "Adds the UUID to the selection's :between set if it is not also the UUID of the start or end paragraph."
+  [sel uuid]
+  (if (or (= uuid (-> sel :start :paragraph))
+          (= uuid (-> sel :end :paragraph)))
+    sel
+    (update sel :between conj uuid)))
+
 (defn shift-single
   "Shift a single-selection by `n` characters (can be positive or negative)."
   [{{paragraph :paragraph offset :offset} :start :as sel} n]
