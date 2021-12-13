@@ -10,7 +10,12 @@
 (def test-str "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")
 (def para (p/paragraph "p1" [(r/run test-str)]))
 (def para2 (p/paragraph "p2" [(r/run "foo bar?")]))
+(def para3 (p/paragraph "p3" [(r/run "bizz buzz")]))
+(def para4 (p/paragraph "p4" [(r/run "bazz bazz")]))
+
 (def doc (doc/document [para, para2]))
+(def doc2 (doc/document [para, para2, para3]))
+(def doc3 (doc/document [para, para2, para3, para4]))
 
 (deftest start-test
   (testing "works for paragraphs"
@@ -102,7 +107,7 @@
     (is (= 0 (caret (prev-word para (selection ["p1" 4]))))))
 
   (testing "collapses first"
-    (is (= 0 (caret (prev-word para (selection ["p1" 5] ["p1" 55] true)))))))
+    (is (= 0 (caret (prev-word para (selection ["p1" 5] ["p1" 55] :backwards? true)))))))
 
 (deftest prev-word-document-test
   (testing "should return the same offset as the paragraph prev-word for all offsets but 0"
@@ -174,15 +179,17 @@
   ;; Forward selection
   (testing "works with single selection"
     (is (= (nav/shift+right doc (selection ["p1" 0]))
-           (selection ["p1" 0] ["p1" 1] false))))
+           (selection ["p1" 0] ["p1" 1] :backwards? false))))
 
   (testing "works with forwards range selection"
     (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 2]))
-           (selection ["p1" 1] ["p1" 3] false))))
+           (selection ["p1" 1] ["p1" 3] :backwards? false))))
 
   (testing "works with forwards range selection across paragraphs"
     (is (= (nav/shift+right doc (selection ["p1" 10] ["p1" (m/len para)]))
-           (selection ["p1" 10] ["p2" 0]))))
+           (selection ["p1" 10] ["p2" 0])))
+    (is (= (nav/shift+right doc2 (selection ["p1" 10] ["p2" (m/len para2)]))
+           (selection ["p1" 10] ["p3" 0] :between #{"p2"}))))
 
   (testing "won't let you go past end of last paragraph"
     (is (= (nav/shift+right doc (selection ["p1" 10] ["p2" (m/len para2)]))
@@ -194,30 +201,32 @@
 
   (testing "works with selecting to end of para with forwards range selection"
     (is (= (nav/shift+right doc (selection ["p1" 0] ["p1" (dec (m/len para))]))
-           (selection ["p1" 0] ["p1" (m/len para)] false))))
+           (selection ["p1" 0] ["p1" (m/len para)] :backwards? false))))
 
   ;; Backwards selection
   (testing "works with backwards range"
-    (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 10] true))
-           (selection ["p1" 2] ["p1" 10] true))))
+    (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 10] :backwards? true))
+           (selection ["p1" 2] ["p1" 10] :backwards? true))))
 
   (testing "works with collapsing a backwards range selection once it becomes single again"
-    (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 2] true))
-           (selection ["p1" 2] ["p1" 2] false))))
+    (is (= (nav/shift+right doc (selection ["p1" 1] ["p1" 2] :backwards? true))
+           (selection ["p1" 2] ["p1" 2] :backwards? false))))
 
-  (testing "works across paragraphs"
-    (is (= (nav/shift+right doc (selection ["p1" (m/len para)] ["p2" 5] true))
-           (selection ["p2" 0] ["p2" 5] true)))
-    (is (= (nav/shift+right doc (selection ["p1" 9] ["p2" 5] true))
-           (selection ["p1" 10] ["p2" 5] true)))))
+  (testing "works with backwards range selections across paragraphs"
+    (is (= (nav/shift+right doc (selection ["p1" (m/len para)] ["p2" 5] :backwards? true))
+           (selection ["p2" 0] ["p2" 5] :backwards? true)))
+    (is (= (nav/shift+right doc2 (selection ["p1" (m/len para)] ["p3" 5], :backwards? true, :between #{"p2"}))
+           (selection ["p2" 0] ["p3" 5] :backwards? true :between #{})))
+    (is (= (nav/shift+right doc (selection ["p1" 9] ["p2" 5] :backwards? true))
+           (selection ["p1" 10] ["p2" 5] :backwards? true)))))
 
 (deftest shift+left
   ;; Forward selection
   (testing "works with single selection"
     (is (= (nav/shift+left doc (selection ["p1" 2]))
-           (selection ["p1" 1] ["p1" 2] true)))
+           (selection ["p1" 1] ["p1" 2] :backwards? true)))
     (is (= (nav/shift+left doc (selection ["p2" 0]))
-           (selection ["p1" (m/len para)] ["p2" 0] true))))
+           (selection ["p1" (m/len para)] ["p2" 0] :backwards? true))))
 
   (testing "works with forwards range selection"
     (is (= (nav/shift+left doc (selection ["p1" 1] ["p1" 5]))
@@ -230,25 +239,29 @@
   (testing "won't let you go past beginning of first paragraph"
     (is (= (nav/shift+left doc (selection ["p1" 0]))
            (selection ["p1" 0])))
-    (is (= (nav/shift+left doc (selection ["p1" 0] ["p1" 10] true))
-           (selection ["p1" 0] ["p1" 10] true))))
+    (is (= (nav/shift+left doc (selection ["p1" 0] ["p1" 10] :backwards? true))
+           (selection ["p1" 0] ["p1" 10] :backwards? true))))
 
   (testing "works across paragraphs with forwards selection"
     (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 0]))
            (selection ["p1" 10] ["p1" (m/len para)])))
     (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 5]))
-           (selection ["p1" 10] ["p2" 4]))))
+           (selection ["p1" 10] ["p2" 4])))
+    (is (= (nav/shift+left doc2 (selection ["p1" 0] ["p3" 0] :between #{"p2"}))
+           (selection ["p1" 0] ["p2" (m/len para2)] :between #{}))))
 
   ;; Backwards selection
   (testing "works with backwards range selection"
-    (is (= (nav/shift+left doc (selection ["p1" 1] ["p1" 10] true))
-           (selection ["p1" 0] ["p1" 10] true))))
+    (is (= (nav/shift+left doc (selection ["p1" 1] ["p1" 10] :backwards? true))
+           (selection ["p1" 0] ["p1" 10] :backwards? true))))
 
   (testing "works with backwards range selection across paragraphs"
-    (is (= (nav/shift+left doc (selection ["p2" 0] ["p2" 5] true))
-           (selection ["p1" (m/len para)] ["p2" 5] true)))
-    (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 5] true))
-           (selection ["p1" 9] ["p2" 5] true)))))
+    (is (= (nav/shift+left doc (selection ["p2" 0] ["p2" 5] :backwards? true))
+           (selection ["p1" (m/len para)] ["p2" 5] :backwards? true)))
+    (is (= (nav/shift+left doc (selection ["p1" 10] ["p2" 5] :backwards? true))
+           (selection ["p1" 9] ["p2" 5] :backwards? true)))
+    (is (= (nav/shift+left doc2 (selection ["p2" 0] ["p3" 5] :backwards? true))
+           (selection ["p1" 80] ["p3" 5] :backwards? true, :between #{"p2"})))))
 
 (deftest hyphen-back-and-forth-test
   (let [text "word1 a-very-long-hyphenated-word word2"]

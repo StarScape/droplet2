@@ -48,9 +48,14 @@
     (-> sel :end :paragraph)))
 
 (defn start-para
-  "Shortcut for (-> sel :start :paragraph) for a single selection."
+  "Shortcut for (-> sel :start :paragraph)."
   [sel]
   (-> sel :start :paragraph))
+
+(defn end-para
+    "Shortcut for (-> sel :end :paragraph)."
+    [sel]
+    (-> sel :end :paragraph))
 
 (defn single?
   "Returns true if argument is a single selection."
@@ -136,8 +141,8 @@
 
    Examples:
    ```
-   (smart-collapse (selection [0 2] [0 5] true)) ; collapses to selection with offset 2
-   (smart-collapse (selection [0 2] [0 5] false)) ; collapses to selection with offset 5
+   (smart-collapse (selection [0 2] [0 5] :backwards? true)) ; collapses to selection with offset 2
+   (smart-collapse (selection [0 2] [0 5] :backwards? false)) ; collapses to selection with offset 5
    ```"
   [sel]
   (if (single? sel)

@@ -155,7 +155,7 @@
                       p2]))))
 
   (testing "deletes from start of paragraph backwards"
-    (is (= (sl/delete doc (selection ["p1" 0] ["p1" 3] true))
+    (is (= (sl/delete doc (selection ["p1" 0] ["p1" 3] :backwards? true))
            (document [(paragraph "p1" [(run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
                                        (run "buzz" #{:bold})])

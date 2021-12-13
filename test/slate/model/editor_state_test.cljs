@@ -249,7 +249,7 @@
                           :resolved? false}}))))
 
   (testing "deletes from start of paragraph backwards"
-    (is (= (sl/delete (editor-state doc (selection ["p1" 0] ["p1" 3] true)))
+    (is (= (sl/delete (editor-state doc (selection ["p1" 0] ["p1" 3] :backwards? true)))
            (map->EditorState
             {:doc (document [(paragraph "p1" [(run "bar" #{:bold :italic})
                                               (run "bizz" #{:italic})

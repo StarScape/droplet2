@@ -22,11 +22,16 @@
     "@" "#" "$" "%" "^" "&" "*" "|"
     "+" "=" "[" "]" "{" "}" "`" "?"})
 
-(defn separator? "Is argument a separator char?" [char] (contains? separators char))
+(defn separator?
+  "Is argument a separator char?"
+  [char]
+  {:pre [(char? char)]}
+  (contains? separators char))
 
 (defn whitespace?
   "Is argument a whitespace char?"
   [char]
+  {:pre [(char? char)]}
   (if (and (str/blank? char) (not= char "") (not= char nil))
     true
     false))
@@ -34,6 +39,7 @@
 (defn word?
   "Is argument a word char?"
   [char]
+  {:pre [(char? char)]}
   (and (not (whitespace? char))
        (not (separator? char))
        (not= nil char)
@@ -47,7 +53,7 @@
 
 (defn until
   "Advance in string `text` beginning at index `start` until a character
-   is found for which predicate `pred` returns true, and returns that index."
+   is found for which predicate `pred` returns true, and return that index."
   [text start pred]
   (loop [i start]
     (if (or (>= i (count text))
@@ -83,8 +89,10 @@
   "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  {:pre [(<= start-offset (.-length text))]
-   :post [(<= % (.-length text))]}
+  {:pre [(and (nat-int? start-offset)
+              (<= start-offset (.-length text)))]
+   :post [(and (nat-int? start-offset)
+               (<= % (.-length text)))]}
   (if (>= start-offset (count text))
     (count text)
     (let [first-char (nth text start-offset)]
@@ -109,8 +117,10 @@
   "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  {:pre [(<= start-offset (.-length text))]
-   :post [(<= % (.-length text))]}
+  {:pre [(and (nat-int? start-offset)
+              (<= start-offset (.-length text)))]
+   :post [(and (nat-int? start-offset)
+               (<= % (.-length text)))]}
   (if (<= start-offset 0)
     0
     (let [before-start (nth text (dec start-offset))]
@@ -200,15 +210,25 @@
 
   (next-char [para sel]
     (cond
-      (range? sel) (sel/collapse-end sel)
-      (and (single? sel) (< (caret sel) (m/len para))) (sel/shift-single sel 1)
-      :else sel))
+      (range? sel)
+      (sel/collapse-end sel)
+
+      (and (single? sel) (< (caret sel) (m/len para)))
+      (sel/shift-single sel 1)
+
+      :else
+      sel))
 
   (prev-char [para sel]
     (cond
-      (range? sel) (sel/collapse-start sel)
-      (and (single? sel) (pos? (caret sel))) (sel/shift-single sel -1)
-      :else sel))
+      (range? sel)
+      (sel/collapse-start sel)
+
+      (and (single? sel) (pos? (caret sel)))
+      (sel/shift-single sel -1)
+
+      :else
+      sel))
 
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
@@ -283,7 +303,11 @@
       (if (and (:backwards? sel) (sel/range? sel))
         (cond
           (= (sel/caret sel) para-length)
-          (assoc sel :start {:offset 0, :paragraph (:uuid next-para)})
+          (-> sel
+              (assoc :start {:offset 0, :paragraph (:uuid next-para)})
+              ;; We just moved the caret from p1 to p2, removing p1 from the selection
+              ;; and making p2 the new start. Remove p2 from :between if it's present.
+              (update :between disj (:uuid next-para)))
 
           :else
           (sel/shift-caret sel 1))
@@ -293,11 +317,17 @@
           sel
 
           (= (sel/caret sel) para-length)
-          (assoc sel :end {:offset 0, :paragraph (:uuid next-para)})
+          (-> sel
+              (assoc :end {:offset 0, :paragraph (:uuid next-para)})
+              ;; We just shift+right'd from p1 to p2, so add p1 to :between IF it's not also :start
+              (update :between #(if-not (= (sel/caret-para sel) (sel/start-para sel))
+                                  (conj % (:uuid para))
+                                  %)))
 
           :else
           (sel/shift-caret sel 1)))))
 
+  ;; TODO: update :between behavior for shift+left
   (shift+left [doc sel]
     (let [para ((:children doc) (sel/caret-para sel))
           prev-para (dll/prev (:children doc) para)]
@@ -308,9 +338,12 @@
           sel
 
           (zero? (sel/caret sel))
-          (assoc sel
-                 :start {:offset (m/len prev-para) :paragraph (:uuid prev-para)}
-                 :backwards? true)
+          (-> sel
+              (assoc :start {:paragraph (:uuid prev-para)
+                             :offset (m/len prev-para)}
+                     :backwards? true)
+              ;; No need to update :between because this is operating on a single selection
+              )
 
           :else
           (sel/shift-start sel -1))
@@ -320,10 +353,22 @@
           sel
 
           (zero? (sel/caret sel))
-          (let [side (if (:backwards? sel) :start :end)]
-            (assoc sel side {:offset (m/len prev-para)
-                             :paragraph (:uuid prev-para)}))
-
+          (if (:backwards? sel)
+            (-> sel
+                (assoc :start {:offset (m/len prev-para)
+                               :paragraph (:uuid prev-para)})
+                ;; Add what was previously the :start paragraph to the :between,
+                ;; as long as it is not also the :end paragraph (i.e. if the selection
+                ;; only spanned a single paragraph).
+                (update :between #(if-not (= (:uuid para) (sel/end-para sel))
+                                    (conj % (:uuid para))
+                                    %)))
+            (-> sel
+                (assoc :end {:offset (m/len prev-para)
+                             :paragraph (:uuid prev-para)})
+                ;; Previous paragraph was either in :between or the :start para. It's
+                ;; now the new :end paragraph, so make sure it's removed from :between.
+                (update :between #(disj % (:uuid prev-para)))))
 
           :else
           (sel/shift-caret sel -1)))))
