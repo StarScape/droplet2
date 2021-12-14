@@ -1,6 +1,8 @@
 (ns slate.navigation-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.navigation :as nav :refer [next-char prev-char next-word prev-word next-word-offset prev-word-offset]]
+            [slate.navigation :as nav :refer [next-char prev-char
+                                              next-word prev-word
+                                              next-word-offset prev-word-offset]]
             [slate.model.common :as m]
             [slate.model.run :as r]
             [slate.model.paragraph :as p]
@@ -15,7 +17,6 @@
 
 (def doc (doc/document [para, para2]))
 (def doc2 (doc/document [para, para2, para3]))
-(def doc3 (doc/document [para, para2, para3, para4]))
 
 (deftest start-test
   (testing "works for paragraphs"
@@ -219,6 +220,26 @@
            (selection ["p2" 0] ["p3" 5] :backwards? true :between #{})))
     (is (= (nav/shift+right doc (selection ["p1" 9] ["p2" 5] :backwards? true))
            (selection ["p1" 10] ["p2" 5] :backwards? true)))))
+
+(deftest ctrl+shift+right
+  (testing "works forwards"
+    (is (= (nav/ctrl+shift+right doc2 (selection ["p1" 0]))
+           (selection ["p1" 0] ["p1" 5])))
+    (is (= (nav/ctrl+shift+right doc2 (selection ["p1" 0] ["p2" (m/len para2)]))
+           (selection ["p1" 0] ["p3" 0] :between #{"p2"}))))
+  (testing "works backwards"
+    (is (= (nav/ctrl+shift+right doc2 (selection ["p1" 0] ["p3" 0]
+                                                 :between #{"p2"}
+                                                 :backwards? true))
+           (selection ["p1" 5] ["p3" 0]
+                      :between #{"p2"}
+                      :backwards? true)))
+    (is (= (nav/ctrl+shift+right doc2 (selection ["p1" (m/len para)] ["p3" 0]
+                                                 :between #{"p2"}
+                                                 :backwards? true))
+           (selection ["p2" 0] ["p3" 0] :between #{} :backwards? true)))
+    (is (= (nav/ctrl+shift+right doc2 (selection ["p1" 0] ["p1" 2] :backwards? true))
+           (selection ["p1" 2] ["p1" 5] :backwards? false)))))
 
 (deftest shift+left
   ;; Forward selection

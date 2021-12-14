@@ -378,12 +378,16 @@
           new-caret {:paragraph (sel/caret-para next-word-sel)
                      :offset (sel/caret next-word-sel)}]
       (if (and (:backwards? sel) (sel/range? sel))
-        (if (and (< (:offset new-caret) (-> sel :end :offset))
-                 (= (:paragraph new-caret) (-> sel :end :paragraph)))
-          (assoc sel :start new-caret)
-          (assoc sel :start (:end sel), :end new-caret, :backwards? false))
-        (assoc sel :end new-caret, :backwards? false))))
+        (-> (if (and (>= (:offset new-caret) (-> sel :end :offset))
+                     (= (:paragraph new-caret) (-> sel :end :paragraph)))
+              (assoc sel :start (:end sel), :end new-caret, :backwards? false)
+              (assoc sel :start new-caret))
+            (sel/remove-ends-from-between))
+        (-> sel
+            (assoc :end new-caret, :backwards? false)
+            (sel/add-to-between (sel/end-para sel))))))
 
+  ;; TODO: fix this to deal with :between
   (ctrl+shift+left [doc sel]
     (let [prev-word-sel (prev-word doc sel)
           new-caret {:paragraph (sel/caret-para prev-word-sel)

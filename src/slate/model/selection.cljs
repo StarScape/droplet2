@@ -79,6 +79,12 @@
     sel
     (update sel :between conj uuid)))
 
+(defn remove-ends-from-between
+  "If the UUID of the start of end paragraphs are in the :between set,
+  removes them. Otherwise, just return the selection as is."
+  [sel]
+  (update sel :between #(disj % (-> sel :start :paragraph) (-> sel :end :paragraph))))
+
 (defn shift-single
   "Shift a single-selection by `n` characters (can be positive or negative)."
   [{{paragraph :paragraph offset :offset} :start :as sel} n]
