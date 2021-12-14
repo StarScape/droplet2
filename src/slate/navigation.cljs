@@ -22,16 +22,18 @@
     "@" "#" "$" "%" "^" "&" "*" "|"
     "+" "=" "[" "]" "{" "}" "`" "?"})
 
+(defn char-or-blank? [x] (or (= x "") (char? x)))
+
 (defn separator?
   "Is argument a separator char?"
   [char]
-  {:pre [(char? char)]}
+  {:pre [(char-or-blank? char)]}
   (contains? separators char))
 
 (defn whitespace?
   "Is argument a whitespace char?"
   [char]
-  {:pre [(char? char)]}
+  {:pre [(char-or-blank? char)]}
   (if (and (str/blank? char) (not= char "") (not= char nil))
     true
     false))
@@ -39,7 +41,7 @@
 (defn word?
   "Is argument a word char?"
   [char]
-  {:pre [(char? char)]}
+  {:pre [(char-or-blank? char)]}
   (and (not (whitespace? char))
        (not (separator? char))
        (not= nil char)
@@ -307,7 +309,7 @@
               (assoc :start {:offset 0, :paragraph (:uuid next-para)})
               ;; We just moved the caret from p1 to p2, removing p1 from the selection
               ;; and making p2 the new start. Remove p2 from :between if it's present.
-              (update :between disj (:uuid next-para)))
+              (sel/remove-ends-from-between))
 
           :else
           (sel/shift-caret sel 1))
@@ -320,9 +322,7 @@
           (-> sel
               (assoc :end {:offset 0, :paragraph (:uuid next-para)})
               ;; We just shift+right'd from p1 to p2, so add p1 to :between IF it's not also :start
-              (update :between #(if-not (= (sel/caret-para sel) (sel/start-para sel))
-                                  (conj % (:uuid para))
-                                  %)))
+              (sel/add-to-between (:uuid para)))
 
           :else
           (sel/shift-caret sel 1)))))
@@ -360,15 +360,13 @@
                 ;; Add what was previously the :start paragraph to the :between,
                 ;; as long as it is not also the :end paragraph (i.e. if the selection
                 ;; only spanned a single paragraph).
-                (update :between #(if-not (= (:uuid para) (sel/end-para sel))
-                                    (conj % (:uuid para))
-                                    %)))
+                (sel/add-to-between (:uuid para)))
             (-> sel
                 (assoc :end {:offset (m/len prev-para)
                              :paragraph (:uuid prev-para)})
                 ;; Previous paragraph was either in :between or the :start para. It's
                 ;; now the new :end paragraph, so make sure it's removed from :between.
-                (update :between #(disj % (:uuid prev-para)))))
+                (sel/remove-ends-from-between)))
 
           :else
           (sel/shift-caret sel -1)))))
@@ -378,26 +376,32 @@
           new-caret {:paragraph (sel/caret-para next-word-sel)
                      :offset (sel/caret next-word-sel)}]
       (if (and (:backwards? sel) (sel/range? sel))
+        ;; Backwards range selection
         (-> (if (and (>= (:offset new-caret) (-> sel :end :offset))
                      (= (:paragraph new-caret) (-> sel :end :paragraph)))
               (assoc sel :start (:end sel), :end new-caret, :backwards? false)
               (assoc sel :start new-caret))
             (sel/remove-ends-from-between))
+        ;; Forwards range or single selection
         (-> sel
             (assoc :end new-caret, :backwards? false)
             (sel/add-to-between (sel/end-para sel))))))
 
-  ;; TODO: fix this to deal with :between
   (ctrl+shift+left [doc sel]
     (let [prev-word-sel (prev-word doc sel)
           new-caret {:paragraph (sel/caret-para prev-word-sel)
                      :offset (sel/caret prev-word-sel)}]
       (if (or (sel/single? sel) (and (:backwards? sel) (sel/range? sel)))
-        (assoc sel :start new-caret, :backwards? true)
-        (if (and (< (:offset new-caret) (-> sel :start :offset))
-                 (= (:paragraph new-caret) (-> sel :start :paragraph)))
-          (assoc sel :start new-caret, :end (:start sel), :backwards? true)
-          (assoc sel :end new-caret, :backwards? false))))))
+        ;; Single selection or backwards range-selection
+        (-> sel
+            (assoc :start new-caret, :backwards? true)
+            (sel/add-to-between (sel/start-para sel)))
+        ;; Forwards range-selection
+        (-> (if (and (< (:offset new-caret) (-> sel :start :offset))
+                     (= (:paragraph new-caret) (-> sel :start :paragraph)))
+              (assoc sel :start new-caret, :end (:start sel), :backwards? true)
+              (assoc sel :end new-caret, :backwards? false))
+            (sel/remove-ends-from-between))))))
 
 
 (comment

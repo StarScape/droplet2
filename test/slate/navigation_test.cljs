@@ -284,6 +284,29 @@
     (is (= (nav/shift+left doc2 (selection ["p2" 0] ["p3" 5] :backwards? true))
            (selection ["p1" 80] ["p3" 5] :backwards? true, :between #{"p2"})))))
 
+(deftest ctrl+shift+left
+  (testing "works forwards"
+    (is (= (nav/ctrl+shift+left doc2 (selection ["p1" 0] ["p3" 0] :between #{"p2"}))
+           (selection ["p1" 0] ["p2" (m/len para2)] :between #{})))
+    (is (= (nav/ctrl+shift+left doc2 (selection ["p1" 1] ["p1" 5]))
+           (selection ["p1" 0] ["p1" 1] :backwards? true))))
+  (testing "works backwards or as single selection"
+    (is (= (nav/ctrl+shift+left doc2 (selection ["p1" 5]))
+           (selection ["p1" 0] ["p1" 5] :backwards? true)))
+    (is (= (nav/ctrl+shift+left doc2 (selection ["p1" 5] ["p3" 0]
+                                                :backwards? true
+                                                :between #{"p2"}))
+           (selection ["p1" 0] ["p3" 0]
+                      :backwards? true
+                      :between #{"p2"})))
+    (is (= (nav/ctrl+shift+left doc2 (selection ["p2" 0] ["p3" 5]
+                                                :backwards? true))
+           (selection ["p1" (m/len para)] ["p3" 5]
+                      :backwards? true
+                      :between #{"p2"})))
+    (is (= (nav/ctrl+shift+left doc2 (selection ["p2" 2] ["p3" 5] :backwards? true))
+           (selection ["p2" 0] ["p3" 5] :backwards? true)))))
+
 (deftest hyphen-back-and-forth-test
   (let [text "word1 a-very-long-hyphenated-word word2"]
     ;; Start at offset 5, jump right 5 times

@@ -85,4 +85,4 @@
   (let [sel (selection ["p1" 0] ["p4" 0] :between #{"p2"})]
     (is (= (sel/add-to-between sel "p3")
            (selection ["p1" 0] ["p4" 0] :between #{"p2" "p3"})))
-    (is (= sel (sel/add-to-between sel "p1")))))(add-to-between)
+    (is (= sel (sel/add-to-between sel "p1")))))
