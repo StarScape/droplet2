@@ -327,7 +327,6 @@
           :else
           (sel/shift-caret sel 1)))))
 
-  ;; TODO: update :between behavior for shift+left
   (shift+left [doc sel]
     (let [para ((:children doc) (sel/caret-para sel))
           prev-para (dll/prev (:children doc) para)]
@@ -402,7 +401,6 @@
               (assoc sel :start new-caret, :end (:start sel), :backwards? true)
               (assoc sel :end new-caret, :backwards? false))
             (sel/remove-ends-from-between))))))
-
 
 (comment
   (def my-par (p/paragraph [(r/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
