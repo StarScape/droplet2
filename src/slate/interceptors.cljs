@@ -1,8 +1,9 @@
 (ns slate.interceptors
   (:require-macros [slate.interceptors :refer [interceptor definterceptor]])
-  (:require [clojure.spec.alpha :as s]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
+            [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
-            [clojure.set :as set]
             [slate.model.editor-state :as es]))
 
 ;; An Interceptor is a a function of (editor-state, ui-state?) -> editor-state

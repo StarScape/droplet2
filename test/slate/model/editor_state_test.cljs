@@ -5,7 +5,7 @@
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
-            [slate.model.editor-state :as state :refer [editor-state map->EditorState]]
+            [slate.model.editor-state :as state :refer [editor-state ->EditorUpdate map->EditorState]]
             [slate.dll :as dll :refer [dll]]))
 
 (def p1 (paragraph "p1" [(run "foo" #{:italic})
@@ -32,133 +32,124 @@
 (deftest insert-test
   (testing "insert 2 runs in middle of a paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p1" 3])) [(run "Hello" #{:italic}) (run "Goodbye!")])
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "fooHello" #{:italic})
-                                              (run "Goodbye!" #{})
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 16])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "fooHello" #{:italic})
+                                                                (run "Goodbye!" #{})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 16])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "insert single run in middle of a paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p1" 3])) (run "Goodbye!"))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                              (run "Goodbye!" #{})
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 11])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
+                                                                (run "Goodbye!" #{})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 11])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "insert run at start of paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p1" 0])) (run "Hello!"))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "Hello!" #{})
-                                              (run "foo" #{:italic})
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 6])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "Hello!" #{})
+                                                                (run "foo" #{:italic})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 6])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "insert run at end of paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p2" 12])) (run "Goodbye!" #{:italic}))
-           (map->EditorState
-            {:doc (document [p1, (paragraph "p2" [(run "aaabbbcccddd") (run "Goodbye!" #{:italic})])])
-             :selection (selection ["p2" 20])
-             :changelist {:changed-uuids #{"p2"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [p1, (paragraph "p2" [(run "aaabbbcccddd") (run "Goodbye!" #{:italic})])])
+                               :selection (selection ["p2" 20])})
+            {:changed-uuids #{"p2"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "multi-paragraph insert in the middle of a single paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p1" 10])) to-insert)
            (sl/insert (editor-state doc (selection ["p1" 10])) (into (dll) to-insert))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "inserted paragraph 1")])
-                             (paragraph "i2" [(run "inserted paragraph 2")])
-                             (paragraph "i3" [(run "inserted paragraph 3")
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["i3" 20])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{"i2" "i3"}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "inserted paragraph 1")])
+                                               (paragraph "i2" [(run "inserted paragraph 2")])
+                                               (paragraph "i3" [(run "inserted paragraph 3")
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["i3" 20])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{"i2" "i3"}
+             :deleted-uuids #{}}))))
 
   (testing "multi-paragraph insert at the start of a paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p2" 0])) to-insert)
            (sl/insert (editor-state doc (selection ["p2" 0])) (into (dll) to-insert))
-           (map->EditorState
-            {:doc (document [p1
-                             (paragraph "p2" [(run "inserted paragraph 1")])
-                             (paragraph "i2" [(run "inserted paragraph 2")])
-                             (paragraph "i3" [(run "inserted paragraph 3aaabbbcccddd")])])
-             :selection (selection ["i3" 20])
-             :changelist {:changed-uuids #{"p2"}
-                          :inserted-uuids #{"i2" "i3"}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [p1
+                                               (paragraph "p2" [(run "inserted paragraph 1")])
+                                               (paragraph "i2" [(run "inserted paragraph 2")])
+                                               (paragraph "i3" [(run "inserted paragraph 3aaabbbcccddd")])])
+                               :selection (selection ["i3" 20])})
+            {:changed-uuids #{"p2"}
+             :inserted-uuids #{"i2" "i3"}
+             :deleted-uuids #{}}))))
 
   (testing "multi-paragraph insert at the end of a paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p1" 14])) to-insert)
            (sl/insert (editor-state doc (selection ["p1" 14])) (into (dll) to-insert))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})
-                                              (run "inserted paragraph 1")])
-                             (paragraph "i2" [(run "inserted paragraph 2")])
-                             (paragraph "i3" [(run "inserted paragraph 3")])
-                             p2])
-             :selection (selection ["i3" 20])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{"i2" "i3"}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})
+                                                                (run "inserted paragraph 1")])
+                                               (paragraph "i2" [(run "inserted paragraph 2")])
+                                               (paragraph "i3" [(run "inserted paragraph 3")])
+                                               p2])
+                               :selection (selection ["i3" 20])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{"i2" "i3"}
+             :deleted-uuids #{}}))))
 
   (testing "inserting a plain string"
     (is (= (sl/insert (editor-state doc (selection ["p1" 3])) "inserted")
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                              (run "inserted")
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 11])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
+                                                                (run "inserted")
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 11])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "when given a range-selection, deletes before inserting"
     (is (= (sl/insert (editor-state doc (selection ["p1" 1] ["p2" 11])) (run "(inserted!)" #{}))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "f" #{:italic}), (run "(inserted!)d")])])
-             :selection (selection ["p1" 12])
-             :changelist {:changed-uuids #{"p1"}
-                          :deleted-uuids #{"p2"}
-                          :inserted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "f" #{:italic}), (run "(inserted!)d")])])
+                               :selection (selection ["p1" 12])})
+            {:changed-uuids #{"p1"}
+             :deleted-uuids #{"p2"}
+             :inserted-uuids #{}}))))
 
   (testing "throws when out of range of paragraph"
     (is (thrown?
@@ -168,108 +159,99 @@
 (deftest delete-single-test
   (testing "does nothing at beginning of doc"
     (is (= (sl/delete (editor-state doc (selection ["p1" 0])))
-           (map->EditorState
-            {:doc doc
-             :selection (selection ["p1" 0])
-             :changelist {:changed-uuids #{}
-                          :deleted-uuids #{}
-                          :inserted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc doc
+                               :selection (selection ["p1" 0])})
+            {:changed-uuids #{}
+             :deleted-uuids #{}
+             :inserted-uuids #{}}))))
 
   (testing "deletes single char in middle of paragraph"
     (is (= (sl/delete (editor-state doc (selection ["p1" 1])))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "oo" #{:italic})
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 0])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "oo" #{:italic})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 0])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "deletes single char at end of paragraph"
     (is (= (sl/delete (editor-state doc (selection ["p1" 14])))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
-                                              (run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 13])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 13])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "merges paragraphs when backspacing from start of paragraph that is not first"
     (is (= (sl/delete (editor-state doc (selection ["p2" 0])))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" (concat (:runs p1) (:runs p2)))])
-             :selection (selection ["p1" 14])
-             :changelist {:changed-uuids #{"p1"}
-                          :deleted-uuids #{"p2"}
-                          :inserted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" (concat (:runs p1) (:runs p2)))])
+                               :selection (selection ["p1" 14])})
+            {:changed-uuids #{"p1"}
+             :deleted-uuids #{"p2"}
+             :inserted-uuids #{}}))))
 
   (testing "deletes single char as normal at end of the paragraph"
     (is (= (sl/delete (editor-state doc (selection ["p2" 12])))
-           (map->EditorState
-            {:doc (document [p1, (paragraph "p2" [(run "aaabbbcccdd")])])
-             :selection (selection ["p2" 11])
-             :changelist {:changed-uuids #{"p2"}
-                          :deleted-uuids #{}
-                          :inserted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [p1, (paragraph "p2" [(run "aaabbbcccdd")])])
+                               :selection (selection ["p2" 11])})
+            {:changed-uuids #{"p2"}
+             :deleted-uuids #{}
+             :inserted-uuids #{}}))))
 
   (testing "does nothing when backspacing at start of first paragraph"
     (is (= (sl/delete (editor-state doc (selection ["p1" 0])))
-           (map->EditorState
-            {:doc doc
-             :selection (selection ["p1" 0])
-             :changelist {:changed-uuids #{}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}})))))
+           (->EditorUpdate
+            (map->EditorState {:doc doc
+                               :selection (selection ["p1" 0])})
+            {:changed-uuids #{}
+             :inserted-uuids #{}
+             :deleted-uuids #{}})))))
 
 (deftest delete-range-test
   (testing "deletes from start of paragraph"
     (is (= (sl/delete (editor-state doc (selection ["p1" 0] ["p1" 3])))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 0])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 0])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "deletes from start of paragraph backwards"
     (is (= (sl/delete (editor-state doc (selection ["p1" 0] ["p1" 3] :backwards? true)))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["p1" 0])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 0])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "deletes up to end of paragraph"
     (is (= (sl/delete (editor-state doc (selection ["p1" 3] ["p1" 14])))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic})]), p2])
-             :selection (selection ["p1" 3])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})]), p2])
+                               :selection (selection ["p1" 3])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "deletes whole paragraph"
     ;; This is an odd edge case, but handling it this way makes the code simpler.
@@ -277,98 +259,89 @@
     ;; of the range selection with the paragraph at the beginning of the range selection,
     ;; and gives it the UUID of the first.
     (is (= (sl/delete (editor-state doc (selection ["p1" 0] ["p2" 0])))
-           (map->EditorState
-            {:doc (document [(assoc p2 :uuid "p1")])
-             :selection (selection ["p1" 0])
-             :changelist {:changed-uuids #{"p1"}
-                         :deleted-uuids #{"p2"}
-                         :inserted-uuids #{}
-                         :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(assoc p2 :uuid "p1")])
+                               :selection (selection ["p1" 0])})
+            {:changed-uuids #{"p1"}
+             :deleted-uuids #{"p2"}
+             :inserted-uuids #{}}))))
 
   (testing "merges start and ending paragraphs when deleting across paragraphs"
     (is (= (sl/delete (editor-state doc (selection ["p1" 3] ["p2" 3])))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic}), (run "bbbcccddd")])])
-             :selection (selection ["p1" 3])
-             :changelist {:changed-uuids #{"p1"}
-                          :deleted-uuids #{"p2"}
-                          :inserted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic}), (run "bbbcccddd")])])
+                               :selection (selection ["p1" 3])})
+            {:changed-uuids #{"p1"}
+             :deleted-uuids #{"p2"}
+             :inserted-uuids #{}}))))
 
   (testing "merges start and ending paragraphs when deleting across more than 2 paragraphs"
     (is (= (sl/delete (editor-state long-doc (selection ["d1" 4] ["d4" 0])))
-           (map->EditorState
-            {:doc (document [(paragraph "d1" [(run "foo1" #{:italic}), (run "foo4" #{:strike})])])
-             :selection (selection ["d1" 4])
-             :changelist {:changed-uuids #{"d1"}
-                          :deleted-uuids #{"d2" "d3" "d4"}
-                          :inserted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "d1" [(run "foo1" #{:italic}), (run "foo4" #{:strike})])])
+                               :selection (selection ["d1" 4])})
+            {:changed-uuids #{"d1"}
+             :deleted-uuids #{"d2" "d3" "d4"}
+             :inserted-uuids #{}}))))
 
   (testing "deletes whole document"
     (is (= (sl/delete (editor-state doc (selection ["p1" 0] ["p2" 12])))
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run)])])
-             :selection (selection ["p1" 0])
-             :changelist {:changed-uuids #{"p1"}
-                          :deleted-uuids #{"p2"}
-                          :inserted-uuids #{}
-                          :resolved? false}})))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run)])])
+                               :selection (selection ["p1" 0])})
+            {:changed-uuids #{"p1"}
+             :deleted-uuids #{"p2"}
+             :inserted-uuids #{}})))))
 
 (deftest enter-test
   (testing "works at start of paragraph"
     (is (= (state/enter (editor-state doc (selection ["p1" 0])) "e1")
-           (map->EditorState
-            {:doc (document [(paragraph "e1" [(run)]), p1, p2])
-             :selection (selection ["e1" 0])
-             :changelist {:inserted-uuids #{"e1"}
-                          :deleted-uuids #{}
-                          :changed-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "e1" [(run)]), p1, p2])
+                               :selection (selection ["e1" 0])})
+            {:inserted-uuids #{"e1"}
+             :deleted-uuids #{}
+             :changed-uuids #{}}))))
 
   (testing "works at end of paragraph"
     (is (= (state/enter (editor-state doc (selection ["p1" 14])) "e1")
-           (map->EditorState
-            {:doc (document [p1, (paragraph "e1" [(run)]), p2])
-             :selection (selection ["e1" 0])
-             :changelist {:inserted-uuids #{"e1"}
-                          :changed-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [p1, (paragraph "e1" [(run)]), p2])
+                               :selection (selection ["e1" 0])})
+            {:inserted-uuids #{"e1"}
+             :changed-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "works in middle of paragraph"
     (is (= (state/enter (editor-state doc (selection ["p1" 3])) "e1")
-           (map->EditorState
-            {:doc (document [(paragraph "p1" [(run "foo" #{:italic})])
-                             (paragraph "e1" [(run "bar" #{:bold :italic})
-                                              (run "bizz" #{:italic})
-                                              (run "buzz" #{:bold})])
-                             p2])
-             :selection (selection ["e1" 0])
-             :changelist {:changed-uuids #{"p1"}
-                          :inserted-uuids #{"e1"}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})])
+                                               (paragraph "e1" [(run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["e1" 0])})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{"e1"}
+             :deleted-uuids #{}}))))
 
   (testing "works at end of doc"
     (is (= (state/enter (editor-state doc (selection ["p2" 12])) "e1")
-           (map->EditorState
-            {:doc (document [p1, p2, (paragraph "e1" [(run)])])
-             :selection (selection ["e1" 0])
-             :changelist {:inserted-uuids #{"e1"}
-                          :changed-uuids #{}
-                          :deleted-uuids #{}
-                          :resolved? false}}))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [p1, p2, (paragraph "e1" [(run)])])
+                               :selection (selection ["e1" 0])})
+            {:inserted-uuids #{"e1"}
+             :changed-uuids #{}
+             :deleted-uuids #{}}))))
 
   (testing "works with range selection"
     (is (= (state/enter (editor-state doc (selection ["p2" 0] ["p2" 12])) "e1")
-           (map->EditorState
-            {:doc (document [p1, (p/empty-paragraph "p2"), (p/empty-paragraph "e1")])
-             :selection (selection ["e1" 0])
-             :changelist {:changed-uuids #{"p2"}
-                          :inserted-uuids #{"e1"}
-                          :deleted-uuids #{}
-                          :resolved? false}})))))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [p1, (p/empty-paragraph "p2"), (p/empty-paragraph "e1")])
+                               :selection (selection ["e1" 0])})
+            {:changed-uuids #{"p2"}
+             :inserted-uuids #{"e1"}
+             :deleted-uuids #{}})))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"

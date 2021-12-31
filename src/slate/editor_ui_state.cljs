@@ -1,20 +1,21 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [interceptor definterceptor]])
-  (:require [slate.model.editor-state :as es]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.spec.test.alpha :as stest]
+            [slate.model.editor-state :as es]
             [slate.model.editor-state-history :as history]
             [slate.events :as events]
             [slate.interceptors :as interceptors]
             [slate.measurement :refer [ruler-for-elem]]
             [slate.utils :refer [debounce]]
-            [slate.viewmodel :as vm]
-            [clojure.spec.alpha :as s]
-            [clojure.spec.test.alpha :as stest]))
+            [slate.view :as view]
+            [slate.viewmodel :as vm]))
 
 (s/def ::id uuid?)
 (s/def ::history ::history/editor-state-history)
 (s/def ::dom-elem #(instance? js/HTMLElement %))
 (s/def ::hidden-input ::dom-elem)
-(s/def ::measure-fn (s/spec :args (s/cat :text string?
+(s/def ::measure-fn (s/fspec :args (s/cat :text string?
                                          :formats (s/coll-of keyword? :kind set?))
                             :ret int?))
 (s/def ::input-history (s/coll-of any?))
@@ -177,8 +178,11 @@
 
          nil)))))
 
+;; TODO: get just the initial render working with the new system.
+;; Set the default editor-state to be something with a multiple-para selection.
+
 (defn init
-  "Initializes the editor surface, and returns an atom containing the editor state. This
+  "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be update throughout the lifetime of the editor. Takes a series
    of keyword arguments:
 
@@ -187,7 +191,7 @@
    :hidden-input - The hidden <input> element needed by the editor to capture keystrokes
 
    Optional:
-   :editor-state - The initial editor-state to load into the editor"
+   :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
   [& {:keys [editor-state editor-elem hidden-input]}]
   (let [measure-fn (ruler-for-elem editor-elem)
         editor-state (or editor-state (es/editor-state))

@@ -1,3 +1,7 @@
+;; TODO: this file can be deleted at some point maybe?
+;; If so, be sure and keep any still-relevant TODOs
+
+
 ;; TODO: allow interceptors of the type "# " which fires when the user types a key sequence of pound then space.
 ;; These need to coexist with the existing control-key oriented interceptors. I think there should be three types:
 ;;
@@ -11,37 +15,7 @@
 ;; to use to achieve this.
 (ns slate.core
   "Main entrypoint for using and initializing the Slate editor."
-  (:require [slate.events :as events]
-            [slate.interceptors :as interceptors]
-            [slate.measurement :refer [ruler-for-elem]]
-            [slate.navigation :as nav]
-            [slate.viewmodel :as vm]))
+  (:require [slate.editor-ui-state :as ui-state]))
 
-;; TODO: Can just create the hidden-elem programmatically in this function.
-(defn init
-  "Initializes the editor surface, and returns an atom containing the editor state. This
-   atom will continue to be update throughout the lifetime of the editor. Takes a series
-   of keyword arguments:
 
-   Required:
-   :editor-elem - The DOM element for the editor
-   :hidden-input - The hidden <input> element needed by the editor to capture keystrokes
-
-   Optional:
-   :doc - The initial document to load into the editor (default to an empty document)
-   :selection - Initial selection (defaults to the start of the document)"
-  [& {:keys [doc selection editor-elem hidden-input]}]
-  (let [measure-fn (ruler-for-elem editor-elem)
-        editor-state (atom {:doc doc
-                            :selection (or selection (nav/start doc))
-                            :viewmodels (vm/from-doc doc 200 measure-fn)
-                            :history (history/init)
-                            :dom-elem editor-elem
-                            :hidden-input hidden-input
-                            :measure-fn measure-fn
-                            :input-history []
-                            :interceptors (interceptors/interceptor-map)})]
-    (events/init-default-events editor-state)
-    (editor/sync-dom @editor-state)
-
-    editor-state))
+(def init ui-state/init)
