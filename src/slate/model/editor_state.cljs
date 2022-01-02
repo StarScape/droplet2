@@ -183,6 +183,15 @@
   ([editor-state]
    (enter editor-state (random-uuid))))
 
+(defn set-selection
+  "Returns a new EditorUpdate with the selection set to `new-selection`."
+  [{:keys [doc selection] :as editor-state} new-selection]
+  (let [selection-uuids (fn [sel]
+                          (set (dll/uuids-range (:children doc) (sel/start-para sel) (sel/end-para sel))))]
+    (->EditorUpdate (assoc editor-state :selection new-selection)
+                    (changelist :changed-uuids (set/union (selection-uuids selection)
+                                                          (selection-uuids new-selection))))))
+
 ;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
 #_(extend-type EditorState
   Selectable

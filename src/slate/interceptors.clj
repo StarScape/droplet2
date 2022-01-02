@@ -3,7 +3,7 @@
 (defmacro interceptor
   "Defines a new interceptor and returns it.
    Takes: attr-map, param-list, function-body*, for example:
-   
+
    ```
    (interceptor {:input-name :click
                  :include-in-history? true}
@@ -30,6 +30,7 @@
          no-dom-sync? false}}
    arglist, fn-body]
   (assert input-name "Input name is required for interceptor macro.")
+  (when include-in-history? (assert (not add-to-history-immediately?) "Cannot have add-to-history-immediately? set to true when "))
   `(map->Interceptor {:input-name ~input-name
                       :no-dom-sync? ~no-dom-sync?
                       :include-in-history? ~include-in-history?
@@ -58,10 +59,10 @@
      (...))
    ```
 
-   However, if any other value's need to be set in the options-map, then the
-   `:input-name` value is still **mandatory**."
+   It will likewise default :input-name to the name of the interceptor in 4-arg arity.
+   However, this can be overriden by using the opts map."
   ([name opts arglist body]
-   `(def ~name (interceptor ~opts ~arglist ~body)))
+   `(def ~name (interceptor ~(update opts :input-name #(or % name)) ~arglist ~body)))
   ([name arglist body]
    `(def ~name (interceptor {:input-name ~(keyword name)} ~arglist ~body))))
 

@@ -179,12 +179,11 @@
 
    Under the hood, the interceptor map looks like this:
    ```
-   completions :: {completion-key -> (interceptor | completions)}
    interceptor-map :: {:shortcuts :: {shorcut-pattern -> interceptor}
-                       :completions :: completions}
+                       :completions :: {completion-key -> (interceptor | completions)}}
    ```
 
-   Where a shortcut-pattern is a '+' delineated list of keys, e.g.
-   :ctrl+alt+a, and a completion key is a string containing any typeable character."
+   Where a shortcut-pattern is a '+' delineated list of keys, e.g. :ctrl+alt+a,
+   and a completion-key is a string containing any typeable character."
   []
   {:shortcuts {}, :completions {}})

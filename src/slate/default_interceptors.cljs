@@ -1,6 +1,9 @@
 (ns slate.default-interceptors
-  (:require [slate.model.editor-state :as es :refer [assoc-state]])
-  (:require-macros [slate.interceptors :refer [definterceptor]]))
+  (:require-macros [slate.interceptors :refer [definterceptor]])
+  (:require [slate.model.common :as m]
+            [slate.model.editor-state :as es]
+            [slate.nav :as nav]
+            [slate.view :as view]))
 
 ;; TODO: can separate all the interceptors and their implementations (including those in view.cljs,
 ;; which could be changed into interceptors) out into an "interceptors" namespace maybe?
@@ -19,115 +22,116 @@
 (definterceptor click
   [editor-state _ e]
   (let [new-sel (view/mouse-event->selection e editor-state (:measure-fn editor-state))]
-    (assoc-state editor-state
-                 :selection new-sel
-                 :changelist )))
+    (es/set-selection editor-state new-sel)))
 
-#_(def default-interceptors
-  {:click (fn [state e]
-            (let [new-sel
-                  (view/mouse-event->selection e state (:measure-fn state))]
-              (with-input-history :click (assoc state :selection new-sel))))
-   :drag (fn [state mousemove-event mousedown-event]
-           (update state
-                   :selection
-                   #(view/drag mousedown-event
-                               mousemove-event
-                               state
-                               (:measure-fn state))))
-   :insert (fn [{:keys [doc selection], :as state} e]
-             (let [text (.-data e)
-                   transaction (m/insert doc selection text)
-                   input-for-history (if (= 1 (.-length text)) text :PASTE)] ;; TODO?
-               ;; TODO:
-               #_(with-input-history input-for-history
-                   (assoc state
-                          :doc new-doc
-                          :selection new-selection))
-               transaction))
-   :delete (fn [{:keys [doc selection], :as state} _e]
-             (let [[new-doc new-sel] (m/delete doc selection)]
-               (with-input-history :delete
-                 (assoc state
-                        :doc new-doc
-                        :selection new-sel))))
-   :enter (fn [{:keys [doc selection], :as state} _e]
-            (let [[new-doc new-sel] (doc/enter doc selection)]
-              (with-input-history :enter
-                (assoc state
-                       :doc new-doc
-                       :selection new-sel))))
-   :tab (fn [{:keys [doc selection], :as state} _e]
-          (let [new-doc (m/insert doc selection "\u2003")
-                new-selection (sel/shift-single selection 1)]
-            (with-input-history :tab
-              (assoc state
-                     :doc new-doc
-                     :selection new-selection))))
-   :left (fn [state _e]
-           (with-input-history
-             :left
-             (update state :selection #(nav/prev-char (:doc state) %))))
-   :ctrl+left (fn [state _e]
-                (with-input-history
-                  :ctrl+left
-                  (update state :selection #(nav/prev-word (:doc state) %))))
-   :shift+left (fn [state _e]
-                 (with-input-history
-                   :shift+left
-                   (update state
-                           :selection
-                           #(nav/shift+left (:doc state) (:selection state)))))
-   :ctrl+shift+left (fn [state _e]
-                      (with-input-history
-                        :ctrl+shift+left
-                        (update state
-                                :selection
-                                #(nav/ctrl+shift+left (:doc state)
-                                                      (:selection state)))))
-   :right (fn [state _e]
-            (with-input-history
-              :right
-              (update state :selection #(nav/next-char (:doc state) %))))
-   :ctrl+right (fn [state _e]
-                 (with-input-history
-                   :ctrl+right
-                   (update state :selection #(nav/next-word (:doc state) %))))
-   :shift+right (fn [state _e]
-                  (with-input-history
-                    :shift+right
-                    (update state
-                            :selection
-                            #(nav/shift+right (:doc state)
-                                              (:selection state)))))
-   :ctrl+shift+right (fn [state _e]
-                       (with-input-history
-                         :ctrl+shift+right
-                         (update state
-                                 :selection
-                                 #(nav/ctrl+shift+right (:doc state)
-                                                        (:selection state)))))
-   :down (fn [state _e]
-           (with-input-history
-             :down
-             (update state :selection #(view/down state (:measure-fn state)))))
-   :shift+down (fn [state _e]
-                 (with-input-history
-                   :shift+down
-                   (update state
-                           :selection
-                           #(view/shift+down state (:measure-fn state)))))
-   :up (fn [state _e]
-         (with-input-history
-           :up
-           (update state :selection #(view/up state (:measure-fn state)))))
-   :shift+up
-   (fn [state _e]
-     (with-input-history
-       :shift+up
-       (update state :selection #(view/shift+up state (:measure-fn state)))))
-   ;; This completion isn't actually done yet (the behavior is fairly complex
-   ;; and
+(definterceptor drag
+  ;; FIXME - can't take multiple params anymore, this needs to be reworked
+  [editor-state ui-state mousemove-event mousedown-event]
+  (es/set-selection editor-state (view/drag mousedown-event
+                                            mousemove-event
+                                            ui-state
+                                            (:measure-fn ui-state))))
+
+(definterceptor insert
+  [editor-state _ e]
+  (m/insert editor-state (.-data e)))
+
+(definterceptor delete
+  [editor-state _ui-state _e]
+  (m/delete editor-state))
+
+(definterceptor enter
+  [editor-state _ui-state _e]
+  (es/enter editor-state))
+
+(definterceptor tab
+  [editor-state _ui-state _e]
+  (m/insert editor-state "\u2003"))
+
+(definterceptor left
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/prev-char editor-state))
+
+(definterceptor ctrl+left
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/prev-word editor-state))
+
+(definterceptor shift+left
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/shift+left editor-state))
+
+(definterceptor ctrl+shift+left
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/ctrl+shift+left editor-state))
+
+(definterceptor right
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/next-char editor-state))
+
+(definterceptor ctrl+right
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/next-word editor-state))
+
+(definterceptor shift+right
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/shift+right editor-state))
+
+(definterceptor ctrl+shift+right
+  {:include-in-history? false}
+  [editor-state _ui-state _e]
+  (nav/ctrl+shift+right editor-state))
+
+;; FIXME
+(definterceptor down
+  {:include-in-history? false}
+  [_editor-state ui-state _e]
+  (view/down ui-state (:measure-fn ui-state)))
+
+;; FIXME
+(definterceptor shift+down
+  {:include-in-history? false}
+  [_editor-state ui-state _e]
+  (view/shift+down ui-state (:measure-fn ui-state)))
+
+;; FIXME
+(definterceptor up
+  {:include-in-history? false}
+  [_editor-state ui-state _e]
+  (view/up ui-state (:measure-fn ui-state)))
+
+;; FIXME
+(definterceptor shift+up
+  {:include-in-history? false}
+  [_editor-state ui-state _e]
+  (view/shift+up ui-state (:measure-fn ui-state)))
+
+(def default-interceptors
+  {:click click
+   :drag drag
+   :insert insert
+   :delete delete
+   :enter enter
+   :tab tab
+   :left left
+   :ctrl+left ctrl+left
+   :shift+left shift+left
+   :ctrl+shift+left ctrl+shift+left
+   :right right
+   :ctrl+right ctrl+right
+   :shift+right shift+right
+   :ctrl+shift+right ctrl+shift+right
+   :down down
+   :shift+down shift+down
+   :up up
+   :shift+up shift+up
+   ;; This completion isn't actually done yet (the behavior is fairly complex and
    ;; needs to work with range selection etc) just a good example interceptor
    ;; for testing
    "\"" (fn [{:keys [doc selection], :as state} _e _default-interceptor]

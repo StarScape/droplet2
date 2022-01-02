@@ -70,9 +70,10 @@
     (assoc ui-state :viewmodels updated-vms)))
 
 (defn fire-interceptor!
-  "The fire-interceptor! function is at the core of Slate's main data loop.
+  "The fire-interceptor! function is the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
-   is called, which handles the state stored in the UIState atom and updating the DOM."
+   is called, which handles updating the state stored in the UIState atom and re-rendering
+   elements in the DOM."
   [ui-state-atom interceptor event]
   (let [ui-state @ui-state-atom ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))

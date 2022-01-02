@@ -53,9 +53,9 @@
   (-> sel :start :paragraph))
 
 (defn end-para
-    "Shortcut for (-> sel :end :paragraph)."
-    [sel]
-    (-> sel :end :paragraph))
+  "Shortcut for (-> sel :end :paragraph)."
+  [sel]
+  (-> sel :end :paragraph))
 
 (defn single?
   "Returns true if argument is a single selection."
