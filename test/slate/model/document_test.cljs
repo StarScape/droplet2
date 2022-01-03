@@ -23,10 +23,6 @@
 
 (def doc (document [p1 p2]))
 
-#p (-> doc
-       (sl/insert (selection ["p1" 3]) "{")
-       (sl/insert (selection ["p1" 4]) "}"))
-
 (def long-doc (document [(paragraph "d1" [(run "foo1" #{:italic})])
                          (paragraph "d2" [(run "foo2" #{:bold})])
                          (paragraph "d3" [(run "foo3" #{:underline})])

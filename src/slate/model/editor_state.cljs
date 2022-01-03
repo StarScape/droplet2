@@ -200,12 +200,12 @@
 (defn auto-surround
   ([{:keys [doc selection] :as editor-state} opening closing]
    (if (sel/single? selection)
-     (let [new-sel (sel/shift-single selection 1)
-           new-doc (-> doc
-                       (insert selection opening)
-                       (insert new-sel closing))]
-       (->EditorUpdate (assoc editor-state :doc new-doc :selection new-sel)
-                       (changelist :changed-uuids #{(-> selection :start :paragraph)})))
+     #_(-> (insert editor-state (str opening closing))
+           (>>= nav/prev-char))
+     (->EditorUpdate (assoc editor-state
+                            :doc (insert doc selection (str opening closing))
+                            :selection (sel/shift-single selection 1))
+                     (changelist :changed-uuids #{(-> selection :start :paragraph)}))
      (->EditorUpdate (assoc editor-state :doc (-> doc
                                                   (insert (sel/collapse-start selection) opening)
                                                   (insert (sel/collapse-end selection) closing)))
