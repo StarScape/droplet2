@@ -183,6 +183,11 @@
   ([editor-state]
    (enter editor-state (random-uuid))))
 
+(defn- uuids-in-selection
+  "Returns a set of all the UUIDs in the current selection, whether range or single."
+  [{:keys [doc selection] :as _editor-state}]
+  (set (dll/uuids-range (:children doc) (sel/start-para selection) (sel/end-para selection))))
+
 (defn set-selection
   "Returns a new EditorUpdate with the selection set to `new-selection`."
   [{:keys [doc selection] :as editor-state} new-selection]
@@ -191,6 +196,21 @@
     (->EditorUpdate (assoc editor-state :selection new-selection)
                     (changelist :changed-uuids (set/union (selection-uuids selection)
                                                           (selection-uuids new-selection))))))
+
+(defn auto-surround
+  ([{:keys [doc selection] :as editor-state} opening closing]
+   (if (sel/single? selection)
+     (let [new-sel (sel/shift-single selection 1)
+           new-doc (-> doc
+                       (insert selection opening)
+                       (insert new-sel closing))]
+       (->EditorUpdate (assoc editor-state :doc new-doc :selection new-sel)
+                       (changelist :changed-uuids #{(-> selection :start :paragraph)})))
+     (->EditorUpdate (assoc editor-state :doc (-> doc
+                                                  (insert (sel/collapse-start selection) opening)
+                                                  (insert (sel/collapse-end selection) closing)))
+                     (changelist :changed-uuids (uuids-in-selection editor-state)))))
+  ([editor-state surround] (auto-surround editor-state surround surround)))
 
 ;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
 #_(extend-type EditorState

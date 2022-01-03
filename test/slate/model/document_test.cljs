@@ -23,6 +23,10 @@
 
 (def doc (document [p1 p2]))
 
+#p (-> doc
+       (sl/insert (selection ["p1" 3]) "{")
+       (sl/insert (selection ["p1" 4]) "}"))
+
 (def long-doc (document [(paragraph "d1" [(run "foo1" #{:italic})])
                          (paragraph "d2" [(run "foo2" #{:bold})])
                          (paragraph "d3" [(run "foo3" #{:underline})])
@@ -332,9 +336,9 @@
 (deftest char-before-test
   (testing "works in 1st paragraph"
     (is (= "\n" (sl/char-before doc (selection ["p1" 0]))))
-    (is (= "f" (sl/char-before doc (selection ["p1"1]))))
-    (is (= "o" (sl/char-before doc (selection ["p1"2]))))
-    (is (= "z" (sl/char-before doc (selection ["p1"13]))))
+    (is (= "f" (sl/char-before doc (selection ["p1" 1]))))
+    (is (= "o" (sl/char-before doc (selection ["p1" 2]))))
+    (is (= "z" (sl/char-before doc (selection ["p1" 13]))))
     (is (= "z" (sl/char-before doc (selection ["p1" 14])))))
 
   (testing "works in other paragraphs"

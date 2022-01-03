@@ -5,7 +5,10 @@
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
-            [slate.model.editor-state :as state :refer [editor-state ->EditorUpdate map->EditorState]]
+            [slate.model.editor-state :as state :refer [editor-state
+                                                        changelist
+                                                        ->EditorUpdate
+                                                        map->EditorState]]
             [slate.dll :as dll :refer [dll]]))
 
 (def p1 (paragraph "p1" [(run "foo" #{:italic})
@@ -342,6 +345,25 @@
             {:changed-uuids #{"p2"}
              :inserted-uuids #{"e1"}
              :deleted-uuids #{}})))))
+
+(deftest auto-surround-test
+  (testing "wraps cursor in opening and closing for single selection"
+    (is (= (state/auto-surround (editor-state doc (selection ["p2" 3])) "(" ")")
+           (->EditorUpdate
+            (map->EditorState {:doc (document [p1, (p/paragraph "p2" [(r/run "aaa()bbbcccddd")])])
+                               :selection (selection ["p2" 4])})
+            (changelist :changed-uuids #{"p2"})))))
+  (testing "surrounds selection with opening and closing for range selection"
+    (is (= (state/auto-surround (editor-state doc (selection ["p1" 0] ["p2" 3])) "(" ")")
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" [(run "(")
+                                                                (run "foo" #{:italic})
+                                                                (run "bar" #{:bold :italic})
+                                                                (run "bizz" #{:italic})
+                                                                (run "buzz" #{:bold})])
+                                               (p/paragraph "p2" [(r/run "aaa)bbbcccddd")])])
+                               :selection (selection ["p1" 0] ["p2" 3])})
+            (changelist :changed-uuids #{"p1" "p2"}))))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"

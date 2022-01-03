@@ -131,14 +131,9 @@
    :shift+down shift+down
    :up up
    :shift+up shift+up
-   ;; This completion isn't actually done yet (the behavior is fairly complex and
-   ;; needs to work with range selection etc) just a good example interceptor
-   ;; for testing
-   "\"" (fn [{:keys [doc selection], :as state} _e _default-interceptor]
+   #_#_"\"" (fn [{:keys [doc selection], :as state} _e _default-interceptor]
           ;; TODO: add logic for only auto-surrounding at appropriate times,
-          ;; e.g. not when next char is
-          ;; alphanumeric, or previous is. Also add a case for range selection,
-          ;; and auto-surround selection if so.
+          ;; e.g. NOT when next char is alphanumeric, or previous is. Also add a case
           (let [new-doc (m/insert doc selection "\"\"")
                 new-selection (sel/shift-single selection 1)]
             (assoc state
