@@ -1,3 +1,5 @@
+;; TODO: all this is out of date
+
 (ns slate.events-browser-test
   (:require [cljs.test :include-macros true :refer [is deftest]]
             [slate.events :as e :refer [reg-interceptor

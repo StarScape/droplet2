@@ -1,4 +1,4 @@
-(ns slate.navigation
+(ns slate.model.navigation
   "Functions for modifying navigating around the document by modifying selections.
    Note that everything in here is pure -- functions take Documents/Paragraphs and a
    selection, and return a new selection.
@@ -149,7 +149,8 @@
 ;; and ctrl+}, ctrl+{, respectively.
 
 (defprotocol Navigable
-  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new Selection."
+  "Methods for navigating around. Implemented for Paragraphs, Documents, and EditorStates.
+  All methods return a new Selection, except for on EditorStates, which returns EditorUpdates."
   (start
    [this]
    "Go to start of Paragraph or Document.")
@@ -160,21 +161,25 @@
 
   (next-char
    [this sel]
+   [editor-state]
    "Move forward by 1 character, or returns the same selection if not possible.
     Equivalent to pressing the right arrow on the keyboard.")
 
   (prev-char
    [this sel]
+   [editor-state]
    "Move backward by 1 character, or return the same selection if not possible.
     Equivalent to pressing the left arrow on the keyboard.")
 
   (next-word
     [this sel]
+    [editor-state]
     "Returns selection after jumping to the end of the next word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac).")
 
   (prev-word
     [this sel]
+    [editor-state]
     "Returns selection after jumping to the start of the previous word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
 
@@ -182,23 +187,27 @@
   "Methods for expanding and contracting selections."
   (shift+right
     [this sel]
+    [editor-state]
     "If selection is not backwards, returns a new selection with the right side expanded by 1.
     If the selection *is* backwards, will *contract* the *left* side of the selection. In other
     words, equivalent to the behavior of pressing shift+right.")
 
   (shift+left
     [this sel]
+    [editor-state]
     "If selection is not backwards, returns a new selection with the right side contracted by 1.
     If the selection *is* backwards, will *expand* the *left* side of the selection. In other
     words, equivalent to the behavior of pressing shift+left.")
 
   (ctrl+shift+right
     [this sel]
+    [editor-state]
     "Expands or contracts the caret side of the selection by a word, depending if the selection is
     forwards or backwards, respectively. Equivalent to the behavior of pressing ctrl+shift+right.")
 
   (ctrl+shift+left
     [this sel]
+    [editor-state]
     "Expands or contracts the caret side of the selection by a word, depending if the selection is
     backwards or forwards respectively. Equivalent to the behavior of pressing ctrl+shift+left."))
 
@@ -403,6 +412,7 @@
             (sel/remove-ends-from-between))))))
 
 ;; TODO: implement Navigable protocol for EditorState, returning EditorUpdates instead of new selections
+;; TODO: add formats field to Selection object and change these methods to accomodate automatically updating it
 
 (comment
   (def my-par (p/paragraph [(r/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))

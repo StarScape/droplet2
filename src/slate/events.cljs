@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [slate.model.common :as m]
             [slate.model.doc :as doc]
-            [slate.navigation :as nav]
+            [slate.model.navigation :as nav]
             [slate.model.selection :as sel]
             [slate.view :as view]))
 

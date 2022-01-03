@@ -165,4 +165,10 @@
       (collapse-start sel)
       (collapse-end sel))))
 
+(defn all-uuids
+  "Returns a set of **all** the paragraphs' UUIDs which are
+  inside the selection (i.e. :start, :between, and :end)."
+  [sel]
+  (conj (:between sel) (-> sel :start :paragraph) (-> sel :end :paragraph)))
+
 ;; TODO: change :paragraph in :start and :end to :uuid

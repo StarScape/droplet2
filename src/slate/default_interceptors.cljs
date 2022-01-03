@@ -2,7 +2,7 @@
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [slate.model.common :as m]
             [slate.model.editor-state :as es]
-            [slate.nav :as nav]
+            [slate.model.navigation :as nav]
             [slate.view :as view]))
 
 ;; TODO: can separate all the interceptors and their implementations (including those in view.cljs,

@@ -23,6 +23,8 @@
     "Returns a new container with the format removed, if it is present.
     Arity taking a selection is not implemented for runs."))
 
+;; TODO: this name overlaps with nav/Selectable
+
 (defprotocol Selectable
   "Operations for any text container on which paragraph offset selections are valid.
    Note that this precludes runs, as they are contained inside paragraphs

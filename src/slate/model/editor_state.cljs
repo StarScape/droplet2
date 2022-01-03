@@ -20,7 +20,8 @@
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.doc :as d :refer [Document]]
-            [slate.model.selection :as sel :refer [Selection]]))
+            [slate.model.selection :as sel :refer [Selection]]
+            [slate.model.navigation :as nav :refer [Navigable]]))
 
 (declare merge-changelists)
 
@@ -183,19 +184,12 @@
   ([editor-state]
    (enter editor-state (random-uuid))))
 
-(defn- uuids-in-selection
-  "Returns a set of all the UUIDs in the current selection, whether range or single."
-  [{:keys [doc selection] :as _editor-state}]
-  (set (dll/uuids-range (:children doc) (sel/start-para selection) (sel/end-para selection))))
-
 (defn set-selection
   "Returns a new EditorUpdate with the selection set to `new-selection`."
-  [{:keys [doc selection] :as editor-state} new-selection]
-  (let [selection-uuids (fn [sel]
-                          (set (dll/uuids-range (:children doc) (sel/start-para sel) (sel/end-para sel))))]
-    (->EditorUpdate (assoc editor-state :selection new-selection)
-                    (changelist :changed-uuids (set/union (selection-uuids selection)
-                                                          (selection-uuids new-selection))))))
+  [{:keys [selection] :as editor-state} new-selection]
+  (->EditorUpdate (assoc editor-state :selection new-selection)
+                  (changelist :changed-uuids (set/union (sel/all-uuids selection)
+                                                        (sel/all-uuids new-selection)))))
 
 (defn auto-surround
   ([{:keys [doc selection] :as editor-state} opening closing]
@@ -209,27 +203,56 @@
      (->EditorUpdate (assoc editor-state :doc (-> doc
                                                   (insert (sel/collapse-start selection) opening)
                                                   (insert (sel/collapse-end selection) closing)))
-                     (changelist :changed-uuids (uuids-in-selection editor-state)))))
+                     (changelist :changed-uuids (sel/all-uuids selection)))))
   ([editor-state surround] (auto-surround editor-state surround surround)))
 
-;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
-#_(extend-type EditorState
-  Selectable
-  (char-at [{:keys [doc selection]}]
-    (char-at doc selection))
-  (char-before [{:keys [doc selection]}]
-    (char-before doc selection))
-  (selected-content [{:keys [doc selection]}]
-    (selected-content doc selection))
-  (shared-formats [{:keys [doc selection]}]
-    (shared-formats doc selection))
-  (toggle-format [{:keys [doc selection] :as editor-state}]
-    (let [doc-children (:children doc)
-          start-para-uuid (-> selection :start :paragraph)
-          end-para-uuid (-> selection :end :paragraph)
-          changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)]
-      (assoc-state :doc (toggle-format doc selection)
-                   :changelist {:changed-uuids (set changed-uuids)})))
+(defn nav-fallthrough
+  [{:keys [doc selection] :as editor-state}, nav-method]
+  (let [new-selection (nav-method doc selection)]
+    (->EditorUpdate (assoc editor-state :selection new-selection)
+                    (changelist :changed-uuids (set/union (sel/all-uuids new-selection)
+                                                          (sel/all-uuids selection))))))
+
+(extend-type EditorState
+  Navigable
+  (start [{:keys [doc selection] :as editor-state}]
+    (let [new-selection (nav/start doc)]
+      (->EditorUpdate (assoc editor-state :selection new-selection)
+                      (changelist :changed-uuids (set/union #{(-> new-selection :start :paragraph)}
+                                                            (sel/all-uuids selection))))))
+  (end [{:keys [doc selection] :as editor-state}]
+    (let [new-selection (nav/end doc)]
+      (->EditorUpdate (assoc editor-state :selection new-selection)
+                      (changelist :changed-uuids (set/union #{(-> new-selection :start :paragraph)}
+                                                            (sel/all-uuids selection))))))
+  (next-char [editor-state] (nav-fallthrough editor-state nav/next-char))
+  (prev-char [editor-state] (nav-fallthrough editor-state nav/prev-char))
+  (next-word [editor-state] (nav-fallthrough editor-state nav/next-word))
+  (prev-word [editor-state] (nav-fallthrough editor-state nav/prev-word))
+
+  nav/Selectable
+  (shift+right [editor-state] (nav-fallthrough editor-state nav/shift+right))
+  (shift+left [editor-state] (nav-fallthrough editor-state nav/shift+left))
+  (ctrl+shift+right [editor-state] (nav-fallthrough editor-state nav/ctrl+shift+right))
+  (ctrl+shift+left [editor-state] (nav-fallthrough editor-state nav/ctrl+shift+left))
+
+  ;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
+  ;; Selectable
+  ;; (char-at [{:keys [doc selection]}]
+  ;;   (char-at doc selection))
+  ;; (char-before [{:keys [doc selection]}]
+  ;;   (char-before doc selection))
+  ;; (selected-content [{:keys [doc selection]}]
+  ;;   (selected-content doc selection))
+  ;; (shared-formats [{:keys [doc selection]}]
+  ;;   (shared-formats doc selection))
+  ;; (toggle-format [{:keys [doc selection] :as editor-state}]
+  ;;   (let [doc-children (:children doc)
+  ;;         start-para-uuid (-> selection :start :paragraph)
+  ;;         end-para-uuid (-> selection :end :paragraph)
+  ;;         changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)]
+  ;;     (assoc-state :doc (toggle-format doc selection)
+  ;;                  :changelist {:changed-uuids (set changed-uuids)})))
   ;; Formattable can be implemented as well if needed
   )
 

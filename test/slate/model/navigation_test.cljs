@@ -1,6 +1,6 @@
-(ns slate.navigation-test
+(ns slate.model.navigation-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.navigation :as nav :refer [next-char prev-char
+            [slate.model.navigation :as nav :refer [next-char prev-char
                                               next-word prev-word
                                               next-word-offset prev-word-offset]]
             [slate.model.common :as m]

@@ -86,3 +86,11 @@
     (is (= (sel/add-to-between sel "p3")
            (selection ["p1" 0] ["p4" 0] :between #{"p2" "p3"})))
     (is (= sel (sel/add-to-between sel "p1")))))
+
+(deftest all-uuids
+  (is (= (sel/all-uuids (selection [:p1 0] [:p4 0] :between #{:p2 :p3}))
+         #{:p1 :p2 :p3 :p4}))
+  (is (= (sel/all-uuids (selection [:p1 0] [:p2 0]))
+         #{:p1 :p2}))
+  (is (= (sel/all-uuids (selection [:p1 0] [:p1 1]))
+         #{:p1})))
