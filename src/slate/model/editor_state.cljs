@@ -206,12 +206,29 @@
                      (changelist :changed-uuids (sel/all-uuids selection)))))
   ([editor-state surround] (auto-surround editor-state surround surround)))
 
-(defn nav-fallthrough
+(defn- nav-fallthrough
   [{:keys [doc selection] :as editor-state}, nav-method]
   (let [new-selection (nav-method doc selection)]
     (->EditorUpdate (assoc editor-state :selection new-selection)
                     (changelist :changed-uuids (set/union (sel/all-uuids new-selection)
                                                           (sel/all-uuids selection))))))
+(defn- selectable-fallthrough-right
+  [{:keys [doc selection] :as editor-state}, selectable-method]
+  (let [new-selection (selectable-method doc selection)
+        changed-uuids (if (:backwards? selection)
+                        #{(sel/start-para selection), (sel/start-para new-selection)}
+                        #{(sel/end-para selection), (sel/end-para new-selection)})]
+    (->EditorUpdate (assoc editor-state :selection new-selection)
+                    (changelist :changed-uuids changed-uuids))))
+
+(defn- selectable-fallthrough-left
+  [{:keys [doc selection] :as editor-state}, selectable-method]
+  (let [new-selection (selectable-method doc selection)
+        changed-uuids (if (or (sel/single? selection) (:backwards? selection))
+                        #{(sel/start-para selection), (sel/start-para new-selection)}
+                        #{(sel/end-para selection), (sel/end-para new-selection)})]
+    (->EditorUpdate (assoc editor-state :selection new-selection)
+                    (changelist :changed-uuids changed-uuids))))
 
 (extend-type EditorState
   Navigable
@@ -235,10 +252,10 @@
   ;; into the 4th, you only have to re-render paragraphs 3 and 4. Current implementation
   ;; is fine for now, though.
   nav/Selectable
-  (shift+right [editor-state] (nav-fallthrough editor-state nav/shift+right))
-  (shift+left [editor-state] (nav-fallthrough editor-state nav/shift+left))
-  (ctrl+shift+right [editor-state] (nav-fallthrough editor-state nav/ctrl+shift+right))
-  (ctrl+shift+left [editor-state] (nav-fallthrough editor-state nav/ctrl+shift+left))
+  (shift+right [editor-state] (selectable-fallthrough-right editor-state nav/shift+right))
+  (shift+left [editor-state] (selectable-fallthrough-left editor-state nav/shift+left))
+  (ctrl+shift+right [editor-state] (selectable-fallthrough-right editor-state nav/ctrl+shift+right))
+  (ctrl+shift+left [editor-state] (selectable-fallthrough-left editor-state nav/ctrl+shift+left))
 
   ;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
   ;; Selectable

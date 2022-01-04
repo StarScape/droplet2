@@ -384,7 +384,7 @@
            (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
                            (changelist :changed-uuids #{"p2"})))))
 
-  ;; The rest of the currently all use the same fallthrough function,
+  ;; The rest of these currently all use the same fallthrough function,
   ;; so testing one is basically the same as testing all of them.
   (testing "rest work"
     (is (= (nav/next-char (editor-state doc (selection ["p1" 0])))
@@ -396,6 +396,53 @@
     (is (= (nav/next-char (editor-state long-doc (selection ["d1" 0] ["d3" 4] :between #{"d2"})))
            (->EditorUpdate (editor-state long-doc (selection ["d3" 4]))
                            (changelist :changed-uuids #{"d1" "d2" "d3"}))))))
+
+(deftest selectable-functions-test
+  (testing "shift+right works forwards (or single)"
+    (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0])))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d1" 1]))
+                           (changelist :changed-uuids #{"d1"}))))
+    (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 4])))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0]))
+                           (changelist :changed-uuids #{"d1" "d2"}))))
+
+    (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0] ["d1" 4])))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 0]))
+                           (changelist :changed-uuids #{"d1" "d2"}))))
+    (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0] ["d3" 4] :between #{"d2"})))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d4" 0] :between #{"d2" "d3"}))
+                           (changelist :changed-uuids #{"d3" "d4"})))))
+
+  (testing "shift+right works backwards"
+    (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 4] ["d2" 4] :backwards? true)))
+           (->EditorUpdate (editor-state long-doc (selection ["d2" 0] ["d2" 4] :backwards? true))
+                           (changelist :changed-uuids #{"d1" "d2"}))))
+    (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 4] ["d3" 4] :backwards? true, :between #{"d2"})))
+           (->EditorUpdate (editor-state long-doc (selection ["d2" 0] ["d3" 4] :backwards? true))
+                           (changelist :changed-uuids #{"d1" "d2"})))))
+
+  (testing "shift+left works forwards"
+    (is (= (nav/shift+left (editor-state long-doc (selection ["d1" 0] ["d2" 0])))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d1" 4]))
+                           (changelist :changed-uuids #{"d1" "d2"}))))
+    (is (= (nav/shift+left (editor-state long-doc (selection ["d1" 0] ["d3" 0] :between #{"d2"})))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 4]))
+                           (changelist :changed-uuids #{"d3" "d2"})))))
+
+  (testing "shift+left works backwards (or single)"
+    (is (= (nav/shift+left (editor-state long-doc (selection ["d1" 4])))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 3] ["d1" 4], :backwards? true))
+                           (changelist :changed-uuids #{"d1"}))))
+    (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0])))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0], :backwards? true))
+                           (changelist :changed-uuids #{"d1" "d2"}))))
+
+    (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d4" 4], :backwards? true, :between #{"d3"})))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d4" 4], :backwards? true, :between #{"d2" "d3"}))
+                           (changelist :changed-uuids #{"d1" "d2"}))))
+    (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d2" 4], :backwards? true)))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 4], :backwards? true))
+                           (changelist :changed-uuids #{"d1" "d2"}))))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"
