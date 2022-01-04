@@ -1,26 +1,16 @@
 (ns slate.model.editor-state
   (:require [clojure.set :as set]
             [clojure.spec.alpha :as s]
-            [slate.dll :as dll :refer [dll]]
+            [slate.dll :as dll]
             [slate.model.common :refer [TextContainer
-                                        Selectable
                                         insert
                                         delete
-                                        insert-start
-                                        insert-end
                                         len
-                                        blank?
-                                        selected-content
-                                        toggle-format
-                                        apply-format
-                                        remove-format
-                                        shared-formats
-                                        char-before
-                                        char-at]]
+                                        blank?]]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph]]
-            [slate.model.doc :as d :refer [Document]]
-            [slate.model.selection :as sel :refer [Selection]]
+            [slate.model.doc :as d]
+            [slate.model.selection :as sel]
             [slate.model.navigation :as nav :refer [Navigable]]))
 
 (declare merge-changelists)
@@ -247,10 +237,6 @@
   (next-word [editor-state] (nav-fallthrough editor-state nav/next-word))
   (prev-word [editor-state] (nav-fallthrough editor-state nav/prev-word))
 
-  ;; TODO: these can be optimized to *only* include paragraphs that have changed.
-  ;; I.e., if you have a selection spanning paragraphs 1 through 3 and you expand it
-  ;; into the 4th, you only have to re-render paragraphs 3 and 4. Current implementation
-  ;; is fine for now, though.
   nav/Selectable
   (shift+right [editor-state] (selectable-fallthrough-right editor-state nav/shift+right))
   (shift+left [editor-state] (selectable-fallthrough-left editor-state nav/shift+left))

@@ -7,7 +7,6 @@
    be aware of either of those should go in the `view` namespace."
   (:require [clojure.string :as str]
             [slate.model.common :as m]
-            [slate.model.run :as r]
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.doc :as doc :refer [Document]]
             [slate.dll :as dll]
@@ -411,8 +410,7 @@
               (assoc sel :end new-caret, :backwards? false))
             (sel/remove-ends-from-between))))))
 
-;; TODO: implement Navigable protocol for EditorState, returning EditorUpdates instead of new selections
-;; TODO: add formats field to Selection object and change these methods to accomodate automatically updating it
+;; TODO: add :formats field to Selection object and change these methods to accomodate automatically updating it
 
 (comment
   (def my-par (p/paragraph [(r/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))

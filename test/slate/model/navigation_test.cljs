@@ -13,7 +13,6 @@
 (def para (p/paragraph "p1" [(r/run test-str)]))
 (def para2 (p/paragraph "p2" [(r/run "foo bar?")]))
 (def para3 (p/paragraph "p3" [(r/run "bizz buzz")]))
-(def para4 (p/paragraph "p4" [(r/run "bazz bazz")]))
 
 (def doc (doc/document [para, para2]))
 (def doc2 (doc/document [para, para2, para3]))

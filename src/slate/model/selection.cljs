@@ -3,7 +3,6 @@
 (defrecord Selection 
   [start end backwards?])
 
-;; TODO: add pre conditions to enforce rules?
 (defn selection
   "Creates a new selection.
 
