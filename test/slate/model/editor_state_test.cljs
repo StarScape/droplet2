@@ -9,6 +9,7 @@
                                                         changelist
                                                         ->EditorUpdate
                                                         map->EditorState]]
+            [slate.model.navigation :as nav]
             [slate.dll :as dll :refer [dll]]))
 
 (def p1 (paragraph "p1" [(run "foo" #{:italic})
@@ -364,6 +365,37 @@
                                                (p/paragraph "p2" [(r/run "aaa)bbbcccddd")])])
                                :selection (selection ["p1" 0] ["p2" 3])})
             (changelist :changed-uuids #{"p1" "p2"}))))))
+
+(deftest nav-functions-test
+  (testing "start and end work"
+    (is (= (nav/start (editor-state doc (selection ["p1" 3])))
+           (->EditorUpdate (editor-state doc (selection ["p1" 0]))
+                           (changelist :changed-uuids #{"p1"}))))
+    (is (= (nav/start (editor-state doc (selection ["p1" 0] ["p2" 3])))
+           (->EditorUpdate (editor-state doc (selection ["p1" 0]))
+                           (changelist :changed-uuids #{"p1" "p2"}))))
+    (is (= (nav/end (editor-state doc (selection ["p1" 3])))
+           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
+                           (changelist :changed-uuids #{"p1" "p2"}))))
+    (is (= (nav/end (editor-state doc (selection ["p1" 0] ["p2" 3])))
+           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
+                           (changelist :changed-uuids #{"p1" "p2"}))))
+    (is (= (nav/end (editor-state doc (selection ["p2" 3])))
+           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
+                           (changelist :changed-uuids #{"p2"})))))
+
+  ;; The rest of the currently all use the same fallthrough function,
+  ;; so testing one is basically the same as testing all of them.
+  (testing "rest work"
+    (is (= (nav/next-char (editor-state doc (selection ["p1" 0])))
+           (->EditorUpdate (editor-state doc (selection ["p1" 1]))
+                           (changelist :changed-uuids #{"p1"}))))
+    (is (= (nav/next-char (editor-state doc (selection ["p1" 14])))
+           (->EditorUpdate (editor-state doc (selection ["p2" 0]))
+                           (changelist :changed-uuids #{"p1" "p2"}))))
+    (is (= (nav/next-char (editor-state long-doc (selection ["d1" 0] ["d3" 4] :between #{"d2"})))
+           (->EditorUpdate (editor-state long-doc (selection ["d3" 4]))
+                           (changelist :changed-uuids #{"d1" "d2" "d3"}))))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"

@@ -230,6 +230,10 @@
   (next-word [editor-state] (nav-fallthrough editor-state nav/next-word))
   (prev-word [editor-state] (nav-fallthrough editor-state nav/prev-word))
 
+  ;; TODO: these can be optimized to *only* include paragraphs that have changed.
+  ;; I.e., if you have a selection spanning paragraphs 1 through 3 and you expand it
+  ;; into the 4th, you only have to re-render paragraphs 3 and 4. Current implementation
+  ;; is fine for now, though.
   nav/Selectable
   (shift+right [editor-state] (nav-fallthrough editor-state nav/shift+right))
   (shift+left [editor-state] (nav-fallthrough editor-state nav/shift+left))
