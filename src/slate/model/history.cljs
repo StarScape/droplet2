@@ -1,4 +1,4 @@
-(ns slate.model.editor-state-history
+(ns slate.model.history
   "The history object holds a series of successive EditorStates.
    This namespace defines functions for manipulating such objects.
 
@@ -65,7 +65,7 @@
 (defn current-state
   "Returns the current state of `history` (the one that should currently be displayed on the screen).
    This should be used rather than accessing any of the fields in the `EditorStateHistory` directly."
-  [{:keys [backstack current-state-index tip] :as history}]
+  [{:keys [backstack current-state-index tip] :as _history}]
   (if (< current-state-index (count backstack))
     (nth backstack current-state-index)
     tip))

@@ -73,6 +73,9 @@
    (map->EditorState
     {:doc doc
      :selection selection}))
+  ([doc]
+   (let [first-paragraph-uuid (-> doc :children dll/first :uuid)]
+     (editor-state doc (sel/selection [first-paragraph-uuid 0]))))
   ([]
    (let [p (p/paragraph)]
      (editor-state (d/document [p]) (sel/selection [(:uuid p) 0])))))

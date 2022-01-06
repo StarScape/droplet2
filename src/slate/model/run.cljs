@@ -22,7 +22,7 @@
     (update r :formats #(disj % format))))
 
 (defn run
-  "Constructor for a new run. A run is defined as text with associating formatting."
+  "Constructor for a new run, a container for text with associated formatting."
   ([text formats]
    (->Run text formats))
   ([text]

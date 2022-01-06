@@ -79,7 +79,8 @@
        :after-sel (not-empty (.substring text end))})))
 
 (defn vm-span->dom
-  "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background."
+  "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background.
+   Returns HTML string."
   [span selection pid para-length]
   (let [format-classes
         (formats->classes (:formats span))
@@ -122,30 +123,41 @@
          (<span> after-sel format-classes))))
 
 (defn vm-line->dom
-  "Convert viewmodel line to DOM element."
+  "Convert viewmodel line to DOM element. Returns HTML string."
   [line selection pid para-length]
   (str "<div class='line'>"
        (apply str (map #(vm-span->dom % selection pid para-length) (:spans line)))
        "</div>"))
 
 (defn vm-para->dom
-  "Convert viewmodel to DOM element."
+  "Convert viewmodel to DOM element. Returns HTML string."
   [viewmodel selection]
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
         para-length (sl/len (:paragraph viewmodel))]
-    (str "<div class='paragraph' id='" (:uuid (:paragraph viewmodel)) "'>"
+    (str "<div class='paragraph' id='" pid "'>"
          (apply str (map #(vm-line->dom % selection pid para-length) lines))
          "</div>")))
 
 (defn vm-paras->dom
-  "Convert the list of [[ParagraphViewModel]]s to DOM elements.
-   Selection is provided in order to render the caret and highlighted text."
+  "Convert the list of [[ParagraphViewModel]]s to DOM elements and returns an HTML
+   string. Selection is provided in order to render the caret and highlighted text."
   [vm-paras selection]
   (binding [*selection-ongoing?* false]
     (str "<div class='document'>"
          (apply str (map #(vm-para->dom % selection) vm-paras))
          "</div>")))
+
+(defn insert-all!
+  [editor-elem vm-paras selection]
+  (set! (.-innerHTML editor-elem) (vm-paras->dom vm-paras selection)))
+
+(defn insert-para! [editor-elem uuid viewmodel]
+  )
+
+(defn remove-para! [editor-elem uuid])
+(defn update-para! [editor-elem uuid viewmodel])
+
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they

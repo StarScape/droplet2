@@ -1,8 +1,8 @@
-(ns slate.model.editor-state-history-test
+(ns slate.model.history-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [clojure.spec.alpha :as s]
             [slate.model.editor-state :as es :refer [editor-state]]
-            [slate.model.editor-state-history :as history]))
+            [slate.model.history :as history]))
 
 (defn resolved-editor-state
   []

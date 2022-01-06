@@ -30,21 +30,21 @@
             [editor-state full-ui-state event]
             (prn editor-state full-ui-state event))))
 
-;; (s/def ::pattern (s/or :string string? :keyword keyword?))
-;; (s/def ::interceptor-fn (s/spec :args (s/cat :state ::es/editor-state
-;;                                              :ui-state any?)
-;;                                 :ret ::es/editor-state))
-;; (s/def ::input-name (s/nilable ::pattern))
-;; (s/def ::include-in-history? boolean?)
-;; (s/def ::add-to-history-immediately? boolean?)
-;; (s/def ::interceptor (s/keys :req-un [::interceptor-fn
-;;                                       ::input-name
-;;                                       ::include-in-history?
-;;                                       ::add-to-history-immediately?]))
-;; (s/def ::shortcuts (s/map-of ::pattern ::interceptor))
-;; (s/def ::completions (s/map-of ::pattern (s/or ::interceptor ::completions)))
-;; (s/def ::interceptor-map (s/keys :req-un [::completions
-;;                                           ::shortcuts]))
+(s/def ::pattern (s/or :string string? :keyword keyword?))
+(s/def ::interceptor-fn any? #_(s/spec :args (s/cat :state ::es/editor-state
+                                             :ui-state any?)
+                                :ret ::es/editor-state))
+(s/def ::input-name (s/nilable ::pattern))
+(s/def ::include-in-history? boolean?)
+(s/def ::add-to-history-immediately? boolean?)
+(s/def ::interceptor (s/keys :req-un [::interceptor-fn
+                                      ::input-name
+                                      ::include-in-history?
+                                      ::add-to-history-immediately?]))
+(s/def ::shortcuts (s/map-of ::pattern ::interceptor))
+(s/def ::completions (s/map-of ::pattern (s/or ::interceptor ::completions)))
+(s/def ::interceptor-map (s/keys :req-un [::completions
+                                          ::shortcuts]))
 
 ;; TODO: should this be const?
 (def modifier-keys #{:ctrl :shift :alt :meta})

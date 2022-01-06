@@ -1,11 +1,11 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [interceptor definterceptor]])
   (:require [clojure.spec.alpha :as s]
-            [clojure.spec.test.alpha :as stest]
             [slate.model.editor-state :as es]
-            [slate.model.editor-state-history :as history]
+            [slate.model.history :as history]
             [slate.events :as events]
             [slate.interceptors :as interceptors]
+            [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
             [slate.utils :refer [debounce]]
             [slate.view :as view]
@@ -31,21 +31,6 @@
                                           ::viewmodels
                                           ::interceptors]))
 
-(defn init-dom!
-  "Perform initial DOM render. This will be called on application startup,
-   then sync-dom! will take over and fire after every interceptor."
-  [ui-state])
-
-(defn sync-dom! [dom-elem viewmodels changelist measure-fn]
-  ;; sync-dom should need: viewmodels, changelist, dom-elem, and measure-fn
-  (let [{:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
-    (doseq [uuid deleted-uuids]
-      (view/remove-para uuid))
-    (doseq [uuid changed-uuids]
-      (view/update-para uuid (get viewmodels uuid)))
-    (doseq [uuid inserted-uuids]
-      (view/insert-para uuid (get viewmodels uuid)))))
-
 (defn add-tip-to-backstack!
   [ui-state-atom]
   (swap! ui-state-atom update :history history/add-tip-to-backstack))
@@ -68,6 +53,28 @@
                                 (assoc new-vms uuid (vm/from-para (get-para uuid) 200 measure-fn)))
                               vms (concat inserted-uuids changed-uuids)))]
     (assoc ui-state :viewmodels updated-vms)))
+
+(defn init-dom!
+  "Perform initial DOM render. This will be called on application startup,
+   then sync-dom! will take over and fire after every interceptor."
+  [ui-state]
+  (let [{:keys [dom-elem viewmodels history]} ui-state
+        {:keys [doc selection]} (history/current-state history)
+        viewmodels (map #(get viewmodels (:uuid %)) (:children doc))]
+    (view/insert-all! dom-elem viewmodels selection)))
+
+(defn sync-dom!
+  "Sync editor DOM element to provided changelist, updating
+  all paragraphs that have been inserted/changed/removed."
+  [dom-elem viewmodels changelist measure-fn]
+  ;; sync-dom should need: viewmodels, changelist, dom-elem, and measure-fn
+  (let [{:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
+    (doseq [uuid deleted-uuids]
+      (view/remove-para! dom-elem uuid))
+    (doseq [uuid changed-uuids]
+      (view/update-para! dom-elem uuid (get viewmodels uuid)))
+    (doseq [uuid inserted-uuids]
+      (view/insert-para! dom-elem uuid (get viewmodels uuid)))))
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.
@@ -114,7 +121,7 @@
       (let [next (current-level p)]
         (if (or (nil? next) (fn? next)) next (recur next ps))))))
 
-(defn init-event-handlers
+(defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
   [*ui-state]
   (let [get-interceptor (partial interceptors/find-interceptor (:interceptors @*ui-state))
@@ -184,27 +191,29 @@
 
 (defn init
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
-   atom will continue to be update throughout the lifetime of the editor. Takes a series
+   atom will continue to be updated throughout the lifetime of the editor. Takes a series
    of keyword arguments:
 
    Required:
-   :editor-elem - The DOM element for the editor
+   :dom-elem - The DOM element that the editor will be displayed in
    :hidden-input - The hidden <input> element needed by the editor to capture keystrokes
 
    Optional:
    :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
-  [& {:keys [editor-state editor-elem hidden-input]}]
-  (let [measure-fn (ruler-for-elem editor-elem)
+  [& {:keys [editor-state dom-elem hidden-input]}]
+  (let [measure-fn (ruler-for-elem dom-elem)
         editor-state (or editor-state (es/editor-state))
-        ui-state (atom {:id (random-uuid)
-                        :viewmodels (vm/from-doc (:doc editor-state) 200 measure-fn)
-                        :history (history/init editor-state)
-                        :dom-elem editor-elem
-                        :hidden-input hidden-input
-                        :measure-fn measure-fn
-                        :input-history []
-                        :interceptors (interceptors/interceptor-map)})]
-    (init-event-handlers ui-state)
-    (init-dom! @ui-state)
+        interceptors-map (-> (interceptors/interceptor-map)
+                             (interceptors/reg-interceptors default-interceptors))
+        *ui-state (atom {:id (random-uuid)
+                         :viewmodels (vm/from-doc (:doc editor-state) 200 measure-fn)
+                         :history (history/init editor-state)
+                         :dom-elem dom-elem
+                         :hidden-input hidden-input
+                         :measure-fn measure-fn
+                         :input-history []
+                         :interceptors interceptors-map})]
+    (init-event-handlers! *ui-state)
+    (init-dom! @*ui-state)
 
     editor-state))
