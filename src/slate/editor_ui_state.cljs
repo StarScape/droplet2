@@ -31,28 +31,41 @@
                                           ::viewmodels
                                           ::interceptors]))
 
-(defn add-tip-to-backstack!
-  [ui-state-atom]
-  (swap! ui-state-atom update :history history/add-tip-to-backstack))
-
-(def add-tip-to-backstack-after-wait! (debounce 3000 add-tip-to-backstack!))
-
 (defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
   [ui-state]
   (let [{:keys [viewmodels history measure-fn]} ui-state
-        tip-editor-state (:tip history)
-        get-para (partial get (-> tip-editor-state :doc :children))
+        tip (:tip history)
+        get-para (partial get (-> tip :editor-state :doc :children))
         {:keys [changed-uuids
                 inserted-uuids
-                deleted-uuids]} (:changelist tip-editor-state)
+                deleted-uuids]} (:changelist tip)
         updated-vms (as-> viewmodels vms
                       (apply dissoc vms deleted-uuids)
                       (reduce (fn [new-vms uuid]
                                 (assoc new-vms uuid (vm/from-para (get-para uuid) 200 measure-fn)))
                               vms (concat inserted-uuids changed-uuids)))]
     (assoc ui-state :viewmodels updated-vms)))
+
+;; TODO: Can be moved to the interceptors NS
+(defn find-completion
+  "Takes the editor's interceptor map and input history, and returns
+   a matching completion interceptor if one exists, or nil otherwise."
+  [key-pressed interceptor-map input-history]
+  {:pre [(vector? input-history)]}
+  (let [completions (:completions interceptor-map)
+        path (reverse (conj input-history key-pressed))] ; [..., "c" "b", "a"]
+    (loop [current-level completions
+           [p & ps] path]
+      (let [next (current-level p)]
+        (if (or (nil? next) (fn? next)) next (recur next ps))))))
+
+(defn add-tip-to-backstack!
+  [*ui-state]
+  (swap! *ui-state update :history history/add-tip-to-backstack))
+
+(def add-tip-to-backstack-after-wait! (debounce 3000 add-tip-to-backstack!))
 
 (defn init-dom!
   "Perform initial DOM render. This will be called on application startup,
@@ -66,60 +79,49 @@
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
-  [dom-elem viewmodels changelist measure-fn]
-  ;; sync-dom should need: viewmodels, changelist, dom-elem, and measure-fn
+  [dom-elem viewmodels changelist selection]
   (let [{:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
+    (doseq [uuid inserted-uuids]
+      (view/insert-para! dom-elem uuid (get viewmodels uuid)))
     (doseq [uuid deleted-uuids]
       (view/remove-para! dom-elem uuid))
     (doseq [uuid changed-uuids]
-      (view/update-para! dom-elem uuid (get viewmodels uuid)))
-    (doseq [uuid inserted-uuids]
-      (view/insert-para! dom-elem uuid (get viewmodels uuid)))))
+      (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
    is called, which handles updating the state stored in the UIState atom and re-rendering
-   elements in the DOM."
-  [ui-state-atom interceptor event]
-  (let [ui-state @ui-state-atom ; only deref once a cycle
+   elements in the DOM.
+
+   Arguments:
+   - `*ui-state`: Atom containing EditorUIState
+   - `interceptor` Interceptor to fire
+   - `event`: Raw JS event object"
+  [*ui-state interceptor event]
+  (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
-        new-editor-state (interceptor editor-state ui-state event)
+        editor-update (interceptor editor-state ui-state event)
         new-ui-state (-> ui-state
-                         (update :history history/set-tip new-editor-state)
+                         (update :history history/set-tip editor-update)
                          (update :input-history events/add-key-to-history (:input-name interceptor))
                          (update-viewmodels-to-history-tip))
         new-ui-state (if (and (:add-to-history-immediately? interceptor)
                               (:include-in-history? interceptor))
-                       (update new-ui-state
-                               :history
-                               history/add-tip-to-backstack
-                               new-editor-state)
+                       (update new-ui-state :history history/add-tip-to-backstack)
                        new-ui-state)]
     (when-not (:no-dom-sync? interceptor)
       (sync-dom! (:dom-elem new-ui-state)
                  (:viewmodels new-ui-state)
-                 (:changelist new-ui-state)
-                 (:measure-fn new-ui-state)))
+                 (:changelist editor-update)
+                 (-> editor-update :editor-state :selection)))
 
-    (reset! ui-state-atom new-ui-state)
+    (reset! *ui-state new-ui-state)
 
     (when (and (:include-in-history? interceptor)
                (not (:add-to-history-immediately? interceptor)))
       ;; NOTE: make sure wait is on a per-instance basis
-      (add-tip-to-backstack-after-wait! ui-state-atom))))
-
-(defn find-completion
-  "Takes the editor's interceptor map and input history, and returns
-   a matching completion interceptor if one exists, or nil otherwise."
-  [key-pressed interceptor-map input-history]
-  {:pre [(vector? input-history)]}
-  (let [completions (:completions interceptor-map)
-        path (reverse (conj input-history key-pressed))] ; [..., "c" "b", "a"]
-    (loop [current-level completions
-           [p & ps] path]
-      (let [next (current-level p)]
-        (if (or (nil? next) (fn? next)) next (recur next ps))))))
+      (add-tip-to-backstack-after-wait! *ui-state))))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
@@ -157,7 +159,7 @@
         ;; TODO: check for completions here (or possibly in the :insert case below?) and if one exists fire its interceptor
        (when-let [interceptor-fn (get-interceptor e)]
          (.preventDefault e)
-         (fire-interceptor! interceptor-fn *ui-state e))))
+         (fire-interceptor! *ui-state interceptor-fn e))))
     (.addEventListener
      hidden-input
      "beforeinput"

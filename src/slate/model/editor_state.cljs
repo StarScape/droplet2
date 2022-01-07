@@ -48,6 +48,9 @@
   (bind [update, state->update]
     (bind update state->update [])))
 
+(s/def ::editor-state #(instance? EditorState %))
+(s/def ::editor-update #(instance? EditorUpdate %))
+
 (defn changelist
   "Constructor for a new changelist object. Takes keyword arguments :change-uuids, :inserted-uuids, and
   :deleted-uuids, set to an empty set by default. If no arguments supplied, returns an empty changelist."
@@ -62,8 +65,6 @@
   "Returns an EditorUpdate with no changes, and therefore no effects."
   [editor-state]
   (->EditorUpdate editor-state (changelist)))
-
-(s/def ::editor-state #(instance? EditorState %))
 
 (defn editor-state
   "Creates a new EditorState object with the given doc and selection
@@ -235,7 +236,7 @@
       (->EditorUpdate (assoc editor-state :selection new-selection)
                       (changelist :changed-uuids (set/union #{(-> new-selection :start :paragraph)}
                                                             (sel/all-uuids selection))))))
-  (next-char [editor-state] (nav-fallthrough editor-state nav/next-char))
+  (next-char [editor-state] "HELLO?" (nav-fallthrough editor-state nav/next-char))
   (prev-char [editor-state] (nav-fallthrough editor-state nav/prev-char))
   (next-word [editor-state] (nav-fallthrough editor-state nav/next-word))
   (prev-word [editor-state] (nav-fallthrough editor-state nav/prev-word))

@@ -1,13 +1,11 @@
 (ns slate.model.history-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [clojure.spec.alpha :as s]
-            [slate.model.editor-state :as es :refer [editor-state]]
+            [slate.model.editor-state :as es :refer [editor-state ->EditorUpdate]]
             [slate.model.history :as history]))
 
-(defn resolved-editor-state
-  []
-  (-> (es/editor-state)
-      (assoc-in [:changelist :resolved?] true)))
+(defn editor-update []
+  (->EditorUpdate (es/editor-state) (es/changelist)))
 
 (deftest spec-test
   (testing "spec catches all invalid states"
@@ -17,38 +15,38 @@
                       :current-state-index 0
                       :tip nil})
            (s/valid? ::history/editor-state-history
-                     {:backstack (vec (repeat 4 (resolved-editor-state)))
+                     {:backstack (vec (repeat 4 (editor-update)))
                       :current-state-index 4
                       :tip nil})
            (s/valid? ::history/editor-state-history
-                     {:backstack (vec (repeat 4 (resolved-editor-state)))
+                     {:backstack (vec (repeat 4 (editor-update)))
                       :current-state-index 1
-                      :tip (resolved-editor-state)})
+                      :tip (editor-update)})
            (s/valid? ::history/editor-state-history
-                     {:backstack (vec (repeat 4 (resolved-editor-state)))
+                     {:backstack (vec (repeat 4 (editor-update)))
                       :current-state-index 5
                       :tip nil})))
     (is (= true
            (s/valid? ::history/editor-state-history
                      {:backstack []
                       :current-state-index 0
-                      :tip (resolved-editor-state)})
+                      :tip (editor-update)})
            (s/valid? ::history/editor-state-history
-                     {:backstack [(resolved-editor-state)]
+                     {:backstack [(editor-update)]
                       :current-state-index 1
-                      :tip (resolved-editor-state)})
+                      :tip (editor-update)})
            (s/valid? ::history/editor-state-history
-                     {:backstack (vec (repeat 4 (resolved-editor-state)))
+                     {:backstack (vec (repeat 4 (editor-update)))
                       :current-state-index 1
                       :tip nil})
            (s/valid? ::history/editor-state-history
-                     {:backstack (vec (repeat 4 (resolved-editor-state)))
+                     {:backstack (vec (repeat 4 (editor-update)))
                       :current-state-index 3
                       :tip nil})))))
 
 (deftest add-tip-to-backstack-test
-  (let [backstack (vec (repeat 4 (resolved-editor-state)))
-        tip (resolved-editor-state)]
+  (let [backstack (vec (repeat 4 (editor-update)))
+        tip (editor-update)]
     (is (= (history/add-tip-to-backstack {:backstack backstack
                                           :current-state-index 4
                                           :tip tip})
@@ -56,69 +54,69 @@
             :current-state-index 4
             :tip nil}))))
 
-(deftest current-state-test
-  (let [state (resolved-editor-state)]
-    (is (= (history/current-state {:backstack (vec (repeat 4 (resolved-editor-state)))
-                                   :current-state-index 4
-                                   :tip state})
+(deftest current-test
+  (let [state (editor-update)]
+    (is (= (history/current {:backstack (vec (repeat 4 (editor-update)))
+                             :current-state-index 4
+                             :tip state})
            state))
-    (is (= (history/current-state {:backstack (-> (repeat 4 (resolved-editor-state))
-                                                  (vec)
-                                                  (conj state))
-                                   :current-state-index 4
-                                   :tip nil})
+    (is (= (history/current {:backstack (-> (repeat 4 (editor-update))
+                                            (vec)
+                                            (conj state))
+                             :current-state-index 4
+                             :tip nil})
            state))
-    (is (= (history/current-state {:backstack (-> [state]
-                                                  (concat (repeat 4 (resolved-editor-state)))
-                                                  (vec))
-                                   :current-state-index 0
-                                   :tip nil})
+    (is (= (history/current {:backstack (-> [state]
+                                            (concat (repeat 4 (editor-update)))
+                                            (vec))
+                             :current-state-index 0
+                             :tip nil})
            state))
-    (is (not= (history/current-state {:backstack (-> [state]
-                                                     (concat (repeat 4 (resolved-editor-state)))
-                                                     (vec))
-                                      :current-state-index 1
-                                      :tip nil})
+    (is (not= (history/current {:backstack (-> [state]
+                                               (concat (repeat 4 (editor-update)))
+                                               (vec))
+                                :current-state-index 1
+                                :tip nil})
               state))))
 
 (deftest has-undo?-test
   (is (= true
-         (history/has-undo? {:backstack (vec (repeat 4 (resolved-editor-state)))
+         (history/has-undo? {:backstack (vec (repeat 4 (editor-update)))
                              :current-state-index 4
-                             :tip (resolved-editor-state)})
-         (history/has-undo? {:backstack [(resolved-editor-state)]
+                             :tip (editor-update)})
+         (history/has-undo? {:backstack [(editor-update)]
                              :current-state-index 1
-                             :tip (resolved-editor-state)})))
+                             :tip (editor-update)})))
   (is (= false
-         (history/has-undo? {:backstack (vec (repeat 4 (resolved-editor-state)))
+         (history/has-undo? {:backstack (vec (repeat 4 (editor-update)))
                              :current-state-index 0
                              :tip nil})
          (history/has-undo? {:backstack []
                              :current-state-index 0
-                             :tip (resolved-editor-state)})
-         (history/has-undo? {:backstack [(resolved-editor-state)]
+                             :tip (editor-update)})
+         (history/has-undo? {:backstack [(editor-update)]
                              :current-state-index 0
                              :tip nil}))))
 
 (deftest has-redo?-test
   (is (= false
-         (history/has-redo? {:backstack (vec (repeat 4 (resolved-editor-state)))
+         (history/has-redo? {:backstack (vec (repeat 4 (editor-update)))
                              :current-state-index 4
-                             :tip (resolved-editor-state)})
-         (history/has-redo? {:backstack [(resolved-editor-state)]
+                             :tip (editor-update)})
+         (history/has-redo? {:backstack [(editor-update)]
                              :current-state-index 1
-                             :tip (resolved-editor-state)})))
+                             :tip (editor-update)})))
   (is (= true
-         (history/has-redo? {:backstack (vec (repeat 4 (resolved-editor-state)))
+         (history/has-redo? {:backstack (vec (repeat 4 (editor-update)))
                              :current-state-index 0
                              :tip nil})
-         (history/has-redo? {:backstack [(resolved-editor-state) (resolved-editor-state)]
+         (history/has-redo? {:backstack [(editor-update) (editor-update)]
                              :current-state-index 0
                              :tip nil}))))
 
 (deftest undo-test
-  (let [backstack (vec (repeat 4 (resolved-editor-state)))
-        tip (resolved-editor-state)]
+  (let [backstack (vec (repeat 4 (editor-update)))
+        tip (editor-update)]
     (is (= (history/undo {:backstack backstack
                           :current-state-index 4
                           :tip tip})
@@ -145,55 +143,55 @@
             :tip nil}))))
 
 (deftest redo-test
-  (let [state1 (resolved-editor-state)
-        state2 (resolved-editor-state)
-        state3 (resolved-editor-state)
-        state4 (resolved-editor-state)
-        tip (resolved-editor-state)]
-    (is (= (history/redo {:backstack [state1 state2 state3 state4]
+  (let [update1 (editor-update)
+        update2 (editor-update)
+        update3 (editor-update)
+        update4 (editor-update)
+        tip (editor-update)]
+    (is (= (history/redo {:backstack [update1 update2 update3 update4]
                           :current-state-index 3
                           :tip nil})
-           {:backstack [state1 state2 state3 state4]
+           {:backstack [update1 update2 update3 update4]
             :current-state-index 3
             :tip nil}))
-    (is (= (history/redo {:backstack [state1 state2 state3 state4]
+    (is (= (history/redo {:backstack [update1 update2 update3 update4]
                           :current-state-index 2
                           :tip nil})
-           {:backstack [state1 state2 state3 state4]
+           {:backstack [update1 update2 update3 update4]
             :current-state-index 3
             :tip nil}))
-    (is (= (history/redo {:backstack [state1 state2 state3 state4]
+    (is (= (history/redo {:backstack [update1 update2 update3 update4]
                           :current-state-index 4
                           :tip tip})
-           {:backstack [state1 state2 state3 state4]
+           {:backstack [update1 update2 update3 update4]
             :current-state-index 4
             :tip tip}))))
 
 (deftest set-tip-test
-  (let [state1 (resolved-editor-state)
-        state2 (resolved-editor-state)
-        state3 (resolved-editor-state)
-        state4 (resolved-editor-state)
-        tip (resolved-editor-state)
-        tip2 (resolved-editor-state)]
-    (is (= (history/set-tip {:backstack [state1 state2 state3 state4]
+  (let [update1 (editor-update)
+        update2 (editor-update)
+        update3 (editor-update)
+        update4 (editor-update)
+        tip (editor-update)
+        tip2 (editor-update)]
+    (is (= (history/set-tip {:backstack [update1 update2 update3 update4]
                              :current-state-index 4
                              :tip tip}
                             tip2)
-           {:backstack [state1 state2 state3 state4]
+           {:backstack [update1 update2 update3 update4]
             :current-state-index 4
             :tip tip2}))
-    (is (= (history/set-tip {:backstack [state1 state2 state3 state4]
+    (is (= (history/set-tip {:backstack [update1 update2 update3 update4]
                              :current-state-index 3
                              :tip nil}
                             tip2)
-           {:backstack [state1 state2 state3 state4]
+           {:backstack [update1 update2 update3 update4]
             :current-state-index 4
             :tip tip2}))
-    (is (= (history/set-tip {:backstack [state1 state2 state3 state4]
+    (is (= (history/set-tip {:backstack [update1 update2 update3 update4]
                              :current-state-index 1
                              :tip nil}
                             tip2)
-           {:backstack [state1 state2]
+           {:backstack [update1 update2]
             :current-state-index 2
             :tip tip2}))))

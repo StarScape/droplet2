@@ -1,6 +1,7 @@
 (ns slate.model.history
-  "The history object holds a series of successive EditorStates.
-   This namespace defines functions for manipulating such objects.
+  "The history object holds a series of successive EditorStates and
+   the changes between them. This namespace defines functions for manipulating
+   and managing the history object.
 
    The history consists of a few parts: the backstack (a list of EditorStates),
    the current-state-index (which references an index into the backstack), and the
@@ -18,13 +19,12 @@
    will automatically incoporate the tip into the backstack after a certain period of inactivity"
   (:require [clojure.spec.alpha :as s]
             [clojure.spec.test.alpha :as stest]
-            [slate.model.editor-state :as es :refer [editor-state]]))
+            [slate.model.editor-state :as es :refer [editor-state]])
+  (:refer-clojure :exclude [next]))
 
-(s/def ::editor-state-changelist-resolved (s/and ::es/editor-state
-                                                 #(-> % :changelist :resolved?)))
-(s/def ::backstack (s/coll-of ::editor-state-changelist-resolved))
+(s/def ::backstack (s/coll-of ::es/editor-update))
 (s/def ::current-state-index nat-int?)
-(s/def ::tip (s/nilable ::es/editor-state)) ;; TODO: should this be resolved?
+(s/def ::tip (s/nilable ::es/editor-update))
 
 (s/def ::editor-state-history
   (s/and (s/keys :req-un [::backstack
@@ -58,44 +58,79 @@
       (update :backstack conj tip)
       (assoc :tip nil)))
 
-(s/fdef current-state
+(s/fdef current
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-state)
+  :ret ::es/editor-update)
 
-(defn current-state
-  "Returns the current state of `history` (the one that should currently be displayed on the screen).
+(defn current
+  "Returns the current entry of `history` (the one that should currently be displayed on the screen).
    This should be used rather than accessing any of the fields in the `EditorStateHistory` directly."
   [{:keys [backstack current-state-index tip] :as _history}]
   (if (< current-state-index (count backstack))
     (nth backstack current-state-index)
     tip))
 
+(s/fdef current-state
+  :args (s/cat :history ::editor-state-history)
+  :ret ::es/editor-state)
+
+(defn current-state
+  "Returns the current `EditorState` of `history` (the one that should currently be displayed on the screen).
+   This should be used rather than accessing any of the fields in the `EditorStateHistory` directly."
+  [history]
+  (:editor-state (current history)))
+
+(s/fdef prev
+  :args (s/cat :history ::editor-state-history)
+  :ret ::es/editor-update)
+
+(defn prev
+  "Returns the previous entry in `history` (the one immediately preceeding the
+   one currently displayed on the screen). This should be used rather than
+   accessing any of the fields in the `EditorStateHistory` directly.
+
+   **Will** return nil if there is no previous entry."
+  [history]
+  (get (:backstack history) (dec (:current-state-index history))))
+
 (s/fdef prev-state
   :args (s/cat :history ::editor-state-history)
   :ret ::es/editor-state)
 
 (defn prev-state
-  "Returns the previous state of `history` (the one immediately preceeding the
+  "Returns the previous `EditorState` in `history` (the one immediately preceeding the
    one currently displayed on the screen). This should be used rather than
    accessing any of the fields in the `EditorStateHistory` directly.
 
    **Will** return nil if there is no previous state."
   [history]
-  (get (:backstack history) (dec (:current-state-index history))))
+  (:editor-state (prev history)))
 
-
-(s/fdef next-state
+(s/fdef next
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-state)
+  :ret ::es/editor-update)
 
-(defn next-state
-  "Returns the next state of `history` (the one immediately succeeding the
+(defn next
+  "Returns the next entry in `history` (the one immediately succeeding the
    one currently displayed on the screen). This should be used rather than
    accessing any of the fields in the `EditorStateHistory` directly.
 
    **Will** return nil if there is no previous state."
   [history]
   (get (:backstack history) (inc (:current-state-index history))))
+
+(s/fdef next-state
+  :args (s/cat :history ::editor-state-history)
+  :ret ::es/editor-state)
+
+(defn next-state
+  "Returns the next `EditorState` in `history` (the one immediately succeeding the
+   one currently displayed on the screen). This should be used rather than
+   accessing any of the fields in the `EditorStateHistory` directly.
+
+   **Will** return nil if there is no previous state."
+  [history]
+  (:editor-state (next history)))
 
 (s/fdef has-undo?
   :args (s/cat :history ::editor-state-history)
@@ -120,7 +155,7 @@
   :ret ::editor-state-history)
 
 (defn undo
-  "Reverts `history` to the previous state, if one exists, (identity otherwise)."
+  "Reverts `history` to the previous entry, if one exists, (identity otherwise)."
   [{:keys [tip] :as history}]
   (if (has-undo? history)
     (-> (if (nil? tip)
@@ -134,7 +169,7 @@
   :ret ::editor-state-history)
 
 (defn redo
-  "Restores `history` to the previously undone state, if one exists (identity otherwise)."
+  "Restores `history` to the previously undone entry, if one exists (identity otherwise)."
   [history]
   (if (has-redo? history)
     (update history :current-state-index inc)
@@ -142,11 +177,11 @@
 
 (s/fdef set-tip
   :args (s/cat :history ::editor-state-history
-               :tip ::es/editor-state)
+               :tip ::es/editor-update)
   :ret ::editor-state-history)
 
 (defn set-tip
-  "Sets the `tip` to the provided `EditorState`. If `has-redo?` is true, the redos will be removed.
+  "Sets the `tip` to the provided val `net-tip`. If `(has-redo?)` is true, the redos will be removed.
    This is what should be called whenever you want to update the editor state without yet adding
    anything to the backstack. For adding the tip to the backstack, see `add-tip-to-backstack`."
   [history new-tip]
@@ -159,13 +194,27 @@
            :current-state-index (count backstack))))
 
 (s/fdef init
-  :args (s/cat :editor-state ::es/editor-state)
+  :args (s/cat :state-or-update (s/or :state ::es/editor-state
+                                      :update ::es/editor-update))
   :ret ::editor-state-history)
 
 (defn init
-  "Returns a new history object with the tip set to the provided EditorState"
-  [editor-state]
-  {:tip editor-state, :backstack [], :current-state-index 0})
+  "Returns a new history object with the tip set to the provided EditorState.
+
+   Arguments:
+   - `state-or-update`: An initial `EditorState` or `EditorUpdate` to serve as the beginning of history.
+   An `EditorState` argument will be converted to an `EditorUpdate` with no changelist."
+  [state-or-update]
+  (let [initial (cond
+                  (instance? es/EditorUpdate state-or-update)
+                  state-or-update
+
+                  (instance? es/EditorState state-or-update)
+                  (es/identity-update state-or-update)
+
+                  :else
+                  (throw "Error in history/init: argument must be either an EditorUpdate or EditorState."))]
+    {:tip initial, :backstack [], :current-state-index 0}))
 
 ;; TODO: look into orchestra en vez de usar esto
 (stest/instrument)

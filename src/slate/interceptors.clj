@@ -1,5 +1,7 @@
 (ns slate.interceptors)
 
+(declare map->Interceptor)
+
 (defmacro interceptor
   "Defines a new interceptor and returns it.
    Takes: attr-map, param-list, function-body*, for example:
@@ -61,10 +63,11 @@
 
    It will likewise default :input-name to the name of the interceptor in 4-arg arity.
    However, this can be overriden by using the opts map."
-  ([name opts arglist body]
-   `(def ~name (interceptor ~(update opts :input-name #(or % name)) ~arglist ~body)))
-  ([name arglist body]
-   `(def ~name (interceptor {:input-name ~(keyword name)} ~arglist ~body))))
+  ([interceptor-name opts arglist body]
+   (let [options (update opts :input-name #(or % (keyword interceptor-name)))]
+     `(def ~interceptor-name (interceptor ~options ~arglist ~body))))
+  ([interceptor-name arglist body]
+   `(def ~interceptor-name (interceptor {:input-name ~(keyword interceptor-name)} ~arglist ~body))))
 
 (comment
   (macroexpand

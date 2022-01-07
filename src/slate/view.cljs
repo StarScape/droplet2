@@ -135,18 +135,18 @@
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
         para-length (sl/len (:paragraph viewmodel))]
-    (str "<div class='paragraph' id='" pid "'>"
-         (apply str (map #(vm-line->dom % selection pid para-length) lines))
-         "</div>")))
+    (binding [*selection-ongoing?* (contains? (:between selection) pid)]
+      (str "<div class='paragraph' id='" pid "'>"
+           (apply str (map #(vm-line->dom % selection pid para-length) lines))
+           "</div>"))))
 
 (defn vm-paras->dom
   "Convert the list of [[ParagraphViewModel]]s to DOM elements and returns an HTML
    string. Selection is provided in order to render the caret and highlighted text."
   [vm-paras selection]
-  (binding [*selection-ongoing?* false]
-    (str "<div class='document'>"
-         (apply str (map #(vm-para->dom % selection) vm-paras))
-         "</div>")))
+  (str "<div class='document'>"
+       (apply str (map #(vm-para->dom % selection) vm-paras))
+       "</div>"))
 
 (defn insert-all!
   [editor-elem vm-paras selection]
@@ -156,8 +156,10 @@
   )
 
 (defn remove-para! [editor-elem uuid])
-(defn update-para! [editor-elem uuid viewmodel])
 
+(defn update-para! [editor-elem uuid viewmodel selection]
+  (let [paragraph-elem (.getElementById js/document (str uuid))]
+    (set! (.-innerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they

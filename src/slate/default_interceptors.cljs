@@ -1,6 +1,7 @@
 (ns slate.default-interceptors
   (:require-macros [slate.interceptors :refer [definterceptor]])
-  (:require [slate.model.common :as m]
+  (:require [slate.interceptors]
+            [slate.model.common :as m]
             [slate.model.editor-state :as es]
             [slate.model.navigation :as nav]
             [slate.view :as view]))
