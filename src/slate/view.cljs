@@ -299,15 +299,17 @@
                        (es/changelist :changed-uuids changed-uuids))))
 
 (defn up
-  "Move the caret up into the next line. Returns a new selection."
-  [{:keys [doc viewmodels] :as doc-state} measure-fn]
-  (let [selection (sel/smart-collapse (:selection doc-state))
-        para-uuid (sel/caret-para selection)
+  "Move the caret up into the next line. Returns an EditorUpdate.
+   This is not in the model code because it requires the viewmodel to work."
+  [editor-state viewmodels measure-fn]
+  (let [{:keys [selection doc]} editor-state
+        collapsed-sel (sel/smart-collapse selection)
+        para-uuid (sel/caret-para collapsed-sel)
         viewmodel (get viewmodels para-uuid)
-        line (line-with-caret viewmodels selection)
+        line (line-with-caret viewmodels collapsed-sel)
         first-line? (= line (first (:lines viewmodel)))
         prev-line (if (not first-line?)
-                    (line-above-caret viewmodels selection)
+                    (line-above-caret viewmodels collapsed-sel)
                     (-> (:children doc)
                         (dll/prev para-uuid)
                         (:uuid)
@@ -316,12 +318,15 @@
                         (peek)))
         new-uuid (if first-line?
                    (:uuid (dll/prev (:children doc) para-uuid))
-                   para-uuid)]
-    (if prev-line
-      (let [caret-offset-px (caret-px selection line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
-        (sel/selection [new-uuid next-line-offset]))
-      selection)))
+                   para-uuid)
+        new-selection (if prev-line
+                        (let [caret-offset-px (caret-px collapsed-sel line measure-fn)
+                              next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
+                          (sel/selection [new-uuid next-line-offset]))
+                        collapsed-sel)
+        changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection)
+                       (es/changelist :changed-uuids changed-uuids))))
 
 (defn shift+down
   "Move the caret down into the next line. Returns a new selection."
@@ -342,7 +347,7 @@
   "Move the caret up into the next line. Returns a new selection."
   [{:keys [selection] :as doc-state} measure-fn]
   ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
-  (let [up-selection (up doc-state measure-fn)
+  (let [up-selection (up nil nil nil) ;; FIXME
         para (sel/caret-para up-selection)
         offset (sel/caret up-selection)
         up-caret {:paragraph para, :offset offset}]

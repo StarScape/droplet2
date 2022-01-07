@@ -89,7 +89,6 @@
   [editor-state _ui-state _e]
   (nav/ctrl+shift+right editor-state))
 
-;; FIXME
 (definterceptor down
   {:include-in-history? false}
   [editor-state ui-state _e]
@@ -101,11 +100,10 @@
   [_editor-state ui-state _e]
   (view/shift+down ui-state (:measure-fn ui-state)))
 
-;; FIXME
 (definterceptor up
   {:include-in-history? false}
-  [_editor-state ui-state _e]
-  (view/up ui-state (:measure-fn ui-state)))
+  [editor-state ui-state _e]
+  (view/up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
 ;; FIXME
 (definterceptor shift+up
