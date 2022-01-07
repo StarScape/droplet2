@@ -97,8 +97,8 @@
 ;; FIXME
 (definterceptor shift+down
   {:include-in-history? false}
-  [_editor-state ui-state _e]
-  (view/shift+down ui-state (:measure-fn ui-state)))
+  [editor-state ui-state _e]
+  (view/shift+down editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
 (definterceptor up
   {:include-in-history? false}
@@ -108,8 +108,8 @@
 ;; FIXME
 (definterceptor shift+up
   {:include-in-history? false}
-  [_editor-state ui-state _e]
-  (view/shift+up ui-state (:measure-fn ui-state)))
+  [editor-state ui-state _e]
+  (view/shift+up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
 (def default-interceptors
   {:click click
