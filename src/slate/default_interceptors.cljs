@@ -92,8 +92,8 @@
 ;; FIXME
 (definterceptor down
   {:include-in-history? false}
-  [_editor-state ui-state _e]
-  (view/down ui-state (:measure-fn ui-state)))
+  [editor-state ui-state _e]
+  (view/down editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
 ;; FIXME
 (definterceptor shift+down

@@ -4,6 +4,7 @@
   (:require [clojure.string :as str]
             [slate.model.selection :as sel]
             [slate.model.common :as sl]
+            [slate.model.editor-state :as es]
             [slate.dll :as dll]))
 
 ;; Utility functions
@@ -264,20 +265,21 @@
 ;; TODO: I think these functions could be moved to the `events` namespace (once it's created),
 ;; and we could just keep the helper functions it calls here, or better yet, move them into the
 ;; measurement namespace.
-;;
-;; TODO: these would both be much more elegant if we kept a DLL of the viewmodels instead
-(defn down
-  "Move the caret down into the next line. Returns a new selection."
-  [{:keys [doc viewmodels] :as doc-state} measure-fn]
-  (let [selection (sel/smart-collapse (:selection doc-state))
-        para-uuid (sel/caret-para selection)
-        viewmodel (get viewmodels para-uuid)
-        line (line-with-caret viewmodels selection)
 
-        ; last line in para?
+(defn down
+  "Move the caret down into the next line. Returns an EditorUpdate.
+   This is not in the model code because it requires the viewmodel to work."
+  [editor-state viewmodels measure-fn]
+  (let [{:keys [selection doc]} editor-state
+        collapsed-sel (sel/smart-collapse selection)
+        para-uuid (sel/caret-para collapsed-sel)
+        viewmodel (get viewmodels para-uuid)
+        line (line-with-caret viewmodels collapsed-sel)
+
+        ;; Last line in paragraph?
         last-line? (= line (peek (:lines viewmodel)))
         next-line (if (not last-line?)
-                    (line-below-caret viewmodels selection)
+                    (line-below-caret viewmodels collapsed-sel)
                     (-> (:children doc)
                         (dll/next para-uuid)
                         (:uuid)
@@ -286,12 +288,15 @@
                         (first)))
         new-uuid (if last-line?
                    (:uuid (dll/next (:children doc) para-uuid))
-                   para-uuid)]
-    (if next-line
-      (let [caret-offset-px (caret-px selection line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel next-line caret-offset-px measure-fn)]
-        (sel/selection [new-uuid next-line-offset]))
-      selection)))
+                   para-uuid)
+        new-selection (if next-line
+                        (let [caret-offset-px (caret-px collapsed-sel line measure-fn)
+                              next-line-offset (nearest-line-offset-to-pixel next-line caret-offset-px measure-fn)]
+                          (sel/selection [new-uuid next-line-offset]))
+                        collapsed-sel)
+        changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection)
+                       (es/changelist :changed-uuids changed-uuids))))
 
 (defn up
   "Move the caret up into the next line. Returns a new selection."
@@ -322,7 +327,8 @@
   "Move the caret down into the next line. Returns a new selection."
   [{:keys [selection] :as doc-state} measure-fn]
   ;; TODO: go to end of line if down-selection == selection (aka it's the last para)
-  (let [down-selection (down doc-state measure-fn)
+  (let [FIXME nil
+        down-selection (down FIXME FIXME FIXME)
         para (sel/caret-para down-selection)
         offset (sel/caret down-selection)
         down-caret {:paragraph para, :offset offset}]
