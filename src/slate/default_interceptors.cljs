@@ -43,6 +43,7 @@
 
 (definterceptor enter
   [editor-state _ui-state _e]
+  (println "Hello from enter!")
   (es/enter editor-state))
 
 (definterceptor tab

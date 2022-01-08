@@ -16,19 +16,18 @@
   (-invoke [this editor-state extras event-obj]
     ((:interceptor-fn this) editor-state extras event-obj)))
 
-
-(definterceptor fake-interceptor
-  {:input-name :click
-   :include-in-history? true}
-  [editor-state full-ui-state event]
-  (prn editor-state full-ui-state event))
-
 (comment
-  #_(def i (interceptor
-            {:input-name :click
-             :include-in-history? true}
-            [editor-state full-ui-state event]
-            (prn editor-state full-ui-state event))))
+  (definterceptor fake-interceptor
+    {:input-name :click
+     :include-in-history? true}
+    [editor-state full-ui-state event]
+    (prn editor-state full-ui-state event))
+  (def i (interceptor
+          {:input-name :click
+           :include-in-history? true}
+          [editor-state full-ui-state event]
+          (prn editor-state full-ui-state event)))
+  )
 
 (s/def ::pattern (s/or :string string? :keyword keyword?))
 (s/def ::interceptor-fn any? #_(s/spec :args (s/cat :state ::es/editor-state

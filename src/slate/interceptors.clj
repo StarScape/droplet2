@@ -30,14 +30,14 @@
     :or {include-in-history? true
          add-to-history-immediately? false
          no-dom-sync? false}}
-   arglist, fn-body]
+   arglist, & fn-body]
   (assert input-name "Input name is required for interceptor macro.")
   (when include-in-history? (assert (not add-to-history-immediately?) "Cannot have add-to-history-immediately? set to true when "))
   `(map->Interceptor {:input-name ~input-name
                       :no-dom-sync? ~no-dom-sync?
                       :include-in-history? ~include-in-history?
                       :add-to-history-immediately? ~add-to-history-immediately?
-                      :interceptor-fn (fn [~@arglist] ~fn-body)}))
+                      :interceptor-fn (fn [~@arglist] ~@fn-body)}))
 
 ;; TODO: 
 (defmacro definterceptor
@@ -63,11 +63,15 @@
 
    It will likewise default :input-name to the name of the interceptor in 4-arg arity.
    However, this can be overriden by using the opts map."
-  ([interceptor-name opts arglist body]
-   (let [options (update opts :input-name #(or % (keyword interceptor-name)))]
-     `(def ~interceptor-name (interceptor ~options ~arglist ~body))))
-  ([interceptor-name arglist body]
-   `(def ~interceptor-name (interceptor {:input-name ~(keyword interceptor-name)} ~arglist ~body))))
+  ;; [interceptor-name opts arglist & fn-body]
+  ;; [interceptor-name arglist & fn-body]
+  [interceptor-name & rest]
+  (if (map? (first rest))
+    (let [[opts arglist & fn-body] rest
+          options (update opts :input-name #(or % (keyword interceptor-name)))]
+      `(def ~interceptor-name (interceptor ~options ~arglist ~@fn-body)))
+    (let [[arglist & fn-body] rest]
+      `(definterceptor ~interceptor-name {} ~arglist ~@fn-body))))
 
 (comment
   (macroexpand
@@ -75,16 +79,25 @@
      {:input-name :click
       :include-in-history? true}
      [editor-state full-ui-state event]
-     (+ 1 2 3)))
+     (+ 1 2 3)
+     (+ 4 5 6)))
 
   (macroexpand
    '(definterceptor click
       {:input-name :click
        :include-in-history? true}
       [editor-state full-ui-state event]
-      (+ 1 2 3)))
+      (+ 1 2 3)
+      (+ 4 5 6)))
 
   (macroexpand
    '(definterceptor click
       [editor-state full-ui-state event]
-      (+ 1 2 3))))
+      (+ 1 2 3)
+      (+ 4 5 6)))
+
+  (macroexpand
+   '(definterceptor click
+      [editor-state full-ui-state event]
+      (+ 1 2 3)))
+  )
