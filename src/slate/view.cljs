@@ -487,7 +487,7 @@
    nearest paragraph is to get its bounding rect and compare. We don't want to have to search through the
    entire list of paragraphs and figure out which one is intersecting the mouse, so instead we can pass in
    a paragraph to start searching at."
-  ([event {:keys [viewmodels doc]} measure-fn last-event]
+  ([event doc viewmodels measure-fn last-event]
    (let [paragraph-in-path (match-elem-in-path event ".paragraph")
          paragraph-uuid (if paragraph-in-path
                           (.-id paragraph-in-path)
@@ -499,8 +499,8 @@
          vm (get viewmodels (uuid (.-id paragraph-elem)))
          sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]
      sel))
-  ([event doc-state measure-fn]
-   (mouse-event->selection event doc-state measure-fn nil)))
+  ([event doc viewmodels measure-fn]
+   (mouse-event->selection event doc viewmodels measure-fn nil)))
 
 (defn- drag-direction
   [started-at currently-at mousedown-event mousemove-event]
@@ -512,7 +512,7 @@
       :forward
       :backward)))
 
-(defn drag
+#_(defn drag
   [mousedown-event mousemove-event doc-state measure-fn]
   (let [started-at (mouse-event->selection mousedown-event doc-state measure-fn)
         currently-at (mouse-event->selection mousemove-event doc-state measure-fn mousedown-event)

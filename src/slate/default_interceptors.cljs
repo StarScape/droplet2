@@ -21,14 +21,18 @@
 ;; stable, so we can test the whole shebang.
 
 (definterceptor click
-  [editor-state _ e]
-  (let [new-sel (view/mouse-event->selection e editor-state (:measure-fn editor-state))]
+  [editor-state ui-state event]
+  (let [new-sel (view/mouse-event->selection event
+                                             (:doc editor-state)
+                                             (:viewmodels ui-state)
+                                             (:measure-fn ui-state))]
     (es/set-selection editor-state new-sel)))
 
 (definterceptor drag
   ;; FIXME - can't take multiple params anymore, this needs to be reworked
   [editor-state ui-state mousemove-event mousedown-event]
-  (es/set-selection editor-state (view/drag mousedown-event
+  nil
+  #_(es/set-selection editor-state (view/drag mousedown-event
                                             mousemove-event
                                             ui-state
                                             (:measure-fn ui-state))))
@@ -94,7 +98,6 @@
   [editor-state ui-state _e]
   (view/down editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
-;; FIXME
 (definterceptor shift+down
   {:include-in-history? false}
   [editor-state ui-state _e]
@@ -105,7 +108,6 @@
   [editor-state ui-state _e]
   (view/up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
-;; FIXME
 (definterceptor shift+up
   {:include-in-history? false}
   [editor-state ui-state _e]

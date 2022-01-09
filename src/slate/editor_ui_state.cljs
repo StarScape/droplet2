@@ -89,7 +89,8 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
-;; TODO next: Fix click interceptor.
+;; TODO next: Fix drag interceptor.
+;; TODO next: Fix clicking off the end of line displaying the cursor at the start of next line.
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.
@@ -135,26 +136,25 @@
     (let [clicked? (atom false :validator boolean?)
           mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
 
-      (.addEventListener
-       editor-elem
-       "mousedown"
-       (fn [e]
-         (.preventDefault e)
-         (.focus hidden-input)
-         (reset! clicked? true)
-         (reset! mousedown-event e)
-         (fire-interceptor! *ui-state (get-interceptor :click) e)))
-
-      (.addEventListener js/window
-                         "mousemove"
+      (.addEventListener editor-elem "mousedown"
                          (fn [e]
-                           (when @clicked?
+                           (.preventDefault e)
+                           (.focus hidden-input)
+                           (reset! clicked? true)
+                           (reset! mousedown-event e)
+                           (fire-interceptor! *ui-state (get-interceptor :click) e)))
+
+      (.addEventListener js/window "mousemove"
+                         (fn [e]
+                           #_(when @clicked?
                              ;; TODO: previously this was taking the @mousedown-event as a final param.
                              ;; May need to add back the ability to add additional parameters in order
                              ;; to get this to work.
                              (fire-interceptor! *ui-state (get-interceptor :drag) e))))
 
-      (.addEventListener js/window "mouseup" (fn [_e] (reset! clicked? false))))
+      (.addEventListener js/window "mouseup"
+                         (fn [_e]
+                           (reset! clicked? false))))
     (.addEventListener
      hidden-input
      "keydown"
