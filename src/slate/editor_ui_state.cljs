@@ -89,7 +89,7 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
-;; TODO next: Fix delete interceptor used in conjunction with enter.
+;; TODO next: Fix click interceptor.
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.

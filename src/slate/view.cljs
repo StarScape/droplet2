@@ -173,7 +173,8 @@
       (.append editor-elem paragraph-elem))
     (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
 
-(defn remove-para! [editor-elem uuid])
+(defn remove-para! [editor-elem uuid]
+  (.remove (js/document.getElementById (str uuid))))
 
 (defn update-para! [editor-elem uuid viewmodel selection]
   (let [paragraph-elem (.getElementById js/document (str uuid))]
