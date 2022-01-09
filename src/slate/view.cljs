@@ -153,8 +153,25 @@
   [editor-elem vm-paras selection]
   (set! (.-innerHTML editor-elem) (vm-paras->dom vm-paras selection)))
 
-(defn insert-para! [editor-elem uuid viewmodel]
-  )
+(defn- next-dom-paragraph-after
+  "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom."
+  [uuid paragraphs-dll]
+  (loop [node (dll/next paragraphs-dll uuid)]
+    (if (nil? node)
+      nil
+      (let [elem (js/document.getElementById (str (:uuid node)))]
+        (if (some? elem)
+          elem
+          (recur (dll/next paragraphs-dll node)))))))
+
+(defn insert-para! [editor-elem uuid viewmodel doc selection]
+  (let [next-elem (next-dom-paragraph-after uuid (:children doc))
+        rendered-paragraph (vm-para->dom viewmodel selection)
+        paragraph-elem (js/document.createElement "p")]
+    (if next-elem
+      (.insertBefore (.-parentNode next-elem) paragraph-elem next-elem)
+      (.append editor-elem paragraph-elem))
+    (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
 
 (defn remove-para! [editor-elem uuid])
 

@@ -231,14 +231,15 @@
          uuid (-> sel :start :paragraph)
          para ((:children doc) uuid)]
      (if (sel/range? sel)
+       ;; TODO: this never happens because editor-state/enter collapses the sel beforehand
        (-> (delete doc sel)
            (enter (sel/collapse-start sel) new-uuid))
        (cond
-         (= caret (len para))
-         (insert-paragraph-after doc uuid new-uuid)
-
          (= caret 0)
          (insert-paragraph-before doc uuid new-uuid)
+
+         (= caret (len para))
+         (insert-paragraph-after doc uuid new-uuid)
 
          :else
          (let [[para1 para2] (split-paragraph doc sel new-uuid)]

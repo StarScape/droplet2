@@ -169,12 +169,11 @@
            new-doc (d/enter doc selection new-uuid)]
        (->EditorUpdate (assoc editor-state
                               :doc new-doc
-                              :selection (sel/selection [new-uuid 0]))
+                              :selection (if (= caret 0)
+                                           (sel/selection [(sel/caret-para selection) 0])
+                                           (sel/selection [new-uuid 0])))
                        (changelist :inserted-uuids #{new-uuid}
-                                   :changed-uuids (if (or (= caret 0)
-                                                          (= caret (len (get-in doc [:children uuid]))))
-                                                    #{}
-                                                    #{uuid}))))))
+                                   :changed-uuids #{uuid})))))
   ([editor-state]
    (enter editor-state (random-uuid))))
 
@@ -236,7 +235,7 @@
       (->EditorUpdate (assoc editor-state :selection new-selection)
                       (changelist :changed-uuids (set/union #{(-> new-selection :start :paragraph)}
                                                             (sel/all-uuids selection))))))
-  (next-char [editor-state] "HELLO?" (nav-fallthrough editor-state nav/next-char))
+  (next-char [editor-state] (nav-fallthrough editor-state nav/next-char))
   (prev-char [editor-state] (nav-fallthrough editor-state nav/prev-char))
   (next-word [editor-state] (nav-fallthrough editor-state nav/next-word))
   (prev-word [editor-state] (nav-fallthrough editor-state nav/prev-word))

@@ -79,16 +79,17 @@
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
-  [dom-elem viewmodels changelist selection]
-  (let [{:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
+  [dom-elem editor-state viewmodels changelist]
+  (let [{:keys [doc selection]} editor-state
+        {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
-      (view/insert-para! dom-elem uuid (get viewmodels uuid)))
+      (view/insert-para! dom-elem uuid (get viewmodels uuid) doc selection))
     (doseq [uuid deleted-uuids]
       (view/remove-para! dom-elem uuid))
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
-;; TODO next: Fix click interceptor.
+;; TODO next: Fix delete interceptor used in conjunction with enter.
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.
@@ -114,9 +115,9 @@
                        new-ui-state)]
     (when-not (:no-dom-sync? interceptor)
       (sync-dom! (:dom-elem new-ui-state)
+                 (:editor-state editor-update)
                  (:viewmodels new-ui-state)
-                 (:changelist editor-update)
-                 (-> editor-update :editor-state :selection)))
+                 (:changelist editor-update)))
 
     (reset! *ui-state new-ui-state)
 

@@ -77,7 +77,7 @@
    (-write writer ", next-uuid: ") (-write writer next-uuid)
    (-write writer "}")))
 
-;; TODO: this shit blows up the whole project when you try to pretty-print it and throws
+;; TODO: this blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
 (deftype DoublyLinkedList [entries-map ; map of (UUID -> DLLEntry)
@@ -326,7 +326,6 @@
         items
         (recur (next list item) (conj items item))))))
 
-;; TODO: testme
 (defn range
   "Returns a sub-list of all the nodes between (and including) `uuid1` and `uuid2`."
   [list uuid1 uuid2]
