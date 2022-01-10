@@ -270,7 +270,11 @@
            offset-px 0
            prev-delta ##Inf]
       (if (= i (count chars-with-formats))
-        (:end-offset line)
+        ;; There is an invisible space at the end of each line - place the text caret directly in
+        ;; front of it, and the caret will be rendered at the start of the next line. However, it
+        ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
+        ;; show up on the next line, so we decrement by 1.
+        (dec (:end-offset line))
         (let [{:keys [char formats]} (nth chars-with-formats i)
               delta (js/Math.abs (- offset-px target-px))]
           (if (> delta prev-delta)
@@ -279,10 +283,6 @@
                    (inc offset)
                    (+ offset-px (measure-fn char formats))
                    delta)))))))
-
-;; TODO: I think these functions could be moved to the `events` namespace (once it's created),
-;; and we could just keep the helper functions it calls here, or better yet, move them into the
-;; measurement namespace.
 
 (defn down-selection
   "Move the caret down into the next line. Returns a new Selection."
@@ -431,21 +431,21 @@
 
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its UUID."
-  [paragraphs client-y prev-event]
+  [paragraphs-dll client-y prev-event]
   ;; (println "Finding overlap!")
   (let [para->bounds (fn [{:keys [uuid]}]
                        (let [bounding-rect (.getBoundingClientRect (.getElementById js/document (str uuid)))]
                          {:uuid uuid
                           :top (.-top bounding-rect)
                           :bottom (.-bottom bounding-rect)}))
-        first-para-bounds (-> paragraphs first para->bounds)
-        last-para-bounds (-> paragraphs peek para->bounds)]
+        first-para-bounds (-> paragraphs-dll first para->bounds)
+        last-para-bounds (-> paragraphs-dll peek para->bounds)]
     (cond
       (< client-y (:top first-para-bounds))
-      (-> paragraphs first :uuid)
+      (-> paragraphs-dll first :uuid)
 
       (> client-y (:bottom last-para-bounds))
-      (-> paragraphs peek :uuid)
+      (-> paragraphs-dll peek :uuid)
 
       ;; TODO: one way to further optimize this would be to cache the last drag event
       ;; and use that. I have a feeling that might be more trouble than its worth though,
@@ -457,19 +457,20 @@
             prev-para (match-elem-in-path prev-event ".paragraph")
             ;; Start searching at either the paragraph the
             ;; previous event took place in, or the first one
-            start-uuid (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs)))
+            start-uuid (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs-dll)))
             advance (if (and prev-para (neg? (- client-y (.-y prev-event))))
                          dll/prev
                          dll/next)]
         ;; TODO: okay, definitely some errors here...
-        (loop [p (get paragraphs start-uuid)]
+        (loop [p (get paragraphs-dll start-uuid)]
           (when (nil? p) (throw "I don't think this should ever happen..."))
 
           (if (overlaps? (para->bounds p))
             (:uuid p)
-            (recur (advance paragraphs p))))))))
+            (recur (advance paragraphs-dll p))))))))
 
-;; TODO: change this to handle mousevents that are outside the paragraph.
+(declare ^:dynamic *last-mousedown-event*)
+
 (defn mouse-event->selection
   "Takes a MouseEvent object and the editor state and, if its clientX and clientY
    are inside a paragraph, returns a single selection set to the paragraph and offset where the
@@ -487,20 +488,18 @@
    nearest paragraph is to get its bounding rect and compare. We don't want to have to search through the
    entire list of paragraphs and figure out which one is intersecting the mouse, so instead we can pass in
    a paragraph to start searching at."
-  ([event doc viewmodels measure-fn last-event]
+  ([event doc viewmodels measure-fn]
    (let [paragraph-in-path (match-elem-in-path event ".paragraph")
          paragraph-uuid (if paragraph-in-path
                           (.-id paragraph-in-path)
-                          (find-overlapping-paragraph (:children doc) (.-y event) last-event))
+                          (find-overlapping-paragraph (:children doc) (.-y event) *last-mousedown-event*))
          ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
          ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
          ; will still be valid, however, so we can just grab the current element like this.
          paragraph-elem (.getElementById js/document paragraph-uuid)
          vm (get viewmodels (uuid (.-id paragraph-elem)))
          sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]
-     sel))
-  ([event doc viewmodels measure-fn]
-   (mouse-event->selection event doc viewmodels measure-fn nil)))
+     sel)))
 
 (defn- drag-direction
   [started-at currently-at mousedown-event mousemove-event]
@@ -512,14 +511,14 @@
       :forward
       :backward)))
 
-#_(defn drag
-  [mousedown-event mousemove-event doc-state measure-fn]
-  (let [started-at (mouse-event->selection mousedown-event doc-state measure-fn)
-        currently-at (mouse-event->selection mousemove-event doc-state measure-fn mousedown-event)
-        dir (drag-direction started-at currently-at mousedown-event mousemove-event)]
+(defn drag
+  [mousemove-event doc viewmodels measure-fn]
+  (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels measure-fn)
+        currently-at (mouse-event->selection mousemove-event doc viewmodels measure-fn)
+        dir (drag-direction started-at currently-at *last-mousedown-event* mousemove-event)]
     (if (= dir :forward)
       (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
                      [(sel/caret-para currently-at) (sel/caret currently-at)])
       (sel/selection [(sel/caret-para currently-at) (sel/caret currently-at)]
                      [(sel/caret-para started-at) (sel/caret started-at)]
-                     true))))
+                     :backwards? true))))

@@ -29,12 +29,10 @@
     (es/set-selection editor-state new-sel)))
 
 (definterceptor drag
-  ;; FIXME - can't take multiple params anymore, this needs to be reworked
-  [editor-state ui-state mousemove-event mousedown-event]
-  nil
-  #_(es/set-selection editor-state (view/drag mousedown-event
-                                            mousemove-event
-                                            ui-state
+  [editor-state ui-state event]
+  (es/set-selection editor-state (view/drag event
+                                            (:doc editor-state)
+                                            (:viewmodels ui-state)
                                             (:measure-fn ui-state))))
 
 (definterceptor insert

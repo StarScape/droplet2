@@ -89,8 +89,7 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
-;; TODO next: Fix drag interceptor.
-;; TODO next: Fix clicking off the end of line displaying the cursor at the start of next line.
+;; TODO next: Surround interceptors, selection :formats, and history
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.
@@ -132,29 +131,30 @@
   [*ui-state]
   (let [get-interceptor (partial interceptors/find-interceptor (:interceptors @*ui-state))
         {editor-elem :dom-elem, hidden-input :hidden-input} @*ui-state]
-    ;; TODO: should probably add an explanatory comment about the relationship between these three events
-    (let [clicked? (atom false :validator boolean?)
+    (let [editor-surface-clicked? (atom false :validator boolean?)
           mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
 
       (.addEventListener editor-elem "mousedown"
                          (fn [e]
                            (.preventDefault e)
                            (.focus hidden-input)
-                           (reset! clicked? true)
+                           (reset! editor-surface-clicked? true)
                            (reset! mousedown-event e)
                            (fire-interceptor! *ui-state (get-interceptor :click) e)))
 
       (.addEventListener js/window "mousemove"
                          (fn [e]
-                           #_(when @clicked?
-                             ;; TODO: previously this was taking the @mousedown-event as a final param.
-                             ;; May need to add back the ability to add additional parameters in order
-                             ;; to get this to work.
-                             (fire-interceptor! *ui-state (get-interceptor :drag) e))))
+                           (when (and @editor-surface-clicked?
+                                      ;; Make sure it's actually still clicked down, if the user moved the mouse
+                                      ;; off-window and back the 'mouseup' event will not have set the atom back to false.
+                                      (= 1 (.-which e)))
+                             ;; *last-mousedown-event* is passed this way for optimization purposes
+                             (binding [view/*last-mousedown-event* @mousedown-event]
+                               (fire-interceptor! *ui-state (get-interceptor :drag) e)))))
 
       (.addEventListener js/window "mouseup"
                          (fn [_e]
-                           (reset! clicked? false))))
+                           (reset! editor-surface-clicked? false))))
     (.addEventListener
      hidden-input
      "keydown"
@@ -190,9 +190,6 @@
          (fire-interceptor! *ui-state (get-interceptor :delete) e)
 
          nil)))))
-
-;; TODO: get just the initial render working with the new system.
-;; Set the default editor-state to be something with a multiple-para selection.
 
 (defn init
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
