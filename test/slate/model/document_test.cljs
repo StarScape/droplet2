@@ -208,7 +208,7 @@
 
   (testing "works with range selection"
     (is (= (doc/enter doc (selection ["p2" 0] ["p2" 12]) "e1")
-           (document [p1, (p/empty-paragraph "p2"), (p/empty-paragraph "e1")])))))
+           (document [p1, (p/empty-paragraph "e1"), (p/empty-paragraph "p2")])))))
 
 (deftest selected-content-test
   (testing "returns list of runs when passed selection within one paragraph"

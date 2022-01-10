@@ -1,19 +1,15 @@
 (ns slate.default-interceptors
+  "Default set of interceptors that are added to a new editor.
+
+  Interceptors are meant for extensibility, but most of the default events are also
+  implemented using them, the idea being that eating our own dogfood is the only
+  way to end up with a sufficiently flexible and ergonomic system."
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [slate.interceptors]
             [slate.model.common :as m]
             [slate.model.editor-state :as es]
             [slate.model.navigation :as nav]
             [slate.view :as view]))
-
-;; TODO: can separate all the interceptors and their implementations (including those in view.cljs,
-;; which could be changed into interceptors) out into an "interceptors" namespace maybe?
-
-;; Default set of interceptors that are added to a new editor.
-;;
-;; Interceptors are meant for extensibility, but most of the default events are also
-;; implemented using them, the idea being that eating our own dogfood is the only
-;; way to end up with a sufficiently flexible and ergonomic system.
 
 ;; TODO: for interceptors that aren't dependent on the viewmodel or DOM state, there's no reason
 ;; I couldn't write unit tests for them. Should probably do that, so I can quickly identify any

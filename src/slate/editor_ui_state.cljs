@@ -89,7 +89,7 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
-;; TODO next: Surround interceptors, selection :formats, and history
+;; TODO next: Autosurround interceptors, selection :formats, and undo/redo
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.

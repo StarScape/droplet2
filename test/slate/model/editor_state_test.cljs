@@ -302,10 +302,10 @@
     (is (= (state/enter (editor-state doc (selection ["p1" 0])) "e1")
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "e1" [(run)]), p1, p2])
-                               :selection (selection ["e1" 0])})
+                               :selection (selection ["p1" 0])})
             {:inserted-uuids #{"e1"}
              :deleted-uuids #{}
-             :changed-uuids #{}}))))
+             :changed-uuids #{"p1"}}))))
 
   (testing "works at end of paragraph"
     (is (= (state/enter (editor-state doc (selection ["p1" 14])) "e1")
@@ -313,7 +313,7 @@
             (map->EditorState {:doc (document [p1, (paragraph "e1" [(run)]), p2])
                                :selection (selection ["e1" 0])})
             {:inserted-uuids #{"e1"}
-             :changed-uuids #{}
+             :changed-uuids #{"p1"}
              :deleted-uuids #{}}))))
 
   (testing "works in middle of paragraph"
@@ -335,16 +335,16 @@
             (map->EditorState {:doc (document [p1, p2, (paragraph "e1" [(run)])])
                                :selection (selection ["e1" 0])})
             {:inserted-uuids #{"e1"}
-             :changed-uuids #{}
+             :changed-uuids #{"p2"}
              :deleted-uuids #{}}))))
 
   (testing "works with range selection"
     (is (= (state/enter (editor-state doc (selection ["p2" 0] ["p2" 12])) "e1")
            (->EditorUpdate
-            (map->EditorState {:doc (document [p1, (p/empty-paragraph "p2"), (p/empty-paragraph "e1")])
-                               :selection (selection ["e1" 0])})
-            {:changed-uuids #{"p2"}
-             :inserted-uuids #{"e1"}
+            (map->EditorState {:doc (document [p1, (p/empty-paragraph "e1"), (p/empty-paragraph "p2")])
+                               :selection (selection ["p2" 0])})
+            {:inserted-uuids #{"e1"}
+             :changed-uuids #{"p2"}
              :deleted-uuids #{}})))))
 
 (deftest auto-surround-test
