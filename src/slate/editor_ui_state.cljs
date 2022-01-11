@@ -4,7 +4,7 @@
             [slate.model.editor-state :as es]
             [slate.model.history :as history]
             [slate.events :as events]
-            [slate.interceptors :as interceptors]
+            [slate.interceptors :as interceptors :refer [interceptor?]]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
             [slate.utils :refer [debounce]]
@@ -48,18 +48,22 @@
                               vms (concat inserted-uuids changed-uuids)))]
     (assoc ui-state :viewmodels updated-vms)))
 
-;; TODO: Can be moved to the interceptors NS
+;; TODO: Can be moved to the interceptors NS. Actually, the input-history stuff can
+;; probably be moved there as well. It's interdependent anyway.
 (defn find-completion
   "Takes the editor's interceptor map and input history, and returns
    a matching completion interceptor if one exists, or nil otherwise."
   [key-pressed interceptor-map input-history]
   {:pre [(vector? input-history)]}
   (let [completions (:completions interceptor-map)
-        path (reverse (conj input-history key-pressed))] ; [..., "c" "b", "a"]
+        completion-path (reverse (conj input-history key-pressed))] ; [..., "c" "b", "a"]
     (loop [current-level completions
-           [p & ps] path]
-      (let [next (current-level p)]
-        (if (or (nil? next) (fn? next)) next (recur next ps))))))
+           [p & ps] completion-path]
+      (let [next-level-or-interceptor (get current-level p)]
+        (if (or (nil? next-level-or-interceptor)
+                (interceptor? next-level-or-interceptor))
+          next-level-or-interceptor
+          (recur next-level-or-interceptor ps))))))
 
 (defn add-tip-to-backstack!
   [*ui-state]
@@ -89,6 +93,7 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
+;; TODO: regression in caret-line-idx
 ;; TODO next: Autosurround interceptors, selection :formats, and undo/redo
 
 (defn fire-interceptor!

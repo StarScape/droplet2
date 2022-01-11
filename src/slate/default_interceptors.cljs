@@ -107,6 +107,10 @@
   [editor-state ui-state _e]
   (view/shift+up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
+(definterceptor auto-surround-double-quote
+  [editor-state _ui-state _e]
+  (es/auto-surround editor-state "\""))
+
 (def default-interceptors
   {:click click
    :drag drag
@@ -126,6 +130,7 @@
    :shift+down shift+down
    :up up
    :shift+up shift+up
+   "\"" auto-surround-double-quote
    #_#_"\"" (fn [{:keys [doc selection], :as state} _e _default-interceptor]
           ;; TODO: add logic for only auto-surrounding at appropriate times,
           ;; e.g. NOT when next char is alphanumeric, or previous is. Also add a case

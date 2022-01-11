@@ -193,10 +193,21 @@
                             :doc (insert doc selection (str opening closing))
                             :selection (sel/shift-single selection 1))
                      (changelist :changed-uuids #{(-> selection :start :paragraph)}))
-     (->EditorUpdate (assoc editor-state :doc (-> doc
-                                                  (insert (sel/collapse-start selection) opening)
-                                                  (insert (sel/collapse-end selection) closing)))
-                     (changelist :changed-uuids (sel/all-uuids selection)))))
+     (let [opening-insert-point (sel/collapse-start selection)
+           closing-insert-point (sel/collapse-end selection)
+           same-para? (= (sel/caret-para opening-insert-point) (sel/caret-para closing-insert-point))
+           closing-insert-point (if same-para?
+                                  (sel/shift-single closing-insert-point 1)
+                                  closing-insert-point)
+           new-doc (-> doc
+                       (insert opening-insert-point opening)
+                       (insert closing-insert-point closing))
+           new-selection (update-in selection [:start :offset] inc)
+           new-selection (if same-para?
+                           (sel/shift-end new-selection 1)
+                           new-selection)]
+       (->EditorUpdate (assoc editor-state :doc new-doc :selection new-selection)
+                       (changelist :changed-uuids (sel/all-uuids selection))))))
   ([editor-state surround] (auto-surround editor-state surround surround)))
 
 (defn- nav-fallthrough

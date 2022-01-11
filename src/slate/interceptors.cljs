@@ -16,6 +16,11 @@
   (-invoke [this editor-state extras event-obj]
     ((:interceptor-fn this) editor-state extras event-obj)))
 
+(defn interceptor?
+  "Returns true if argument is an Interceptor."
+  [i]
+  (instance? Interceptor i))
+
 (comment
   (definterceptor fake-interceptor
     {:input-name :click

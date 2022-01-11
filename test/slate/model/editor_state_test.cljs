@@ -363,7 +363,7 @@
                                                                 (run "bizz" #{:italic})
                                                                 (run "buzz" #{:bold})])
                                                (p/paragraph "p2" [(r/run "aaa)bbbcccddd")])])
-                               :selection (selection ["p1" 0] ["p2" 3])})
+                               :selection (selection ["p1" 1] ["p2" 3])})
             (changelist :changed-uuids #{"p1" "p2"}))))))
 
 (deftest nav-functions-test
