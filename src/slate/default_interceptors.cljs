@@ -109,7 +109,15 @@
 
 (definterceptor auto-surround-double-quote
   [editor-state _ui-state _e]
-  (es/auto-surround editor-state "\""))
+  (es/auto-surround editor-state \"))
+
+(definterceptor auto-surround-single-quote
+  [editor-state _ui-state _e]
+  (es/auto-surround editor-state \'))
+
+(definterceptor auto-surround-paren
+  [editor-state _ui-state _e]
+  (es/auto-surround editor-state "(" ")"))
 
 (def default-interceptors
   {:click click
@@ -131,11 +139,5 @@
    :up up
    :shift+up shift+up
    "\"" auto-surround-double-quote
-   #_#_"\"" (fn [{:keys [doc selection], :as state} _e _default-interceptor]
-          ;; TODO: add logic for only auto-surrounding at appropriate times,
-          ;; e.g. NOT when next char is alphanumeric, or previous is. Also add a case
-          (let [new-doc (m/insert doc selection "\"\"")
-                new-selection (sel/shift-single selection 1)]
-            (assoc state
-                   :doc new-doc
-                   :selection new-selection)))})
+   "'" auto-surround-single-quote
+   "(" auto-surround-paren})

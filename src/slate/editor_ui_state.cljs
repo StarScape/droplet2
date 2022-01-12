@@ -1,5 +1,5 @@
 (ns slate.editor-ui-state
-  (:require-macros [slate.interceptors :refer [interceptor definterceptor]])
+  (:require-macros [slate.interceptors])
   (:require [clojure.spec.alpha :as s]
             [slate.model.editor-state :as es]
             [slate.model.history :as history]
