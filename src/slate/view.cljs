@@ -217,7 +217,7 @@
   [viewmodels selection]
   {:pre [(sel/single? selection)]}
   (let [caret (sel/caret selection)
-        vm (viewmodels (-> selection :start :paragraph))
+        vm (viewmodels (-> selection :start :paragraph)) ;; TODO: should arg be (sel/caret-para selection) instead?
         within-line? #(and (>= caret (:start-offset %)) (< caret (:end-offset %)))
         at-para-end? #(and (= caret (:end-offset %)) (= caret (sl/len (:paragraph vm))))
         lines (:lines vm)]
@@ -261,7 +261,18 @@
 (defn chars-and-formats [span] (map #(hash-map :char %, :formats (:formats span)) (:text span)))
 
 (defn nearest-line-offset-to-pixel
-  [line target-px measure-fn]
+  "Takes a viewmodel Line and a distance from the left side of the editor-element in pixels,
+   and returns the paragraph offset that is closest to that pixel position.
+
+   Arguments:
+   - `line`: viewmodel Line object
+   - `target-px`: target distance from left bound of editor element, in pixels
+   - `last-line-in-paragraph?`: bool, should be true if this is the last line in the paragraph,
+      as that will affect the logic somewhat.
+   - `measure-fn`: measure function to use"
+  [line target-px last-line-in-paragraph? measure-fn]
+  line
+  last-line-in-paragraph?
   (let [chars-with-formats (->> (:spans line)
                                 (map chars-and-formats (:spans line))
                                 (flatten))]
@@ -270,11 +281,15 @@
            offset-px 0
            prev-delta ##Inf]
       (if (= i (count chars-with-formats))
-        ;; There is an invisible space at the end of each line - place the text caret directly in
-        ;; front of it, and the caret will be rendered at the start of the next line. However, it
-        ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
-        ;; show up on the next line, so we decrement by 1.
-        (dec (:end-offset line))
+        ;; If we reach the end of the line without finding a matching offset, default to last offset
+        (if (not last-line-in-paragraph?)#_ (< 0 (:end-offset line))
+          ;; There is an invisible space at the end of each line - place the text caret directly in
+          ;; front of it, and the caret will be rendered at the start of the next line. However, it
+          ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
+          ;; show up on the next line, so we decrement by 1.
+          (dec (:end-offset line))
+          ;; ...however, this is NOT true whenever the line is the last in its paragraph
+          (:end-offset line))
         (let [{:keys [char formats]} (nth chars-with-formats i)
               delta (js/Math.abs (- offset-px target-px))]
           (if (> delta prev-delta)
@@ -291,11 +306,11 @@
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
         viewmodel (get viewmodels para-uuid)
-        line (line-with-caret viewmodels collapsed-sel)
+        caret-line (line-with-caret viewmodels collapsed-sel)
 
-        ;; Last line in paragraph?
-        last-line? (= line (peek (:lines viewmodel)))
-        next-line (if (not last-line?)
+        ;; Caret on last line in paragraph?
+        caret-in-last-line? (= caret-line (peek (:lines viewmodel)))
+        next-line (if (not caret-in-last-line?)
                     (line-below-caret viewmodels collapsed-sel)
                     (-> (:children doc)
                         (dll/next para-uuid)
@@ -303,12 +318,20 @@
                         (viewmodels)
                         (:lines)
                         (first)))
-        new-uuid (if last-line?
+        next-line-vm-paragraph (if (not caret-in-last-line?)
+                                 viewmodel
+                                 (-> (:children doc) (dll/next para-uuid) (:uuid) (viewmodels)))
+        next-line-is-last-line-in-its-paragraph? (= next-line
+                                                    (peek (:lines next-line-vm-paragraph)))
+        new-uuid (if caret-in-last-line?
                    (:uuid (dll/next (:children doc) para-uuid))
                    para-uuid)]
     (if next-line
-      (let [caret-offset-px (caret-px collapsed-sel line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel next-line caret-offset-px measure-fn)]
+      (let [caret-offset-px (caret-px collapsed-sel caret-line measure-fn)
+            next-line-offset (nearest-line-offset-to-pixel next-line
+                                                           caret-offset-px
+                                                           next-line-is-last-line-in-its-paragraph?
+                                                           measure-fn)]
         (sel/selection [new-uuid next-line-offset]))
       collapsed-sel)))
 
@@ -328,9 +351,9 @@
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
         viewmodel (get viewmodels para-uuid)
-        line (line-with-caret viewmodels collapsed-sel)
-        first-line? (= line (first (:lines viewmodel)))
-        prev-line (if (not first-line?)
+        caret-line (line-with-caret viewmodels collapsed-sel)
+        caret-in-first-line? (= caret-line (first (:lines viewmodel)))
+        prev-line (if (not caret-in-first-line?)
                     (line-above-caret viewmodels collapsed-sel)
                     (-> (:children doc)
                         (dll/prev para-uuid)
@@ -338,12 +361,15 @@
                         (viewmodels)
                         (:lines)
                         (peek)))
-        new-uuid (if first-line?
+        new-uuid (if caret-in-first-line?
                    (:uuid (dll/prev (:children doc) para-uuid))
                    para-uuid)]
     (if prev-line
-      (let [caret-offset-px (caret-px collapsed-sel line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
+      (let [caret-offset-px (caret-px collapsed-sel caret-line measure-fn)
+            next-line-offset (nearest-line-offset-to-pixel prev-line
+                                                           caret-offset-px
+                                                           caret-in-first-line?
+                                                           measure-fn)]
         (sel/selection [new-uuid next-line-offset]))
       collapsed-sel)))
 
@@ -423,10 +449,11 @@
                (< py 0) (first lines)
                (>= py (.-height dom-elem-rect)) (peek lines)
                :else (nth lines (int (/ py line-height))))
+        last-line? (= line (peek lines))
         offset (cond
                  (< px 0) (:start-offset line)
                  (> px (.-width dom-elem-rect)) (:end-offset line)
-                 :else (nearest-line-offset-to-pixel line px measure-fn))]
+                 :else (nearest-line-offset-to-pixel line px last-line? measure-fn))]
     (sel/selection [(:uuid paragraph) offset])))
 
 (defn find-overlapping-paragraph

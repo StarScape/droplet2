@@ -93,7 +93,6 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
-;; TODO: regression in caret-line-idx
 ;; TODO next: Autosurround interceptors, selection :formats, and undo/redo
 
 (defn fire-interceptor!
