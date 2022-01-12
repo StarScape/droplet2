@@ -6,7 +6,7 @@
             [clojure.spec.test.alpha :as stest]
             [slate.model.editor-state :as es]))
 
-;; An Interceptor is a a function of (editor-state, ui-state?) -> editor-state
+;; An Interceptor is a a function of (EditorState, EditorUiState?, Event?) -> EditorUpdate
 (defrecord Interceptor [interceptor-fn
                         input-name
                         include-in-history?
@@ -137,6 +137,21 @@
   [pattern]
   (concat [:completions] (reverse (.split pattern ""))))
 
+(defn find-completion
+  "Takes the interceptor map and input history, and returns
+   a matching completion interceptor if one exists, or nil otherwise."
+  [key-pressed interceptor-map input-history]
+  {:pre [(vector? input-history)]}
+  (let [completions (:completions interceptor-map)
+        completion-path (reverse (conj input-history key-pressed))] ; [..., "c" "b", "a"]
+    (loop [current-level completions
+           [p & ps] completion-path]
+      (let [next-level-or-interceptor (get current-level p)]
+        (if (or (nil? next-level-or-interceptor)
+                (interceptor? next-level-or-interceptor))
+          next-level-or-interceptor
+          (recur next-level-or-interceptor ps))))))
+
 (defmulti find-interceptor
   "Given a pattern or an event, returns the interceptor associated with it, or nil if one does not exist."
   (fn [_interceptors arg] (type arg)))
@@ -191,3 +206,19 @@
    and a completion-key is a string containing any typeable character."
   []
   {:shortcuts {}, :completions {}})
+
+;; Input history
+
+(def ^:const max-input-history 10)
+
+(defn add-to-input-history
+  "Adds the key to the vector of input history, dropping the least recent key
+   typed off the history vector if necessary, and returns the new history vector."
+  [input-history interceptor event]
+  (let [val-to-add (if (= :insert (:input-name interceptor))
+                     (.-data event)
+                     (:input-name interceptor))]
+    (conj (if (< (count input-history) max-input-history)
+            input-history
+            (subvec input-history 1))
+          val-to-add)))

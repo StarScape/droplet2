@@ -3,7 +3,6 @@
   (:require [clojure.spec.alpha :as s]
             [slate.model.editor-state :as es]
             [slate.model.history :as history]
-            [slate.events :as events]
             [slate.interceptors :as interceptors :refer [interceptor?]]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
@@ -47,23 +46,6 @@
                                 (assoc new-vms uuid (vm/from-para (get-para uuid) 200 measure-fn)))
                               vms (concat inserted-uuids changed-uuids)))]
     (assoc ui-state :viewmodels updated-vms)))
-
-;; TODO: Can be moved to the interceptors NS. Actually, the input-history stuff can
-;; probably be moved there as well. It's interdependent anyway.
-(defn find-completion
-  "Takes the editor's interceptor map and input history, and returns
-   a matching completion interceptor if one exists, or nil otherwise."
-  [key-pressed interceptor-map input-history]
-  {:pre [(vector? input-history)]}
-  (let [completions (:completions interceptor-map)
-        completion-path (reverse (conj input-history key-pressed))] ; [..., "c" "b", "a"]
-    (loop [current-level completions
-           [p & ps] completion-path]
-      (let [next-level-or-interceptor (get current-level p)]
-        (if (or (nil? next-level-or-interceptor)
-                (interceptor? next-level-or-interceptor))
-          next-level-or-interceptor
-          (recur next-level-or-interceptor ps))))))
 
 (defn add-tip-to-backstack!
   [*ui-state]
@@ -111,7 +93,7 @@
         editor-update (interceptor editor-state ui-state event)
         new-ui-state (-> ui-state
                          (update :history history/set-tip editor-update)
-                         (update :input-history events/add-key-to-history (:input-name interceptor))
+                         (update :input-history interceptors/add-to-input-history interceptor event)
                          (update-viewmodels-to-history-tip))
         new-ui-state (if (and (:add-to-history-immediately? interceptor)
                               (:include-in-history? interceptor))
@@ -186,7 +168,7 @@
          (let [{:keys [interceptors input-history]} @*ui-state
                ;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
                completion-interceptor (when (= 1 (.. e -data -length))
-                                        (find-completion (.-data e) interceptors input-history))
+                                        (interceptors/find-completion (.-data e) interceptors input-history))
                interceptor (or completion-interceptor (get-interceptor :insert))]
            (fire-interceptor! *ui-state interceptor e))
 

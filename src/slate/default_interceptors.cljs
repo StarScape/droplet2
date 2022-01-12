@@ -7,7 +7,7 @@
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [slate.interceptors]
             [slate.model.common :as m]
-            [slate.model.editor-state :as es]
+            [slate.model.editor-state :as es :refer [>>=]]
             [slate.model.navigation :as nav]
             [slate.view :as view]))
 
@@ -119,6 +119,12 @@
   [editor-state _ui-state _e]
   (es/auto-surround editor-state "(" ")"))
 
+(definterceptor transform-double-dash-to-em-dash
+  [editor-state _ _]
+  (-> (m/delete editor-state)
+      (>>= m/delete)
+      (>>= m/insert "—")))
+
 (def default-interceptors
   {:click click
    :drag drag
@@ -140,4 +146,5 @@
    :shift+up shift+up
    "\"" auto-surround-double-quote
    "'" auto-surround-single-quote
-   "(" auto-surround-paren})
+   "(" auto-surround-paren
+   "-- " transform-double-dash-to-em-dash})
