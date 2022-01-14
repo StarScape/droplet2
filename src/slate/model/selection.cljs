@@ -1,7 +1,10 @@
-(ns slate.model.selection)
+(ns slate.model.selection
+  "Functions for creating and manipulating Selection objects,
+   a basic building block of the editor which indicate where
+   the text cursor and selection are.")
 
-(defrecord Selection 
-  [start end backwards?])
+(defrecord Selection
+  [start end between backwards? formats])
 
 (defn selection
   "Creates a new selection.
@@ -17,16 +20,21 @@
      that there actually are no paragraphs between `:start` and `:end`.
 
    - `:backwards?`: a boolean indicating if the range selection is backwards, i.e. if
-   the text caret should be visible at the start instead of the end."
-  ([[start-paragraph start-offset] [end-paragraph end-offset] & {:keys [backwards? between]
+   the text caret should be visible at the start instead of the end.
+
+   - `:formats`: a set of the formats to use when inserting at the current single selection, or,
+   for range selections, the set of formats shared by _all_ of the selection."
+  ([[start-paragraph start-offset] [end-paragraph end-offset] & {:keys [backwards? between formats]
                                                                  :or {backwards? false
-                                                                      between #{}}}]
+                                                                      between #{}
+                                                                      formats #{}}}]
    (map->Selection {:start {:paragraph start-paragraph
                             :offset start-offset}
                     :end {:paragraph end-paragraph
                           :offset end-offset}
                     :backwards? backwards?
-                    :between between}))
+                    :between between
+                    :formats formats}))
   #_([start end]
    (selection start end))
   ([start]

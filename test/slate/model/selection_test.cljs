@@ -13,7 +13,8 @@
       (is (= sel (map->Selection {:start {:paragraph :p1, :offset 0}
                                   :end {:paragraph :p2, :offset 10}
                                   :backwards? true
-                                  :between #{}})))))
+                                  :between #{}
+                                  :formats #{}})))))
   (testing "Different ways of initializing selection"
     (let [s1 (selection [:p1 0] [:p1 0] :backwards? false)
           s2 (selection [:p1 0] [:p1 0])
@@ -21,7 +22,8 @@
       (is (= s1(map->Selection {:start {:paragraph :p1, :offset 0}
                               :end {:paragraph :p1, :offset 0}
                               :backwards? false
-                              :between #{}})))
+                              :between #{}
+                              :formats #{}})))
       (is (= s1 s2 s3)))))
 
 (deftest caret-test
@@ -65,21 +67,24 @@
                           :end {:paragraph :p1
                                 :offset 0}
                           :backwards? false
-                          :between #{}})))
+                          :between #{}
+                          :formats #{}})))
   (is (= (sel/collapse-end between-sel)
          (map->Selection {:start {:paragraph :p4
                                   :offset 10}
                           :end {:paragraph :p4
                                 :offset 10}
                           :backwards? false
-                          :between #{}})))
+                          :between #{}
+                          :formats #{}})))
   (is (= (sel/smart-collapse between-sel)
          (map->Selection {:start {:paragraph :p4
                                   :offset 10}
                           :end {:paragraph :p4
                                 :offset 10}
                           :backwards? false
-                          :between #{}}))))
+                          :between #{}
+                          :formats #{}}))))
 
 (deftest add-to-between
   (let [sel (selection ["p1" 0] ["p4" 0] :between #{"p2"})]
