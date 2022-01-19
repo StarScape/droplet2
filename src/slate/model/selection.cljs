@@ -100,12 +100,13 @@
   (selection [paragraph (+ n offset)]))
 
 (defn set-single
-  "Sets a single-selection to a given offset."
+  "Sets a single-selection to a given offset. Formats will be automatically reset to an empty set."
   [sel offset]
   {:pre [(single? sel), (nat-int? offset)]}
   (-> sel
       (assoc-in [:start :offset] offset)
-      (assoc-in [:end :offset] offset)))
+      (assoc-in [:end :offset] offset)
+      (assoc :formats #{})))
 
 (defn correct-orientation
   "Sets the selection's :backwards? field to false if it is a single selection."

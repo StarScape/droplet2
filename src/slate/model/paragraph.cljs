@@ -13,7 +13,7 @@
                                         blank?
                                         apply-format
                                         remove-format
-                                        shared-formats
+                                        formatting
                                         char-before
                                         char-at]]
             [slate.model.run :as r]
@@ -225,6 +225,15 @@
                      flatten vec optimize-runs)]
     (assoc para :runs new-runs)))
 
+(defn formatting-at [para sel]
+  (let [[run-idx _] (at-offset (:runs para) (sel/caret sel))]
+    (:formats ((:runs para) run-idx))))
+
+(defn formatting-before [para sel]
+  (if (zero? (sel/caret sel))
+    nil
+    (formatting-at para (sel/shift-single sel -1))))
+
 (extend-type Paragraph
   Selectable
   (char-at [para sel]
@@ -240,16 +249,19 @@
   ;; TODO: should this return a paragraph instead of a list of runs?
   (selected-content [para sel] (second (separate-selected (:runs para) sel)))
 
-  (shared-formats
-   ([para] (shared-formats para (selection [(:uuid para) 0] [(:uuid para) (len para)])))
+  (formatting
+   ([para] (formatting para (selection [(:uuid para) 0]
+                                       [(:uuid para) (len para)])))
    ([para sel]
-    (let [runs (:runs para)
-          [start-run-idx _] (at-offset runs (-> sel :start :offset))
-          [end-run-idx _] (before-offset runs (-> sel :end :offset))
-          selected-runs (subvec runs start-run-idx (inc end-run-idx))]
-      (->> selected-runs
-           (map :formats)
-           (apply set/intersection)))))
+    (if (contains? (:between sel) (:uuid para))
+      (formatting para)
+      (let [runs (:runs para)
+            [start-run-idx _] (at-offset runs (-> sel :start :offset))
+            [end-run-idx _] (before-offset runs (-> sel :end :offset))
+            selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+        (->> selected-runs
+             (map :formats)
+             (apply set/intersection))))))
 
   (toggle-format
    [para sel format]

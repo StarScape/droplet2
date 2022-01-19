@@ -204,4 +204,4 @@
     (init-event-handlers! *ui-state)
     (init-dom! @*ui-state)
 
-    editor-state))
+    *ui-state))

@@ -210,21 +210,36 @@
     "Expands or contracts the caret side of the selection by a word, depending if the selection is
     backwards or forwards respectively. Equivalent to the behavior of pressing ctrl+shift+left."))
 
+(defn autoset-formats
+  [selection para_or_doc]
+  {:pre [(sel/single? selection)]}
+  (let [para (condp = (type para_or_doc)
+               Paragraph para_or_doc
+               Document (get (:children para_or_doc) (sel/caret-para selection)))
+        formats (if (zero? (sel/caret selection))
+                  (p/formatting-at para selection)
+                  (p/formatting-before para selection))]
+    (assoc selection :formats formats)))
+
 (extend-type Paragraph
   Navigable
   (start [para]
-    (selection [(:uuid para) 0]))
+    (-> (selection [(:uuid para) 0])
+        (autoset-formats para)))
 
   (end [para]
-    (selection [(:uuid para) (m/len para)]))
+    (-> (selection [(:uuid para) (m/len para)])
+        (autoset-formats para)))
 
   (next-char [para sel]
     (cond
       (range? sel)
-      (sel/collapse-end sel)
+      (-> (sel/collapse-end sel)
+          (autoset-formats para))
 
       (and (single? sel) (< (caret sel) (m/len para)))
-      (sel/shift-single sel 1)
+      (-> (sel/shift-single sel 1)
+          (autoset-formats para))
 
       :else
       sel))
@@ -232,10 +247,12 @@
   (prev-char [para sel]
     (cond
       (range? sel)
-      (sel/collapse-start sel)
+      (-> (sel/collapse-start sel)
+          (autoset-formats para))
 
       (and (single? sel) (pos? (caret sel)))
-      (sel/shift-single sel -1)
+      (-> (sel/shift-single sel -1)
+          (autoset-formats para))
 
       :else
       sel))
@@ -244,41 +261,53 @@
     (let [text (apply str (map :text (:runs para)))
           collapsed (smart-collapse sel)
           offset (next-word-offset text (caret collapsed))]
-      (sel/set-single collapsed offset)))
+      (-> (sel/set-single collapsed offset)
+          (autoset-formats para))))
 
   (prev-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           collapsed (smart-collapse sel)
           offset (prev-word-offset text (caret collapsed))]
-      (sel/set-single collapsed offset))))
+      (-> (sel/set-single collapsed offset)
+          (autoset-formats para)))))
 
 (extend-type Document
   Navigable
   (start [doc]
-    (selection [(:uuid (dll/first (:children doc))) 0]))
+    (-> (selection [(:uuid (dll/first (:children doc))) 0])
+        (autoset-formats doc)))
 
   (end [doc]
     (let [last-para (dll/last (:children doc))]
-      (selection [(:uuid last-para) (m/len last-para)])))
+      (-> (selection [(:uuid last-para) (m/len last-para)])
+          (autoset-formats last-para))))
 
   (next-char [doc sel]
     (if (range? sel)
-      (sel/collapse-end sel)
+      (-> (sel/collapse-end sel) (autoset-formats doc))
       (let [para ((:children doc) (-> sel :start :paragraph))]
+        ;; At end of paragraph?
         (if (= (caret sel) (m/len para))
+          ;; At end of _last_ paragraph?
           (if (doc/last-para? doc para)
             sel
+            ;; At end of different paragraph, goto start of next one
             (start (dll/next (:children doc) para)))
+          ;; Not at end of paragraph, defer to Paragraph's next-char impl
           (next-char para sel)))))
 
   (prev-char [doc sel]
     (if (range? sel)
-      (sel/collapse-start sel)
+      (-> (sel/collapse-start sel) (autoset-formats doc))
       (let [para ((:children doc) (-> sel :start :paragraph))]
+        ;; At start of paragraph?
         (if (zero? (caret sel))
+          ;; At start of _first_ paragraph?
           (if (doc/first-para? doc para)
             sel
+            ;; At start of different paragraph, goto end of previous one
             (end (dll/prev (:children doc) para)))
+          ;; Not at start of paragraph, defer to Paragraph's prev-char impl
           (prev-char para sel)))))
 
   (next-word [doc sel]
@@ -287,8 +316,7 @@
           para ((:children doc) para-uuid)]
       (if (and (= (sel/caret collapsed) (m/len para))
                (not= para (dll/last (:children doc))))
-        ;; TODO: can change to a call to (start) once that is implemented
-        (selection [(:uuid (dll/next (:children doc) para)), 0])
+        (start (dll/next (:children doc) para))
         (next-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
   (prev-word [doc sel]
@@ -297,9 +325,7 @@
           para ((:children doc) para-uuid)]
       (if (and (= 0 (sel/caret collapsed))
                (not= para (dll/first (:children doc))))
-        ;; TODO: can change to a call to (end) once that is implemented
-        (let [prev-para (dll/prev (:children doc) para)]
-          (selection [(:uuid prev-para), (m/len prev-para)]))
+        (end (dll/prev (:children doc) para))
         (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
   ;; TODO: It's possible these can be cleaned up, but *write tests* before

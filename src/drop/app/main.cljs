@@ -1,8 +1,10 @@
 (ns drop.app.main
-  (:require [slate.model.run :refer [run]]
+  (:require [clojure.string :as str]
+            [slate.model.run :refer [run]]
             [slate.model.paragraph :refer [paragraph]]
             [slate.model.doc :refer [document]]
             [slate.model.editor-state :refer [editor-state]]
+            [slate.model.history :as history]
             [slate.core :as sl]))
 
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
@@ -25,6 +27,16 @@
 (def *ui-state (sl/init :editor-state (editor-state doc)
                         :dom-elem fake-editor
                         :hidden-input hidden-input))
+
+(defn update-formats-elem
+  [key atom old-state new-state]
+  (let [sel (:selection (history/current-state (:history new-state)))
+        formats-str (str "Formats: " (str/join \, (:formats sel)))
+        elem (js/document.getElementById "formats")]
+    (set! (.-innerHTML elem) formats-str)))
+(update-formats-elem nil nil nil @*ui-state)
+
+(add-watch *ui-state :formats-watcher update-formats-elem)
 
 (defn main [])
 

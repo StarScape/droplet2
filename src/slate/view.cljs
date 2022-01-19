@@ -5,6 +5,7 @@
             [slate.model.selection :as sel]
             [slate.model.common :as sl]
             [slate.model.editor-state :as es]
+            [slate.model.navigation :as nav]
             [slate.dll :as dll]))
 
 ;; Utility functions
@@ -332,7 +333,7 @@
                                                            caret-offset-px
                                                            next-line-is-last-line-in-its-paragraph?
                                                            measure-fn)]
-        (sel/selection [new-uuid next-line-offset]))
+        (nav/autoset-formats (sel/selection [new-uuid next-line-offset]) doc))
       collapsed-sel)))
 
 (defn down
@@ -370,7 +371,7 @@
                                                            caret-offset-px
                                                            caret-in-first-line?
                                                            measure-fn)]
-        (sel/selection [new-uuid next-line-offset]))
+        (nav/autoset-formats (sel/selection [new-uuid next-line-offset]) doc))
       collapsed-sel)))
 
 (defn up

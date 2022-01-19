@@ -166,14 +166,14 @@
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "goobar2")]))))))
 
-(deftest shared-formats-test
+(deftest formatting-test
   (testing "with a shared format across many runs"
     (let [p (paragraph "123" [(run "a", #{:italic :bold})
                               (run "b", #{:italic :underline})
                               (run "c", #{:italic :strikethrough})
                               (run "d", #{:italic})])]
       (is (= #{:italic}
-             (sl/shared-formats p (selection ["123" 0] ["123" (sl/len p)]))))))
+             (sl/formatting p (selection ["123" 0] ["123" (sl/len p)]))))))
 
   (testing "with a no shared formats"
     (let [p (paragraph "123" [(run "a", #{:italic :bold})
@@ -181,7 +181,7 @@
                               (run "c", #{:strikethrough})
                               (run "d", #{:italic})])]
       (is (= #{}
-             (sl/shared-formats p (selection ["123" 0] ["123" (sl/len p)]))))))
+             (sl/formatting p (selection ["123" 0] ["123" (sl/len p)]))))))
 
   (testing "single run"
     (let [p (paragraph "123" [(run "a", #{:italic :bold})
@@ -189,7 +189,7 @@
                               (run "c", #{:strikethrough})
                               (run "d", #{:italic})])]
       (is (= #{:italic :bold}
-             (sl/shared-formats p (selection ["123" 0] ["123" 1]))))))
+             (sl/formatting p (selection ["123" 0] ["123" 1]))))))
 
   (testing "two runs"
     (let [p (paragraph "123" [(run "aa", #{:italic :bold})
@@ -197,8 +197,8 @@
                               (run "cc", #{:strikethrough})
                               (run "dd", #{:italic})])]
       (is (= #{:italic}
-             (sl/shared-formats p (selection ["123" 0] ["123" 3]))
-             (sl/shared-formats p (selection ["123" 0] ["123" 4]))))))
+             (sl/formatting p (selection ["123" 0] ["123" 3]))
+             (sl/formatting p (selection ["123" 0] ["123" 4]))))))
 
   (testing "single-arity version selections whole paragraph"
     (let [p (paragraph "123" [(run "aa", #{:italic :bold})
@@ -206,8 +206,8 @@
                               (run "cc", #{:italic :strikethrough})
                               (run "dd", #{:italic})])]
       (is (= #{:italic}
-             (sl/shared-formats p (selection ["123" 0] ["123" 3]))
-             (sl/shared-formats p (selection ["123" 0] ["123" 4])))))))
+             (sl/formatting p (selection ["123" 0] ["123" 3]))
+             (sl/formatting p (selection ["123" 0] ["123" 4])))))))
 
 ;; TODO: test for selected-content
 

@@ -177,6 +177,7 @@
   ([editor-state]
    (enter editor-state (random-uuid))))
 
+;; TODO: Auto-set :formats on selection
 (defn set-selection
   "Returns a new EditorUpdate with the selection set to `new-selection`."
   [{:keys [selection] :as editor-state} new-selection]
@@ -265,8 +266,8 @@
   ;;   (char-before doc selection))
   ;; (selected-content [{:keys [doc selection]}]
   ;;   (selected-content doc selection))
-  ;; (shared-formats [{:keys [doc selection]}]
-  ;;   (shared-formats doc selection))
+  ;; (formatting [{:keys [doc selection]}]
+  ;;   (formatting doc selection))
   ;; (toggle-format [{:keys [doc selection] :as editor-state}]
   ;;   (let [doc-children (:children doc)
   ;;         start-para-uuid (-> selection :start :paragraph)

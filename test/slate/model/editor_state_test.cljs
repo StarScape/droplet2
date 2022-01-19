@@ -369,10 +369,10 @@
 (deftest nav-functions-test
   (testing "start and end work"
     (is (= (nav/start (editor-state doc (selection ["p1" 3])))
-           (->EditorUpdate (editor-state doc (selection ["p1" 0]))
+           (->EditorUpdate (editor-state doc (selection ["p1" 0] ["p1" 0] :formats #{:italic}))
                            (changelist :changed-uuids #{"p1"}))))
     (is (= (nav/start (editor-state doc (selection ["p1" 0] ["p2" 3])))
-           (->EditorUpdate (editor-state doc (selection ["p1" 0]))
+           (->EditorUpdate (editor-state doc (selection ["p1" 0] ["p1" 0] :formats #{:italic}))
                            (changelist :changed-uuids #{"p1" "p2"}))))
     (is (= (nav/end (editor-state doc (selection ["p1" 3])))
            (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
@@ -388,13 +388,13 @@
   ;; so testing one is basically the same as testing all of them.
   (testing "rest work"
     (is (= (nav/next-char (editor-state doc (selection ["p1" 0])))
-           (->EditorUpdate (editor-state doc (selection ["p1" 1]))
+           (->EditorUpdate (editor-state doc (selection ["p1" 1] ["p1" 1] :formats #{:italic}))
                            (changelist :changed-uuids #{"p1"}))))
-    (is (= (nav/next-char (editor-state doc (selection ["p1" 14])))
+    (is (= (nav/next-char (editor-state doc (selection ["p1" 14] ["p1" 14] :formats #{:bold})))
            (->EditorUpdate (editor-state doc (selection ["p2" 0]))
                            (changelist :changed-uuids #{"p1" "p2"}))))
     (is (= (nav/next-char (editor-state long-doc (selection ["d1" 0] ["d3" 4] :between #{"d2"})))
-           (->EditorUpdate (editor-state long-doc (selection ["d3" 4]))
+           (->EditorUpdate (editor-state long-doc (selection ["d3" 4] ["d3" 4] :formats #{:underline}))
                            (changelist :changed-uuids #{"d1" "d2" "d3"}))))))
 
 (deftest selectable-functions-test
@@ -470,18 +470,18 @@
 ;;     (is (= [(paragraph "d1" [(run "foo1" #{:italic})]) (paragraph "d2" [])]
 ;;            (sl/selected-content long-doc (selection ["d1" 0] ["d2" 0]))))))
 
-;; (deftest shared-formats-test
+;; (deftest formatting-test
 ;;   (let [formats-doc (document [(paragraph "f1" [(run "foo1" #{:italic})
 ;;                                                 (run "foo2" #{:italic :bold})
 ;;                                                 (run "foo3" #{:bold})])
 ;;                                (paragraph "f2" [(run "bar1" #{:italic :bold :underline})])])]
 ;;     (testing "works inside same paragraph"
-;;       (is (= #{:italic} (sl/shared-formats formats-doc (selection ["f1" 0] ["f1" 8]))))
-;;       (is (= #{:italic :bold} (sl/shared-formats formats-doc (selection ["f1" 4] ["f1" 8]))))
-;;       (is (= #{:bold} (sl/shared-formats formats-doc (selection ["f1" 4] ["f1" 12])))))
+;;       (is (= #{:italic} (sl/formatting formats-doc (selection ["f1" 0] ["f1" 8]))))
+;;       (is (= #{:italic :bold} (sl/formatting formats-doc (selection ["f1" 4] ["f1" 8]))))
+;;       (is (= #{:bold} (sl/formatting formats-doc (selection ["f1" 4] ["f1" 12])))))
 
 ;;     (testing "works across paragraphs"
-;;       (is (= #{:bold} (sl/shared-formats formats-doc (selection ["f1" 8] ["f2" 3])))))))
+;;       (is (= #{:bold} (sl/formatting formats-doc (selection ["f1" 8] ["f2" 3])))))))
 
 ;; ;; TODO NEXT: fix toggle-format tests
 ;; ;; TODO after that: get new transaction system rendering properly/fix any errors it's caused with view and event handling layers.

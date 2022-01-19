@@ -41,7 +41,7 @@
     [container sel]
     "Returns the content within the range-selection inside the container, either as a vector
     of runs or a list (probably a dll) of paragraphs, depending which is appropriate.")
-  (shared-formats
+  (formatting
     [container]
     [container sel]
     "Returns the set of all the formats shared by each run that is wholly or partially

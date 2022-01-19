@@ -12,7 +12,7 @@
                                         toggle-format
                                         apply-format
                                         remove-format
-                                        shared-formats
+                                        formatting
                                         char-before
                                         char-at]]
             [slate.model.run :as r :refer [Run]]
@@ -163,7 +163,7 @@
 
 (defmethod insert [Document Selection js/String]
   [doc sel text]
-  (insert-into-single-paragraph doc sel (r/run text)))
+  (insert-into-single-paragraph doc sel (r/run text (:formats sel))))
 
 (defn insert-paragraph-before
   "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.
@@ -260,19 +260,19 @@
           (dll/prepend (p/delete-before start-para (-> sel :start :offset)))
           (conj (p/delete-after end-para (-> sel :end :offset)))))))
 
-(defn doc-shared-formats [doc sel]
+(defn doc-formatting [doc sel]
   (if (sel/single-paragraph? sel)
     ;; TODO: it is probably worth having a (get-paragraph) function that takes a Document and UUID
-    (shared-formats ((:children doc) (-> sel :start :paragraph)) sel)
+    (formatting ((:children doc) (-> sel :start :paragraph)) sel)
     (->> (selected-content doc sel)
-         (map shared-formats)
+         (map (comp set formatting))
          (apply set/intersection))))
 
 (defn doc-toggle-format [doc sel format]
   (if (sel/single-paragraph? sel)
     (update-in doc [:children (sel/start-para sel)] #(toggle-format % sel format))
     (let [children (:children doc)
-          common-formats (shared-formats doc sel)
+          common-formats (formatting doc sel)
           format-fn (if (contains? common-formats format) remove-format apply-format)
 
           start-para-uuid (-> sel :start :paragraph)
@@ -310,7 +310,7 @@
   (char-at [doc sel] (char-at ((:children doc) (sel/start-para sel)) sel))
   (char-before [doc sel] (char-before ((:children doc) (sel/start-para sel)) sel))
   (selected-content [doc sel] (doc-selected-content doc sel)) ; TODO: how to handle UUIDs with this?
-  (shared-formats [doc sel] (doc-shared-formats doc sel))
+  (formatting [doc sel] (doc-formatting doc sel))
   (toggle-format [doc sel format] (doc-toggle-format doc sel format))
   ;; Formattable can be implemented as well if needed
   )
