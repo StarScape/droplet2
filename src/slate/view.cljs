@@ -333,7 +333,7 @@
                                                            caret-offset-px
                                                            next-line-is-last-line-in-its-paragraph?
                                                            measure-fn)]
-        (nav/autoset-formats (sel/selection [new-uuid next-line-offset]) doc))
+        (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset])))
       collapsed-sel)))
 
 (defn down
@@ -371,7 +371,7 @@
                                                            caret-offset-px
                                                            caret-in-first-line?
                                                            measure-fn)]
-        (nav/autoset-formats (sel/selection [new-uuid next-line-offset]) doc))
+        (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset])))
       collapsed-sel)))
 
 (defn up

@@ -29,7 +29,6 @@
                                           ::input-history
                                           ::viewmodels
                                           ::interceptors]))
-
 (defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
@@ -74,8 +73,6 @@
       (view/remove-para! dom-elem uuid))
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
-
-;; TODO next: Selection :formats, and undo/redo
 
 (defn fire-interceptor!
   "The fire-interceptor! function is the core of Slate's main data loop.

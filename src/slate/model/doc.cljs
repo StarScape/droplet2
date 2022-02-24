@@ -261,12 +261,12 @@
           (conj (p/delete-after end-para (-> sel :end :offset)))))))
 
 (defn doc-formatting [doc sel]
-  (if (sel/single-paragraph? sel)
-    ;; TODO: it is probably worth having a (get-paragraph) function that takes a Document and UUID
-    (formatting ((:children doc) (-> sel :start :paragraph)) sel)
-    (->> (selected-content doc sel)
-         (map (comp set formatting))
-         (apply set/intersection))))
+  (let [caret-para (get (:children doc) (sel/caret-para sel))]
+    (if (sel/single-paragraph? sel)
+      (formatting caret-para sel)
+      (->> (selected-content doc sel)
+           (map (comp set formatting))
+           (apply set/intersection)))))
 
 (defn doc-toggle-format [doc sel format]
   (if (sel/single-paragraph? sel)

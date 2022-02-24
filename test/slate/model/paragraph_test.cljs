@@ -248,6 +248,13 @@
 ;;     (testing "not activated on whole selection, should activate"
 ;;       (is (= #{:})))))
 
+(deftest get-formatting-test
+  (let [p (paragraph "p1" [(run "f" #{:italic}) (run "oo" #{:bold})])]
+    (is (= #{:italic} (sl/formatting p (selection ["p1" 0]))))
+    (is (= #{:italic} (sl/formatting p (selection ["p1" 1]))))
+    (is (= #{:bold} (sl/formatting p (selection ["p1" 2]))))
+    (is (= #{:bold} (sl/formatting p (selection ["p1" (sl/len p)]))))))
+
 (deftest char-at-test
   (let [mypara (paragraph "123" [(run "foo")])]
     (is (= "f" (sl/char-at mypara (selection ["123" 0]))))

@@ -255,13 +255,15 @@
    ([para sel]
     (if (contains? (:between sel) (:uuid para))
       (formatting para)
-      (let [runs (:runs para)
-            [start-run-idx _] (at-offset runs (-> sel :start :offset))
-            [end-run-idx _] (before-offset runs (-> sel :end :offset))
-            selected-runs (subvec runs start-run-idx (inc end-run-idx))]
-        (->> selected-runs
-             (map :formats)
-             (apply set/intersection))))))
+      (if (sel/single? sel)
+        (if (zero? (sel/caret sel)) (formatting-at para sel) (formatting-before para sel))
+        (let [runs (:runs para)
+              [start-run-idx _] (at-offset runs (-> sel :start :offset))
+              [end-run-idx _] (before-offset runs (-> sel :end :offset))
+              selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+          (->> selected-runs
+               (map :formats)
+               (apply set/intersection)))))))
 
   (toggle-format
    [para sel format]

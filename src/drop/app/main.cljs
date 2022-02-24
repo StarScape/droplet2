@@ -7,12 +7,16 @@
             [slate.model.history :as history]
             [slate.core :as sl]))
 
+;; INPROG: Keep track of :formats on Selection object, implement for rest of nav methods, for click and drag as well
+;; TODO: undo/redo
+
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
 ;; TODO: Make a React element that encapsulates the editor. This should
 ;; live at the app level, not the Slate library level.
 ;; TODO: Handle resizing of the text area
 
 ;; TODO: Handle inserting with styles (maybe add a 'current-style' to the doc-state object?)
+
 
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))
