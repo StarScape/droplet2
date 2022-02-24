@@ -455,7 +455,7 @@
                  (< px 0) (:start-offset line)
                  (> px (.-width dom-elem-rect)) (:end-offset line)
                  :else (nearest-line-offset-to-pixel line px last-line? measure-fn))]
-    (sel/selection [(:uuid paragraph) offset])))
+    (nav/autoset-formats paragraph (sel/selection [(:uuid paragraph) offset]))))
 
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its UUID."
@@ -543,10 +543,11 @@
   [mousemove-event doc viewmodels measure-fn]
   (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels measure-fn)
         currently-at (mouse-event->selection mousemove-event doc viewmodels measure-fn)
-        dir (drag-direction started-at currently-at *last-mousedown-event* mousemove-event)]
-    (if (= dir :forward)
-      (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
-                     [(sel/caret-para currently-at) (sel/caret currently-at)])
-      (sel/selection [(sel/caret-para currently-at) (sel/caret currently-at)]
-                     [(sel/caret-para started-at) (sel/caret started-at)]
-                     :backwards? true))))
+        dir (drag-direction started-at currently-at *last-mousedown-event* mousemove-event)
+        raw-selection (if (= dir :forward)
+                        (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
+                                       [(sel/caret-para currently-at) (sel/caret currently-at)])
+                        (sel/selection [(sel/caret-para currently-at) (sel/caret currently-at)]
+                                       [(sel/caret-para started-at) (sel/caret started-at)]
+                                       :backwards? true))]
+    (nav/autoset-formats doc raw-selection)))

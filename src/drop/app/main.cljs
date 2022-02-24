@@ -7,7 +7,7 @@
             [slate.model.history :as history]
             [slate.core :as sl]))
 
-;; INPROG: Keep track of :formats on Selection object, implement for rest of nav methods, for click and drag as well
+;; INPROG: Keep track of :formats on Selection object, insert automatically with current :formats
 ;; TODO: undo/redo
 
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
