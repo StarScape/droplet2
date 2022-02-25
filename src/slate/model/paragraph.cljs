@@ -69,10 +69,10 @@
 
 ;; These two functions are poorly named, really. Should probably be something like
 ;; run-idx-and-run-relative-offset-from-paragraph-offset, but I haven't come up with
-;; anything that's descriptive enough and without being verbose.
-;;
-;; There are a bit more complicated than I would like them to be, but at least the
-;; complexity is mostly contained here.
+;; anything that's descriptive enough without being mega-verbose.
+
+;; There are a bit more complicated and loop-y than I would like them to be, but at
+;; least the complexity is mostly contained here.
 
 (defn at-offset
   "Returns the index of the run that `offset` falls inside of, as well as the
@@ -84,10 +84,9 @@
     (loop [run-idx -1, offset-into-run 0, sum-prev-offsets 0]
       (if (> sum-prev-offsets offset)
         [run-idx offset-into-run]
-        (recur
-         (inc run-idx)
-         (- offset sum-prev-offsets)
-         (+ sum-prev-offsets (len (nth runs (inc run-idx)))))))))
+        (recur (inc run-idx)
+               (- offset sum-prev-offsets)
+               (+ sum-prev-offsets (len (nth runs (inc run-idx)))))))))
 
 (defn before-offset
   "Returns the index of the run immediately before `offset`, as well as the
@@ -231,7 +230,7 @@
 
 (defn formatting-before [para sel]
   (if (zero? (sel/caret sel))
-    nil
+    (throw "This should never happen, check formatting-before function.")
     (formatting-at para (sel/shift-single sel -1))))
 
 (extend-type Paragraph

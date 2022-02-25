@@ -87,10 +87,13 @@
   (if (sel/range? selection)
     (-> (delete editor-state)
         (>>= insert content))
-    (->EditorUpdate (assoc editor-state
-                           :doc (insert doc selection content)
-                           :selection (sel/shift-single selection (len content)))
-                    (changelist :changed-uuids #{(sel/start-para selection)}))))
+    (let [new-doc (insert doc selection content)
+          new-sel (->> (sel/shift-single selection (len content))
+                       (nav/autoset-formats new-doc))]
+      (->EditorUpdate (assoc editor-state
+                             :doc new-doc
+                             :selection new-sel)
+                      (changelist :changed-uuids #{(sel/start-para selection)})))))
 
 (defmethod insert [EditorState [Run]]
   [editor-state runs]
@@ -100,13 +103,14 @@
   [{:keys [doc selection] :as editor-state}, paragraphs]
   (if (sel/range? selection)
     (-> editor-state (delete) (insert paragraphs))
-    (->EditorUpdate (assoc editor-state
-                           :doc (insert doc selection paragraphs)
-                           :selection (let [last-paragraph (peek paragraphs)]
-                                        (sel/selection [(:uuid last-paragraph) (len last-paragraph)])))
-                    (changelist :changed-uuids #{(sel/start-para selection)}
-                                :inserted-uuids (-> (map :uuid (drop 1 paragraphs))
-                                                    (set))))))
+    (let [last-paragraph (peek paragraphs)
+          new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
+                             (nav/autoset-formats last-paragraph))]
+      (->EditorUpdate (assoc editor-state
+                             :doc (insert doc selection paragraphs)
+                             :selection new-selection)
+                      (changelist :changed-uuids #{(sel/start-para selection)}
+                                  :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))
 
 (defmethod insert [EditorState Paragraph]
   [editor-state paragraph]
@@ -117,8 +121,9 @@
   (insert-text-container editor-state run))
 
 (defmethod insert [EditorState js/String]
-  [editor-state text]
-  (insert-text-container editor-state text))
+  [{:keys [selection] :as editor-state} text]
+  ;; Insert string == insert run with current active formats
+  (insert editor-state (r/run text (:formats selection))))
 
 (defmethod delete [EditorState]
   [{:keys [doc selection] :as editor-state}]
@@ -131,16 +136,18 @@
           ; First char of first paragraph, do nothing
           (identity-update editor-state)
           ; First char of a different paragraph, merge with previous
-          (let [prev-para (dll/prev (:children doc) startp-uuid)]
+          (let [prev-para (dll/prev (:children doc) startp-uuid)
+                new-selection (->> (sel/selection [(:uuid prev-para), (len prev-para)])
+                                   (nav/autoset-formats prev-para))]
             (->EditorUpdate (assoc editor-state
                                    :doc new-doc
-                                   :selection (sel/selection [(:uuid prev-para), (len prev-para)]))
+                                   :selection new-selection)
                             (changelist :changed-uuids #{(:uuid prev-para)}
                                         :deleted-uuids #{startp-uuid}))))
         ; Not the first char of the selected paragraph, normal backspace
         (->EditorUpdate (assoc editor-state
                                :doc new-doc
-                               :selection (sel/shift-single selection -1))
+                               :selection (nav/autoset-formats new-doc (sel/shift-single selection -1)))
                         (changelist :changed-uuids #{startp-uuid})))
       ;; Range selection
       (let [startp-uuid (-> selection :start :paragraph)
@@ -152,7 +159,7 @@
                                                             (set))))]
         (->EditorUpdate (assoc editor-state
                                :doc new-doc
-                               :selection (sel/collapse-start selection))
+                               :selection (nav/autoset-formats new-doc (sel/collapse-start selection)))
                         new-changelist)))))
 
 (defn enter

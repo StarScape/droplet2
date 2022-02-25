@@ -7,8 +7,10 @@
             [slate.model.history :as history]
             [slate.core :as sl]))
 
-;; INPROG: Keep track of :formats on Selection object, insert automatically with current :formats
+;; INPROG: Keep track of :formats on Selection object, keep track of after (enter) called
+;; TODO: format toggling (ctrl+i, ctrl+b, etc.)
 ;; TODO: undo/redo
+;; TODO: separate keymappings for macOS
 
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
 ;; TODO: Make a React element that encapsulates the editor. This should

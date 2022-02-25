@@ -80,7 +80,7 @@
     (is (= (sl/insert (editor-state doc (selection ["p2" 12])) (run "Goodbye!" #{:italic}))
            (->EditorUpdate
             (map->EditorState {:doc (document [p1, (paragraph "p2" [(run "aaabbbcccddd") (run "Goodbye!" #{:italic})])])
-                               :selection (selection ["p2" 20])})
+                               :selection (selection ["p2" 20] ["p2" 20] :formats #{:italic})})
             {:changed-uuids #{"p2"}
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
@@ -150,7 +150,7 @@
     (is (= (sl/insert (editor-state doc (selection ["p1" 1] ["p2" 11])) (run "(inserted!)" #{}))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "p1" [(run "f" #{:italic}), (run "(inserted!)d")])])
-                               :selection (selection ["p1" 12])})
+                               :selection (selection ["p1" 12] ["p1" 12])})
             {:changed-uuids #{"p1"}
              :deleted-uuids #{"p2"}
              :inserted-uuids #{}}))))
@@ -178,7 +178,7 @@
                                                                 (run "bizz" #{:italic})
                                                                 (run "buzz" #{:bold})])
                                                p2])
-                               :selection (selection ["p1" 0])})
+                               :selection (selection ["p1" 0] ["p1" 0] :formats #{:italic})})
             {:changed-uuids #{"p1"}
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
@@ -191,7 +191,7 @@
                                                                 (run "bizz" #{:italic})
                                                                 (run "buz" #{:bold})])
                                                p2])
-                               :selection (selection ["p1" 13])})
+                               :selection (selection ["p1" 13] ["p1" 13] :formats #{:bold})})
             {:changed-uuids #{"p1"}
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
@@ -200,7 +200,7 @@
     (is (= (sl/delete (editor-state doc (selection ["p2" 0])))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "p1" (concat (:runs p1) (:runs p2)))])
-                               :selection (selection ["p1" 14])})
+                               :selection (selection ["p1" 14] ["p1" 14] :formats #{:bold})})
             {:changed-uuids #{"p1"}
              :deleted-uuids #{"p2"}
              :inserted-uuids #{}}))))
@@ -231,7 +231,7 @@
                                                                 (run "bizz" #{:italic})
                                                                 (run "buzz" #{:bold})])
                                                p2])
-                               :selection (selection ["p1" 0])})
+                               :selection (selection ["p1" 0] ["p1" 0] :formats #{:bold :italic})})
             {:changed-uuids #{"p1"}
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
@@ -243,7 +243,7 @@
                                                                 (run "bizz" #{:italic})
                                                                 (run "buzz" #{:bold})])
                                                p2])
-                               :selection (selection ["p1" 0])})
+                               :selection (selection ["p1" 0] ["p1" 0] :formats #{:bold :italic})})
             {:changed-uuids #{"p1"}
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
@@ -252,7 +252,7 @@
     (is (= (sl/delete (editor-state doc (selection ["p1" 3] ["p1" 14])))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})]), p2])
-                               :selection (selection ["p1" 3])})
+                               :selection (selection ["p1" 3] ["p1" 3] :formats #{:italic})})
             {:changed-uuids #{"p1"}
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
@@ -274,7 +274,7 @@
     (is (= (sl/delete (editor-state doc (selection ["p1" 3] ["p2" 3])))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic}), (run "bbbcccddd")])])
-                               :selection (selection ["p1" 3])})
+                               :selection (selection ["p1" 3] ["p1" 3] :formats #{:italic})})
             {:changed-uuids #{"p1"}
              :deleted-uuids #{"p2"}
              :inserted-uuids #{}}))))
@@ -283,7 +283,7 @@
     (is (= (sl/delete (editor-state long-doc (selection ["d1" 4] ["d4" 0])))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "d1" [(run "foo1" #{:italic}), (run "foo4" #{:strike})])])
-                               :selection (selection ["d1" 4])})
+                               :selection (selection ["d1" 4] ["d1" 4] :formats #{:italic})})
             {:changed-uuids #{"d1"}
              :deleted-uuids #{"d2" "d3" "d4"}
              :inserted-uuids #{}}))))
@@ -434,11 +434,11 @@
            (->EditorUpdate (editor-state long-doc (selection ["d1" 3] ["d1" 4], :backwards? true, :formats #{:italic}))
                            (changelist :changed-uuids #{"d1"}))))
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0], :backwards? true, :formats #{}))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0], :backwards? true))
                            (changelist :changed-uuids #{"d1" "d2"}))))
 
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d4" 4], :backwards? true, :between #{"d3"})))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d4" 4], :backwards? true, :between #{"d2" "d3"}, :formats #{}))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d4" 4], :backwards? true, :between #{"d2" "d3"}))
                            (changelist :changed-uuids #{"d1" "d2"}))))
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d2" 4], :backwards? true)))
            (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 4], :backwards? true))
