@@ -324,7 +324,7 @@
                                                                 (run "bizz" #{:italic})
                                                                 (run "buzz" #{:bold})])
                                                p2])
-                               :selection (selection ["e1" 0])})
+                               :selection (selection ["e1" 0] ["e1" 0] :formats #{:bold :italic})})
             {:changed-uuids #{"p1"}
              :inserted-uuids #{"e1"}
              :deleted-uuids #{}}))))
