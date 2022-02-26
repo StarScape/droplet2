@@ -7,8 +7,9 @@
             [slate.model.history :as history]
             [slate.core :as sl]))
 
-;; INPROG: Keep track of :formats on Selection object, keep track of after (enter) called
-;; TODO: update (selection) constructor to allow a single [] arg followed by kw-args
+;; DONE: Keep track of :formats on Selection object
+;; DONE: update (selection) constructor to allow a single [] arg followed by kw-args
+
 ;; TODO: format toggling (ctrl+i, ctrl+b, etc.)
 ;; TODO: undo/redo
 ;; TODO: separate keymappings for macOS

@@ -6,6 +6,21 @@
 (defrecord Selection
   [start end between backwards? formats])
 
+(defn selection-impl
+  [& {:keys [start end backwards? between formats]
+      :or {backwards? false
+           between #{}
+           formats #{}}}]
+  (let [[start-paragraph start-offset] start
+        [end-paragraph end-offset] (or end start)]
+    (map->Selection {:start {:paragraph start-paragraph
+                             :offset start-offset}
+                     :end {:paragraph end-paragraph
+                           :offset end-offset}
+                     :backwards? backwards?
+                     :between between
+                     :formats formats})))
+
 (defn selection
   "Creates a new selection.
 
@@ -24,21 +39,20 @@
 
    - `:formats`: a set of the formats to use when inserting at the current single selection, or,
    for range selections, the set of formats shared by _all_ of the selection."
-  ([[start-paragraph start-offset] [end-paragraph end-offset] & {:keys [backwards? between formats]
-                                                                 :or {backwards? false
-                                                                      between #{}
-                                                                      formats #{}}}]
-   (map->Selection {:start {:paragraph start-paragraph
-                            :offset start-offset}
-                    :end {:paragraph end-paragraph
-                          :offset end-offset}
-                    :backwards? backwards?
-                    :between between
-                    :formats formats}))
-  #_([start end]
-   (selection start end))
-  ([start]
-   (selection start start)))
+  ([arg1, arg2, & args]
+   (cond
+     (and (vector? arg1) (vector? arg2))
+     (apply selection-impl :start arg1, :end arg2, args)
+
+     (vector? arg1)
+     (apply selection-impl :start arg1, :end arg1, arg2, args)
+
+     :else
+     (apply selection-impl arg1 arg2 args)))
+  ([arg1 arg2]
+   (selection-impl :start arg1 :end arg2))
+  ([arg1]
+   (selection-impl :start arg1 :end arg1)))
 
 (defn caret
   "Returns the location the caret will be rendered at."

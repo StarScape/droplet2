@@ -18,13 +18,34 @@
   (testing "Different ways of initializing selection"
     (let [s1 (selection [:p1 0] [:p1 0] :backwards? false)
           s2 (selection [:p1 0] [:p1 0])
-          s3 (selection [:p1 0])]
-      (is (= s1(map->Selection {:start {:paragraph :p1, :offset 0}
-                              :end {:paragraph :p1, :offset 0}
-                              :backwards? false
-                              :between #{}
-                              :formats #{}})))
-      (is (= s1 s2 s3)))))
+          s3 (selection [:p1 0])
+          s4 (selection [:p1 0] :formats #{:italic})
+          s4-alt1 (selection :start [:p1 0] :formats #{:italic})
+          s4-alt2 (selection :start [:p1 0] :end [:p1 0] :formats #{:italic})
+          s5 (selection :start [:p1 0] :end [:p2 3])
+          s6 (selection :start [:p1 0] :end [:p2 3] :between #{:p1.5})]
+      (is (= s1 (map->Selection {:start {:paragraph :p1, :offset 0}
+                                 :end {:paragraph :p1, :offset 0}
+                                 :backwards? false
+                                 :between #{}
+                                 :formats #{}})))
+      (is (= s1 s2 s3))
+      (is (= s4 (map->Selection {:start {:paragraph :p1, :offset 0}
+                                 :end {:paragraph :p1, :offset 0}
+                                 :backwards? false
+                                 :between #{}
+                                 :formats #{:italic}})))
+      (is (= s4 s4-alt1 s4-alt2))
+      (is (= s5 (map->Selection {:start {:paragraph :p1, :offset 0}
+                                 :end {:paragraph :p2, :offset 3}
+                                 :backwards? false
+                                 :between #{}
+                                 :formats #{}})))
+      (is (= s6 (map->Selection {:start {:paragraph :p1, :offset 0}
+                                 :end {:paragraph :p2, :offset 3}
+                                 :backwards? false
+                                 :between #{:p1.5}
+                                 :formats #{}}))))))
 
 (deftest caret-test
   (is (= (sel/caret sel-single) 10))
