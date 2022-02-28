@@ -21,7 +21,13 @@
     [this format]
     [this sel format]
     "Returns a new container with the format removed, if it is present.
-    Arity taking a selection is not implemented for runs."))
+    Arity taking a selection is not implemented for runs.")
+  (toggle-format
+   [this format]
+   [this sel format]
+   "Either applies the selected format to the selection (if the selected text
+    does not already have that format) or removes it (if the selected text **does**
+    have that format)."))
 
 ;; TODO: this name overlaps with nav/Selectable
 
@@ -30,7 +36,6 @@
    Note that this precludes runs, as they are contained inside paragraphs
    and therefore a 'paragraph offset into a run' would not make sense.
    Basically, this is a set of common operations on paragraphs and documents."
-
   (char-at
     [container sel]
     "Returns the character under the block cursor at the given single selection `sel`")
@@ -46,12 +51,7 @@
     [container sel]
     "Returns the set of all the formats shared by each run that is wholly or partially
     inside the selection. Will return an empty set if there are no formats shared.
-    If not passed a selection, will return shared formats for the whole container.")
-  (toggle-format
-    [doc sel format]
-    "Either applies the selected format to the selection (if the selected text
-    does not already have that format) or removes it (if the selected text **does**
-    have that format)."))
+    If not passed a selection, will return shared formats for the whole container."))
 
 (defn type-dispatch [& args] (mapv type args))
 

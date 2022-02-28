@@ -120,3 +120,8 @@
          #{:p1 :p2}))
   (is (= (sel/all-uuids (selection [:p1 0] [:p1 1]))
          #{:p1})))
+
+(deftest toggle-format-test
+  (let [s (selection [:p1 0] :formats #{:italic})]
+    (is (= (-> s (sel/toggle-format :italic) :formats) #{}))
+    (is (= (-> s (sel/toggle-format :bold) :formats) #{:italic :bold}))))

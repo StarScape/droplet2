@@ -3,6 +3,7 @@
             [clojure.spec.alpha :as s]
             [slate.dll :as dll]
             [slate.model.common :refer [TextContainer
+                                        Formattable
                                         insert
                                         delete
                                         len
@@ -285,15 +286,20 @@
   ;;   (selected-content doc selection))
   ;; (formatting [{:keys [doc selection]}]
   ;;   (formatting doc selection))
-  ;; (toggle-format [{:keys [doc selection] :as editor-state}]
-  ;;   (let [doc-children (:children doc)
-  ;;         start-para-uuid (-> selection :start :paragraph)
-  ;;         end-para-uuid (-> selection :end :paragraph)
-  ;;         changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)]
-  ;;     (assoc-state :doc (toggle-format doc selection)
-  ;;                  :changelist {:changed-uuids (set changed-uuids)})))
-  ;; Formattable can be implemented as well if needed
-  )
+  Formattable
+  (toggle-format
+   [{:keys [doc selection] :as editor-state} format]
+   (if (sel/single? selection)
+     (->EditorUpdate (update editor-state :selection sel/toggle-format format)
+                     ;; Include changelist in case we want to render
+                     ;; the caret different depending on formatting
+                     (changelist :changed-uuids #{(sel/caret-para selection)}))
+     (let [doc-children (:children doc)
+           start-para-uuid (-> selection :start :paragraph)
+           end-para-uuid (-> selection :end :paragraph)
+           changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)]
+       (->EditorUpdate (assoc editor-state :doc (m/toggle-format doc selection format))
+                       (changelist :changed-uuids (set changed-uuids)))))))
 
 (defn merge-changelists
   "Takes two transactions and returns a third that combines them. UUIDs are rearranged

@@ -16,21 +16,6 @@
 ;; regressions. However, probably a good idea to wait until the history system is in place and
 ;; stable, so we can test the whole shebang.
 
-(definterceptor click
-  [editor-state ui-state event]
-  (let [new-sel (view/mouse-event->selection event
-                                             (:doc editor-state)
-                                             (:viewmodels ui-state)
-                                             (:measure-fn ui-state))]
-    (es/set-selection editor-state new-sel)))
-
-(definterceptor drag
-  [editor-state ui-state event]
-  (es/set-selection editor-state (view/drag event
-                                            (:doc editor-state)
-                                            (:viewmodels ui-state)
-                                            (:measure-fn ui-state))))
-
 (definterceptor insert
   [editor-state _ e]
   (m/insert editor-state (.-data e)))
@@ -46,6 +31,22 @@
 (definterceptor tab
   [editor-state _ui-state _e]
   (m/insert editor-state "\u2003"))
+
+;; Movement / navigation ;;
+(definterceptor click
+  [editor-state ui-state event]
+  (let [new-sel (view/mouse-event->selection event
+                                             (:doc editor-state)
+                                             (:viewmodels ui-state)
+                                             (:measure-fn ui-state))]
+    (es/set-selection editor-state new-sel)))
+
+(definterceptor drag
+  [editor-state ui-state event]
+  (es/set-selection editor-state (view/drag event
+                                            (:doc editor-state)
+                                            (:viewmodels ui-state)
+                                            (:measure-fn ui-state))))
 
 (definterceptor left
   {:include-in-history? false}
@@ -107,6 +108,7 @@
   [editor-state ui-state _e]
   (view/shift+up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
+;; Auto-surrounding ;;
 (definterceptor auto-surround-double-quote
   [editor-state _ui-state _e]
   (es/auto-surround editor-state \"))
@@ -119,11 +121,21 @@
   [editor-state _ui-state _e]
   (es/auto-surround editor-state "(" ")"))
 
+;; Autocompletions ;;
 (definterceptor transform-double-dash-to-em-dash
   [editor-state _ _]
   (-> (m/delete editor-state)
       (>>= m/delete)
       (>>= m/insert "—")))
+
+;; Formatting
+(definterceptor ctrl+i
+  [editor-state _ _]
+  (m/toggle-format editor-state :italic))
+
+(definterceptor ctrl+b
+  [editor-state _ _]
+  (m/toggle-format editor-state :bold))
 
 (def default-interceptors
   {:click click
@@ -144,6 +156,8 @@
    :shift+down shift+down
    :up up
    :shift+up shift+up
+   :ctrl+i ctrl+i
+   :ctrl+b ctrl+b
    "\"" auto-surround-double-quote
    "'" auto-surround-single-quote
    "(" auto-surround-paren

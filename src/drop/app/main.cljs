@@ -10,7 +10,6 @@
 ;; DONE: Keep track of :formats on Selection object
 ;; DONE: update (selection) constructor to allow a single [] arg followed by kw-args
 
-;; TODO: format toggling (ctrl+i, ctrl+b, etc.)
 ;; TODO: undo/redo
 ;; TODO: separate keymappings for macOS
 

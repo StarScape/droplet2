@@ -193,4 +193,11 @@
   [sel]
   (conj (:between sel) (-> sel :start :paragraph) (-> sel :end :paragraph)))
 
+(defn toggle-format
+  "Add format `f` to :formats if it is not present, removes it if it is."
+  [{:keys [formats] :as sel} f]
+  (assoc sel :formats (if (contains? formats f)
+                        (disj formats f)
+                        (conj formats f))))
+
 ;; TODO: change :paragraph in :start and :end to :uuid

@@ -74,14 +74,3 @@
 (defmethod delete [Run js/Number]
   [run caret]
   (delete run (dec caret) caret))
-
-;; TODO: should these 2 be in the Formattable protocol? Are they needed at all?
-(defn apply-formats
-  "Returns a new run with the all the supplied formats applied."
-  [r formats]
-  (update r :formats #(apply conj % formats)))
-
-(defn remove-formats
-  "Returns a new run with all the supplied formats removed."
-  [r formats]
-  (update r :formats #(apply disj % formats)))

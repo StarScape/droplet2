@@ -264,23 +264,6 @@
                (map :formats)
                (apply set/intersection)))))))
 
-  (toggle-format
-   [para sel format]
-   (let [[before in-selection after]
-         (separate-selected (:runs para) sel)
-
-         common-formats
-         (->> in-selection (map :formats) (apply set/intersection))
-
-         selected-runs-toggled
-         (if (contains? common-formats format)
-           (mapv #(remove-format % format) in-selection)
-           (mapv #(apply-format % format) in-selection))
-
-         new-runs
-         (optimize-runs (concat before selected-runs-toggled after))]
-     (assoc para :runs new-runs)))
-
   ;; TODO: test these
   Formattable
   (apply-format
@@ -289,7 +272,22 @@
 
   (remove-format
    ([p format] (update p :runs (partial map #(remove-format % format))))
-   ([p sel format] (update-selected-runs p sel #(remove-format % format)))))
+   ([p sel format] (update-selected-runs p sel #(remove-format % format))))
+
+  (toggle-format
+   [para sel format]
+   (let [[before in-selection after] (separate-selected (:runs para) sel)
+
+         common-formats (->> in-selection
+                             (map :formats)
+                             (apply set/intersection))
+
+         in-selection-toggled (if (contains? common-formats format)
+                                (mapv #(remove-format % format) in-selection)
+                                (mapv #(apply-format % format) in-selection))
+
+         new-runs (optimize-runs (concat before in-selection-toggled after))]
+     (assoc para :runs new-runs))))
 
 ;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs

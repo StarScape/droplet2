@@ -3,6 +3,7 @@
             [slate.dll :as dll :refer [dll]]
             [slate.model.common :refer [TextContainer
                                         Selectable
+                                        Formattable
                                         insert
                                         delete
                                         insert-start
@@ -311,49 +312,9 @@
   (char-before [doc sel] (char-before ((:children doc) (sel/start-para sel)) sel))
   (selected-content [doc sel] (doc-selected-content doc sel)) ; TODO: how to handle UUIDs with this?
   (formatting [doc sel] (doc-formatting doc sel))
-  (toggle-format [doc sel format] (doc-toggle-format doc sel format))
-  ;; Formattable can be implemented as well if needed
-  )
 
-#_(defn merge-transactions
-  "Takes two transactions and returns a third that combines them. UUIDs are rearranged
-   as necessary according to the following rules:
-
-   - If a pid is **deleted**:
-     - And then inserted: move to changed
-   - If a pid is **changed**:
-     - And then deleted: move to deleted
-   - If a pid is **inserted**:
-     - And then deleted: remove from both inserted and deleted
-     - And then changed: move to inserted.
-
-   The :doc and :selection properties of the returned transaction will be those of t2.
-
-   It is assumed that t2 is a transaction that happened immediately after t1. You cannot simply
-   randomly transactions on wholly unrelated editor states, or states at different points in time.
-
-   The purpose of this is so that we can combine many transactions, but still only rerender the document once."
-  [t1 t2]
-  (let [deleted-then-inserted (set (filter #(contains? (:deleted-uuids t1) %) (:inserted-uuids t2)))
-        changed-then-deleted  (set (filter #(contains? (:changed-uuids t1) %) (:deleted-uuids t2)))
-        inserted-then-deleted (set (filter #(contains? (:inserted-uuids t1) %) (:deleted-uuids t2)))
-        inserted-then-changed (set (filter #(contains? (:inserted-uuids t1) %) (:changed-uuids t2)))
-
-        new-deleted (-> (set/union (:deleted-uuids t1) (:deleted-uuids t2))
-                        (set/difference deleted-then-inserted inserted-then-deleted)
-                        (set/union changed-then-deleted))
-        new-changed (-> (set/union (:changed-uuids t1) (:changed-uuids t2))
-                        (set/difference changed-then-deleted inserted-then-changed)
-                        (set/union deleted-then-inserted))
-        new-inserted (-> (set/union (:inserted-uuids t1) (:inserted-uuids t2))
-                         (set/difference inserted-then-deleted deleted-then-inserted)
-                         (set/union inserted-then-changed))]
-    (-> (merge t1 t2 {:deleted-uuids new-deleted
-                      :changed-uuids new-changed
-                      :inserted-uuids new-inserted})
-        (remove-nil-vals-from-map))))
-
-;; TODO: spec for transaction?
+  Formattable
+  (toggle-format [doc sel format] (doc-toggle-format doc sel format)))
 
 (comment
   (def p1 (p/paragraph [(r/run "foo" #{:italic})
