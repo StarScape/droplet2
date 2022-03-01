@@ -137,7 +137,7 @@
   [editor-state _ _]
   (m/toggle-format editor-state :bold))
 
-(def default-interceptors
+(def universal-interceptors
   {:click click
    :drag drag
    :insert insert
@@ -145,20 +145,37 @@
    :enter enter
    :tab tab
    :left left
-   :ctrl+left ctrl+left
    :shift+left shift+left
-   :ctrl+shift+left ctrl+shift+left
    :right right
-   :ctrl+right ctrl+right
-   :shift+right shift+right
    :ctrl+shift+right ctrl+shift+right
    :down down
    :shift+down shift+down
    :up up
    :shift+up shift+up
-   :ctrl+i ctrl+i
-   :ctrl+b ctrl+b
    "\"" auto-surround-double-quote
    "'" auto-surround-single-quote
    "(" auto-surround-paren
    "-- " transform-double-dash-to-em-dash})
+
+(def win-linux-interceptors
+  {:ctrl+left ctrl+left
+   :ctrl+shift+left ctrl+shift+left
+   :ctrl+right ctrl+right
+   :ctrl+shift+right ctrl+shift+right
+   :ctrl+i ctrl+i
+   :ctrl+b ctrl+b})
+
+(def mac-interceptors
+  {:alt+left ctrl+left
+   :alt+shift+left ctrl+shift+left
+   :alt+right ctrl+right
+   :alt+shift+right ctrl+shift+right
+   :cmd+i ctrl+i
+   :cmd+b ctrl+b})
+
+(def is-mac? true) ;; just set to true for now during development
+
+(def default-interceptors
+  (merge universal-interceptors (if is-mac?
+                                  mac-interceptors
+                                  win-linux-interceptors)))

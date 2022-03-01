@@ -51,7 +51,7 @@
                                           ::shortcuts]))
 
 ;; TODO: should this be const?
-(def modifier-keys #{:ctrl :shift :alt :meta})
+(def modifier-keys #{:ctrl :shift :alt :cmd})
 
 (def valid-interceptor-keywords
   ^{:doc "Set of legal modifier keys and events for an interceptor pattern."}
@@ -102,6 +102,7 @@
                             (.-ctrlKey e) (conj! :ctrl)
                             (.-altKey e) (conj! :alt)
                             (.-shiftKey e) (conj! :shift)
+                            (.-metaKey e) (conj! :cmd)
                             :then (persistent!))
         key (event->key e)
         pressed-keys (cond-> modifiers-pressed

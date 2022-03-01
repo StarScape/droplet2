@@ -10,8 +10,8 @@
 ;; DONE: Keep track of :formats on Selection object
 ;; DONE: update (selection) constructor to allow a single [] arg followed by kw-args
 
-;; TODO: undo/redo
 ;; TODO: separate keymappings for macOS
+;; TODO: undo/redo
 
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
 ;; TODO: Make a React element that encapsulates the editor. This should
