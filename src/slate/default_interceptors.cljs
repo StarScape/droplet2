@@ -9,6 +9,7 @@
             [slate.model.common :as m]
             [slate.model.editor-state :as es :refer [>>=]]
             [slate.model.navigation :as nav]
+            [slate.utils :as utils]
             [slate.view :as view]))
 
 ;; TODO: for interceptors that aren't dependent on the viewmodel or DOM state, there's no reason
@@ -34,6 +35,7 @@
 
 ;; Movement / navigation ;;
 (definterceptor click
+  {:include-in-history? false}
   [editor-state ui-state event]
   (let [new-sel (view/mouse-event->selection event
                                              (:doc editor-state)
@@ -42,6 +44,7 @@
     (es/set-selection editor-state new-sel)))
 
 (definterceptor drag
+  {:include-in-history? false}
   [editor-state ui-state event]
   (es/set-selection editor-state (view/drag event
                                             (:doc editor-state)
@@ -173,9 +176,7 @@
    :cmd+i ctrl+i
    :cmd+b ctrl+b})
 
-(def is-mac? true) ;; just set to true for now during development
-
 (def default-interceptors
-  (merge universal-interceptors (if is-mac?
+  (merge universal-interceptors (if (utils/is-mac?)
                                   mac-interceptors
                                   win-linux-interceptors)))

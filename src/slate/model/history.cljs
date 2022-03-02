@@ -54,6 +54,7 @@
 (defn add-tip-to-backstack
   "Removes `history`'s tip and incorporates it into the backstack as the last element."
   [{:keys [tip] :as history}]
+  (assert (some? tip) "Tip must not be nil if add-tip-to-backstack is called!")
   (-> history
       (update :backstack conj tip)
       (assoc :tip nil)))
@@ -138,10 +139,10 @@
 
 (defn has-undo?
   "Returns true if argument `history` has a state before the current."
-  [{:keys[current-state-index backstack] :as history}]
+  [{:keys[current-state-index] :as history}]
   (pos? current-state-index))
 
-(s/fdef has-undo?
+(s/fdef has-redo?
   :args (s/cat :history ::editor-state-history)
   :ret boolean?)
 
@@ -158,9 +159,7 @@
   "Reverts `history` to the previous entry, if one exists, (identity otherwise)."
   [{:keys [tip] :as history}]
   (if (has-undo? history)
-    (-> (if (nil? tip)
-          history
-          (add-tip-to-backstack history))
+    (-> (if (some? tip) (add-tip-to-backstack history) history)
         (update :current-state-index dec))
     history))
 
@@ -181,7 +180,7 @@
   :ret ::editor-state-history)
 
 (defn set-tip
-  "Sets the `tip` to the provided val `net-tip`. If `(has-redo?)` is true, the redos will be removed.
+  "Sets the `tip` to the provided val `new-tip`. If `(has-redo?)` is true, the redos will be removed.
    This is what should be called whenever you want to update the editor state without yet adding
    anything to the backstack. For adding the tip to the backstack, see `add-tip-to-backstack`."
   [history new-tip]
@@ -214,7 +213,7 @@
 
                   :else
                   (throw "Error in history/init: argument must be either an EditorUpdate or EditorState."))]
-    {:tip initial, :backstack [], :current-state-index 0}))
+    {:tip nil, :backstack [initial], :current-state-index 0}))
 
 ;; TODO: look into orchestra en vez de usar esto
 (stest/instrument)

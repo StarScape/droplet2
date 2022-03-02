@@ -114,8 +114,8 @@
    keys pressed. So for example:
 
    ```
-   (shortcut-pattern->key-set :shift+a)
-   (shortcut-pattern->key-set :ctrl+alt+enter)
+   (shortcut-pattern->key-set :shift+a) ; #{:shift :a}
+   (shortcut-pattern->key-set :ctrl+alt+enter) ; #{:ctrl :alt :enter}
    ```
 
    This is necessary because we want to be able to find an interceptor for a given
@@ -215,11 +215,12 @@
 (defn add-to-input-history
   "Adds the key to the vector of input history, dropping the least recent key
    typed off the history vector if necessary, and returns the new history vector."
-  [input-history interceptor event]
-  (let [val-to-add (if (= :insert (:input-name interceptor))
-                     (.-data event)
-                     (:input-name interceptor))]
-    (conj (if (< (count input-history) max-input-history)
-            input-history
-            (subvec input-history 1))
-          val-to-add)))
+  ([input-history input-name]
+   (conj (if (< (count input-history) max-input-history)
+           input-history
+           (subvec input-history 1))
+         input-name))
+  ([input-history interceptor event]
+   (add-to-input-history input-history (if (= :insert (:input-name interceptor))
+                                         (.-data event)
+                                         (:input-name interceptor)))))

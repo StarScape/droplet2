@@ -343,6 +343,14 @@
        :changed-uuids new-changed
        :inserted-uuids new-inserted})))
 
+(defn reverse-changelist
+  "Taking a changelist that contains update information to go from state A to state B,
+   produces a new changelists with update information on on how to go from state B to A."
+  [{:keys [inserted-uuids changed-uuids deleted-uuids]}]
+  {:inserted-uuids deleted-uuids
+   :changed-uuids changed-uuids
+   :deleted-uuids inserted-uuids})
+
 (comment
   (def p1 (p/paragraph [(r/run "foo" #{:italic})
                         (r/run "bar" #{:bold :italic})

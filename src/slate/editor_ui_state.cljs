@@ -6,7 +6,7 @@
             [slate.interceptors :as interceptors :refer [interceptor?]]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
-            [slate.utils :refer [debounce]]
+            [slate.utils :refer [cancellable-debounce cancel-debounced!]]
             [slate.view :as view]
             [slate.viewmodel :as vm]))
 
@@ -29,28 +29,22 @@
                                           ::input-history
                                           ::viewmodels
                                           ::interceptors]))
+
 (defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
   [ui-state]
   (let [{:keys [viewmodels history measure-fn]} ui-state
-        tip (:tip history)
-        get-para (partial get (-> tip :editor-state :doc :children))
-        {:keys [changed-uuids
-                inserted-uuids
-                deleted-uuids]} (:changelist tip)
-        updated-vms (as-> viewmodels vms
-                      (apply dissoc vms deleted-uuids)
-                      (reduce (fn [new-vms uuid]
-                                (assoc new-vms uuid (vm/from-para (get-para uuid) 200 measure-fn)))
-                              vms (concat inserted-uuids changed-uuids)))]
-    (assoc ui-state :viewmodels updated-vms)))
+        {:keys [editor-state changelist]} (:tip history)
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) measure-fn changelist)]
+    (assoc ui-state :viewmodels new-viewmodels)))
 
 (defn add-tip-to-backstack!
   [*ui-state]
+  {:pre [(instance? Atom #p *ui-state)]}
   (swap! *ui-state update :history history/add-tip-to-backstack))
 
-(def add-tip-to-backstack-after-wait! (debounce 3000 add-tip-to-backstack!))
+(def add-tip-to-backstack-after-wait! (cancellable-debounce 1000 add-tip-to-backstack!))
 
 (defn init-dom!
   "Perform initial DOM render. This will be called on application startup,
@@ -106,12 +100,40 @@
 
     (when (and (:include-in-history? interceptor)
                (not (:add-to-history-immediately? interceptor)))
-      ;; NOTE: make sure wait is on a per-instance basis
+      ;; TODO: change this to be on a per-instance basis
       (add-tip-to-backstack-after-wait! *ui-state))))
+
+;; TODO: can we add a "manual" interceptor type to handle this?
+;; Something that does not call fire-interceptor! but just allows
+;; you to do what you want in the interceptor? Can that replace no-dom-sync?
+(defn undo! [*ui-state]
+  (cancel-debounced! #p add-tip-to-backstack-after-wait!)
+  (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state
+        current-update (history/current history)]
+    (when (history/has-undo? history)
+      (let [new-input-history (interceptors/add-to-input-history input-history :undo)
+            new-history (history/undo history)
+            restored-update (history/current new-history)
+            restored-state (:editor-state restored-update)
+            changelist (es/reverse-changelist (:changelist current-update))
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) measure-fn changelist)
+            new-ui-state (assoc ui-state
+                                :input-history new-input-history
+                                :history new-history
+                                :viewmodels new-vms)]
+        (sync-dom! (:dom-elem new-ui-state)
+                   (:editor-state restored-update)
+                   (:viewmodels new-ui-state)
+                   changelist)
+        (reset! *ui-state new-ui-state)))))
+
+(defn redo! [*ui-state]
+  (comment 'TODO))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
   [*ui-state]
+  (swap! *ui-state assoc :add-tip-to-backstack-callback #(add-tip-to-backstack-after-wait! *ui-state))
   (let [get-interceptor (partial interceptors/find-interceptor (:interceptors @*ui-state))
         {editor-elem :dom-elem, hidden-input :hidden-input} @*ui-state]
     (let [editor-surface-clicked? (atom false :validator boolean?)
@@ -142,10 +164,17 @@
      hidden-input
      "keydown"
      (fn [e]
-        ;; TODO: check for completions here (or possibly in the :insert case below?) and if one exists fire its interceptor
-       (when-let [interceptor-fn (get-interceptor e)]
-         (.preventDefault e)
-         (fire-interceptor! *ui-state interceptor-fn e))))
+       (condp = (interceptors/event->key-set e)
+         ;; TODO: need something more elegant for this
+         #{:cmd :z} (do
+                      (.preventDefault e)
+                      (undo! *ui-state))
+         #{:cmd :shift :z} (do
+                             (.preventDefault e)
+                             (redo! *ui-state))
+         (when-let [interceptor-fn (get-interceptor e)]
+           (.preventDefault e)
+           (fire-interceptor! *ui-state interceptor-fn e)))))
     (.addEventListener
      hidden-input
      "beforeinput"
@@ -193,6 +222,7 @@
         *ui-state (atom {:id (random-uuid)
                          :viewmodels (vm/from-doc (:doc editor-state) 200 measure-fn)
                          :history (history/init editor-state)
+                         :add-tip-to-backstack-callback nil
                          :dom-elem dom-elem
                          :hidden-input hidden-input
                          :measure-fn measure-fn

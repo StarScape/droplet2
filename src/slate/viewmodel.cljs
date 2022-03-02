@@ -191,9 +191,13 @@
             vm (from-para p width measure-fn)]
         (recur (rest paragraphs) (assoc uuids->vms (:uuid p) vm))))))
 
-#_(defn from-doc
-  "Takes a [[Document]], converts each of its [[Paragraph]]s to [[ParagraphViewModel]]s,
-   and returns a a [[DLL]] of ParagraphViewModels."
-  [doc width measure-fn]
-  (dll)
-  #_(from-para p width measure-fn))
+(defn update-viewmodels
+  [viewmodels doc measure-fn changelist]
+  (let [{:keys [changed-uuids inserted-uuids deleted-uuids]} changelist
+        get-para (partial get (:children doc))
+        updated-vms (as-> viewmodels vms
+                      (apply dissoc vms deleted-uuids)
+                      (reduce (fn [new-vms uuid]
+                                (assoc new-vms uuid (from-para (get-para uuid) 200 measure-fn)))
+                              vms (concat inserted-uuids changed-uuids)))]
+    updated-vms))
