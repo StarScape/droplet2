@@ -41,7 +41,7 @@
 
 (defn add-tip-to-backstack!
   [*ui-state]
-  {:pre [(instance? Atom #p *ui-state)]}
+  {:pre [(instance? Atom *ui-state)]}
   (swap! *ui-state update :history history/add-tip-to-backstack))
 
 (def add-tip-to-backstack-after-wait! (cancellable-debounce 1000 add-tip-to-backstack!))
@@ -100,14 +100,14 @@
 
     (when (and (:include-in-history? interceptor)
                (not (:add-to-history-immediately? interceptor)))
-      ;; TODO: change this to be on a per-instance basis
+      ;; TODO: change this to be on a per-instance of *ui-state basis
       (add-tip-to-backstack-after-wait! *ui-state))))
 
 ;; TODO: can we add a "manual" interceptor type to handle this?
 ;; Something that does not call fire-interceptor! but just allows
 ;; you to do what you want in the interceptor? Can that replace no-dom-sync?
 (defn undo! [*ui-state]
-  (cancel-debounced! #p add-tip-to-backstack-after-wait!)
+  (cancel-debounced! add-tip-to-backstack-after-wait!)
   (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state
         current-update (history/current history)]
     (when (history/has-undo? history)
@@ -128,7 +128,24 @@
         (reset! *ui-state new-ui-state)))))
 
 (defn redo! [*ui-state]
-  (comment 'TODO))
+  (cancel-debounced! add-tip-to-backstack-after-wait!)
+  (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state]
+    (when (history/has-redo? history)
+      (let [new-input-history (interceptors/add-to-input-history input-history :redo)
+            new-history (history/redo history)
+            restored-update (history/current new-history)
+            restored-state (:editor-state restored-update)
+            changelist (:changelist restored-update)
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) measure-fn changelist)
+            new-ui-state (assoc ui-state
+                                :input-history new-input-history
+                                :history new-history
+                                :viewmodels new-vms)]
+        (sync-dom! (:dom-elem new-ui-state)
+                   (:editor-state restored-update)
+                   (:viewmodels new-ui-state)
+                   changelist)
+        (reset! *ui-state new-ui-state)))))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."

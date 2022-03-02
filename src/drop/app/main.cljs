@@ -9,8 +9,9 @@
 
 ;; DONE: Keep track of :formats on Selection object
 ;; DONE: update (selection) constructor to allow a single [] arg followed by kw-args
+;; DONE: undo/redo
 
-;; TODO: undo/redo
+;; Implement 'manual' interceptors?
 ;; TODO: handle completion undo with backspace -- I think the best thing might be just to
 ;;       fire undo! in the delete handler if the last action was a completion.
 ;; TODO: add cmd+left and cmd+right shortcuts to go to start/end of line

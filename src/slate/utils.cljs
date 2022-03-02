@@ -43,7 +43,7 @@
 
 (comment
   (defn test-fn [a b c]
-    (println #p (str "Args are: " a b c))
+    (println (str "Args are: " a b c))
     nil)
 
   (def debounced-fn (cancellable-debounce 3000 test-fn))
