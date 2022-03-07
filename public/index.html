@@ -69,6 +69,7 @@
       opacity: 0;
       position: absolute;
       left: -10;
+      pointer-events: none;
     }
 
     .hidden {
@@ -86,6 +87,7 @@
   <!-- Hidden input for capturing keystrokes -->
   <input id='hidden-input' type='text' autofocus />
 
+  <div id='formats'>Formats: </div>
   <div class='my-boxes'>
     <div class='my-box' id='fake-editor'></div>
     <!-- <div class='my-box' id='fake-editor-dom-layout' contenteditable="true">

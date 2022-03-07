@@ -1,4 +1,4 @@
-(ns slate.navigation
+(ns slate.model.navigation
   "Functions for modifying navigating around the document by modifying selections.
    Note that everything in here is pure -- functions take Documents/Paragraphs and a
    selection, and return a new selection.
@@ -6,9 +6,11 @@
    Also, nothing here should be dependent on the viewmodel or the DOM. Things that have to
    be aware of either of those should go in the `view` namespace."
   (:require [clojure.string :as str]
-            [slate.core :as sl]
+            [slate.model.common :as m]
+            [slate.model.paragraph :as p :refer [Paragraph]]
+            [slate.model.doc :as doc :refer [Document]]
             [slate.dll :as dll]
-            [slate.selection :as sel :refer [selection caret smart-collapse single? range?]]))
+            [slate.model.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
 ;; Some helpers and useful primitives ;;
 
@@ -19,11 +21,18 @@
     "@" "#" "$" "%" "^" "&" "*" "|"
     "+" "=" "[" "]" "{" "}" "`" "?"})
 
-(defn separator? "Is argument a separator char?" [char] (contains? separators char))
+(defn char-or-blank? [x] (or (= x "") (char? x)))
+
+(defn separator?
+  "Is argument a separator char?"
+  [char]
+  {:pre [(char-or-blank? char)]}
+  (contains? separators char))
 
 (defn whitespace?
   "Is argument a whitespace char?"
   [char]
+  {:pre [(char-or-blank? char)]}
   (if (and (str/blank? char) (not= char "") (not= char nil))
     true
     false))
@@ -31,6 +40,7 @@
 (defn word?
   "Is argument a word char?"
   [char]
+  {:pre [(char-or-blank? char)]}
   (and (not (whitespace? char))
        (not (separator? char))
        (not= nil char)
@@ -44,7 +54,7 @@
 
 (defn until
   "Advance in string `text` beginning at index `start` until a character
-   is found for which predicate `pred` returns true, and returns that index."
+   is found for which predicate `pred` returns true, and return that index."
   [text start pred]
   (loop [i start]
     (if (or (>= i (count text))
@@ -80,8 +90,10 @@
   "Helper function for `next-word`, but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  {:pre [(<= start-offset (.-length text))]
-   :post [(<= % (.-length text))]}
+  {:pre [(and (nat-int? start-offset)
+              (<= start-offset (.-length text)))]
+   :post [(and (nat-int? start-offset)
+               (<= % (.-length text)))]}
   (if (>= start-offset (count text))
     (count text)
     (let [first-char (nth text start-offset)]
@@ -106,8 +118,10 @@
   "Helper function for `prev-word`, but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  {:pre [(<= start-offset (.-length text))]
-   :post [(<= % (.-length text))]}
+  {:pre [(and (nat-int? start-offset)
+              (<= start-offset (.-length text)))]
+   :post [(and (nat-int? start-offset)
+               (<= % (.-length text)))]}
   (if (<= start-offset 0)
     0
     (let [before-start (nth text (dec start-offset))]
@@ -134,7 +148,8 @@
 ;; and ctrl+}, ctrl+{, respectively.
 
 (defprotocol Navigable
-  "Methods for navigating around. Implemented for Paragraphs and Documents. All methods return a new Selection."
+  "Methods for navigating around. Implemented for Paragraphs, Documents, and EditorStates.
+  All methods return a new Selection, except for on EditorStates, which returns EditorUpdates."
   (start
    [this]
    "Go to start of Paragraph or Document.")
@@ -145,21 +160,25 @@
 
   (next-char
    [this sel]
+   [editor-state]
    "Move forward by 1 character, or returns the same selection if not possible.
     Equivalent to pressing the right arrow on the keyboard.")
 
   (prev-char
    [this sel]
+   [editor-state]
    "Move backward by 1 character, or return the same selection if not possible.
     Equivalent to pressing the left arrow on the keyboard.")
 
   (next-word
     [this sel]
+    [editor-state]
     "Returns selection after jumping to the end of the next word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac).")
 
   (prev-word
     [this sel]
+    [editor-state]
     "Returns selection after jumping to the start of the previous word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
 
@@ -167,95 +186,117 @@
   "Methods for expanding and contracting selections."
   (shift+right
     [this sel]
+    [editor-state]
     "If selection is not backwards, returns a new selection with the right side expanded by 1.
     If the selection *is* backwards, will *contract* the *left* side of the selection. In other
     words, equivalent to the behavior of pressing shift+right.")
 
   (shift+left
     [this sel]
+    [editor-state]
     "If selection is not backwards, returns a new selection with the right side contracted by 1.
     If the selection *is* backwards, will *expand* the *left* side of the selection. In other
     words, equivalent to the behavior of pressing shift+left.")
 
   (ctrl+shift+right
     [this sel]
+    [editor-state]
     "Expands or contracts the caret side of the selection by a word, depending if the selection is
     forwards or backwards, respectively. Equivalent to the behavior of pressing ctrl+shift+right.")
 
   (ctrl+shift+left
     [this sel]
+    [editor-state]
     "Expands or contracts the caret side of the selection by a word, depending if the selection is
     backwards or forwards respectively. Equivalent to the behavior of pressing ctrl+shift+left."))
 
-(extend-type sl/Paragraph
+(defn autoset-formats
+  [para-or-doc selection]
+  (assoc selection :formats (m/formatting para-or-doc selection)))
+
+(extend-type Paragraph
   Navigable
   (start [para]
-    (selection [(:uuid para) 0]))
+    (autoset-formats para (selection [(:uuid para) 0])))
 
   (end [para]
-    (selection [(:uuid para) (sl/len para)]))
+    (autoset-formats para (selection [(:uuid para) (m/len para)])))
 
   (next-char [para sel]
     (cond
-      (range? sel) (sel/collapse-end sel)
-      (and (single? sel) (< (caret sel) (sl/len para))) (sel/shift-single sel 1)
-      :else sel))
+      (range? sel)
+      (autoset-formats para (sel/collapse-end sel))
+
+      (and (single? sel) (< (caret sel) (m/len para)))
+      (autoset-formats para (sel/shift-single sel 1))
+
+      :else
+      sel))
 
   (prev-char [para sel]
     (cond
-      (range? sel) (sel/collapse-start sel)
-      (and (single? sel) (pos? (caret sel))) (sel/shift-single sel -1)
-      :else sel))
+      (range? sel)
+      (autoset-formats para (sel/collapse-start sel))
+
+      (and (single? sel) (pos? (caret sel)))
+      (autoset-formats para (sel/shift-single sel -1))
+
+      :else
+      sel))
 
   (next-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           collapsed (smart-collapse sel)
           offset (next-word-offset text (caret collapsed))]
-      (sel/set-single collapsed offset)))
+      (autoset-formats para (sel/set-single collapsed offset))))
 
   (prev-word [para sel]
     (let [text (apply str (map :text (:runs para)))
           collapsed (smart-collapse sel)
           offset (prev-word-offset text (caret collapsed))]
-      (sel/set-single collapsed offset))))
+      (autoset-formats para (sel/set-single collapsed offset)))))
 
-(extend-type sl/Document
+(extend-type Document
   Navigable
-  (start [doc]
-    (selection [(:uuid (dll/first (:children doc))) 0]))
+  (start [doc] (start (dll/first (:children doc))))
 
-  (end [doc]
-    (let [last-para (dll/last (:children doc))]
-      (selection [(:uuid last-para) (sl/len last-para)])))
+  (end [doc] (end (dll/last (:children doc))))
 
   (next-char [doc sel]
     (if (range? sel)
-      (sel/collapse-end sel)
+      (autoset-formats doc (sel/collapse-end sel))
       (let [para ((:children doc) (-> sel :start :paragraph))]
-        (if (= (caret sel) (sl/len para))
-          (if (sl/last-para? doc para)
+        ;; At end of paragraph?
+        (if (= (caret sel) (m/len para))
+          ;; At end of _last_ paragraph?
+          (if (doc/last-para? doc para)
             sel
+            ;; At end of different paragraph, goto start of next one
             (start (dll/next (:children doc) para)))
+          ;; Not at end of paragraph, defer to Paragraph's next-char impl
           (next-char para sel)))))
 
   (prev-char [doc sel]
     (if (range? sel)
-      (sel/collapse-start sel)
+      (autoset-formats doc (sel/collapse-start sel))
       (let [para ((:children doc) (-> sel :start :paragraph))]
+        ;; At start of paragraph?
         (if (zero? (caret sel))
-          (if (sl/first-para? doc para)
+          ;; At start of _first_ paragraph?
+          (if (doc/first-para? doc para)
             sel
+            ;; At start of different paragraph, goto end of previous one
             (end (dll/prev (:children doc) para)))
+          ;; Not at start of paragraph, defer to Paragraph's prev-char impl
           (prev-char para sel)))))
 
   (next-word [doc sel]
     (let [collapsed (smart-collapse sel)
           para-uuid (sel/start-para collapsed)
           para ((:children doc) para-uuid)]
-      (if (and (= (sel/caret collapsed) (sl/len para))
+      (if (and (= (sel/caret collapsed) (m/len para))
                (not= para (dll/last (:children doc))))
-        ;; TODO: can change to a call to (start) once that is implemented
-        (selection [(:uuid (dll/next (:children doc) para)), 0])
+        (start (dll/next (:children doc) para))
         (next-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
   (prev-word [doc sel]
@@ -264,9 +305,7 @@
           para ((:children doc) para-uuid)]
       (if (and (= 0 (sel/caret collapsed))
                (not= para (dll/first (:children doc))))
-        ;; TODO: can change to a call to (end) once that is implemented
-        (let [prev-para (dll/prev (:children doc) para)]
-          (selection [(:uuid prev-para), (sl/len prev-para)]))
+        (end (dll/prev (:children doc) para))
         (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
 
   ;; TODO: It's possible these can be cleaned up, but *write tests* before
@@ -274,86 +313,123 @@
   ;; easily that I'm not breaking them every time I switch an if around or something.
   Selectable
   (shift+right [doc sel]
-    (let [para ((:children doc) (sel/caret-para sel))
-          para-length (sl/len para)
-          next-para (dll/next (:children doc) para)]
-      (if (and (:backwards? sel) (sel/range? sel))
-        (cond
-          (= (sel/caret sel) para-length)
-          (assoc sel :start {:offset 0, :paragraph (:uuid next-para)})
+    (autoset-formats
+     doc
+     (let [para ((:children doc) (sel/caret-para sel))
+           para-length (m/len para)
+           next-para (dll/next (:children doc) para)]
+       (if (and (:backwards? sel) (sel/range? sel))
+         (cond
+           (= (sel/caret sel) para-length)
+           (-> sel
+               (assoc :start {:offset 0, :paragraph (:uuid next-para)})
+               ;; We just moved the caret from p1 to p2, removing p1 from the selection
+               ;; and making p2 the new start. Remove p2 from :between if it's present.
+               (sel/remove-ends-from-between))
 
-          :else
-          (sel/shift-caret sel 1))
-        (cond
-          (and (sl/last-para? doc para)
-               (= (sel/caret sel) para-length))
-          sel
+           :else
+           (sel/shift-caret sel 1))
+         (cond
+           (and (doc/last-para? doc para)
+                (= (sel/caret sel) para-length))
+           sel
 
-          (= (sel/caret sel) para-length)
-          (assoc sel :end {:offset 0, :paragraph (:uuid next-para)})
+           (= (sel/caret sel) para-length)
+           (-> sel
+               (assoc :end {:offset 0, :paragraph (:uuid next-para)})
+              ;; We just shift+right'd from p1 to p2, so add p1 to :between IF it's not also :start
+               (sel/add-to-between (:uuid para)))
 
-          :else
-          (sel/shift-caret sel 1)))))
+           :else
+           (sel/shift-caret sel 1))))))
 
   (shift+left [doc sel]
-    (let [para ((:children doc) (sel/caret-para sel))
-          prev-para (dll/prev (:children doc) para)]
-      (if (sel/single? sel)
-        (cond
-          (and (sl/first-para? doc para)
-               (zero? (sel/caret sel)))
-          sel
+    (autoset-formats
+     doc
+     (let [para ((:children doc) (sel/caret-para sel))
+           prev-para (dll/prev (:children doc) para)]
+       (if (sel/single? sel)
+         (cond
+           (and (doc/first-para? doc para)
+                (zero? (sel/caret sel)))
+           sel
 
-          (zero? (sel/caret sel))
-          (assoc sel
-                 :start {:offset (sl/len prev-para) :paragraph (:uuid prev-para)}
-                 :backwards? true)
+           (zero? (sel/caret sel))
+           (-> sel
+               (assoc :start {:paragraph (:uuid prev-para)
+                              :offset (m/len prev-para)}
+                      :backwards? true))
+              ;; No need to update :between because this is operating on a single selection
 
-          :else
-          (sel/shift-start sel -1))
-        (cond
-          (and (sl/first-para? doc para)
-               (zero? (sel/caret sel)))
-          sel
+           :else
+           (sel/shift-start sel -1))
+         (cond
+           (and (doc/first-para? doc para)
+                (zero? (sel/caret sel)))
+           sel
 
-          (zero? (sel/caret sel))
-          (let [side (if (:backwards? sel) :start :end)]
-            (assoc sel side {:offset (sl/len prev-para)
-                             :paragraph (:uuid prev-para)}))
+           (zero? (sel/caret sel))
+           (if (:backwards? sel)
+             (-> sel
+                 (assoc :start {:offset (m/len prev-para)
+                                :paragraph (:uuid prev-para)})
+                 ;; Add what was previously the :start paragraph to the :between,
+                 ;; as long as it is not also the :end paragraph (i.e. if the selection
+                 ;; only spanned a single paragraph).
+                 (sel/add-to-between (:uuid para)))
+             (-> sel
+                 (assoc :end {:offset (m/len prev-para)
+                              :paragraph (:uuid prev-para)})
+                ;; Previous paragraph was either in :between or the :start para. It's
+                ;; now the new :end paragraph, so make sure it's removed from :between.
+                 (sel/remove-ends-from-between)))
 
-
-          :else
-          (sel/shift-caret sel -1)))))
+           :else
+           (sel/shift-caret sel -1))))))
 
   (ctrl+shift+right [doc sel]
-    (let [next-word-sel (next-word doc sel)
-          new-caret {:paragraph (sel/caret-para next-word-sel)
-                     :offset (sel/caret next-word-sel)}]
-      (if (and (:backwards? sel) (sel/range? sel))
-        (if (and (< (:offset new-caret) (-> sel :end :offset))
-                 (= (:paragraph new-caret) (-> sel :end :paragraph)))
-          (assoc sel :start new-caret)
-          (assoc sel :start (:end sel), :end new-caret, :backwards? false))
-        (assoc sel :end new-caret, :backwards? false))))
+    (autoset-formats
+     doc
+     (let [next-word-sel (next-word doc sel)
+           new-caret {:paragraph (sel/caret-para next-word-sel)
+                      :offset (sel/caret next-word-sel)}]
+       (if (and (:backwards? sel) (sel/range? sel))
+         ;; Backwards range selection
+         (-> (if (and (>= (:offset new-caret) (-> sel :end :offset))
+                      (= (:paragraph new-caret) (-> sel :end :paragraph)))
+               (assoc sel :start (:end sel), :end new-caret, :backwards? false)
+               (assoc sel :start new-caret))
+             (sel/remove-ends-from-between))
+         ;; Forwards range or single selection
+         (-> sel
+             (assoc :end new-caret, :backwards? false)
+             (sel/add-to-between (sel/end-para sel)))))))
 
   (ctrl+shift+left [doc sel]
-    (let [prev-word-sel (prev-word doc sel)
-          new-caret {:paragraph (sel/caret-para prev-word-sel)
-                     :offset (sel/caret prev-word-sel)}]
-      (if (or (sel/single? sel) (and (:backwards? sel) (sel/range? sel)))
-        (assoc sel :start new-caret, :backwards? true)
-        (if (and (< (:offset new-caret) (-> sel :start :offset))
-                 (= (:paragraph new-caret) (-> sel :start :paragraph)))
-          (assoc sel :start new-caret, :end (:start sel), :backwards? true)
-          (assoc sel :end new-caret, :backwards? false))))))
+    (autoset-formats
+     doc
+     (let [prev-word-sel (prev-word doc sel)
+           new-caret {:paragraph (sel/caret-para prev-word-sel)
+                      :offset (sel/caret prev-word-sel)}]
+       (if (or (sel/single? sel) (and (:backwards? sel) (sel/range? sel)))
+         ;; Single selection or backwards range-selection
+         (-> sel
+             (assoc :start new-caret, :backwards? true)
+             (sel/add-to-between (sel/start-para sel)))
+         ;; Forwards range-selection
+         (-> (if (and (< (:offset new-caret) (-> sel :start :offset))
+                      (= (:paragraph new-caret) (-> sel :start :paragraph)))
+               (assoc sel :start new-caret, :end (:start sel), :backwards? true)
+               (assoc sel :end new-caret, :backwards? false))
+             (sel/remove-ends-from-between)))))))
 
+;; TODO: add :formats field to Selection object and change these methods to accomodate automatically updating it
 
 (comment
-  (def my-par (sl/paragraph [(sl/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
+  (def my-par (p/paragraph [(r/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
   (prev-word-offset (apply str (map :text (:runs my-par))) 0)
   (next-word-offset (apply str (map :text (:runs my-par))) 80)
 
-  (def my-doc (sl/document [my-par, (sl/paragraph [(sl/run "foo bar?")])]))
+  (def my-doc (doc/document [my-par, (p/paragraph [(r/run "foo bar?")])]))
   (caret (next-word my-doc (selection [1 0])))
-  (caret (prev-word my-doc (selection [0 7])))
-  )
+  (caret (prev-word my-doc (selection [0 7]))))

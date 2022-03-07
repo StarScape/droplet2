@@ -39,4 +39,4 @@ That build is set to autorun `:autorun true`, so there is no need for any additi
 ## Output directories
 
 - Browser code is output to `public/js/`.
-- Test code it ouput to `out/`.
+- Test code is ouput to `out/`.

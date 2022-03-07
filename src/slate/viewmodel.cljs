@@ -20,12 +20,10 @@
    representation between the model and the view, not because it's directly inspired by any of the MVC/psuedo-MVC
    frameworks that also happen to use that term."
   (:require [clojure.string :as str]
-            [slate.dll :as dll :refer [dll]]
-            [slate.core :as c]
+            [slate.model.run :as r]
             [slate.measurement :refer [fake-measure-fn ruler]]))
 
 ;; It is worth noting that this is some of my least favorite code in the whole project.
-;; So if any unsuspecting soul happens to look at this someday, don't judge me too hard --
 ;; I don't even like having this layer of indirection *here*, and I would gladly get rid
 ;; of it, only there's not another solution that doesn't wind up being even more nasty.
 ;; The good news is the nastiness is **largely** contained here.
@@ -120,13 +118,13 @@
         (max-words (:text run) (:formats run) width-left line-width measure-fn)]
     [(assoc span :text span-text
                  :width (measure-fn span-text (:formats run)))
-     (c/run remaining-text (:formats run))]))
+     (r/run remaining-text (:formats run))]))
 
 (comment
-  (max-span-from-run (c/run "foobar bizz buzz hello hello goodbye") 300 300 fake-measure-fn)
-  (max-span-from-run (c/run "foobar bizz buzz hello hello a goodbye") 300 300 fake-measure-fn) ; be sure and test this
-  (max-span-from-run (c/run "foobar bizz buzz hello hello a goodbye") 10 300 fake-measure-fn) ; be sure and test this
-  (max-span-from-run (c/run "the second line now. ") 300 300 fake-measure-fn))
+  (max-span-from-run (r/run "foobar bizz buzz hello hello goodbye") 300 300 fake-measure-fn)
+  (max-span-from-run (r/run "foobar bizz buzz hello hello a goodbye") 300 300 fake-measure-fn) ; be sure and test this
+  (max-span-from-run (r/run "foobar bizz buzz hello hello a goodbye") 10 300 fake-measure-fn) ; be sure and test this
+  (max-span-from-run (r/run "the second line now. ") 300 300 fake-measure-fn))
 
 (defn add-max-to-last-line
   "Adds the maximum amount of chars from `run` onto the last line in `line`, adding
@@ -146,9 +144,9 @@
     [new-lines, remaining]))
 
 (comment
-  (add-max-to-last-line [(empty-line)] (c/run "foobar bizz buzz hello hello goodbye") 300 fake-measure-fn)
-  (add-max-to-last-line [(empty-line)] (c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. ") 300 fake-measure-fn)
-  (add-max-to-last-line [(empty-line)] (c/run "the second line now. ") 300 fake-measure-fn))
+  (add-max-to-last-line [(empty-line)] (r/run "foobar bizz buzz hello hello goodbye") 300 fake-measure-fn)
+  (add-max-to-last-line [(empty-line)] (r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. ") 300 fake-measure-fn)
+  (add-max-to-last-line [(empty-line)] (r/run "the second line now. ") 300 fake-measure-fn))
 
 (defn lineify
   "Convert vector of runs to a vector of lines, with no line exceeding `width`.
@@ -166,15 +164,15 @@
        (recur new-lines remaining-runs width measure-fn)))))
 
 (comment
-  (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fake-measure-fn)
-  (lineify [(c/run "abc" #{:italic}) (c/run "foobar")] 300 fake-measure-fn)
+  (lineify [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fake-measure-fn)
+  (lineify [(r/run "abc" #{:italic}) (r/run "foobar")] 300 fake-measure-fn)
   ;; TODO: add these as test cases
-  (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+  (lineify [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
            300 fake-measure-fn)
-  (lineify [(c/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+  (lineify [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
            300 fake-measure-fn)
-  (lineify [(c/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 fake-measure-fn)
-  (lineify [(c/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 (ruler "15px" "serif")))
+  (lineify [(r/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 fake-measure-fn)
+  (lineify [(r/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 (ruler "15px" "serif")))
 
 (defn from-para
   "Converts a [[Paragraph]] to a ParagraphViewModel."
@@ -193,9 +191,13 @@
             vm (from-para p width measure-fn)]
         (recur (rest paragraphs) (assoc uuids->vms (:uuid p) vm))))))
 
-#_(defn from-doc
-  "Takes a [[Document]], converts each of its [[Paragraph]]s to [[ParagraphViewModel]]s,
-   and returns a a [[DLL]] of ParagraphViewModels."
-  [doc width measure-fn]
-  (dll)
-  #_(from-para p width measure-fn))
+(defn update-viewmodels
+  [viewmodels doc measure-fn changelist]
+  (let [{:keys [changed-uuids inserted-uuids deleted-uuids]} changelist
+        get-para (partial get (:children doc))
+        updated-vms (as-> viewmodels vms
+                      (apply dissoc vms deleted-uuids)
+                      (reduce (fn [new-vms uuid]
+                                (assoc new-vms uuid (from-para (get-para uuid) 200 measure-fn)))
+                              vms (concat inserted-uuids changed-uuids)))]
+    updated-vms))

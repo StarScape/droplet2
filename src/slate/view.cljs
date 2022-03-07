@@ -2,8 +2,10 @@
   "Functions for converting from viewmodels to DOM elements (in the form of strings),
    as well as some utilities for dealing with the editor's DOM layer in general."
   (:require [clojure.string :as str]
-            [slate.selection :as sel]
-            [slate.core :as sl]
+            [slate.model.selection :as sel]
+            [slate.model.common :as sl]
+            [slate.model.editor-state :as es]
+            [slate.model.navigation :as nav]
             [slate.dll :as dll]))
 
 ;; Utility functions
@@ -79,7 +81,8 @@
        :after-sel (not-empty (.substring text end))})))
 
 (defn vm-span->dom
-  "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background."
+  "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background.
+   Returns HTML string."
   [span selection pid para-length]
   (let [format-classes
         (formats->classes (:formats span))
@@ -122,30 +125,61 @@
          (<span> after-sel format-classes))))
 
 (defn vm-line->dom
-  "Convert viewmodel line to DOM element."
+  "Convert viewmodel line to DOM element. Returns HTML string."
   [line selection pid para-length]
   (str "<div class='line'>"
        (apply str (map #(vm-span->dom % selection pid para-length) (:spans line)))
        "</div>"))
 
 (defn vm-para->dom
-  "Convert viewmodel to DOM element."
+  "Convert viewmodel to DOM element. Returns HTML string."
   [viewmodel selection]
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
         para-length (sl/len (:paragraph viewmodel))]
-    (str "<div class='paragraph' id='" (:uuid (:paragraph viewmodel)) "'>"
-         (apply str (map #(vm-line->dom % selection pid para-length) lines))
-         "</div>")))
+    (binding [*selection-ongoing?* (contains? (:between selection) pid)]
+      (str "<div class='paragraph' id='" pid "'>"
+           (apply str (map #(vm-line->dom % selection pid para-length) lines))
+           "</div>"))))
 
 (defn vm-paras->dom
-  "Convert the list of [[ParagraphViewModel]]s to DOM elements.
-   Selection is provided in order to render the caret and highlighted text."
+  "Convert the list of [[ParagraphViewModel]]s to DOM elements and returns an HTML
+   string. Selection is provided in order to render the caret and highlighted text."
   [vm-paras selection]
-  (binding [*selection-ongoing?* false]
-    (str "<div class='document'>"
-         (apply str (map #(vm-para->dom % selection) vm-paras))
-         "</div>")))
+  (str "<div class='document'>"
+       (apply str (map #(vm-para->dom % selection) vm-paras))
+       "</div>"))
+
+(defn insert-all!
+  [editor-elem vm-paras selection]
+  (set! (.-innerHTML editor-elem) (vm-paras->dom vm-paras selection)))
+
+(defn- next-dom-paragraph-after
+  "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom."
+  [uuid paragraphs-dll]
+  (loop [node (dll/next paragraphs-dll uuid)]
+    (if (nil? node)
+      nil
+      (let [elem (js/document.getElementById (str (:uuid node)))]
+        (if (some? elem)
+          elem
+          (recur (dll/next paragraphs-dll node)))))))
+
+(defn insert-para! [editor-elem uuid viewmodel doc selection]
+  (let [next-elem (next-dom-paragraph-after uuid (:children doc))
+        rendered-paragraph (vm-para->dom viewmodel selection)
+        paragraph-elem (js/document.createElement "p")]
+    (if next-elem
+      (.insertBefore (.-parentNode next-elem) paragraph-elem next-elem)
+      (.append editor-elem paragraph-elem))
+    (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
+
+(defn remove-para! [editor-elem uuid]
+  (.remove (js/document.getElementById (str uuid))))
+
+(defn update-para! [editor-elem uuid viewmodel selection]
+  (let [paragraph-elem (.getElementById js/document (str uuid))]
+    (set! (.-innerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they
@@ -184,7 +218,7 @@
   [viewmodels selection]
   {:pre [(sel/single? selection)]}
   (let [caret (sel/caret selection)
-        vm (viewmodels (-> selection :start :paragraph))
+        vm (viewmodels (-> selection :start :paragraph)) ;; TODO: should arg be (sel/caret-para selection) instead?
         within-line? #(and (>= caret (:start-offset %)) (< caret (:end-offset %)))
         at-para-end? #(and (= caret (:end-offset %)) (= caret (sl/len (:paragraph vm))))
         lines (:lines vm)]
@@ -228,7 +262,18 @@
 (defn chars-and-formats [span] (map #(hash-map :char %, :formats (:formats span)) (:text span)))
 
 (defn nearest-line-offset-to-pixel
-  [line target-px measure-fn]
+  "Takes a viewmodel Line and a distance from the left side of the editor-element in pixels,
+   and returns the paragraph offset that is closest to that pixel position.
+
+   Arguments:
+   - `line`: viewmodel Line object
+   - `target-px`: target distance from left bound of editor element, in pixels
+   - `last-line-in-paragraph?`: bool, should be true if this is the last line in the paragraph,
+      as that will affect the logic somewhat.
+   - `measure-fn`: measure function to use"
+  [line target-px last-line-in-paragraph? measure-fn]
+  line
+  last-line-in-paragraph?
   (let [chars-with-formats (->> (:spans line)
                                 (map chars-and-formats (:spans line))
                                 (flatten))]
@@ -237,7 +282,15 @@
            offset-px 0
            prev-delta ##Inf]
       (if (= i (count chars-with-formats))
-        (:end-offset line)
+        ;; If we reach the end of the line without finding a matching offset, default to last offset
+        (if (not last-line-in-paragraph?)#_ (< 0 (:end-offset line))
+          ;; There is an invisible space at the end of each line - place the text caret directly in
+          ;; front of it, and the caret will be rendered at the start of the next line. However, it
+          ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
+          ;; show up on the next line, so we decrement by 1.
+          (dec (:end-offset line))
+          ;; ...however, this is NOT true whenever the line is the last in its paragraph
+          (:end-offset line))
         (let [{:keys [char formats]} (nth chars-with-formats i)
               delta (js/Math.abs (- offset-px target-px))]
           (if (> delta prev-delta)
@@ -247,90 +300,126 @@
                    (+ offset-px (measure-fn char formats))
                    delta)))))))
 
-;; TODO: I think these functions could be moved to the `events` namespace (once it's created),
-;; and we could just keep the helper functions it calls here, or better yet, move them into the
-;; measurement namespace.
-;;
-;; TODO: these would both be much more elegant if we kept a DLL of the viewmodels instead
-(defn down
-  "Move the caret down into the next line. Returns a new selection."
-  [{:keys [doc viewmodels] :as doc-state} measure-fn]
-  (let [selection (sel/smart-collapse (:selection doc-state))
-        para-uuid (sel/caret-para selection)
+(defn down-selection
+  "Move the caret down into the next line. Returns a new Selection."
+  [editor-state viewmodels measure-fn]
+  (let [{:keys [selection doc]} editor-state
+        collapsed-sel (sel/smart-collapse selection)
+        para-uuid (sel/caret-para collapsed-sel)
         viewmodel (get viewmodels para-uuid)
-        line (line-with-caret viewmodels selection)
+        caret-line (line-with-caret viewmodels collapsed-sel)
 
-        ; last line in para?
-        last-line? (= line (peek (:lines viewmodel)))
-        next-line (if (not last-line?)
-                    (line-below-caret viewmodels selection)
+        ;; Caret on last line in paragraph?
+        caret-in-last-line? (= caret-line (peek (:lines viewmodel)))
+        next-line (if (not caret-in-last-line?)
+                    (line-below-caret viewmodels collapsed-sel)
                     (-> (:children doc)
                         (dll/next para-uuid)
                         (:uuid)
                         (viewmodels)
                         (:lines)
                         (first)))
-        new-uuid (if last-line?
+        next-line-vm-paragraph (if (not caret-in-last-line?)
+                                 viewmodel
+                                 (-> (:children doc) (dll/next para-uuid) (:uuid) (viewmodels)))
+        next-line-is-last-line-in-its-paragraph? (= next-line
+                                                    (peek (:lines next-line-vm-paragraph)))
+        new-uuid (if caret-in-last-line?
                    (:uuid (dll/next (:children doc) para-uuid))
                    para-uuid)]
     (if next-line
-      (let [caret-offset-px (caret-px selection line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel next-line caret-offset-px measure-fn)]
-        (sel/selection [new-uuid next-line-offset]))
-      selection)))
+      (let [caret-offset-px (caret-px collapsed-sel caret-line measure-fn)
+            next-line-offset (nearest-line-offset-to-pixel next-line
+                                                           caret-offset-px
+                                                           next-line-is-last-line-in-its-paragraph?
+                                                           measure-fn)]
+        (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset])))
+      collapsed-sel)))
 
-(defn up
-  "Move the caret up into the next line. Returns a new selection."
-  [{:keys [doc viewmodels] :as doc-state} measure-fn]
-  (let [selection (sel/smart-collapse (:selection doc-state))
-        para-uuid (sel/caret-para selection)
+(defn down
+  "Move the caret down into the next line. Returns an EditorUpdate.
+   This is not in the model code because it requires the viewmodel to work."
+  [{:keys [selection] :as editor-state} viewmodels measure-fn]
+  (let [new-selection (down-selection editor-state viewmodels measure-fn)
+        changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection)
+                       (es/changelist :changed-uuids changed-uuids))))
+
+(defn up-selection
+  "Move the caret up into the next line. Returns a new Selection."
+  [editor-state viewmodels measure-fn]
+  (let [{:keys [selection doc]} editor-state
+        collapsed-sel (sel/smart-collapse selection)
+        para-uuid (sel/caret-para collapsed-sel)
         viewmodel (get viewmodels para-uuid)
-        line (line-with-caret viewmodels selection)
-        first-line? (= line (first (:lines viewmodel)))
-        prev-line (if (not first-line?)
-                    (line-above-caret viewmodels selection)
+        caret-line (line-with-caret viewmodels collapsed-sel)
+        caret-in-first-line? (= caret-line (first (:lines viewmodel)))
+        prev-line (if (not caret-in-first-line?)
+                    (line-above-caret viewmodels collapsed-sel)
                     (-> (:children doc)
                         (dll/prev para-uuid)
                         (:uuid)
                         (viewmodels)
                         (:lines)
                         (peek)))
-        new-uuid (if first-line?
+        new-uuid (if caret-in-first-line?
                    (:uuid (dll/prev (:children doc) para-uuid))
                    para-uuid)]
     (if prev-line
-      (let [caret-offset-px (caret-px selection line measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel prev-line caret-offset-px measure-fn)]
-        (sel/selection [new-uuid next-line-offset]))
-      selection)))
+      (let [caret-offset-px (caret-px collapsed-sel caret-line measure-fn)
+            next-line-offset (nearest-line-offset-to-pixel prev-line
+                                                           caret-offset-px
+                                                           caret-in-first-line?
+                                                           measure-fn)]
+        (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset])))
+      collapsed-sel)))
+
+(defn up
+  "Move the caret up into the next line. Returns an EditorUpdate.
+   This is not in the model code because it requires the viewmodel to work."
+  [{:keys [selection] :as editor-state} viewmodels measure-fn]
+  (let [new-selection (up-selection editor-state viewmodels measure-fn)
+        changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection)
+                       (es/changelist :changed-uuids changed-uuids))))
 
 (defn shift+down
-  "Move the caret down into the next line. Returns a new selection."
-  [{:keys [selection] :as doc-state} measure-fn]
+  "Move the caret down into the next line. Returns an EditorUpdate."
+  [editor-state viewmodels measure-fn]
   ;; TODO: go to end of line if down-selection == selection (aka it's the last para)
-  (let [down-selection (down doc-state measure-fn)
-        para (sel/caret-para down-selection)
-        offset (sel/caret down-selection)
-        down-caret {:paragraph para, :offset offset}]
-    (if (and (:backwards? selection) (sel/range? selection))
-      (if (and (< offset (-> selection :end :offset)) (= para (-> selection :end :paragraph)))
-        (assoc selection :start down-caret, :backwards? true)
-        (assoc selection :start (:end selection), :end down-caret, :backwards? false))
-      (assoc selection :end down-caret, :backwards? false))))
+  (let [{:keys [selection]} editor-state
+        down-sel (down-selection editor-state viewmodels measure-fn)
+        down-para (sel/caret-para down-sel)
+        down-offset (sel/caret down-sel)
+        down-caret {:paragraph down-para, :offset down-offset}
+        new-selection (if (and (:backwards? selection) (sel/range? selection))
+                        (if (and (= down-para   (-> selection :end :paragraph))
+                                 (< down-offset (-> selection :end :offset)))
+                          (assoc selection :start down-caret, :backwards? true)
+                          (assoc selection :start (:end selection), :end down-caret, :backwards? false))
+                        (assoc selection :end down-caret, :backwards? false))
+        changed-uuids #{(sel/caret-para selection), (sel/caret-para new-selection)}]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection)
+                       (es/changelist :changed-uuids changed-uuids))))
 
 (defn shift+up
-  "Move the caret up into the next line. Returns a new selection."
-  [{:keys [selection] :as doc-state} measure-fn]
+  "Move the caret up into the next line. Returns an EditorUpdate."
+  [editor-state viewmodels measure-fn]
   ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
-  (let [up-selection (up doc-state measure-fn)
-        para (sel/caret-para up-selection)
-        offset (sel/caret up-selection)
-        up-caret {:paragraph para, :offset offset}]
-    (if (and (not (:backwards? selection)) (sel/range? selection))
-      (if (and (< offset (-> selection :start :offset)) (= para (-> selection :start :paragraph)))
-        (assoc selection :start up-caret, :end (:start selection), :backwards? true)
-        (assoc selection :end up-caret, :backwards? false))
-      (assoc selection :start up-caret, :backwards? true))))
+  (let [{:keys [selection]} editor-state
+        up-sel (up-selection editor-state viewmodels measure-fn)
+        up-para (sel/caret-para up-sel)
+        up-offset (sel/caret up-sel)
+        up-caret {:paragraph up-para, :offset up-offset}
+        new-selection (if (and (not (:backwards? selection)) (sel/range? selection))
+                        (if (and (= up-para   (-> selection :start :paragraph))
+                                 (< up-offset (-> selection :start :offset)))
+                          (assoc selection :start up-caret, :end (:start selection), :backwards? true)
+                          (assoc selection :end up-caret, :backwards? false))
+                        (assoc selection :start up-caret, :backwards? true))
+        changed-uuids #{(sel/caret-para selection), (sel/caret-para new-selection)}]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection)
+                       (es/changelist :changed-uuids changed-uuids))))
 
 (defn calc-line-height
   "Returns the actual *rendered* line height given a paragraph DOM element, in pixels."
@@ -361,29 +450,30 @@
                (< py 0) (first lines)
                (>= py (.-height dom-elem-rect)) (peek lines)
                :else (nth lines (int (/ py line-height))))
+        last-line? (= line (peek lines))
         offset (cond
                  (< px 0) (:start-offset line)
                  (> px (.-width dom-elem-rect)) (:end-offset line)
-                 :else (nearest-line-offset-to-pixel line px measure-fn))]
-    (sel/selection [(:uuid paragraph) offset])))
+                 :else (nearest-line-offset-to-pixel line px last-line? measure-fn))]
+    (nav/autoset-formats paragraph (sel/selection [(:uuid paragraph) offset]))))
 
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its UUID."
-  [paragraphs client-y prev-event]
+  [paragraphs-dll client-y prev-event]
   ;; (println "Finding overlap!")
   (let [para->bounds (fn [{:keys [uuid]}]
                        (let [bounding-rect (.getBoundingClientRect (.getElementById js/document (str uuid)))]
                          {:uuid uuid
                           :top (.-top bounding-rect)
                           :bottom (.-bottom bounding-rect)}))
-        first-para-bounds (-> paragraphs first para->bounds)
-        last-para-bounds (-> paragraphs peek para->bounds)]
+        first-para-bounds (-> paragraphs-dll first para->bounds)
+        last-para-bounds (-> paragraphs-dll peek para->bounds)]
     (cond
       (< client-y (:top first-para-bounds))
-      (-> paragraphs first :uuid)
+      (-> paragraphs-dll first :uuid)
 
       (> client-y (:bottom last-para-bounds))
-      (-> paragraphs peek :uuid)
+      (-> paragraphs-dll peek :uuid)
 
       ;; TODO: one way to further optimize this would be to cache the last drag event
       ;; and use that. I have a feeling that might be more trouble than its worth though,
@@ -395,21 +485,22 @@
             prev-para (match-elem-in-path prev-event ".paragraph")
             ;; Start searching at either the paragraph the
             ;; previous event took place in, or the first one
-            start-uuid (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs)))
+            start-uuid (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs-dll)))
             advance (if (and prev-para (neg? (- client-y (.-y prev-event))))
                          dll/prev
                          dll/next)]
         ;; TODO: okay, definitely some errors here...
-        (loop [p (get paragraphs start-uuid)]
+        (loop [p (get paragraphs-dll start-uuid)]
           (when (nil? p) (throw "I don't think this should ever happen..."))
 
           (if (overlaps? (para->bounds p))
             (:uuid p)
-            (recur (advance paragraphs p))))))))
+            (recur (advance paragraphs-dll p))))))))
 
-;; TODO: change this to handle mousevents that are outside the paragraph.
+(declare ^:dynamic *last-mousedown-event*)
+
 (defn mouse-event->selection
-  "Takes a MouseEvent object and the collection of viewmodels and, if its clientX and clientY
+  "Takes a MouseEvent object and the editor state and, if its clientX and clientY
    are inside a paragraph, returns a single selection set to the paragraph and offset where the
    mouse pointer is at.
 
@@ -425,20 +516,18 @@
    nearest paragraph is to get its bounding rect and compare. We don't want to have to search through the
    entire list of paragraphs and figure out which one is intersecting the mouse, so instead we can pass in
    a paragraph to start searching at."
-  ([event {:keys [viewmodels doc]} measure-fn last-event]
+  ([event doc viewmodels measure-fn]
    (let [paragraph-in-path (match-elem-in-path event ".paragraph")
          paragraph-uuid (if paragraph-in-path
                           (.-id paragraph-in-path)
-                          (find-overlapping-paragraph (:children doc) (.-y event) last-event))
-        ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
-        ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
-        ; will still be valid, however, so we can just grab the current element like this.
+                          (find-overlapping-paragraph (:children doc) (.-y event) *last-mousedown-event*))
+         ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
+         ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
+         ; will still be valid, however, so we can just grab the current element like this.
          paragraph-elem (.getElementById js/document paragraph-uuid)
          vm (get viewmodels (uuid (.-id paragraph-elem)))
          sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]
-     sel))
-  ([event doc-state measure-fn]
-   (mouse-event->selection event doc-state measure-fn nil)))
+     sel)))
 
 (defn- drag-direction
   [started-at currently-at mousedown-event mousemove-event]
@@ -451,13 +540,14 @@
       :backward)))
 
 (defn drag
-  [mousedown-event mousemove-event doc-state measure-fn]
-  (let [started-at (mouse-event->selection mousedown-event doc-state measure-fn)
-        currently-at (mouse-event->selection mousemove-event doc-state measure-fn mousedown-event)
-        dir (drag-direction started-at currently-at mousedown-event mousemove-event)]
-    (if (= dir :forward)
-      (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
-                     [(sel/caret-para currently-at) (sel/caret currently-at)])
-      (sel/selection [(sel/caret-para currently-at) (sel/caret currently-at)]
-                     [(sel/caret-para started-at) (sel/caret started-at)]
-                     true))))
+  [mousemove-event doc viewmodels measure-fn]
+  (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels measure-fn)
+        currently-at (mouse-event->selection mousemove-event doc viewmodels measure-fn)
+        dir (drag-direction started-at currently-at *last-mousedown-event* mousemove-event)
+        raw-selection (if (= dir :forward)
+                        (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
+                                       [(sel/caret-para currently-at) (sel/caret currently-at)])
+                        (sel/selection [(sel/caret-para currently-at) (sel/caret currently-at)]
+                                       [(sel/caret-para started-at) (sel/caret started-at)]
+                                       :backwards? true))]
+    (nav/autoset-formats doc raw-selection)))
