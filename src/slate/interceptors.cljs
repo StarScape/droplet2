@@ -11,7 +11,7 @@
                         input-name
                         include-in-history?
                         add-to-history-immediately?
-                        no-dom-sync?]
+                        manual?]
   IFn
   (-invoke [this editor-state extras event-obj]
     ((:interceptor-fn this) editor-state extras event-obj)))
@@ -51,7 +51,7 @@
                                           ::shortcuts]))
 
 ;; TODO: should this be const?
-(def modifier-keys #{:ctrl :shift :alt :cmd})
+(def modifier-keys #{:cmd :ctrl :shift :alt})
 
 (def valid-interceptor-keywords
   ^{:doc "Set of legal modifier keys and events for an interceptor pattern."}

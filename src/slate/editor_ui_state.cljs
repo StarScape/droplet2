@@ -1,5 +1,5 @@
 (ns slate.editor-ui-state
-  (:require-macros [slate.interceptors])
+  (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [clojure.spec.alpha :as s]
             [slate.model.editor-state :as es]
             [slate.model.history :as history]
@@ -7,7 +7,8 @@
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
             [slate.view :as view]
-            [slate.viewmodel :as vm]))
+            [slate.viewmodel :as vm]
+            [slate.utils :as utils]))
 
 (s/def ::id uuid?)
 (s/def ::history ::history/editor-state-history)
@@ -77,8 +78,8 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
-(defn fire-interceptor!
-  "The fire-interceptor! function is the core of Slate's main data loop.
+(defn fire-normal-interceptor!
+  "This the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
    is called, which handles updating the state stored in the UIState atom and re-rendering
    elements in the DOM.
@@ -99,11 +100,10 @@
                               (:include-in-history? interceptor))
                        (update new-ui-state :history history/add-tip-to-backstack)
                        new-ui-state)]
-    (when-not (:no-dom-sync? interceptor)
-      (sync-dom! (:dom-elem new-ui-state)
-                 (:editor-state editor-update)
-                 (:viewmodels new-ui-state)
-                 (:changelist editor-update)))
+    (sync-dom! (:dom-elem new-ui-state)
+               (:editor-state editor-update)
+               (:viewmodels new-ui-state)
+               (:changelist editor-update))
 
     (reset! *ui-state new-ui-state)
 
@@ -112,10 +112,16 @@
       ;; TODO: change this to be on a per-instance of *ui-state basis
       (add-tip-to-backstack-after-wait! *ui-state))))
 
-;; TODO: can we add a "manual" interceptor type to handle this?
-;; Something that does not call fire-interceptor! but just allows
-;; you to do what you want in the interceptor? Can that replace no-dom-sync?
-(defn undo! [*ui-state]
+(defn fire-interceptor!
+  [*ui-state interceptor event]
+  (if (:manual? interceptor)
+    ;; Manual interceptors don't rely on Slate's default data-loop
+    (interceptor *ui-state event)
+    (fire-normal-interceptor! *ui-state interceptor event)))
+
+(definterceptor undo!
+  {:manual? true}
+  [*ui-state _]
   (cancel-add-tip-to-backstack! *ui-state)
   (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state
         current-update (history/current history)]
@@ -136,7 +142,9 @@
                    changelist)
         (reset! *ui-state new-ui-state)))))
 
-(defn redo! [*ui-state]
+(definterceptor redo!
+  {:manual? true}
+  [*ui-state _]
   (cancel-add-tip-to-backstack! *ui-state)
   (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state]
     (when (history/has-redo? history)
@@ -190,17 +198,9 @@
      hidden-input
      "keydown"
      (fn [e]
-       (condp = (interceptors/event->key-set e)
-         ;; TODO: need something more elegant for this
-         #{:cmd :z} (do
-                      (.preventDefault e)
-                      (undo! *ui-state))
-         #{:cmd :shift :z} (do
-                             (.preventDefault e)
-                             (redo! *ui-state))
-         (when-let [interceptor-fn (get-interceptor e)]
-           (.preventDefault e)
-           (fire-interceptor! *ui-state interceptor-fn e)))))
+       (when-let [interceptor-fn (get-interceptor e)]
+         (.preventDefault e)
+         (fire-interceptor! *ui-state interceptor-fn e))))
     (.addEventListener
      hidden-input
      "beforeinput"
@@ -229,6 +229,14 @@
 
          nil)))))
 
+(def manual-interceptors
+  "Some manual interceptors that are not pure and therefore defined here rather than default_interceptors."
+  (if utils/is-mac?
+    {:cmd+z undo!
+     :cmd+shift+z redo!}
+    {:ctrl+z undo!
+     :ctrl+shift+z redo!}))
+
 (defn init
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be updated throughout the lifetime of the editor. Takes a series
@@ -244,7 +252,8 @@
   (let [measure-fn (ruler-for-elem dom-elem)
         editor-state (or editor-state (es/editor-state))
         interceptors-map (-> (interceptors/interceptor-map)
-                             (interceptors/reg-interceptors default-interceptors))
+                             (interceptors/reg-interceptors default-interceptors)
+                             (interceptors/reg-interceptors manual-interceptors))
         *ui-state (atom {:id (random-uuid)
                          :viewmodels (vm/from-doc (:doc editor-state) 200 measure-fn)
                          :history (history/init editor-state)

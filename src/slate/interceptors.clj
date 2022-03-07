@@ -23,18 +23,20 @@
    `:add-to-history-immediately?`: **Default `false`**. Whether the return value should be added to
    the editor's history immediately, without a timeout for inactivity.
 
-   `:no-dom-sync?`: **Default `false`**. Set to `true` if a DOM sync *is not necessary* after this interceptor is called.
-   This exists because it is occasionally useful to hook into the interceptor system to execute operations that have
-   nothing to do with Slate's editor surface itself, such as file-saving on a shortcut."
-  [{:keys [input-name include-in-history? add-to-history-immediately? no-dom-sync?]
+   `:manual?`: **Default `false`**. If set to `true`, the typical add-to-history and DOM sync process is forgone and the interceptor
+   will just be called as a normal function, **which is passed the EditorUIState atom** (not just it's contents) and the event. This exists because
+   it is occasionally useful to hook into the interceptor system to execute operations that have nothing to do with Slate's editor surface
+   itself, such as file-saving on a shortcut, or the undo and redo operations, which behave a little differently than the normal interceptor
+   paths."
+  [{:keys [input-name include-in-history? add-to-history-immediately? manual?]
     :or {include-in-history? true
          add-to-history-immediately? false
-         no-dom-sync? false}}
+         manual? false}}
    arglist, & fn-body]
   (assert input-name "Input name is required for interceptor macro.")
   (when include-in-history? (assert (not add-to-history-immediately?) "Cannot have add-to-history-immediately? set to true when "))
   `(map->Interceptor {:input-name ~input-name
-                      :no-dom-sync? ~no-dom-sync?
+                      :manual? ~manual?
                       :include-in-history? ~include-in-history?
                       :add-to-history-immediately? ~add-to-history-immediately?
                       :interceptor-fn (fn [~@arglist] ~@fn-body)}))
