@@ -150,6 +150,7 @@
    :left left
    :shift+left shift+left
    :right right
+   :shift+right shift+right
    :ctrl+shift+right ctrl+shift+right
    :down down
    :shift+down shift+down
