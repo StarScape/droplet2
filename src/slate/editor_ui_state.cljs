@@ -3,10 +3,9 @@
   (:require [clojure.spec.alpha :as s]
             [slate.model.editor-state :as es]
             [slate.model.history :as history]
-            [slate.interceptors :as interceptors :refer [interceptor?]]
+            [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
-            [slate.utils :refer [cancellable-debounce cancel-debounced!]]
             [slate.view :as view]
             [slate.viewmodel :as vm]))
 
@@ -30,6 +29,8 @@
                                           ::viewmodels
                                           ::interceptors]))
 
+(def ^:const history-timeout-ms 1000)
+
 (defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
@@ -44,7 +45,15 @@
   {:pre [(instance? Atom *ui-state)]}
   (swap! *ui-state update :history history/add-tip-to-backstack))
 
-(def add-tip-to-backstack-after-wait! (cancellable-debounce 1000 add-tip-to-backstack!))
+(defn add-tip-to-backstack-after-wait!
+  [*ui-state]
+  (js/clearTimeout (:add-tip-to-backstack-timer-id @*ui-state))
+  (swap! *ui-state assoc :add-tip-to-backstack-timer-id (js/setTimeout #(add-tip-to-backstack! *ui-state)
+                                                                       history-timeout-ms)))
+
+(defn cancel-add-tip-to-backstack!
+  [*ui-state]
+  (js/clearTimeout (:add-tip-to-backstack-timer-id @*ui-state)))
 
 (defn init-dom!
   "Perform initial DOM render. This will be called on application startup,
@@ -107,7 +116,7 @@
 ;; Something that does not call fire-interceptor! but just allows
 ;; you to do what you want in the interceptor? Can that replace no-dom-sync?
 (defn undo! [*ui-state]
-  (cancel-debounced! add-tip-to-backstack-after-wait!)
+  (cancel-add-tip-to-backstack! *ui-state)
   (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state
         current-update (history/current history)]
     (when (history/has-undo? history)
@@ -128,7 +137,7 @@
         (reset! *ui-state new-ui-state)))))
 
 (defn redo! [*ui-state]
-  (cancel-debounced! add-tip-to-backstack-after-wait!)
+  (cancel-add-tip-to-backstack! *ui-state)
   (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state]
     (when (history/has-redo? history)
       (let [new-input-history (interceptors/add-to-input-history input-history :redo)
@@ -239,7 +248,7 @@
         *ui-state (atom {:id (random-uuid)
                          :viewmodels (vm/from-doc (:doc editor-state) 200 measure-fn)
                          :history (history/init editor-state)
-                         :add-tip-to-backstack-callback nil
+                         :add-tip-to-backstack-timer-id nil
                          :dom-elem dom-elem
                          :hidden-input hidden-input
                          :measure-fn measure-fn
