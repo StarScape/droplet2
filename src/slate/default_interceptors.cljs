@@ -113,14 +113,17 @@
 
 ;; Auto-surrounding ;;
 (definterceptor auto-surround-double-quote
+  {:add-to-history-immediately? true}
   [editor-state _ui-state _e]
   (es/auto-surround editor-state \"))
 
 (definterceptor auto-surround-single-quote
+  {:add-to-history-immediately? true}
   [editor-state _ui-state _e]
   (es/auto-surround editor-state \'))
 
 (definterceptor auto-surround-paren
+  {:add-to-history-immediately? true}
   [editor-state _ui-state _e]
   (es/auto-surround editor-state "(" ")"))
 

@@ -15,8 +15,8 @@
 (s/def ::dom-elem #(instance? js/HTMLElement %))
 (s/def ::hidden-input ::dom-elem)
 (s/def ::measure-fn (s/fspec :args (s/cat :text string?
-                                         :formats (s/coll-of keyword? :kind set?))
-                            :ret int?))
+                                          :formats (s/coll-of keyword? :kind set?))
+                             :ret int?))
 (s/def ::input-history (s/coll-of any?))
 (s/def ::viewmodels (s/coll-of any?))
 (s/def ::interceptors ::interceptors/interceptor-map)
@@ -40,6 +40,26 @@
         {:keys [editor-state changelist]} (:tip history)
         new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
+
+(defn update-history
+  [history editor-update interceptor]
+  ;; if normal:
+  ;;   Just update tip, integrate into backstack after debounced timeout
+  ;; if completion:
+  ;;   Take state before interceptor fired, add that to the backstack immediately.
+  ;;   Then set the tip to the result of the completion interceptor.
+  (cond
+    ;; C
+    (and (:add-to-history-immediately? interceptor)
+         (:include-in-history? interceptor))
+    (-> history
+        (history/add-tip-to-backstack)
+        (history/set-tip editor-update))
+
+    ;; (:include-in-history? interceptor)
+    ;; (history/set-tip history editor-update)
+
+    :else (history/set-tip history editor-update)))
 
 (defn add-tip-to-backstack!
   [*ui-state]
@@ -77,26 +97,6 @@
       (view/remove-para! dom-elem uuid))
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
-
-;; if normal:
-;;   Just update tip, integrate into backstack after debounced timeout
-;; if completion:
-;;   Take state before interceptor fired, add that to the backstack immediately.
-;;   Then set the tip to the result of the completion interceptor.
-
-(defn update-history
-  [history editor-update interceptor]
-  (cond
-    (and (:add-to-history-immediately? interceptor)
-         (:include-in-history? interceptor))
-    (-> history
-        (history/add-tip-to-backstack)
-        (history/set-tip editor-update))
-
-    (:include-in-history? interceptor)
-    (history/set-tip history editor-update)
-
-    :else history))
 
 (defn fire-normal-interceptor!
   "This the core of Slate's main data loop.
@@ -246,7 +246,10 @@
            (fire-interceptor! *ui-state interceptor e))
 
          "deleteContentBackward"
-         (fire-interceptor! *ui-state (get-interceptor :delete) e)
+         (let [{:keys [input-history]} @*ui-state]
+           (if (= :transform-double-dash-to-em-dash (peek input-history))
+             (fire-interceptor! *ui-state undo! e)
+             (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 
          nil)))))
 
