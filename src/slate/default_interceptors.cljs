@@ -126,6 +126,7 @@
 
 ;; Autocompletions ;;
 (definterceptor transform-double-dash-to-em-dash
+  {:add-to-history-immediately? true}
   [editor-state _ _]
   (-> (m/delete editor-state)
       (>>= m/delete)

@@ -78,6 +78,26 @@
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
+;; if normal:
+;;   Just update tip, integrate into backstack after debounced timeout
+;; if completion:
+;;   Take state before interceptor fired, add that to the backstack immediately.
+;;   Then set the tip to the result of the completion interceptor.
+
+(defn update-history
+  [history editor-update interceptor]
+  (cond
+    (and (:add-to-history-immediately? interceptor)
+         (:include-in-history? interceptor))
+    (-> history
+        (history/add-tip-to-backstack)
+        (history/set-tip editor-update))
+
+    (:include-in-history? interceptor)
+    (history/set-tip history editor-update)
+
+    :else history))
+
 (defn fire-normal-interceptor!
   "This the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
@@ -93,13 +113,9 @@
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
         new-ui-state (-> ui-state
-                         (update :history history/set-tip editor-update)
+                         (update :history update-history editor-update interceptor)
                          (update :input-history interceptors/add-to-input-history interceptor event)
-                         (update-viewmodels-to-history-tip))
-        new-ui-state (if (and (:add-to-history-immediately? interceptor)
-                              (:include-in-history? interceptor))
-                       (update new-ui-state :history history/add-tip-to-backstack)
-                       new-ui-state)]
+                         (update-viewmodels-to-history-tip))]
     (sync-dom! (:dom-elem new-ui-state)
                (:editor-state editor-update)
                (:viewmodels new-ui-state)
@@ -107,9 +123,14 @@
 
     (reset! *ui-state new-ui-state)
 
-    (when (and (:include-in-history? interceptor)
-               (not (:add-to-history-immediately? interceptor)))
-      ;; TODO: change this to be on a per-instance of *ui-state basis
+    (cond
+      ;; Adding to history has already be handled, cancel the debounced func if one is waiting to fire
+      (and (:add-to-history-immediately? interceptor)
+           (:include-in-history? interceptor))
+      (cancel-add-tip-to-backstack! *ui-state)
+
+      ;; Integrate the history tip into the backstack after a period of inactivity
+      (:include-in-history? interceptor)
       (add-tip-to-backstack-after-wait! *ui-state))))
 
 (defn fire-interceptor!

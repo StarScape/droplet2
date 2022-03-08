@@ -34,7 +34,9 @@
          manual? false}}
    arglist, & fn-body]
   (assert input-name "Input name is required for interceptor macro.")
-  (when include-in-history? (assert (not add-to-history-immediately?) "Cannot have add-to-history-immediately? set to true when "))
+  (when (not include-in-history?)
+    (assert (not add-to-history-immediately?)
+            "add-to-history-immediately? cannot be true if include-in-history? is false"))
   `(map->Interceptor {:input-name ~input-name
                       :manual? ~manual?
                       :include-in-history? ~include-in-history?
