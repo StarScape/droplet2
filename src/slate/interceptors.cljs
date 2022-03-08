@@ -221,6 +221,16 @@
            (subvec input-history 1))
          input-name))
   ([input-history interceptor event]
-   (add-to-input-history input-history (if (= :insert (:input-name interceptor))
-                                         (.-data event)
-                                         (:input-name interceptor)))))
+   (let [input-name (cond
+                      ;; TODO: may need to change this to a map with :completion true and other info at some point
+                      ;; May need to also change to the interceptor just having a field like :undoable-with-delete?
+                      ;; or something, depending on future needs. This behavior may not make sense e.g. for paren completion
+                      (and (:add-to-history-immediately? interceptor)
+                           (:include-in-history? interceptor))
+                      :completion
+
+                      (= :insert (:input-name interceptor))
+                      (.-data event)
+
+                      :else (:input-name interceptor))]
+     (add-to-input-history input-history input-name))))

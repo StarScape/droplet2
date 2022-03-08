@@ -48,18 +48,12 @@
   ;; if completion:
   ;;   Take state before interceptor fired, add that to the backstack immediately.
   ;;   Then set the tip to the result of the completion interceptor.
-  (cond
-    ;; C
-    (and (:add-to-history-immediately? interceptor)
-         (:include-in-history? interceptor))
+  (if (and (:add-to-history-immediately? interceptor)
+           (:include-in-history? interceptor))
     (-> history
         (history/add-tip-to-backstack)
         (history/set-tip editor-update))
-
-    ;; (:include-in-history? interceptor)
-    ;; (history/set-tip history editor-update)
-
-    :else (history/set-tip history editor-update)))
+    (history/set-tip history editor-update)))
 
 (defn add-tip-to-backstack!
   [*ui-state]
@@ -226,16 +220,6 @@
      hidden-input
      "beforeinput"
      (fn [e]
-        ;; TODO: how to undo a completion with a backspace immediately after the
-        ;; completion fires? I think one method might be to FIRST let the normal
-        ;; :insert interceptor fire, THEN afterward fire the completion. Then a 
-        ;; special case must be added to the :delete interceptor which undoes what
-        ;; just happened IF the last thing to happen was a completion interceptor.
-        ;; This would also necessitate that every completion add :completion or something
-        ;; similar to the input-history.
-        ;;
-        ;; I think it could work but I'm not yet totally sure how I feel about it.
-        ;; Need to think it over.
        (case (.-inputType e)
          "insertText"
          (let [{:keys [interceptors input-history]} @*ui-state
@@ -247,7 +231,7 @@
 
          "deleteContentBackward"
          (let [{:keys [input-history]} @*ui-state]
-           (if (= :transform-double-dash-to-em-dash (peek input-history))
+           (if (= :completion (peek input-history))
              (fire-interceptor! *ui-state undo! e)
              (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 

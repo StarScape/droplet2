@@ -54,7 +54,6 @@
 (defn add-tip-to-backstack
   "Removes `history`'s tip and incorporates it into the backstack as the last element."
   [{:keys [tip] :as history}]
-  #_(assert (some? tip) "Tip must not be nil if add-tip-to-backstack is called!")
   (if (nil? tip)
     history
     (-> history
