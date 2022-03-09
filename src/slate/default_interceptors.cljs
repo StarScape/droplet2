@@ -182,8 +182,8 @@
    :ctrl+shift+right ctrl+shift+right
    :ctrl+i ctrl+i
    :ctrl+b ctrl+b
-   ;; TODO: page up and page down shortcuts for win/linux
-   })
+   :pageup start-of-line
+   :pagedown end-of-line})
 
 (def mac-interceptors
   {:alt+left ctrl+left
@@ -192,8 +192,8 @@
    :alt+shift+right ctrl+shift+right
    :cmd+i ctrl+i
    :cmd+b ctrl+b
-   :cmd+right end-of-line
-   :cmd+left start-of-line})
+   :cmd+left start-of-line
+   :cmd+right end-of-line})
 
 (def default-interceptors
   (merge universal-interceptors (if (utils/is-mac?)
