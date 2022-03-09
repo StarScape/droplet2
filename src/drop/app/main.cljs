@@ -7,20 +7,18 @@
             [slate.model.history :as history]
             [slate.core :as sl]))
 
-;; DONE: Keep track of :formats on Selection object
-;; DONE: update (selection) constructor to allow a single [] arg followed by kw-args
-;; DONE: undo/redo
-
-;; TODO: handle completion undo with backspace -- I think the best thing might be just to
-;;       fire undo! in the delete handler if the last action was a completion.
 ;; TODO: add cmd+left and cmd+right shortcuts to go to start/end of line
 ;; TODO: nav functions for moving between clauses, sentences, and paragraphs
+;; TODO: make so that cmd+i, cmd+b, etc only get added to history done with a range selection (how much do I care?)
 
 ;; TODO: Handle resizing of the text area
 ;; TODO: add support for ordered and unordered lists
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
 ;; TODO: Make a React element that encapsulates the editor. This should
 ;; live at the app level, not the Slate library level.
+;; TODO: Set up Electron
+;; TODO: File saving/loading
+;; TODO: interface design/impl
 
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))

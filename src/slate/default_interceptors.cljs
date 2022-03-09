@@ -111,6 +111,16 @@
   [editor-state ui-state _e]
   (view/shift+up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
 
+(definterceptor start-of-line
+  {:include-in-history? false}
+  [editor-state ui-state _e]
+  (view/start-of-line editor-state (:viewmodels ui-state)))
+
+(definterceptor end-of-line
+  {:include-in-history? false}
+  [editor-state ui-state _e]
+  (view/end-of-line editor-state (:viewmodels ui-state)))
+
 ;; Auto-surrounding ;;
 (definterceptor auto-surround-double-quote
   {:add-to-history-immediately? true}
@@ -171,7 +181,9 @@
    :ctrl+right ctrl+right
    :ctrl+shift+right ctrl+shift+right
    :ctrl+i ctrl+i
-   :ctrl+b ctrl+b})
+   :ctrl+b ctrl+b
+   ;; TODO: page up and page down shortcuts for win/linux
+   })
 
 (def mac-interceptors
   {:alt+left ctrl+left
@@ -179,7 +191,9 @@
    :alt+right ctrl+right
    :alt+shift+right ctrl+shift+right
    :cmd+i ctrl+i
-   :cmd+b ctrl+b})
+   :cmd+b ctrl+b
+   :cmd+right end-of-line
+   :cmd+left start-of-line})
 
 (def default-interceptors
   (merge universal-interceptors (if (utils/is-mac?)

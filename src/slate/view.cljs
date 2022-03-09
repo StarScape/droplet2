@@ -421,6 +421,36 @@
     (es/->EditorUpdate (assoc editor-state :selection new-selection)
                        (es/changelist :changed-uuids changed-uuids))))
 
+(defn start-of-line-selection
+  "Returns a Selection that moves the cursor to the beginning of the current line."
+  [{:keys [selection]} viewmodels]
+  (let [new-offset (:start-offset (line-with-caret viewmodels selection))]
+    (sel/selection [(sel/caret-para selection) new-offset])))
+
+(defn start-of-line
+  "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
+  [{:keys [selection] :as editor-state} viewmodels]
+  (es/->EditorUpdate (assoc editor-state :selection (start-of-line-selection editor-state viewmodels))
+                     (es/changelist :changed-uuids (sel/all-uuids selection))))
+
+(defn end-of-line-selection
+  "Returns a Selection that moves the cursor to the beginning of the current line."
+  [{:keys [doc selection]} viewmodels]
+  (let [paragraph (get (:children doc) (sel/caret-para selection))
+        caret-line (line-with-caret viewmodels selection)
+        end-offset (:end-offset caret-line)
+        ;; Decrement by 1 if it's not last line to account for space at the end of each line
+        new-offset (if (= end-offset (sl/len paragraph))
+                     end-offset
+                     (dec end-offset))]
+    (sel/selection [(:uuid paragraph) new-offset])))
+
+(defn end-of-line
+  "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
+  [{:keys [selection] :as editor-state} viewmodels]
+  (es/->EditorUpdate (assoc editor-state :selection (end-of-line-selection editor-state viewmodels))
+                     (es/changelist :changed-uuids (sel/all-uuids selection))))
+
 (defn calc-line-height
   "Returns the actual *rendered* line height given a paragraph DOM element, in pixels."
   [paragraph-dom-elem]
