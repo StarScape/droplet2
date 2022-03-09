@@ -121,6 +121,16 @@
   [editor-state ui-state _e]
   (view/end-of-line editor-state (:viewmodels ui-state)))
 
+(definterceptor start-of-doc
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/start editor-state))
+
+(definterceptor end-of-doc
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/end editor-state))
+
 ;; Auto-surrounding ;;
 (definterceptor auto-surround-double-quote
   {:add-to-history-immediately? true}
@@ -182,8 +192,11 @@
    :ctrl+shift+right ctrl+shift+right
    :ctrl+i ctrl+i
    :ctrl+b ctrl+b
+   ;; TODO: should these be in universal-interceptors?
    :pageup start-of-line
-   :pagedown end-of-line})
+   :pagedown end-of-line
+   :home start-of-doc
+   :end end-of-doc})
 
 (def mac-interceptors
   {:alt+left ctrl+left
@@ -193,7 +206,9 @@
    :cmd+i ctrl+i
    :cmd+b ctrl+b
    :cmd+left start-of-line
-   :cmd+right end-of-line})
+   :cmd+right end-of-line
+   :cmd+up start-of-doc
+   :cmd+down end-of-doc})
 
 (def default-interceptors
   (merge universal-interceptors (if (utils/is-mac?)

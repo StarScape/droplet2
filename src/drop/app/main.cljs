@@ -7,10 +7,11 @@
             [slate.model.history :as history]
             [slate.core :as sl]))
 
-;; TODO: add cmd+left and cmd+right shortcuts to go to start/end of line
+;; DONE: add cmd+left and cmd+right shortcuts to go to start/end of line
+
+;; TODO: add cmd+up/cmd+down and home/end shortcuts to go to start/end of doc
 ;; TODO: nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: make so that cmd+i, cmd+b, etc only get added to history done with a range selection (how much do I care?)
-
 ;; TODO: Handle resizing of the text area
 ;; TODO: add support for ordered and unordered lists
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
