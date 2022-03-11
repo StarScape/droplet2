@@ -32,9 +32,9 @@
 
 (def ^:const history-timeout-ms 1000)
 
-(def ^:const font-size-min 5)
-(def ^:const font-size-max 100)
-(def ^:const font-size-delta "Amount to increase/decrease font size by each time." 10)
+(def ^:const font-size-min 10)
+(def ^:const font-size-max 70)
+(def ^:const font-size-delta "Amount to increase/decrease font size by each time." 5)
 
 (defn elem-width
   "Returns the width of the UIState's dom element, in pixels."
@@ -126,59 +126,20 @@
     (swap! *ui-state assoc :measure-fn (ruler-for-elem dom-elem))
     (full-dom-render! *ui-state)))
 
-(defn increase-font-size!
+(definterceptor increase-font-size!
+  {:manual? true}
   [*ui-state]
+  #p "Hello?"
   (let [new-font-size (+ font-size-delta (view/font-size (:dom-elem @*ui-state)))]
     (when (<= new-font-size font-size-max)
       (set-font-size! *ui-state new-font-size))))
 
-(defn decrease-font-size!
+(definterceptor decrease-font-size!
+  {:manual? true}
   [*ui-state]
   (let [new-font-size (- (view/font-size (:dom-elem @*ui-state)) font-size-delta)]
     (when (>= new-font-size font-size-min)
       (set-font-size! *ui-state new-font-size))))
-
-(defn fire-normal-interceptor!
-  "This the core of Slate's main data loop.
-   Any time an event happens which finds a matching interceptor, fire-interceptor!
-   is called, which handles updating the state stored in the UIState atom and re-rendering
-   elements in the DOM.
-
-   Arguments:
-   - `*ui-state`: Atom containing EditorUIState
-   - `interceptor` Interceptor to fire
-   - `event`: Raw JS event object"
-  [*ui-state interceptor event]
-  (let [ui-state @*ui-state ; only deref once a cycle
-        editor-state (history/current-state (:history ui-state))
-        editor-update (interceptor editor-state ui-state event)
-        new-ui-state (-> ui-state
-                         (update :history update-history editor-update interceptor)
-                         (update :input-history interceptors/add-to-input-history interceptor event)
-                         (update-viewmodels-to-history-tip))]
-    (sync-dom! (:dom-elem new-ui-state)
-               (:editor-state editor-update)
-               (:viewmodels new-ui-state)
-               (:changelist editor-update))
-
-    (reset! *ui-state new-ui-state)
-
-    (cond
-      ;; Adding to history has already be handled, cancel the debounced func if one is waiting to fire
-      (and (:add-to-history-immediately? interceptor)
-           (:include-in-history? interceptor))
-      (cancel-add-tip-to-backstack! *ui-state)
-
-      ;; Integrate the history tip into the backstack after a period of inactivity
-      (:include-in-history? interceptor)
-      (add-tip-to-backstack-after-wait! *ui-state))))
-
-(defn fire-interceptor!
-  [*ui-state interceptor event]
-  (if (:manual? interceptor)
-    ;; Manual interceptors don't rely on Slate's default data-loop
-    (interceptor *ui-state event)
-    (fire-normal-interceptor! *ui-state interceptor event)))
 
 (definterceptor undo!
   {:manual? true}
@@ -224,6 +185,48 @@
                    (:viewmodels new-ui-state)
                    changelist)
         (reset! *ui-state new-ui-state)))))
+
+(defn fire-normal-interceptor!
+  "This the core of Slate's main data loop.
+   Any time an event happens which finds a matching interceptor, fire-interceptor!
+   is called, which handles updating the state stored in the UIState atom and re-rendering
+   elements in the DOM.
+
+   Arguments:
+   - `*ui-state`: Atom containing EditorUIState
+   - `interceptor` Interceptor to fire
+   - `event`: Raw JS event object"
+  [*ui-state interceptor event]
+  (let [ui-state @*ui-state ; only deref once a cycle
+        editor-state (history/current-state (:history ui-state))
+        editor-update (interceptor editor-state ui-state event)
+        new-ui-state (-> ui-state
+                         (update :history update-history editor-update interceptor)
+                         (update :input-history interceptors/add-to-input-history interceptor event)
+                         (update-viewmodels-to-history-tip))]
+    (sync-dom! (:dom-elem new-ui-state)
+               (:editor-state editor-update)
+               (:viewmodels new-ui-state)
+               (:changelist editor-update))
+
+    (reset! *ui-state new-ui-state)
+
+    (cond
+      ;; Adding to history has already be handled, cancel the debounced func if one is waiting to fire
+      (and (:add-to-history-immediately? interceptor)
+           (:include-in-history? interceptor))
+      (cancel-add-tip-to-backstack! *ui-state)
+
+      ;; Integrate the history tip into the backstack after a period of inactivity
+      (:include-in-history? interceptor)
+      (add-tip-to-backstack-after-wait! *ui-state))))
+
+(defn fire-interceptor!
+  [*ui-state interceptor event]
+  (if (:manual? interceptor)
+    ;; Manual interceptors don't rely on Slate's default data-loop
+    (interceptor *ui-state event)
+    (fire-normal-interceptor! *ui-state interceptor event)))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
@@ -289,9 +292,13 @@
   "Some manual interceptors that are not pure and therefore defined here rather than default_interceptors."
   (if utils/is-mac?
     {:cmd+z undo!
-     :cmd+shift+z redo!}
+     :cmd+shift+z redo!
+     :cmd+= increase-font-size!
+     :cmd+- decrease-font-size!}
     {:ctrl+z undo!
-     :ctrl+shift+z redo!}))
+     :ctrl+shift+z redo!
+     :ctrl+= increase-font-size!
+     :ctrl+- decrease-font-size!}))
 
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
@@ -308,7 +315,7 @@
   (let [dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem dom-elem)
         editor-state (or editor-state (es/editor-state))
-        interceptors-map (-> (interceptors/interceptor-map)
+        interceptors-map #p (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
         *ui-state (atom {:id (random-uuid)

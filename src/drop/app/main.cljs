@@ -12,6 +12,7 @@
 ;; DONE: Handle resizing of the text area
 
 ;; TODO: Handle font resizing of the text area
+;; TODO: Add support for h1 and h2
 ;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
@@ -44,10 +45,7 @@
 
 (defn main []
   (update-formats-elem nil nil nil @*ui-state)
-  (add-watch *ui-state :formats-watcher update-formats-elem)
-
-  (.addEventListener (js/document.getElementById "plus") "click" #(ui-state/increase-font-size! *ui-state))
-  (.addEventListener (js/document.getElementById "minus") "click" #(ui-state/decrease-font-size! *ui-state)))
+  (add-watch *ui-state :formats-watcher update-formats-elem))
 
 (defn ^:dev/after-load reload []
   #_(sync-dom @state))
