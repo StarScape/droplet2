@@ -4,22 +4,23 @@
             [slate.model.paragraph :refer [paragraph]]
             [slate.model.doc :refer [document]]
             [slate.model.editor-state :refer [editor-state] :as es]
+            [slate.editor-ui-state :as ui-state]
             [slate.model.history :as history]
             [slate.core :as sl]))
 
 ;; DONE: add cmd+left and cmd+right shortcuts to go to start/end of line
+;; DONE: Handle resizing of the text area
 
-;; TODO: Handle resizing of the text area
 ;; TODO: Handle font resizing of the text area
-;; TODO: add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
-;; TODO: nav functions for moving between clauses, sentences, and paragraphs
-;; TODO: make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
+;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
+;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
+;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
+;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
-;; TODO: Make a React element that encapsulates the editor. This should
-;; live at the app level, not the Slate library level.
+;; TODO: Make a React element that encapsulates the editor. This should live at the app level, not in Slate.
 ;; TODO: Set up Electron
 ;; TODO: File saving/loading
-;; TODO: interface design/impl
+;; TODO: Interface design/impl
 
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))
@@ -40,11 +41,13 @@
         formats-str (str "Formats: " (str/join \, (:formats sel)))
         elem (js/document.getElementById "formats")]
     (set! (.-innerHTML elem) formats-str)))
-(update-formats-elem nil nil nil @*ui-state)
 
-(add-watch *ui-state :formats-watcher update-formats-elem)
+(defn main []
+  (update-formats-elem nil nil nil @*ui-state)
+  (add-watch *ui-state :formats-watcher update-formats-elem)
 
-(defn main [])
+  (.addEventListener (js/document.getElementById "plus") "click" #(ui-state/increase-font-size! *ui-state))
+  (.addEventListener (js/document.getElementById "minus") "click" #(ui-state/decrease-font-size! *ui-state)))
 
 (defn ^:dev/after-load reload []
   #_(sync-dom @state))

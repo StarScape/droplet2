@@ -18,6 +18,15 @@
             (when (.-matches elem) (.matches elem sstring)))]
     (first (filter #(selector-matches? % selector-string) (.-path e)))))
 
+(defn font-size
+  "Returns the element's font size, in pixels, _as a number_, not a string."
+  [dom-elem]
+  (let [style (js/getComputedStyle dom-elem)
+        font-size-str (.getPropertyValue style "font-size")]
+    (-> font-size-str
+        (subs 0 (- (.-length font-size-str) 2))
+        (js/parseInt))))
+
 ;; Dynamic var to indicate whether the selection is still ongoing.
 ;; This is something we need to keep track of between paragraphs
 ;; so it winds up a little more elegant to make careful use of a

@@ -32,6 +32,10 @@
 
 (def ^:const history-timeout-ms 1000)
 
+(def ^:const font-size-min 5)
+(def ^:const font-size-max 100)
+(def ^:const font-size-delta "Amount to increase/decrease font size by each time." 10)
+
 (defn elem-width
   "Returns the width of the UIState's dom element, in pixels."
   [ui-state]
@@ -44,6 +48,14 @@
   (let [{:keys [viewmodels history measure-fn]} ui-state
         {:keys [editor-state changelist]} (:tip history)
         new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (elem-width ui-state) measure-fn changelist)]
+    (assoc ui-state :viewmodels new-viewmodels)))
+
+#_(defn update-all-viewmodels-to-current-state
+  [ui-state]
+  (let [{:keys [dom-elem history measure-fn] :as ui-state} ui-state
+        editor-state (history/current-state history)
+        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
+        new-viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
 (defn update-history
@@ -76,13 +88,18 @@
   (js/clearTimeout (:add-tip-to-backstack-timer-id @*ui-state)))
 
 (defn full-dom-render!
-  "Renders the entire document to the DOM. This is only called in special circumstances (such as on application startup),
-   as normally the interceptor system will handle rendering changed/inserted/deleted paragraphs selectively."
-  [ui-state]
-  (let [{:keys [dom-elem viewmodels history]} ui-state
+  "Updates all viewmodels and renders the entire document to the DOM. This is only called in special circumstances
+   (such as on application startup), as normally the interceptor system will handle rendering changed/inserted/deleted
+   paragraphs selectively."
+  [*ui-state]
+  (let [{:keys [dom-elem history measure-fn] :as ui-state} @*ui-state
         {:keys [doc selection]} (history/current-state history)
+        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
+        viewmodels (vm/from-doc doc dom-elem-width measure-fn)
+        new-ui-state (assoc ui-state :viewmodels viewmodels)
         viewmodels (map #(get viewmodels (:uuid %)) (:children doc))]
-    (view/insert-all! dom-elem viewmodels selection)))
+    (view/insert-all! dom-elem viewmodels selection)
+    (reset! *ui-state new-ui-state)))
 
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
@@ -100,13 +117,26 @@
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."
   [*ui-state]
-  (let [{:keys [dom-elem history measure-fn] :as ui-state} @*ui-state
-        editor-state (history/current-state history)
-        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        new-viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)
-        new-ui-state (assoc ui-state :viewmodels new-viewmodels)]
-    (full-dom-render! new-ui-state)
-    (reset! *ui-state new-ui-state)))
+  (full-dom-render! *ui-state))
+
+(defn set-font-size!
+  [*ui-state new-size]
+  (let [{:keys [dom-elem]} @*ui-state]
+    (set! (.. dom-elem -style -fontSize) (str new-size "px"))
+    (swap! *ui-state assoc :measure-fn (ruler-for-elem dom-elem))
+    (full-dom-render! *ui-state)))
+
+(defn increase-font-size!
+  [*ui-state]
+  (let [new-font-size (+ font-size-delta (view/font-size (:dom-elem @*ui-state)))]
+    (when (<= new-font-size font-size-max)
+      (set-font-size! *ui-state new-font-size))))
+
+(defn decrease-font-size!
+  [*ui-state]
+  (let [new-font-size (- (view/font-size (:dom-elem @*ui-state)) font-size-delta)]
+    (when (>= new-font-size font-size-min)
+      (set-font-size! *ui-state new-font-size))))
 
 (defn fire-normal-interceptor!
   "This the core of Slate's main data loop.
@@ -292,6 +322,6 @@
                          :input-history []
                          :interceptors interceptors-map})]
     (init-event-handlers! *ui-state)
-    (full-dom-render! @*ui-state)
+    (full-dom-render! *ui-state)
 
     *ui-state))
