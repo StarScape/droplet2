@@ -192,12 +192,12 @@
         (recur (rest paragraphs) (assoc uuids->vms (:uuid p) vm))))))
 
 (defn update-viewmodels
-  [viewmodels doc measure-fn changelist]
+  [viewmodels doc elem-width measure-fn changelist]
   (let [{:keys [changed-uuids inserted-uuids deleted-uuids]} changelist
         get-para (partial get (:children doc))
         updated-vms (as-> viewmodels vms
                       (apply dissoc vms deleted-uuids)
                       (reduce (fn [new-vms uuid]
-                                (assoc new-vms uuid (from-para (get-para uuid) 200 measure-fn)))
+                                (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn)))
                               vms (concat inserted-uuids changed-uuids)))]
     updated-vms))

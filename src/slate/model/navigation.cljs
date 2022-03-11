@@ -5,7 +5,8 @@
 
    Also, nothing here should be dependent on the viewmodel or the DOM. Things that have to
    be aware of either of those should go in the `view` namespace."
-  (:require [clojure.string :as str]
+  (:require [clojure.set :as set]
+            [clojure.string :as str]
             [slate.model.common :as m]
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.doc :as doc :refer [Document]]
@@ -14,12 +15,21 @@
 
 ;; Some helpers and useful primitives ;;
 
-(def separators
-  "Non-whitespace word separators"
-  #{"." "/" "\\" "(" ")" "\"" "'"
-    "-" ":" "," ";" "<" ">" "~" "!"
-    "@" "#" "$" "%" "^" "&" "*" "|"
-    "+" "=" "[" "]" "{" "}" "`" "?"})
+(def sentence-separators
+  #{"." "!" "?"})
+
+(def clause-separators
+  (set/union sentence-separators
+             #{"," ":" ";"}))
+
+(def word-separators
+  (set/union
+   clause-separators
+   #{"/" "\\" "(" ")" "\""
+     "'" "-" "<" ">" "~"
+     "@" "#" "$" "%" "^"
+     "&" "*" "|" "+" "="
+     "[" "]" "{" "}" "`"}))
 
 (defn char-or-blank? [x] (or (= x "") (char? x)))
 
@@ -27,7 +37,7 @@
   "Is argument a separator char?"
   [char]
   {:pre [(char-or-blank? char)]}
-  (contains? separators char))
+  (contains? word-separators char))
 
 (defn whitespace?
   "Is argument a whitespace char?"
@@ -171,15 +181,15 @@
     Equivalent to pressing the left arrow on the keyboard.")
 
   (next-word
-    [this sel]
-    [editor-state]
-    "Returns selection after jumping to the end of the next word from selection `sel`.
+   [this sel]
+   [editor-state]
+   "Returns selection after jumping to the end of the next word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac).")
 
   (prev-word
-    [this sel]
-    [editor-state]
-    "Returns selection after jumping to the start of the previous word from selection `sel`.
+   [this sel]
+   [editor-state]
+   "Returns selection after jumping to the start of the previous word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
 
 (defprotocol Selectable

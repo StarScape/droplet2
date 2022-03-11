@@ -17,5 +17,4 @@
   "Main entrypoint for using and initializing the Slate editor."
   (:require [slate.editor-ui-state :as ui-state]))
 
-
-(def init ui-state/init)
+(def init! ui-state/init!)

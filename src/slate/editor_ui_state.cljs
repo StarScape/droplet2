@@ -32,13 +32,18 @@
 
 (def ^:const history-timeout-ms 1000)
 
+(defn elem-width
+  "Returns the width of the UIState's dom element, in pixels."
+  [ui-state]
+  (.-width (.getBoundingClientRect (:dom-elem ui-state))))
+
 (defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
   [ui-state]
   (let [{:keys [viewmodels history measure-fn]} ui-state
         {:keys [editor-state changelist]} (:tip history)
-        new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) measure-fn changelist)]
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (elem-width ui-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
 (defn update-history
@@ -70,9 +75,9 @@
   [*ui-state]
   (js/clearTimeout (:add-tip-to-backstack-timer-id @*ui-state)))
 
-(defn init-dom!
-  "Perform initial DOM render. This will be called on application startup,
-   then sync-dom! will take over and fire after every interceptor."
+(defn full-dom-render!
+  "Renders the entire document to the DOM. This is only called in special circumstances (such as on application startup),
+   as normally the interceptor system will handle rendering changed/inserted/deleted paragraphs selectively."
   [ui-state]
   (let [{:keys [dom-elem viewmodels history]} ui-state
         {:keys [doc selection]} (history/current-state history)
@@ -91,6 +96,17 @@
       (view/remove-para! dom-elem uuid))
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
+
+(defn handle-resize!
+  "Called when the window is resized, handles re-rendering the full doc."
+  [*ui-state]
+  (let [{:keys [dom-elem history measure-fn] :as ui-state} @*ui-state
+        editor-state (history/current-state history)
+        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
+        new-viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)
+        new-ui-state (assoc ui-state :viewmodels new-viewmodels)]
+    (full-dom-render! new-ui-state)
+    (reset! *ui-state new-ui-state)))
 
 (defn fire-normal-interceptor!
   "This the core of Slate's main data loop.
@@ -146,7 +162,7 @@
             restored-update (history/current new-history)
             restored-state (:editor-state restored-update)
             changelist (es/reverse-changelist (:changelist current-update))
-            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) measure-fn changelist)
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (elem-width ui-state) measure-fn changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
@@ -168,7 +184,7 @@
             restored-update (history/current new-history)
             restored-state (:editor-state restored-update)
             changelist (:changelist restored-update)
-            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) measure-fn changelist)
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (elem-width ui-state) measure-fn changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
@@ -235,7 +251,9 @@
              (fire-interceptor! *ui-state undo! e)
              (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 
-         nil)))))
+         nil)))
+
+    (.addEventListener js/window "resize" #(handle-resize! *ui-state))))
 
 (def manual-interceptors
   "Some manual interceptors that are not pure and therefore defined here rather than default_interceptors."
@@ -245,7 +263,7 @@
     {:ctrl+z undo!
      :ctrl+shift+z redo!}))
 
-(defn init
+(defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be updated throughout the lifetime of the editor. Takes a series
    of keyword arguments:
@@ -257,13 +275,15 @@
    Optional:
    :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
   [& {:keys [editor-state dom-elem hidden-input]}]
-  (let [measure-fn (ruler-for-elem dom-elem)
+  (let [dom-elem-width (.-width (.getBoundingClientRect dom-elem))
+        measure-fn (ruler-for-elem dom-elem)
         editor-state (or editor-state (es/editor-state))
         interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
         *ui-state (atom {:id (random-uuid)
-                         :viewmodels (vm/from-doc (:doc editor-state) 200 measure-fn)
+                         ;; TODO: get width
+                         :viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)
                          :history (history/init editor-state)
                          :add-tip-to-backstack-timer-id nil
                          :dom-elem dom-elem
@@ -272,6 +292,6 @@
                          :input-history []
                          :interceptors interceptors-map})]
     (init-event-handlers! *ui-state)
-    (init-dom! @*ui-state)
+    (full-dom-render! @*ui-state)
 
     *ui-state))

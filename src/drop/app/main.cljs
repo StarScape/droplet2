@@ -9,11 +9,11 @@
 
 ;; DONE: add cmd+left and cmd+right shortcuts to go to start/end of line
 
-;; TODO: add cmd+up/cmd+down and home/end shortcuts to go to start/end of doc
-;; TODO: nav functions for moving between clauses, sentences, and paragraphs
-;; TODO: make so that cmd+i, cmd+b, etc only get added to history done with a range selection (how much do I care?)
 ;; TODO: Handle resizing of the text area
-;; TODO: add support for ordered and unordered lists
+;; TODO: Handle font resizing of the text area
+;; TODO: add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
+;; TODO: nav functions for moving between clauses, sentences, and paragraphs
+;; TODO: make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
 ;; TODO: Make a React element that encapsulates the editor. This should
 ;; live at the app level, not the Slate library level.
@@ -30,9 +30,9 @@
 (def para3 (paragraph (uuid "p3") [(run "And this is paragraph número dos.")]))
 (def doc (document [para1 para2 para3]))
 
-(def *ui-state (sl/init :editor-state (editor-state doc)
-                        :dom-elem fake-editor
-                        :hidden-input hidden-input))
+(def *ui-state (sl/init! :editor-state (editor-state doc)
+                         :dom-elem fake-editor
+                         :hidden-input hidden-input))
 
 (defn update-formats-elem
   [key atom old-state new-state]
