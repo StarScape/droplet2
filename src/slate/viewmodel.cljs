@@ -24,9 +24,9 @@
             [slate.measurement :refer [fake-measure-fn ruler]]))
 
 ;; It is worth noting that this is some of my least favorite code in the whole project.
-;; I don't even like having this layer of indirection *here*, and I would gladly get rid
+;; I don't even like having this layer of indirection _here_, and I would gladly get rid
 ;; of it, only there's not another solution that doesn't wind up being even more nasty.
-;; The good news is the nastiness is **largely** contained here.
+;; The good news is the nastiness is __largely__ contained here.
 
 ;; (defrecord DocumentViewModel [paragraphs container-width])
 (defrecord ParagraphViewModel [lines paragraph container-width])

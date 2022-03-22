@@ -14,28 +14,34 @@
                                         apply-format
                                         remove-format
                                         formatting
-                                        char-before
                                         char-at]]
             [slate.model.run :as r]
             [slate.model.selection :as sel :refer [Selection selection]]))
 
 (declare optimize-runs)
 
-(defrecord Paragraph [uuid runs]
+(defrecord Paragraph [uuid runs type]
   TextContainer
   (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p)))
   (blank? [p] (zero? (len p))))
 
 (defn paragraph
-  "Creates a new paragraph. If no UUID is supplied a random one is created."
-  ([runs]
-   (->Paragraph (random-uuid) (optimize-runs runs)))
-  ([]
-   (->Paragraph (random-uuid) [(r/empty-run)]))
+  "Creates a new paragraph. If no UUID is supplied a random one is created.
 
+   Paragraph fields:
+   - `uuid`: Unique ID for paragraph
+   - `runs`: vector of runs within the paragraph (never empty, always at least 1 empty run)
+   - `type`: The type of paragraph -- either :h1, :h2, :ordered-li, :unordered-li, or nil
+             (indicates a normal paragraph with body text)."
+  ([]
+   (->Paragraph (random-uuid) [(r/empty-run)] nil))
+  ([runs]
+   (->Paragraph (random-uuid) (optimize-runs runs) nil))
   ;; This arity is mostly for testing (to make it easier to track that the UUID remains what it should)
   ([uuid runs]
-   (->Paragraph uuid (optimize-runs runs))))
+   (->Paragraph uuid (optimize-runs runs) nil))
+  ([uuid type runs]
+   (->Paragraph uuid (optimize-runs runs) type)))
 
 (defn empty-paragraph
   "Creates an empty paragraph, optionally taking a UUID to assign to it."
@@ -292,8 +298,9 @@
 ;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs
   "Merges the two paragraphs. By default new paragraph will have the UUID of `p1`.
-   Optionally takes a third parameter to set the UUID to whatever you want."
+   Optionally takes a third parameter to set the UUID to whatever you want. New paragraph
+   will have the type of the __first__ paragraph."
   ([p1 p2 uuid]
-   (paragraph uuid (vec (concat (:runs p1) (:runs p2)))))
+   (paragraph uuid (vec (concat (:runs p1) (:runs p2))) (:type p1)))
   ([p1 p2]
    (merge-paragraphs p1 p2 (:uuid p1))))

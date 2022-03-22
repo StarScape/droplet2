@@ -129,7 +129,6 @@
 (definterceptor increase-font-size!
   {:manual? true}
   [*ui-state]
-  #p "Hello?"
   (let [new-font-size (+ font-size-delta (view/font-size (:dom-elem @*ui-state)))]
     (when (<= new-font-size font-size-max)
       (set-font-size! *ui-state new-font-size))))
@@ -224,7 +223,7 @@
 (defn fire-interceptor!
   [*ui-state interceptor event]
   (if (:manual? interceptor)
-    ;; Manual interceptors don't rely on Slate's default data-loop
+    ;; Manual interceptors circumvent Slate's default data-loop and just fire as regular functions
     (interceptor *ui-state event)
     (fire-normal-interceptor! *ui-state interceptor event)))
 
@@ -315,7 +314,7 @@
   (let [dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem dom-elem)
         editor-state (or editor-state (es/editor-state))
-        interceptors-map #p (-> (interceptors/interceptor-map)
+        interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
         *ui-state (atom {:id (random-uuid)

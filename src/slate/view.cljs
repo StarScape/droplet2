@@ -44,7 +44,12 @@
          (>= caret span-start)
          (< caret span-end))))
 
-(defn formats->classes [formats]
+(defn para-type->css-class [paragraph-type]
+  (if paragraph-type
+    (str (name paragraph-type) "-format")
+    ""))
+
+(defn formats->css-classes [formats]
   (map #(str (name %) "-format") formats))
 
 (defn- <span>
@@ -94,7 +99,7 @@
    Returns HTML string."
   [span selection pid para-length]
   (let [format-classes
-        (formats->classes (:formats span))
+        (formats->css-classes (:formats span))
 
         {:keys [before-sel, inside-sel, after-sel]}
         (split-span span pid selection *selection-ongoing?*)
@@ -145,10 +150,10 @@
   [viewmodel selection]
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
-        para-length (sl/len (:paragraph viewmodel))]
+        para (:paragraph viewmodel)]
     (binding [*selection-ongoing?* (contains? (:between selection) pid)]
-      (str "<div class='paragraph' id='" pid "'>"
-           (apply str (map #(vm-line->dom % selection pid para-length) lines))
+      (str "<div class='paragraph " (para-type->css-class (:type para)) "' id='" pid "'>"
+           (apply str (map #(vm-line->dom % selection pid (sl/len para)) lines))
            "</div>"))))
 
 (defn vm-paras->dom
@@ -158,10 +163,6 @@
   (str "<div class='document'>"
        (apply str (map #(vm-para->dom % selection) vm-paras))
        "</div>"))
-
-(defn insert-all!
-  [editor-elem vm-paras selection]
-  (set! (.-innerHTML editor-elem) (vm-paras->dom vm-paras selection)))
 
 (defn- next-dom-paragraph-after
   "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom."
@@ -174,6 +175,10 @@
           elem
           (recur (dll/next paragraphs-dll node)))))))
 
+(defn insert-all!
+  [editor-elem vm-paras selection]
+  (set! (.-innerHTML editor-elem) (vm-paras->dom vm-paras selection)))
+
 (defn insert-para! [editor-elem uuid viewmodel doc selection]
   (let [next-elem (next-dom-paragraph-after uuid (:children doc))
         rendered-paragraph (vm-para->dom viewmodel selection)
@@ -183,12 +188,12 @@
       (.append editor-elem paragraph-elem))
     (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
 
-(defn remove-para! [editor-elem uuid]
+(defn remove-para! [_editor-elem uuid]
   (.remove (js/document.getElementById (str uuid))))
 
-(defn update-para! [editor-elem uuid viewmodel selection]
+(defn update-para! [_editor-elem uuid viewmodel selection]
   (let [paragraph-elem (.getElementById js/document (str uuid))]
-    (set! (.-innerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
+    (set! (.-outerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they
