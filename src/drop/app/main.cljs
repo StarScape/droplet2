@@ -14,13 +14,23 @@
 
 ;; TODO: Add support for h1 and h2
 ;;   DONE: support rendering h1 and h2 correctly
-;;   TODO: fix click and other measurement operations
+;;   DONE: fix click and other measurement operations
+;;   TODO: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
+;;   TODO: make sure tests are fixed
 ;;   TODO: support preserving type on pressing enter
 
+;; TODO: cleanup up-selection and down-selection by removing special case of if-let
+
+;; TODO: change measurement ns to cleanup measurement DOM element whenever the font size switched, etc.
+;;       We can do this by simple setting the ID of that element to "${uuid-of-editor}-measure-elem", or similar,
+;;       and then providing a cleanup function that must be called after the font-size (or any other operation for
+;;       which a new measurement-fn must be created). Alternatively, just delete the existing DOM elem each time (ruler-for-elem)
+;;       is called. This may actually be less error prone.
 ;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
 ;; TODO: Copy and paste
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
+;; TODO: cmd+shift+right, cmd+shift+left
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
@@ -32,8 +42,8 @@
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))
 
-(def para0 (paragraph "p0" :h1 [(run "A Title")]))
-(def para05 (paragraph "p05" :h2 [(run "A subtitle")]))
+(def para0 (paragraph (uuid "p0") :h1 [(run "A Title")]))
+(def para05 (paragraph (uuid "p05") :h2 [(run "A subtitle")]))
 (def para1 (paragraph (uuid "p1") [(run "Hello world, this is an example of a paragraph ")
                                    (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                                    (run "Don't know what else to say. Hmmmm..." #{:bold})]))

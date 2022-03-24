@@ -70,10 +70,10 @@
   "Takes the maximum number of chars from string `word` without exceeding
    `width`, and returns a tuple of [chars that fit, chars that did not].
    This is useful when splitting up a word that is too big to fit on one line."
-  [word formats width measure-fn]
+  [word formats paragraph-type width measure-fn]
   (loop [chars-left word, chars-fit ""]
     (let [new-chars-fit (str chars-fit (first chars-left))
-          new-width (measure-fn new-chars-fit formats)]
+          new-width (measure-fn new-chars-fit formats paragraph-type)]
       (if (or (> new-width width)
               (empty? chars-left))
         [chars-fit, (apply str chars-left)]
@@ -83,20 +83,20 @@
   "Takes the maximum number of words from string `src` without exceeding `width-left`,
    as measured by function `measure-fn`. Returns two strings: all the text added,
    and all the text that would not fit (which is an empty string if everything fit)."
-  [src formats width-left line-width measure-fn]
-  (loop [words-fit "", words (get-words src)]
+  [src-string formats paragraph-type width-left line-width measure-fn]
+  (loop [words-fit "", words (get-words src-string)]
     (let [next-word (first words)
           new-text (str words-fit next-word)
-          new-width (measure-fn (.trimEnd new-text) formats)]
+          new-width (measure-fn (.trimEnd new-text) formats paragraph-type)]
       (cond
         (and (seq words) (<= (int new-width) width-left))
         (recur new-text (rest words))
 
         ;; If there is a word that is greater than the total allowed
         ;; line width, fit what we can in this span and move on.
-        (and (seq words) (> (measure-fn next-word formats) line-width))
-        (let [left-on-line (- width-left (measure-fn words-fit formats))
-              [word-fit, not-fit] (max-chars-from-word next-word formats left-on-line measure-fn)]
+        (and (seq words) (> (measure-fn next-word formats paragraph-type) line-width))
+        (let [left-on-line (- width-left (measure-fn words-fit formats paragraph-type))
+              [word-fit, not-fit] (max-chars-from-word next-word formats paragraph-type left-on-line measure-fn)]
           [word-fit, (apply str not-fit (next words))])
 
         :else
@@ -110,14 +110,14 @@
   "Constructs a span of as many of the words from `run` as it can without exceeding
    the width of `width-left`, then returns the span and a run with the text that would
    not fit (if any)."
-  [run width-left line-width measure-fn]
+  [run paragraph-type width-left line-width measure-fn]
   (let [span
         (->Span "" (:formats run) 0 0)
 
         [span-text, remaining-text]
-        (max-words (:text run) (:formats run) width-left line-width measure-fn)]
+        (max-words (:text run) (:formats run) paragraph-type width-left line-width measure-fn)]
     [(assoc span :text span-text
-                 :width (measure-fn span-text (:formats run)))
+                 :width (measure-fn span-text (:formats run) paragraph-type))
      (r/run remaining-text (:formats run))]))
 
 (comment
@@ -130,9 +130,9 @@
   "Adds the maximum amount of chars from `run` onto the last line in `line`, adding
    an extra line to the end of lines if necessary. Returns updated list of lines, and
    a run with text that did not fit on line (can be empty), as a pair."
-  [lines run width measure-fn]
+  [lines run paragraph-type width measure-fn]
   (let [width-left (- width (:width (peek lines)))
-        [new-span, remaining] (max-span-from-run run width-left width measure-fn)
+        [new-span, remaining] (max-span-from-run run paragraph-type width-left width measure-fn)
         new-lines (cond-> lines
                     ;; If any words were able to fit, put them on the line
                     (seq (:text new-span))
@@ -151,17 +151,17 @@
 (defn lineify
   "Convert vector of runs to a vector of lines, with no line exceeding `width`.
    Consuming code shouldn't use this directly, see instead `from-para`."
-  ([runs width measure-fn]
-   (lineify [(empty-line)] runs width measure-fn))
-  ([lines [run & runs] width measure-fn]
+  ([runs paragraph-type width measure-fn]
+   (lineify [(empty-line)] runs paragraph-type width measure-fn))
+  ([lines [run & runs] paragraph-type width measure-fn]
    (if-not run
      lines
-     (let [[new-lines, leftover] (add-max-to-last-line lines run width measure-fn)
+     (let [[new-lines, leftover] (add-max-to-last-line lines run paragraph-type width measure-fn)
            remaining-runs (cond->> runs
                             ;; if there is leftover text that didn't fit on the
                             ;; line, add it back to the list of runs for the next line
                             (seq (:text leftover)) (cons leftover))]
-       (recur new-lines remaining-runs width measure-fn)))))
+       (recur new-lines remaining-runs paragraph-type width measure-fn)))))
 
 (comment
   (lineify [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fake-measure-fn)
@@ -177,7 +177,7 @@
 (defn from-para
   "Converts a [[Paragraph]] to a ParagraphViewModel."
   [para width measure-fn]
-  (->ParagraphViewModel (lineify (:runs para) width measure-fn) para width))
+  (->ParagraphViewModel (lineify (:runs para) (:type para) width measure-fn) para width))
 
 ;; TODO: testme
 (defn from-doc

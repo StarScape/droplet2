@@ -41,6 +41,7 @@
   ([uuid runs]
    (->Paragraph uuid (optimize-runs runs) nil))
   ([uuid type runs]
+   {:pre [(uuid? uuid) (sequential? runs)]}
    (->Paragraph uuid (optimize-runs runs) type)))
 
 (defn empty-paragraph
