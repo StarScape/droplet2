@@ -1,11 +1,12 @@
 (ns drop.app.main
   (:require [clojure.string :as str]
+            [slate.editor-ui-state :as ui-state]
             [slate.model.run :refer [run]]
             [slate.model.paragraph :refer [paragraph]]
             [slate.model.doc :refer [document]]
             [slate.model.editor-state :refer [editor-state] :as es]
-            [slate.editor-ui-state :as ui-state]
             [slate.model.history :as history]
+            [slate.model.selection :as sel]
             [slate.core :as sl]))
 
 ;; DONE: add cmd+left and cmd+right shortcuts to go to start/end of line
@@ -15,12 +16,18 @@
 ;; TODO: Add support for h1 and h2
 ;;   DONE: support rendering h1 and h2 correctly
 ;;   DONE: fix click and other measurement operations
-;;   TODO: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
+;;   DONE: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
+;;   TODO: bug: goto para3 (empty para), shift+up once, shift+down twice
+;;   TODO: going down from end of first paragraph (h1) results in cursor way further to the left than it should be
 ;;   TODO: make sure tests are fixed
 ;;   TODO: support preserving type on pressing enter
 
 ;; TODO: cleanup up-selection and down-selection by removing special case of if-let
-
+;; TODO: generic move-caret-to function?
+;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
+;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
+;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
+;;       left/right) interceptors.
 ;; TODO: change measurement ns to cleanup measurement DOM element whenever the font size switched, etc.
 ;;       We can do this by simple setting the ID of that element to "${uuid-of-editor}-measure-elem", or similar,
 ;;       and then providing a cleanup function that must be called after the font-size (or any other operation for
@@ -51,7 +58,7 @@
 (def para3 (paragraph (uuid "p3") [(run "And this is paragraph número dos.")]))
 (def doc (document [para0 para05 (paragraph [(run)]) para1 para2 para3]))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc)
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p0") 0] [(uuid "p0") 7]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

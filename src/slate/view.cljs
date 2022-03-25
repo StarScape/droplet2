@@ -192,6 +192,7 @@
   (.remove (js/document.getElementById (str uuid))))
 
 (defn update-para! [_editor-elem uuid viewmodel selection]
+  #_(js/console.log (str "updating paragraph " uuid))
   (let [paragraph-elem (.getElementById js/document (str uuid))]
     (set! (.-outerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
 
@@ -421,6 +422,11 @@
                           (assoc selection :start down-caret, :backwards? true)
                           (assoc selection :start (:end selection), :end down-caret, :backwards? false))
                         (assoc selection :end down-caret, :backwards? false))
+        new-selection (if (:backwards? new-selection)
+                        ;; may have moved start down a paragraph and need to remove new start from :between
+                        (sel/remove-ends-from-between new-selection)
+                        ;; may have moved end down a paragraph and need to add previous end para to :between
+                        (sel/add-to-between new-selection (sel/end-para selection)))
         changed-uuids #{(sel/caret-para selection), (sel/caret-para new-selection)}]
     (es/->EditorUpdate (assoc editor-state :selection new-selection)
                        (es/changelist :changed-uuids changed-uuids))))
@@ -440,6 +446,11 @@
                           (assoc selection :start up-caret, :end (:start selection), :backwards? true)
                           (assoc selection :end up-caret, :backwards? false))
                         (assoc selection :start up-caret, :backwards? true))
+        new-selection (if (:backwards? new-selection)
+                        ;; may have moved start up a paragraph and need to add previous start para to :between
+                        (sel/add-to-between new-selection (sel/start-para selection))
+                        ;; may have moved end up a paragraph and need to remove new end from :between
+                        (sel/remove-ends-from-between new-selection))
         changed-uuids #{(sel/caret-para selection), (sel/caret-para new-selection)}]
     (es/->EditorUpdate (assoc editor-state :selection new-selection)
                        (es/changelist :changed-uuids changed-uuids))))

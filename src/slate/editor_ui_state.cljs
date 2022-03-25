@@ -225,7 +225,8 @@
   (if (:manual? interceptor)
     ;; Manual interceptors circumvent Slate's default data-loop and just fire as regular functions
     (interceptor *ui-state event)
-    (fire-normal-interceptor! *ui-state interceptor event)))
+    (fire-normal-interceptor! *ui-state interceptor event))
+  #_(println (-> @*ui-state :history (history/current-state) :selection)))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."

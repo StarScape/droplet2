@@ -28,7 +28,7 @@
    (measure elem cache text #{} nil))
   ([elem cache text formats]
    (throw "Invalid arity of measurement function!")
-   (measure elem cache text formats nil))
+   #_(measure elem cache text formats nil))
   ([elem cache text formats paragraph-type]
    (let [formats-hash (hash (seq formats))
          type-hash (hash paragraph-type)
