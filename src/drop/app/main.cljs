@@ -18,11 +18,13 @@
 ;;   DONE: fix click and other measurement operations
 ;;   DONE: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
 ;;   DONE: bug: goto para3 (empty para), shift+up twice, shift+down twice (looks like incorrectly collapsing after first shift+down)
-;;   TODO: going down from end of first paragraph (h1) results in cursor way further to the left than it should be
+;;   DONE: going down from end of first paragraph (h1) results in cursor way further to the left than it should be
+;;   TODO: check if going up from last offset in 2nd para is correct (look by measure in DOM, not comparing with conteneditable)
 ;;   TODO: make sure tests are fixed
 ;;   TODO: support preserving type on pressing enter
+;;   TODO: cleanup up-selection and down-selection by removing special case of if-let
 
-;; TODO: cleanup up-selection and down-selection by removing special case of if-let
+;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
 ;; TODO: generic move-caret-to function?
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
 ;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
@@ -33,7 +35,6 @@
 ;;       and then providing a cleanup function that must be called after the font-size (or any other operation for
 ;;       which a new measurement-fn must be created). Alternatively, just delete the existing DOM elem each time (ruler-for-elem)
 ;;       is called. This may actually be less error prone.
-;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
 ;; TODO: Copy and paste
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
@@ -60,21 +61,7 @@
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-;; slate.model.selection.Selection{:backwards? true
-;;                                 :between #{#uuid "p2"}
-;;                                 :start {:paragraph #uuid "p1", :offset 0}
-;;                                 :end {:paragraph #uuid "div1", :offset 0}
-;;                                 :formats #{}}
-
-;; slate.model.selection/Selection {:backwards? true
-;;                                  :between #{"p2"}
-;;                                  :end {:offset 0, :paragraph #uuid "div1"}
-;;                                  :formats #{}
-;;                                  :start {:offset 0, :paragraph #uuid "p1"}}
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "p1") 0]
-                                                                        :end [(uuid "div1") 0]
-                                                                        :between #{(uuid "p2")}
-                                                                        :backwards? true))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p1") 7]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

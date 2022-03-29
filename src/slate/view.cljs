@@ -319,19 +319,19 @@
   (let [{:keys [selection doc]} editor-state
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
+        para (get (:children doc) para-uuid)
         viewmodel (get viewmodels para-uuid)
         caret-line (line-with-caret viewmodels collapsed-sel)
 
         ;; Caret on last line in paragraph?
         caret-in-last-line? (= caret-line (peek (:lines viewmodel)))
-        first-para? (= para-uuid (:uuid (dll/first (:children doc))))
-        destination-paragraph (if (or first-para? (not caret-in-last-line?))
-                                (get (:children doc) para-uuid)
+        last-para? (= para-uuid (:uuid (dll/last (:children doc))))
+        destination-para (if (or last-para? (not caret-in-last-line?))
+                                para
                                 (dll/next (:children doc) para-uuid))
-        paragraph-type (:type destination-paragraph)
         next-line (if (not caret-in-last-line?)
                     (line-below-caret viewmodels collapsed-sel)
-                    (->> destination-paragraph
+                    (->> destination-para
                         (:uuid)
                         (get viewmodels)
                         (:lines)
@@ -343,13 +343,13 @@
                    (:uuid (dll/next (:children doc) para-uuid))
                    para-uuid)]
     (if next-line
-      (let [caret-offset-px (caret-px collapsed-sel caret-line paragraph-type measure-fn)
+      (let [caret-offset-px (caret-px collapsed-sel caret-line (:type para) measure-fn)
             next-line-offset (nearest-line-offset-to-pixel :line next-line
                                                            :target-px caret-offset-px
                                                            :last-line-in-paragraph? (= next-line
                                                                                        (peek (:lines next-line-vm-paragraph)))
                                                            :measure-fn measure-fn
-                                                           :paragraph-type paragraph-type)]
+                                                           :paragraph-type (:type destination-para))]
         (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset])))
       collapsed-sel)))
 
@@ -368,14 +368,14 @@
   (let [{:keys [selection doc]} editor-state
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
+        para (get (:children doc) para-uuid)
         viewmodel (get viewmodels para-uuid)
         caret-line (line-with-caret viewmodels collapsed-sel)
         caret-in-first-line? (= caret-line (first (:lines viewmodel)))
-        last-para? (= para-uuid (:uuid (dll/last (:children doc))))
-        destination-paragraph (if (or last-para? (not caret-in-first-line?))
-                                (get (:children doc) para-uuid)
+        first-para? (= para-uuid (:uuid (dll/first (:children doc))))
+        destination-paragraph (if (or first-para? (not caret-in-first-line?))
+                                para
                                 (dll/prev (:children doc) para-uuid))
-        paragraph-type (:type destination-paragraph)
         prev-line (if (not caret-in-first-line?)
                     (line-above-caret viewmodels collapsed-sel)
                     (-> (:children doc)
@@ -388,13 +388,13 @@
                    (:uuid (dll/prev (:children doc) para-uuid))
                    para-uuid)]
     (if prev-line
-      (let [caret-offset-px (caret-px collapsed-sel caret-line paragraph-type measure-fn)
-            next-line-offset (nearest-line-offset-to-pixel :line prev-line
+      (let [caret-offset-px (caret-px collapsed-sel caret-line (:type para) measure-fn)
+            prev-line-offset (nearest-line-offset-to-pixel :line prev-line
                                                            :target-px caret-offset-px
                                                            :last-line-in-paragraph? caret-in-first-line?
                                                            :measure-fn measure-fn
-                                                           :paragraph-type paragraph-type)]
-        (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset])))
+                                                           :paragraph-type (:type destination-paragraph))]
+        (nav/autoset-formats doc (sel/selection [new-uuid prev-line-offset])))
       collapsed-sel)))
 
 (defn up
