@@ -41,6 +41,7 @@
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: cmd+shift+right, cmd+shift+left
+;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
 ;; TODO: Handle case of click, hold, type some stuff, THEN release

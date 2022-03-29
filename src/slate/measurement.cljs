@@ -25,7 +25,7 @@
 (defn measure
   "Helper function for `ruler`. Not private and __can__ be used directly, but generally should not be."
   ([elem cache text]
-   (measure elem cache text #{} nil))
+   (measure elem cache text #{} :body))
   ([elem cache text formats]
    (throw "Invalid arity of measurement function!")
    #_(measure elem cache text formats nil))
@@ -84,4 +84,5 @@
   "For testing, returns every char width as 10px.
    Meant to simulate a function created with `ruler`."
   ([str] (* 10 (.-length str)))
-  ([str _formats] (* 10 (.-length str))))
+  ([str _formats] (* 10 (.-length str)))
+  ([str _formats _paragraph-type] (* 10 (.-length str))))

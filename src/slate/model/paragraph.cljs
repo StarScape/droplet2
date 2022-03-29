@@ -31,17 +31,16 @@
    Paragraph fields:
    - `uuid`: Unique ID for paragraph
    - `runs`: vector of runs within the paragraph (never empty, always at least 1 empty run)
-   - `type`: The type of paragraph -- either :h1, :h2, :ordered-li, :unordered-li, or nil
-             (indicates a normal paragraph with body text)."
+   - `type`: The type of paragraph -- either :h1, :h2, :ordered-li, :unordered-li, or :body (default)."
   ([]
-   (->Paragraph (random-uuid) [(r/empty-run)] nil))
+   (->Paragraph (random-uuid) [(r/empty-run)] :body))
   ([runs]
-   (->Paragraph (random-uuid) (optimize-runs runs) nil))
+   (->Paragraph (random-uuid) (optimize-runs runs) :body))
   ;; This arity is mostly for testing (to make it easier to track that the UUID remains what it should)
   ([uuid runs]
-   (->Paragraph uuid (optimize-runs runs) nil))
+   (->Paragraph uuid (optimize-runs runs) :body))
   ([uuid type runs]
-   {:pre [(uuid? uuid) (sequential? runs)]}
+   #_{:pre [(uuid? uuid) (sequential? runs)]}
    (->Paragraph uuid (optimize-runs runs) type)))
 
 (defn empty-paragraph
@@ -302,6 +301,6 @@
    Optionally takes a third parameter to set the UUID to whatever you want. New paragraph
    will have the type of the __first__ paragraph."
   ([p1 p2 uuid]
-   (paragraph uuid (vec (concat (:runs p1) (:runs p2))) (:type p1)))
+   (paragraph uuid (:type p1) (vec (concat (:runs p1) (:runs p2)))))
   ([p1 p2]
    (merge-paragraphs p1 p2 (:uuid p1))))
