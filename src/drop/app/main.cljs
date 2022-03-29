@@ -20,8 +20,8 @@
 ;;   DONE: bug: goto para3 (empty para), shift+up twice, shift+down twice (looks like incorrectly collapsing after first shift+down)
 ;;   DONE: going down from end of first paragraph (h1) results in cursor way further to the left than it should be
 ;;   DONE: Bug going up from end of second para (h2)
-;;   TODO: make sure tests are fixed
-;;   TODO: add interceptors for h1 and h2
+;;   DONE: make sure tests are fixed
+;;   DONE: add interceptors for h1 and h2
 ;;   TODO: support preserving type on pressing enter
 ;;   TODO: cleanup up-selection and down-selection by removing special case of if-let
 
@@ -38,9 +38,12 @@
 ;;       which a new measurement-fn must be created). Alternatively, just delete the existing DOM elem each time (ruler-for-elem)
 ;;       is called. This may actually be less error prone.
 ;; TODO: Copy and paste
+;;   TODO: to/from droplet doc
+;;   TODO: to/from outside source
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: cmd+shift+right, cmd+shift+left
+;; TODO: don't fire ' autocomplete if char immediately before or after cursor is alphanumeric,
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
