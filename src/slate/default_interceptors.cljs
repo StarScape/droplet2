@@ -204,7 +204,9 @@
    :pageup start-of-line
    :pagedown end-of-line
    :home start-of-doc
-   :end end-of-doc})
+   :end end-of-doc
+   :ctrl+1 h1
+   :ctrl+2 h2})
 
 (def mac-interceptors
   {:alt+left ctrl+left
