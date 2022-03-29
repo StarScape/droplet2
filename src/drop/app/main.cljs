@@ -19,13 +19,15 @@
 ;;   DONE: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
 ;;   DONE: bug: goto para3 (empty para), shift+up twice, shift+down twice (looks like incorrectly collapsing after first shift+down)
 ;;   DONE: going down from end of first paragraph (h1) results in cursor way further to the left than it should be
-;;   TODO: check if going up from last offset in 2nd para is correct (look by measure in DOM, not comparing with conteneditable)
+;;   DONE: Bug going up from end of second para (h2)
 ;;   TODO: make sure tests are fixed
+;;   TODO: add interceptors for h1 and h2
 ;;   TODO: support preserving type on pressing enter
 ;;   TODO: cleanup up-selection and down-selection by removing special case of if-let
 
 ;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
 ;; TODO: generic move-caret-to function?
+;; TODO: if start of paragraph is a space, shift+option+left won't select that space even when its the only thing left to select
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
 ;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
 ;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
@@ -61,7 +63,7 @@
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p1") 7]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p2") 10]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 
