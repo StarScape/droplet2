@@ -17,7 +17,7 @@
 ;;   DONE: support rendering h1 and h2 correctly
 ;;   DONE: fix click and other measurement operations
 ;;   DONE: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
-;;   TODO: bug: goto para3 (empty para), shift+up once, shift+down twice
+;;   DONE: bug: goto para3 (empty para), shift+up twice, shift+down twice (looks like incorrectly collapsing after first shift+down)
 ;;   TODO: going down from end of first paragraph (h1) results in cursor way further to the left than it should be
 ;;   TODO: make sure tests are fixed
 ;;   TODO: support preserving type on pressing enter
@@ -49,16 +49,32 @@
 (def fake-editor (.getElementById js/document "fake-editor"))
 (def hidden-input (.querySelector js/document "#hidden-input"))
 
-(def para0 (paragraph (uuid "p0") :h1 [(run "A Title")]))
-(def para05 (paragraph (uuid "p05") :h2 [(run "A subtitle")]))
-(def para1 (paragraph (uuid "p1") [(run "Hello world, this is an example of a paragraph ")
-                                   (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
-                                   (run "Don't know what else to say. Hmmmm..." #{:bold})]))
-(def para2 (paragraph (uuid "p2") [(run)]))
-(def para3 (paragraph (uuid "p3") [(run "And this is paragraph número dos.")]))
-(def doc (document [para0 para05 (paragraph [(run)]) para1 para2 para3]))
+(def paragraphs
+  [(paragraph (uuid "p1") :h1 [(run "A Title")])
+   (paragraph (uuid "p2") :h2 [(run "A subtitle")])
+   (paragraph (uuid "div1") [(run)])
+   (paragraph (uuid "p3") [(run "Hello world, this is an example of a paragraph ")
+                           (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
+                           (run "Don't know what else to say. Hmmmm..." #{:bold})])
+   (paragraph (uuid "div2") [(run)])
+   (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
+(def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p0") 0] [(uuid "p0") 7]))
+;; slate.model.selection.Selection{:backwards? true
+;;                                 :between #{#uuid "p2"}
+;;                                 :start {:paragraph #uuid "p1", :offset 0}
+;;                                 :end {:paragraph #uuid "div1", :offset 0}
+;;                                 :formats #{}}
+
+;; slate.model.selection/Selection {:backwards? true
+;;                                  :between #{"p2"}
+;;                                  :end {:offset 0, :paragraph #uuid "div1"}
+;;                                  :formats #{}
+;;                                  :start {:offset 0, :paragraph #uuid "p1"}}
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "p1") 0]
+                                                                        :end [(uuid "div1") 0]
+                                                                        :between #{(uuid "p2")}
+                                                                        :backwards? true))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

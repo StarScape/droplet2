@@ -36,10 +36,9 @@
   (map #(str (name %) "-format") formats))
 
 ;; Dynamic var to indicate whether the selection is still ongoing.
-;; This is something we need to keep track of between paragraphs
-;; so it winds up a little more elegant to make careful use of a
-;; dynamic var, rather than returning a selection-ongoing? value
-;; up and down a bunch of different cycles of the callstack.
+;; This is something we need to keep track of between paragraphs so it winds up a little
+;; more elegant to make careful use of a dynamic var, rather than returning a selection-ongoing?
+;; value up and down a bunch of different cycles of the callstack.
 (declare ^:dynamic *selection-ongoing?*)
 
 (def caret-elem "<span class='text-caret'></span>")
@@ -418,9 +417,9 @@
         down-caret {:paragraph down-para, :offset down-offset}
         new-selection (if (and (:backwards? selection) (sel/range? selection))
                         (if (and (= down-para   (-> selection :end :paragraph))
-                                 (< down-offset (-> selection :end :offset)))
-                          (assoc selection :start down-caret, :backwards? true)
-                          (assoc selection :start (:end selection), :end down-caret, :backwards? false))
+                                 (>= down-offset (-> selection :end :offset)))
+                          (assoc selection :start (:end selection), :end down-caret, :backwards? false)
+                          (assoc selection :start down-caret, :backwards? true))
                         (assoc selection :end down-caret, :backwards? false))
         new-selection (if (:backwards? new-selection)
                         ;; may have moved start down a paragraph and need to remove new start from :between
