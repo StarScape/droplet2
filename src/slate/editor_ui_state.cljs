@@ -93,12 +93,12 @@
    paragraphs selectively."
   [*ui-state]
   (let [{:keys [dom-elem history measure-fn] :as ui-state} @*ui-state
-        {:keys [doc selection]} (history/current-state history)
+        {:keys [doc selection] :as editor-state} (history/current-state history)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         viewmodels (vm/from-doc doc dom-elem-width measure-fn)
         new-ui-state (assoc ui-state :viewmodels viewmodels)
         viewmodels (map #(get viewmodels (:uuid %)) (:children doc))]
-    (view/insert-all! dom-elem viewmodels selection)
+    (view/insert-all! dom-elem viewmodels editor-state)
     (reset! *ui-state new-ui-state)))
 
 (defn sync-dom!
@@ -108,7 +108,7 @@
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
-      (view/insert-para! dom-elem uuid (get viewmodels uuid) doc selection))
+      (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
     (doseq [uuid deleted-uuids]
       (view/remove-para! dom-elem uuid))
     (doseq [uuid changed-uuids]

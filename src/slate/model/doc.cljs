@@ -30,6 +30,7 @@
 (defn document
   "Creates a new document."
   ([children]
+   ;; TODO: check that children all have unique IDs, but not in production.
    (cond
      (= (type children) dll/DoublyLinkedList)
      (->Document children)

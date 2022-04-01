@@ -12,8 +12,7 @@
 ;; DONE: add cmd+left and cmd+right shortcuts to go to start/end of line
 ;; DONE: Handle resizing of the text area
 ;; DONE: Handle font resizing of the text area
-
-;; TODO: Add support for h1 and h2
+;; DONE: Add support for h1 and h2
 ;;   DONE: support rendering h1 and h2 correctly
 ;;   DONE: fix click and other measurement operations
 ;;   DONE: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
@@ -22,12 +21,19 @@
 ;;   DONE: Bug going up from end of second para (h2)
 ;;   DONE: make sure tests are fixed
 ;;   DONE: add interceptors for h1 and h2
-;;   TODO: support preserving type on pressing enter
-;;   TODO: cleanup up-selection and down-selection by removing special case of if-let
+;;   WONT: support preserving type on pressing enter
 
 ;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
-;; TODO: generic move-caret-to function?
+;;   DONE: Render correctly
+;;   TODO: Update correctly
+;;   TODO: Delete correctly (ensure <ul>/<ol> element is removed when last list item is removed)
+;;   TODO: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
+;;   TODO: Interceptors for ul and ol
+;;   TODO: Preserve paragraph type on enter, if current paragraph is a list
+;;   TODO: De-listify on double enter from list item paragraph (a la everyothertexteditor)
+
 ;; TODO: if start of paragraph is a space, shift+option+left won't select that space even when its the only thing left to select
+;; TODO: resize works incorrectly when there is an h1 or h2 since they are absolutely sized
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
 ;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
 ;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
@@ -64,6 +70,13 @@
                            (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                            (run "Don't know what else to say. Hmmmm..." #{:bold})])
    (paragraph (uuid "div2") [(run)])
+   (paragraph (uuid "ol1") :ul [(run "Bullet 1")])
+   (paragraph (uuid "ol2") :ul [(run "Bullet 2")])
+   (paragraph (uuid "ol3") :ul [(run "Bullet 3")])
+   (paragraph [(run "(Take a break.)")])
+   (paragraph (uuid "ul1") :ol [(run "Ordered item 1")])
+   (paragraph (uuid "ul2") :ol [(run "Ordered item 2")])
+   (paragraph (uuid "div3") [(run)])
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 

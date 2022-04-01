@@ -203,6 +203,7 @@
                   (changelist :changed-uuids (set/union (sel/all-uuids selection)
                                                         (sel/all-uuids new-selection)))))
 
+;; TODO: test
 (defn toggle-paragraph-type
   [{:keys [selection doc] :as editor-state} type]
   (let [start-uuid (sel/start-para selection)

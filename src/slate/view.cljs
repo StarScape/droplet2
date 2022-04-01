@@ -144,6 +144,8 @@
        (apply str (map #(vm-span->dom % selection pid para-length) (:spans line)))
        "</div>"))
 
+(declare ^:dynamic *list-ongoing?*)
+
 (defn vm-para->dom
   "Convert viewmodel to DOM element. Returns HTML string."
   [viewmodel selection]
@@ -164,7 +166,8 @@
        "</div>"))
 
 (defn- next-dom-paragraph-after
-  "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom."
+  "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom.
+   If no paragraphs are found at all, returns `nil`."
   [uuid paragraphs-dll]
   (loop [node (dll/next paragraphs-dll uuid)]
     (if (nil? node)
@@ -174,18 +177,60 @@
           elem
           (recur (dll/next paragraphs-dll node)))))))
 
-(defn insert-all!
-  [editor-elem vm-paras selection]
-  (set! (.-innerHTML editor-elem) (vm-paras->dom vm-paras selection)))
+(defn- paragraph-type-dispatch [_ _ vm _ _] (-> vm :paragraph :type))
 
-(defn insert-para! [editor-elem uuid viewmodel doc selection]
-  (let [next-elem (next-dom-paragraph-after uuid (:children doc))
+(defn- insert-list-para!
+  [list-type editor-elem uuid viewmodel {:keys [doc selection] :as _es}]
+  (let [tag-name (name list-type)
         rendered-paragraph (vm-para->dom viewmodel selection)
-        paragraph-elem (js/document.createElement "p")]
+        paragraph-elem (js/document.createElement "p")
+        next-elem (next-dom-paragraph-after uuid (:children doc))
+        next-elem-inside-ul? (= (.. next-elem -parentNode -tagName toLowerCase) tag-name)
+        node-to-insert-inside-of (if next-elem-inside-ul? (.-parentNode next-elem) editor-elem)
+        paragraph-outer-html (if next-elem-inside-ul?
+                               rendered-paragraph
+                               (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
+    #p next-elem-inside-ul?
+    #p node-to-insert-inside-of
     (if next-elem
-      (.insertBefore (.-parentNode next-elem) paragraph-elem next-elem)
+      (.insertBefore node-to-insert-inside-of paragraph-elem next-elem)
+      (.append editor-elem paragraph-elem))
+    (set! (.-outerHTML paragraph-elem) paragraph-outer-html)))
+
+(defmulti insert-para!
+  {:arglists '([editor-elem uuid viewmodel doc selection])}
+  #'paragraph-type-dispatch)
+
+(defmethod insert-para!
+  :default
+  [editor-elem uuid viewmodel {:keys [doc selection] :as _editor-state}]
+  (let [rendered-paragraph (vm-para->dom viewmodel selection)
+        paragraph-elem (js/document.createElement "p")
+        #_#_next-paragraph-elem (next-dom-paragraph-after uuid (:children doc))
+        node-to-insert-before (when-some [next-paragraph-elem (next-dom-paragraph-after uuid (:children doc))]
+                                (if (= editor-elem (.-parentNode next-paragraph-elem))
+                                  next-paragraph-elem
+                                  (.-parentNode next-paragraph-elem)))]
+    (if node-to-insert-before
+      (.insertBefore editor-elem paragraph-elem node-to-insert-before)
       (.append editor-elem paragraph-elem))
     (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
+
+(defmethod insert-para!
+  :ul
+  [editor-elem uuid viewmodel editor-state]
+  (insert-list-para! "ul" editor-elem uuid viewmodel editor-state))
+
+(defmethod insert-para!
+  :ol
+  [editor-elem uuid viewmodel editor-state]
+  (insert-list-para! "ol" editor-elem uuid viewmodel editor-state))
+
+(defn insert-all!
+  [editor-elem vm-paras editor-state]
+  (set! (.-innerHTML editor-elem) "")
+  (doseq [vm (reverse vm-paras)]
+    (insert-para! editor-elem (-> vm :paragraph :uuid) vm editor-state)))
 
 (defn remove-para! [_editor-elem uuid]
   (.remove (js/document.getElementById (str uuid))))
