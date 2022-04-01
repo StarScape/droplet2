@@ -112,7 +112,7 @@
     (doseq [uuid deleted-uuids]
       (view/remove-para! uuid editor-state prev-state))
     (doseq [uuid changed-uuids]
-      (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
+      (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))))
 
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."

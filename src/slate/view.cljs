@@ -296,9 +296,15 @@
   (remove-list-para! :ol uuid editor-state prev-state))
 
 ;; Currently all paragraph types update the same, no special logic/multimethod needed
-(defn update-para! [_editor-elem uuid viewmodel selection]
-  (let [paragraph-elem (.getElementById js/document (str uuid))]
-    (set! (.-outerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
+(defn update-para! [editor-elem uuid viewmodel editor-state prev-state]
+  (let [paragraph-elem (.getElementById js/document (str uuid))
+        type-changed? (not= (-> editor-state :doc :children (get uuid) :type)
+                            (-> prev-state :doc :children (get uuid) :type))]
+    (if type-changed?
+      (do
+        (remove-para! uuid editor-state prev-state)
+        (insert-para! editor-elem uuid viewmodel editor-state))
+      (set! (.-outerHTML paragraph-elem) (vm-para->dom viewmodel (:selection editor-state))))))
 
 (defn insert-all!
   "Inserts __all__ paragraphs in the list `vm-paras` into the DOM.

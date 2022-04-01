@@ -25,11 +25,13 @@
 
 ;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
 ;;   DONE: Render correctly
+;;   DONE: Delete correctly (ensure <ul>/<ol> element is removed when last list item is removed)
+;;   DONE: Fix enter (currently inserting _above_ the first list-paragraph)
 ;;   DONE: Update correctly
-;;   TODO: Delete correctly (ensure <ul>/<ol> element is removed when last list item is removed)
-;;   TODO: fix enter (currently inserting _above_ the first list-paragraph)
+;;   DONE: Interceptors for ul and ol
+;;   TODO: Switching a ul to an ol or viceversa causes an error
+;;   TODO: Hitting backspace on an empty paragraph should convert the paragraph to a :body para, not remove it
 ;;   TODO: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
-;;   TODO: Interceptors for ul and ol
 ;;   TODO: Preserve paragraph type on enter, if current paragraph is a list
 ;;   TODO: De-listify on double enter from list item paragraph (a la everyothertexteditor)
 

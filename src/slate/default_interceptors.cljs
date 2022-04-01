@@ -172,6 +172,14 @@
   [editor-state _ _]
   (es/toggle-paragraph-type editor-state :h2))
 
+(definterceptor ulist
+  [editor-state _ _]
+  (es/toggle-paragraph-type editor-state :ul))
+
+(definterceptor olist
+  [editor-state _ _]
+  (es/toggle-paragraph-type editor-state :ol))
+
 (def universal-interceptors
   {:click click
    :drag drag
@@ -220,7 +228,9 @@
    :cmd+up start-of-doc
    :cmd+down end-of-doc
    :cmd+1 h1
-   :cmd+2 h2})
+   :cmd+2 h2
+   :cmd+u ulist
+   :cmd+o olist})
 
 (def default-interceptors
   (merge universal-interceptors (if (utils/is-mac?)
