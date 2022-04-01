@@ -9,6 +9,7 @@
             [slate.model.common :as m]
             [slate.model.editor-state :as es :refer [>>=]]
             [slate.model.navigation :as nav]
+            [slate.model.selection :as sel]
             [slate.utils :as utils]
             [slate.view :as view]))
 
@@ -22,8 +23,13 @@
   (m/insert editor-state (.-data e)))
 
 (definterceptor delete
-  [editor-state _ui-state _e]
-  (m/delete editor-state))
+  [{:keys [doc selection] :as editor-state} _ui-state _e]
+  (let [paragraph-type (:type (get (:children doc) (sel/caret-para selection)))]
+    (if (and (sel/single? selection)
+             (zero? (-> selection :start :offset))
+             (or (= paragraph-type :ol) (= paragraph-type :ul)))
+      (es/toggle-paragraph-type editor-state paragraph-type)
+      (m/delete editor-state))))
 
 (definterceptor enter
   [editor-state _ui-state _e]
