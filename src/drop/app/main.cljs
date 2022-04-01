@@ -25,8 +25,9 @@
 
 ;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
 ;;   DONE: Render correctly
-;;   TODO: Update correctly
+;;   DONE: Update correctly
 ;;   TODO: Delete correctly (ensure <ul>/<ol> element is removed when last list item is removed)
+;;   TODO: fix enter (currently inserting _above_ the first list-paragraph)
 ;;   TODO: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
 ;;   TODO: Interceptors for ul and ol
 ;;   TODO: Preserve paragraph type on enter, if current paragraph is a list
@@ -65,6 +66,7 @@
 (def paragraphs
   [(paragraph (uuid "p1") :h1 [(run "A Title")])
    (paragraph (uuid "p2") :h2 [(run "A subtitle")])
+   (paragraph (uuid "s1") :ul [(run "S")])
    (paragraph (uuid "div1") [(run)])
    (paragraph (uuid "p3") [(run "Hello world, this is an example of a paragraph ")
                            (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
@@ -80,7 +82,7 @@
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p2") 10]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "s1") 1]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

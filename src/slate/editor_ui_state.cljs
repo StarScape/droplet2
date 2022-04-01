@@ -93,7 +93,7 @@
    paragraphs selectively."
   [*ui-state]
   (let [{:keys [dom-elem history measure-fn] :as ui-state} @*ui-state
-        {:keys [doc selection] :as editor-state} (history/current-state history)
+        {:keys [doc] :as editor-state} (history/current-state history)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         viewmodels (vm/from-doc doc dom-elem-width measure-fn)
         new-ui-state (assoc ui-state :viewmodels viewmodels)
@@ -104,13 +104,13 @@
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
-  [dom-elem editor-state viewmodels changelist]
+  [dom-elem editor-state prev-state viewmodels changelist]
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
       (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
     (doseq [uuid deleted-uuids]
-      (view/remove-para! dom-elem uuid))
+      (view/remove-para! uuid editor-state prev-state))
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
 
@@ -159,6 +159,7 @@
                                 :viewmodels new-vms)]
         (sync-dom! (:dom-elem new-ui-state)
                    (:editor-state restored-update)
+                   (history/current-state history)
                    (:viewmodels new-ui-state)
                    changelist)
         (reset! *ui-state new-ui-state)))))
@@ -181,6 +182,7 @@
                                 :viewmodels new-vms)]
         (sync-dom! (:dom-elem new-ui-state)
                    (:editor-state restored-update)
+                   (history/current-state history)
                    (:viewmodels new-ui-state)
                    changelist)
         (reset! *ui-state new-ui-state)))))
@@ -205,6 +207,7 @@
                          (update-viewmodels-to-history-tip))]
     (sync-dom! (:dom-elem new-ui-state)
                (:editor-state editor-update)
+               editor-state
                (:viewmodels new-ui-state)
                (:changelist editor-update))
 

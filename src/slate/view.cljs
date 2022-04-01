@@ -177,36 +177,55 @@
           elem
           (recur (dll/next paragraphs-dll node)))))))
 
-(defn- paragraph-type-dispatch [_ _ vm _ _] (-> vm :paragraph :type))
-
 (defn- insert-list-para!
+  "Implementation for inserting both a :ul or an :ol paragraph (the only difference is the tag name of the
+   containing element, either <ul> or <ol>). Automatically wraps the element in <ul>/<ol> IF there is not already
+   one present for the current run of list paragraphs, otherwise will insert into that <ul>/<ol>"
   [list-type editor-elem uuid viewmodel {:keys [doc selection] :as _es}]
   (let [tag-name (name list-type)
         rendered-paragraph (vm-para->dom viewmodel selection)
         paragraph-elem (js/document.createElement "p")
         next-elem (next-dom-paragraph-after uuid (:children doc))
-        next-elem-inside-ul? (= (.. next-elem -parentNode -tagName toLowerCase) tag-name)
-        node-to-insert-inside-of (if next-elem-inside-ul? (.-parentNode next-elem) editor-elem)
-        paragraph-outer-html (if next-elem-inside-ul?
+        next-elem-inside-list-elem? (= (.. next-elem -parentNode -tagName toLowerCase) tag-name)
+        node-to-insert-inside-of (if next-elem-inside-list-elem? (.-parentNode next-elem) editor-elem)
+        paragraph-outer-html (if next-elem-inside-list-elem?
                                rendered-paragraph
                                (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
-    #p next-elem-inside-ul?
-    #p node-to-insert-inside-of
     (if next-elem
       (.insertBefore node-to-insert-inside-of paragraph-elem next-elem)
       (.append editor-elem paragraph-elem))
     (set! (.-outerHTML paragraph-elem) paragraph-outer-html)))
 
-(defmulti insert-para!
-  {:arglists '([editor-elem uuid viewmodel doc selection])}
-  #'paragraph-type-dispatch)
+(defn remove-list-para!
+  [list-type uuid editor-state prev-state]
+  (let [elem (js/document.getElementById (str uuid))
+        old-children (-> prev-state :doc :children)
+        new-children (-> editor-state :doc :children)
+        prev-para-uuid (:uuid (dll/prev old-children uuid))
+        next-para-uuid (:uuid (dll/next old-children uuid))
+        prev-para-type (:type (get new-children prev-para-uuid))
+        next-para-type (:type (get new-children next-para-uuid))]
+    (if (and (not= prev-para-type list-type)
+             (not= next-para-type list-type))
+      ;; Only item in the list, remove parent so there is no dangling <ul>/<ol>
+      (.remove (.-parentElement elem))
+      ;; Other items in list, keep <ul>/<ol>
+      (.remove elem))))
 
-(defmethod insert-para!
-  :default
+(defmulti insert-para!
+  "Inserts the paragraph with `uuid` into the DOM."
+  {:arglists '([editor-elem uuid viewmodel doc selection])}
+  (fn [_ _ vm _ _] (-> vm :paragraph :type)))
+
+(defmulti remove-para!
+  "Removes the paragraph with `uuid` from the DOM."
+  {:arglists '([uuid editor-state prev-editor-state])}
+  (fn [uuid _ {:keys [doc]}] (:type (get (:children doc) uuid))))
+
+(defmethod insert-para! :default
   [editor-elem uuid viewmodel {:keys [doc selection] :as _editor-state}]
   (let [rendered-paragraph (vm-para->dom viewmodel selection)
         paragraph-elem (js/document.createElement "p")
-        #_#_next-paragraph-elem (next-dom-paragraph-after uuid (:children doc))
         node-to-insert-before (when-some [next-paragraph-elem (next-dom-paragraph-after uuid (:children doc))]
                                 (if (= editor-elem (.-parentNode next-paragraph-elem))
                                   next-paragraph-elem
@@ -216,29 +235,39 @@
       (.append editor-elem paragraph-elem))
     (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
 
-(defmethod insert-para!
-  :ul
+(defmethod insert-para! :ul
   [editor-elem uuid viewmodel editor-state]
-  (insert-list-para! "ul" editor-elem uuid viewmodel editor-state))
+  (insert-list-para! :ul editor-elem uuid viewmodel editor-state))
 
-(defmethod insert-para!
-  :ol
+(defmethod insert-para! :ol
   [editor-elem uuid viewmodel editor-state]
-  (insert-list-para! "ol" editor-elem uuid viewmodel editor-state))
+  (insert-list-para! :ol editor-elem uuid viewmodel editor-state))
+
+(defmethod remove-para! :default
+  [uuid _ _]
+  (.remove (js/document.getElementById (str uuid))))
+
+(defmethod remove-para! :ul
+  [uuid editor-state prev-state]
+  (remove-list-para! :ul uuid editor-state prev-state))
+
+(defmethod remove-para! :ol
+  [uuid editor-state prev-state]
+  (remove-list-para! :ol uuid editor-state prev-state))
+
+;; Currently all paragraph types update the same, no special logic/multimethod needed
+(defn update-para! [_editor-elem uuid viewmodel selection]
+  (let [paragraph-elem (.getElementById js/document (str uuid))]
+    (set! (.-outerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
 
 (defn insert-all!
+  "Inserts __all__ paragraphs in the list `vm-paras` into the DOM.
+   Only used in a few special circumstances, like initial render, otherwise
+   document should be updated piecewise using `(insert|remove|update)-para!`."
   [editor-elem vm-paras editor-state]
   (set! (.-innerHTML editor-elem) "")
   (doseq [vm (reverse vm-paras)]
     (insert-para! editor-elem (-> vm :paragraph :uuid) vm editor-state)))
-
-(defn remove-para! [_editor-elem uuid]
-  (.remove (js/document.getElementById (str uuid))))
-
-(defn update-para! [_editor-elem uuid viewmodel selection]
-  #_(js/console.log (str "updating paragraph " uuid))
-  (let [paragraph-elem (.getElementById js/document (str uuid))]
-    (set! (.-outerHTML paragraph-elem) (vm-para->dom viewmodel selection))))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they
