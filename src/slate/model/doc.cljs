@@ -171,7 +171,8 @@
   "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.
    Optionally takes a UUID to assign to the new paragraph. Returns a new document."
   ([doc uuid new-para-uuid]
-   (replace-paragraph-with doc uuid [(assoc (p/paragraph) :uuid new-para-uuid) ((:children doc) uuid)]))
+   (replace-paragraph-with doc uuid [(assoc (p/paragraph) :uuid new-para-uuid),
+                                     (get (:children doc) uuid)]))
   ([doc uuid]
    (insert-paragraph-before doc uuid (random-uuid))))
 

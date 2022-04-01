@@ -82,7 +82,7 @@
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "s1") 1]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "ol1") 8]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

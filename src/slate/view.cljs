@@ -18,6 +18,38 @@
             (when (.-matches elem) (.matches elem sstring)))]
     (first (filter #(selector-matches? % selector-string) (.-path e)))))
 
+(defn split-elem-on-child!
+  "Takes an element (e.g. a <ol>) and one of its children (e.g. an <li>) and clones
+   the parent element into two, inserting everything up to and including the target child
+   element into the left parent element.
+
+   <ol>
+     <li>A</li>
+     <li>B</li>
+     <li>C</li>
+     <li>D</li>
+   </ol>
+
+   split ol at <li>B</li> =
+
+   <ol>
+     <li>A</li>
+     <li>B</li>
+   </ol>
+   <ol>
+     <li>C</li>
+     <li>D</li>
+   </ol>"
+  [elem-to-split child-elem-to-split-at]
+  (let [left-elem (.cloneNode elem-to-split)]
+    (loop [node (.-firstElementChild elem-to-split)]
+      (let [next-sibling (.-nextElementSibling node)]
+        (.appendChild left-elem node)
+        (if (= node child-elem-to-split-at)
+          left-elem
+          (recur next-sibling))))
+    (.insertBefore (.-parentNode elem-to-split) left-elem elem-to-split)))
+
 (defn font-size
   "Returns the element's font size, in pixels, _as a number_, not a string."
   [dom-elem]
@@ -229,7 +261,15 @@
         node-to-insert-before (when-some [next-paragraph-elem (next-dom-paragraph-after uuid (:children doc))]
                                 (if (= editor-elem (.-parentNode next-paragraph-elem))
                                   next-paragraph-elem
-                                  (.-parentNode next-paragraph-elem)))]
+                                  (do
+                                    ;; When the next paragraph is not top level within the document (e.g. is contained)
+                                    ;; inside a <ol> or <ul>, and ALSO has a previous sibling inside of the same containing
+                                    ;; element, that means we are inserting a normal paragraph into the middle of a list, so
+                                    ;; we need to split the <ol> or <ul> into two separate ones and insert our new para after
+                                    ;; the first.
+                                    (when-let [prev-element (.-previousElementSibling next-paragraph-elem)]
+                                      (split-elem-on-child! (.-parentNode next-paragraph-elem) prev-element))
+                                    (.-parentNode next-paragraph-elem))))]
     (if node-to-insert-before
       (.insertBefore editor-elem paragraph-elem node-to-insert-before)
       (.append editor-elem paragraph-elem))
