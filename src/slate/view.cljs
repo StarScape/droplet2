@@ -216,17 +216,28 @@
   [list-type editor-elem uuid viewmodel {:keys [doc selection] :as _es}]
   (let [tag-name (name list-type)
         rendered-paragraph (vm-para->dom viewmodel selection)
-        paragraph-elem (js/document.createElement "p")
-        next-elem (next-dom-paragraph-after uuid (:children doc))
-        next-elem-inside-list-elem? (= (.. next-elem -parentNode -tagName toLowerCase) tag-name)
-        node-to-insert-inside-of (if next-elem-inside-list-elem? (.-parentNode next-elem) editor-elem)
-        paragraph-outer-html (if next-elem-inside-list-elem?
-                               rendered-paragraph
-                               (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
-    (if next-elem
-      (.insertBefore node-to-insert-inside-of paragraph-elem next-elem)
-      (.append editor-elem paragraph-elem))
-    (set! (.-outerHTML paragraph-elem) paragraph-outer-html)))
+        p-elem (js/document.createElement "p")
+        next-p-elem (next-dom-paragraph-after uuid (:children doc))
+        next-p-inside-same-list-elem? (= (.. next-p-elem -parentNode -tagName toLowerCase) tag-name)
+        p-outer-html (if next-p-inside-same-list-elem?
+                       rendered-paragraph
+                       (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
+    (if next-p-elem
+      (let [next-p-parent (.-parentNode next-p-elem)
+            node-to-insert-inside-of (if next-p-inside-same-list-elem? next-p-parent editor-elem)
+            node-to-insert-before (if (and (not next-p-inside-same-list-elem?)
+                                           (not= next-p-parent editor-elem))
+                                    ;; Next paragraph is also inside a containing element (ul/ol),
+                                    ;; but of a different type (inserting a :ul immediately before an :ol)
+                                    ;; or viceverse, therefore we want to insert the paragraph before its _parent_.
+                                    next-p-parent
+                                    ;; Otherwise insert before the next paragraph as normal
+                                    next-p-elem)]
+        (.insertBefore node-to-insert-inside-of p-elem node-to-insert-before))
+      (.append editor-elem p-elem))
+
+    ;; Must be placed in DOM before outerHTML can be set
+    (set! (.-outerHTML p-elem) p-outer-html)))
 
 (defn remove-list-para!
   [list-type uuid editor-state prev-state]

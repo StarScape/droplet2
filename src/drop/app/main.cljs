@@ -29,8 +29,8 @@
 ;;   DONE: Fix enter (currently inserting _above_ the first list-paragraph)
 ;;   DONE: Update correctly
 ;;   DONE: Interceptors for ul and ol
-;;   TODO: Switching a ul to an ol or viceversa causes an error
-;;   TODO: Hitting backspace on an empty paragraph should convert the paragraph to a :body para, not remove it
+;;   DONE: Hitting backspace on an empty paragraph should convert the paragraph to a :body para, not remove it
+;;   DONE: Switching a ul to an ol or viceversa causes an error
 ;;   TODO: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
 ;;   TODO: Preserve paragraph type on enter, if current paragraph is a list
 ;;   TODO: De-listify on double enter from list item paragraph (a la everyothertexteditor)
