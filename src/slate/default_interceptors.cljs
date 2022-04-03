@@ -32,8 +32,14 @@
       (m/delete editor-state))))
 
 (definterceptor enter
-  [editor-state _ui-state _e]
-  (es/enter editor-state))
+  [{:keys [doc selection] :as editor-state} _ui-state _e]
+  (let [paragraph (get (:children doc) (sel/caret-para selection))
+        paragraph-type (:type paragraph)]
+    (if (and (sel/single? selection)
+             (m/blank? paragraph)
+             (or (= paragraph-type :ol) (= paragraph-type :ul)))
+      (es/toggle-paragraph-type editor-state paragraph-type)
+      (es/enter editor-state))))
 
 (definterceptor tab
   [editor-state _ui-state _e]
