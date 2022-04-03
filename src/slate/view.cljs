@@ -209,6 +209,40 @@
           elem
           (recur (dll/next paragraphs-dll node)))))))
 
+(defn- next-dom-paragraph-before
+  "Returns the next paragraph before the one with UUID `uuid` that currently has a node in the dom.
+   If no paragraphs are found at all, returns `nil`."
+  [uuid paragraphs-dll]
+  (loop [node (dll/prev paragraphs-dll uuid)]
+    (if (nil? node)
+      nil
+      (let [elem (js/document.getElementById (str (:uuid node)))]
+        (if (some? elem)
+          elem
+          (recur (dll/prev paragraphs-dll node)))))))
+
+(defn- nearest-top-level-ancestor
+  [elem editor-elem]
+  (loop [e elem]
+    (if (= (.-parentElement e) editor-elem)
+      e
+      (recur (.-parentElement e)))))
+
+(defn merge-list-elems-if-needed!
+  "Takes two ADJACENT elements and, if they are both of the same list container type (e.g.
+   are both a separate <ul> or <ol>), merges them together."
+  [prev-elem next-elem]
+  (when (and prev-elem next-elem
+             (not= prev-elem next-elem)
+             (= (.-tagName prev-elem) (.-tagName next-elem))
+             (or (= "OL" (.-tagName prev-elem))
+                 (= "UL" (.-tagName prev-elem))))
+    (let [prev-elem-content (.-innerHTML prev-elem)
+          next-elem-content (.-innerHTML next-elem)
+          prev-elem-new-content (str prev-elem-content next-elem-content)]
+      (.remove next-elem)
+      (set! (.-innerHTML prev-elem) prev-elem-new-content))))
+
 (defn- insert-list-para!
   "Implementation for inserting both a :ul or an :ol paragraph (the only difference is the tag name of the
    containing element, either <ul> or <ol>). Automatically wraps the element in <ul>/<ol> IF there is not already
@@ -218,30 +252,45 @@
         rendered-paragraph (vm-para->dom viewmodel selection)
         p-elem (js/document.createElement "p")
         next-p-elem (next-dom-paragraph-after uuid (:children doc))
-        next-p-inside-same-list-elem? (= (.. next-p-elem -parentNode -tagName toLowerCase) tag-name)
-        p-outer-html (if next-p-inside-same-list-elem?
+        next-p-inside-same-list-elem? (when next-p-elem
+                                        (= (.. next-p-elem -parentNode -tagName toLowerCase) tag-name))
+        prev-p-elem (next-dom-paragraph-before uuid (:children doc))
+        prev-p-inside-same-list-elem? (when prev-p-elem
+                                        (= (.. prev-p-elem -parentNode -tagName toLowerCase) tag-name))
+        p-outer-html (if (or next-p-inside-same-list-elem?
+                             prev-p-inside-same-list-elem?)
                        rendered-paragraph
                        (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
-    (if next-p-elem
-      (let [next-p-parent (.-parentNode next-p-elem)
-            node-to-insert-inside-of (if next-p-inside-same-list-elem? next-p-parent editor-elem)
-            node-to-insert-before (if (and (not next-p-inside-same-list-elem?)
-                                           (not= next-p-parent editor-elem))
-                                    ;; Next paragraph is also inside a containing element (ul/ol),
-                                    ;; but of a different type (inserting a :ul immediately before an :ol)
-                                    ;; or viceverse, therefore we want to insert the paragraph before its _parent_.
-                                    next-p-parent
-                                    ;; Otherwise insert before the next paragraph as normal
-                                    next-p-elem)]
-        (.insertBefore node-to-insert-inside-of p-elem node-to-insert-before))
-      (.append editor-elem p-elem))
+    (cond
+      ;; insert into UL before next-p-elem
+      (and next-p-elem next-p-inside-same-list-elem?
+           prev-p-elem prev-p-inside-same-list-elem?)
+      (.insertBefore (.-parentNode next-p-elem) p-elem next-p-elem)
 
+      ;; insert into UL before next-p-elem
+      (and next-p-elem next-p-inside-same-list-elem?)
+      (.insertBefore (.-parentNode next-p-elem) p-elem next-p-elem)
+
+      ;; append to prev-p-elem's parent <ul>/<ol>
+      (and prev-p-elem prev-p-inside-same-list-elem?)
+      (.append (.-parentNode prev-p-elem) p-elem)
+
+      ;; neither prev nor next is a list paragraph but there is a next paragraph in the DOM currently
+      ;; insert directly before the _nearest ancestor_ of next-p-elem that is top-level within document elem
+      (some? next-p-elem)
+      (.insertBefore editor-elem p-elem (nearest-top-level-ancestor next-p-elem editor-elem))
+
+      :else
+      ;; No next elem, append to document end
+      (.append editor-elem p-elem))
     ;; Must be placed in DOM before outerHTML can be set
     (set! (.-outerHTML p-elem) p-outer-html)))
 
 (defn remove-list-para!
-  [list-type uuid editor-state prev-state]
+  [list-type editor-elem uuid editor-state prev-state]
   (let [elem (js/document.getElementById (str uuid))
+        prev-elem (.-previousElementSibling elem)
+        next-elem (.-nextElementSibling elem)
         old-children (-> prev-state :doc :children)
         new-children (-> editor-state :doc :children)
         prev-para-uuid (:uuid (dll/prev old-children uuid))
@@ -253,7 +302,8 @@
       ;; Only item in the list, remove parent so there is no dangling <ul>/<ol>
       (.remove (.-parentElement elem))
       ;; Other items in list, keep <ul>/<ol>
-      (.remove elem))))
+      (.remove elem))
+    (merge-list-elems-if-needed! prev-elem next-elem)))
 
 (defmulti insert-para!
   "Inserts the paragraph with `uuid` into the DOM."
@@ -263,7 +313,7 @@
 (defmulti remove-para!
   "Removes the paragraph with `uuid` from the DOM."
   {:arglists '([uuid editor-state prev-editor-state])}
-  (fn [uuid _ {:keys [doc]}] (:type (get (:children doc) uuid))))
+  (fn [_ uuid _ {:keys [doc]}] (:type (get (:children doc) uuid))))
 
 (defmethod insert-para! :default
   [editor-elem uuid viewmodel {:keys [doc selection] :as _editor-state}]
@@ -295,16 +345,22 @@
   (insert-list-para! :ol editor-elem uuid viewmodel editor-state))
 
 (defmethod remove-para! :default
-  [uuid _ _]
-  (.remove (js/document.getElementById (str uuid))))
+  [_editor-elem uuid _ _]
+  ;; TODO: check to see if the paragraphs before and after uuid are both list paragraphs
+  ;; of the same type, and merge if so
+  (let [p-elem (js/document.getElementById (str uuid))
+        prev-elem (.-previousElementSibling p-elem)
+        next-elem (.-nextElementSibling p-elem)]
+    (.remove p-elem)
+    (merge-list-elems-if-needed! prev-elem next-elem)))
 
 (defmethod remove-para! :ul
-  [uuid editor-state prev-state]
-  (remove-list-para! :ul uuid editor-state prev-state))
+  [editor-elem uuid editor-state prev-state]
+  (remove-list-para! :ul editor-elem uuid editor-state prev-state))
 
 (defmethod remove-para! :ol
-  [uuid editor-state prev-state]
-  (remove-list-para! :ol uuid editor-state prev-state))
+  [editor-elem uuid editor-state prev-state]
+  (remove-list-para! :ol editor-elem uuid editor-state prev-state))
 
 ;; Currently all paragraph types update the same, no special logic/multimethod needed
 (defn update-para! [editor-elem uuid viewmodel editor-state prev-state]
@@ -313,7 +369,7 @@
                             (-> prev-state :doc :children (get uuid) :type))]
     (if type-changed?
       (do
-        (remove-para! uuid editor-state prev-state)
+        (remove-para! editor-elem uuid editor-state prev-state)
         (insert-para! editor-elem uuid viewmodel editor-state))
       (set! (.-outerHTML paragraph-elem) (vm-para->dom viewmodel (:selection editor-state))))))
 

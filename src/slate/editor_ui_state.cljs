@@ -110,7 +110,7 @@
     (doseq [uuid inserted-uuids]
       (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
     (doseq [uuid deleted-uuids]
-      (view/remove-para! uuid editor-state prev-state))
+      (view/remove-para! dom-elem uuid editor-state prev-state))
     (doseq [uuid changed-uuids]
       (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))))
 
