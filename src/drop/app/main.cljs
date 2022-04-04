@@ -34,10 +34,11 @@
 ;;   DONE: Preserve paragraph type on enter, if current paragraph is a list
 ;;   DONE: Bug - press enter after last item in olist, is not merged correctly into previous olist
 ;;   DONE: Bug - completely delete second paragraph in olist, once gone you are left with two separate lists
-;;   TODO: De-listify on double enter from list item paragraph (a la everyothertexteditor)
-;;   TODO: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
+;;   DONE: De-listify on double enter from list item paragraph (a la everyothertexteditor)
+;;   DONE: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
+;;   TODO: :between paragraphs are not rendered correctly whenever a list is involved.
 
-;; TODO: Undo maybe broken?
+;; TODO: Undo maybe broken? (test with lists)
 ;; TODO: Bug - range select anything, then pressing cmd+left OR cmd+right results in error
 ;; TODO: if start of paragraph is a space, shift+option+left won't select that space even when its the only thing left to select
 ;; TODO: resize works incorrectly when there is an h1 or h2 since they are absolutely sized

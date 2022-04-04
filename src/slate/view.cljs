@@ -59,6 +59,15 @@
         (subs 0 (- (.-length font-size-str) 2))
         (js/parseInt))))
 
+(defn margins
+  "Returns the elements margins as a map of {:top, :bottom, :left, :right}."
+  [dom-elem]
+  (let [style (js/getComputedStyle dom-elem)]
+    {:top (js/parseFloat (.-marginTop style))
+     :bottom (js/parseFloat (.-marginBottom style))
+     :left (js/parseFloat (.-marginLeft style))
+     :right (js/parseFloat (.-marginRight style))}))
+
 (defn paragraph-type->css-class [paragraph-type]
   (if paragraph-type
     (str (name paragraph-type) "-format")
@@ -530,9 +539,11 @@
                    (:uuid (dll/next (:children doc) para-uuid))
                    para-uuid)]
     (if next-line
-      (let [caret-offset-px (caret-px collapsed-sel caret-line (:type para) measure-fn)
+      (let [initial-para-margin (:left (margins (.getElementById js/document para-uuid)))
+            dest-para-margin (:left (margins (.getElementById js/document (:uuid destination-para))))
+            caret-offset-px (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn))
             next-line-offset (nearest-line-offset-to-pixel :line next-line
-                                                           :target-px caret-offset-px
+                                                           :target-px (- caret-offset-px dest-para-margin)
                                                            :last-line-in-paragraph? (= next-line
                                                                                        (peek (:lines next-line-vm-paragraph)))
                                                            :measure-fn measure-fn
@@ -560,7 +571,7 @@
         caret-line (line-with-caret viewmodels collapsed-sel)
         caret-in-first-line? (= caret-line (first (:lines viewmodel)))
         first-para? (= para-uuid (:uuid (dll/first (:children doc))))
-        destination-paragraph (if (or first-para? (not caret-in-first-line?))
+        destination-para (if (or first-para? (not caret-in-first-line?))
                                 para
                                 (dll/prev (:children doc) para-uuid))
         prev-line (if (not caret-in-first-line?)
@@ -575,12 +586,14 @@
                    (:uuid (dll/prev (:children doc) para-uuid))
                    para-uuid)]
     (if prev-line
-      (let [caret-offset-px (caret-px collapsed-sel caret-line (:type para) measure-fn)
+      (let [initial-para-margin (:left (margins (.getElementById js/document para-uuid)))
+            dest-para-margin (:left (margins (.getElementById js/document (:uuid destination-para))))
+            caret-offset-px (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn))
             prev-line-offset (nearest-line-offset-to-pixel :line prev-line
-                                                           :target-px caret-offset-px
+                                                           :target-px (- caret-offset-px dest-para-margin)
                                                            :last-line-in-paragraph? caret-in-first-line?
                                                            :measure-fn measure-fn
-                                                           :paragraph-type (:type destination-paragraph))]
+                                                           :paragraph-type (:type destination-para))]
         (nav/autoset-formats doc (sel/selection [new-uuid prev-line-offset])))
       collapsed-sel)))
 
