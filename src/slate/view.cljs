@@ -809,11 +809,17 @@
   [mousemove-event doc viewmodels measure-fn]
   (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels measure-fn)
         currently-at (mouse-event->selection mousemove-event doc viewmodels measure-fn)
+        started-uuid (sel/caret-para started-at)
+        started-offset (sel/caret started-at)
+        current-uuid (sel/caret-para currently-at)
+        current-offset (sel/caret currently-at)
         dir (drag-direction started-at currently-at *last-mousedown-event* mousemove-event)
         raw-selection (if (= dir :forward)
-                        (sel/selection [(sel/caret-para started-at) (sel/caret started-at)]
-                                       [(sel/caret-para currently-at) (sel/caret currently-at)])
-                        (sel/selection [(sel/caret-para currently-at) (sel/caret currently-at)]
-                                       [(sel/caret-para started-at) (sel/caret started-at)]
-                                       :backwards? true))]
+                        (sel/selection [started-uuid started-offset]
+                                       [current-uuid current-offset]
+                                       :between (set (dll/uuids-between (:children doc) started-uuid current-uuid)))
+                        (sel/selection [current-uuid current-offset]
+                                       [started-uuid started-offset]
+                                       :backwards? true
+                                       :between (set (dll/uuids-between (:children doc) current-uuid started-uuid))))]
     (nav/autoset-formats doc raw-selection)))
