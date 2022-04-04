@@ -36,8 +36,8 @@
 ;;   DONE: Bug - completely delete second paragraph in olist, once gone you are left with two separate lists
 ;;   DONE: De-listify on double enter from list item paragraph (a la everyothertexteditor)
 ;;   DONE: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
-;;   TODO: :between paragraphs are not rendered correctly whenever a list is involved.
 
+;; TODO: :between paragraphs are not rendered correctly whenever drag with mouse
 ;; TODO: Undo maybe broken? (test with lists)
 ;; TODO: Bug - range select anything, then pressing cmd+left OR cmd+right results in error
 ;; TODO: if start of paragraph is a space, shift+option+left won't select that space even when its the only thing left to select
@@ -73,7 +73,8 @@
 (def paragraphs
   [(paragraph (uuid "p1") :h1 [(run "A Title")])
    (paragraph (uuid "p2") :h2 [(run "A subtitle")])
-   (paragraph (uuid "s1") :ul [(run "S")])
+   (paragraph (uuid "s1") :ul [(run "A bullet")])
+   (paragraph (uuid "s2") :ul [(run "And anotha")])
    (paragraph (uuid "div1") [(run)])
    (paragraph (uuid "p3") [(run "Hello world, this is an example of a paragraph ")
                            (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
@@ -84,13 +85,13 @@
    (paragraph (uuid "ol3") :ul [(run "Bullet 3")])
    (paragraph [(run "(Take a break.)")])
    (paragraph (uuid "ul1") :ol [(run "Ordered item 1")])
-   (paragraph (uuid "ul2") :ol [(run "")])
+   (paragraph (uuid "ul2") :ol [(run "Ordered item 2")])
    (paragraph (uuid "ul3") :ol [(run "Ordered item 3")])
    (paragraph (uuid "div3") [(run)])
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "ul2") 0]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p1") 0]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 
