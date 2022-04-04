@@ -9,6 +9,7 @@
             [slate.model.common :as m]
             [slate.model.editor-state :as es :refer [>>=]]
             [slate.model.navigation :as nav]
+            [slate.model.selection :as sel]
             [slate.utils :as utils]
             [slate.view :as view]))
 
@@ -22,12 +23,23 @@
   (m/insert editor-state (.-data e)))
 
 (definterceptor delete
-  [editor-state _ui-state _e]
-  (m/delete editor-state))
+  [{:keys [doc selection] :as editor-state} _ui-state _e]
+  (let [paragraph-type (:type (get (:children doc) (sel/caret-para selection)))]
+    (if (and (sel/single? selection)
+             (zero? (-> selection :start :offset))
+             (or (= paragraph-type :ol) (= paragraph-type :ul)))
+      (es/toggle-paragraph-type editor-state paragraph-type)
+      (m/delete editor-state))))
 
 (definterceptor enter
-  [editor-state _ui-state _e]
-  (es/enter editor-state))
+  [{:keys [doc selection] :as editor-state} _ui-state _e]
+  (let [paragraph (get (:children doc) (sel/caret-para selection))
+        paragraph-type (:type paragraph)]
+    (if (and (sel/single? selection)
+             (m/blank? paragraph)
+             (or (= paragraph-type :ol) (= paragraph-type :ul)))
+      (es/toggle-paragraph-type editor-state paragraph-type)
+      (es/enter editor-state))))
 
 (definterceptor tab
   [editor-state _ui-state _e]
@@ -164,6 +176,22 @@
   [editor-state _ _]
   (m/toggle-format editor-state :bold))
 
+(definterceptor h1
+  [editor-state _ _]
+  (es/toggle-paragraph-type editor-state :h1))
+
+(definterceptor h2
+  [editor-state _ _]
+  (es/toggle-paragraph-type editor-state :h2))
+
+(definterceptor ulist
+  [editor-state _ _]
+  (es/toggle-paragraph-type editor-state :ul))
+
+(definterceptor olist
+  [editor-state _ _]
+  (es/toggle-paragraph-type editor-state :ol))
+
 (def universal-interceptors
   {:click click
    :drag drag
@@ -196,7 +224,9 @@
    :pageup start-of-line
    :pagedown end-of-line
    :home start-of-doc
-   :end end-of-doc})
+   :end end-of-doc
+   :ctrl+1 h1
+   :ctrl+2 h2})
 
 (def mac-interceptors
   {:alt+left ctrl+left
@@ -208,7 +238,11 @@
    :cmd+left start-of-line
    :cmd+right end-of-line
    :cmd+up start-of-doc
-   :cmd+down end-of-doc})
+   :cmd+down end-of-doc
+   :cmd+1 h1
+   :cmd+2 h2
+   :cmd+u ulist
+   :cmd+o olist})
 
 (def default-interceptors
   (merge universal-interceptors (if (utils/is-mac?)

@@ -215,7 +215,7 @@
     (is (= (doc/enter doc (selection ["p2" 12]) "e1")
            (document [p1, p2, (paragraph "e1" [(run)])]))))
 
-  (testing "works with range selection"
+  #_(testing "works with range selection"
     (is (= (doc/enter doc (selection ["p2" 0] ["p2" 12]) "e1")
            (document [p1, (p/empty-paragraph "e1"), (p/empty-paragraph "p2")])))))
 

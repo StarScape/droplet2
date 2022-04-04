@@ -16,3 +16,9 @@
                  (dissoc new-map key)
                  new-map))
              m m))
+
+(defn set-toggle
+  "Adds `val` to set if not present, removes it if present."
+  [s val]
+  {:pre [(set? s)]}
+  (if (contains? s val) (disj s val) (conj s val)))

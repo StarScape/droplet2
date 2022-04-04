@@ -5,6 +5,11 @@
   <title>Test</title>
 
   <style type="text/css">
+    body {
+      /* TODO: for now globally disabled for simplicity, either set manually on all elements or use shadow DOM. */
+      font-kerning: none !important;
+    }
+
     #fake-editor {
       white-space: pre;
     }
@@ -15,7 +20,7 @@
     }
 
     .my-box {
-      width: 100%;
+      width: 100vw;
       height: 100vh;
       margin: 0;
       padding: 0;
@@ -76,6 +81,19 @@
       opacity: 0;
     }
 
+    ul, ol {
+      padding: 0;
+      margin: 0;
+    }
+
+    .ul-format, .ol-format {
+      display: list-item;
+      margin-left: 1.25em;
+    }
+    .ul-format { list-style-type: disc; }
+    .ol-format { list-style-type: decimal; }
+    .h1-format { font-size: 30px !important; }
+    .h2-format { font-size: 20px !important; }
     .italic-format { font-style: italic !important; }
     .bold-format { font-weight: bold !important; }
     .underline-format { text-decoration: line-through !important; }
@@ -86,20 +104,32 @@
 
   <!-- Hidden input for capturing keystrokes -->
   <input id='hidden-input' type='text' autofocus />
-
   <div>
     <span id='formats' style='margin-right: 30px;'>Formats: </span>
   </div>
   <div class='my-boxes'>
-    <div class='my-box' id='fake-editor'></div>
+    <div class='my-box document' id='fake-editor'></div>
+
     <!-- <div class='my-box' id='fake-editor-dom-layout' contenteditable="true">
-      <p class="paragraph">&emsp;Hello world, this is an example of a paragraph <i>that I might want to split into lines. I'm really just typing a bunch of random stuff in here.</i><b>Don't know what else to say. Hmmmm...</b></p>
+      <p class="paragraph h1-format">A Title</p>
+      <p class="paragraph h2-format">A subtitle</p>
+      <p class="paragraph"></p>
+      <p class="paragraph">Hello world, this is an example of a paragraph <i>that I might want to split into lines. I'm really just typing a bunch of random stuff in here. </i><b>Don't know what else to say. Hmmmm...</b></p>
+      <p class="paragraph"></p>
+      <ul>
+        <p class="paragraph ul-format">Foo!</p>
+        <p class="paragraph ul-format">Bar!</p>
+        <p class="paragraph ul-format">Buzz!</p>
+      </ul>
+      <p class="paragraph">(Take a break)</p>
+      <ul>
+        <p class="paragraph ul-format">Now bizz!</p>
+      </ul>
       <p class="paragraph">And this is paragraph numero dos.</p>
     </div> -->
-    <!-- <div class='my-box' id='fake-editor-dom-layout' contenteditable="true">Hello world, this is an example of a paragraph that I might want to split into lines. I'm really just typing a bunch of random stuff in here. Don't know what else to say. Hmmmm...</div>
 
-    <input id='override-checkbox' type="checkbox" name="override">
-    <label for="override">Override</label> -->
+    <!-- <input id='override-checkbox' type="checkbox" name="override">
+    <label for="override">Override</label>  -->
   </div>
 
   <script src="js/main.js" type="text/javascript"></script>

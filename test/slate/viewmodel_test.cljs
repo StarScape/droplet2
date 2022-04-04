@@ -24,14 +24,14 @@
 
 (deftest lineify-test
   (testing "works with an empty run"
-    (is (= (unrecord (vm/lineify [(r/run "")] 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify [(r/run "")] :body 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 0
              :width 0
              :spans [{:text "", :formats #{}, :start-offset 0, :width 0}]}])))
 
   (testing "works with a run that fits on just one line"
-    (is (= (unrecord (vm/lineify [(r/run "foobar")] 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify [(r/run "foobar")] :body 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 6
              :width 60
@@ -41,7 +41,7 @@
                       :width 60}]}])))
 
   (testing "works with a big long run"
-    (is (= (unrecord (vm/lineify runs 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify runs :body 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 29
              :width 290
@@ -65,7 +65,7 @@
                       :width 200}]}])))
 
   (testing "works with a bunch of small runs"
-    (is (= (unrecord (vm/lineify runs-formatted 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify runs-formatted :body 300 fake-measure-fn))
            [{:start-offset 0
              :end-offset 29
              :width 290
@@ -109,7 +109,7 @@
                       :width 40}]}])))
 
   (testing "works with a word too large to fit on a line"
-    (is (= (unrecord (vm/lineify [(r/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 fake-measure-fn))
+    (is (= (unrecord (vm/lineify [(r/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] :body 300 fake-measure-fn))
            [{:spans [{:text "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                       :formats #{}
                       :start-offset 0

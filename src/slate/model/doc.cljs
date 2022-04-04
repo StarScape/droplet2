@@ -20,6 +20,8 @@
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.selection :as sel :refer [Selection]]))
 
+(def ^:const types-preserved-on-enter #{:ul, :ol})
+
 (declare merge-transactions)
 
 (defrecord Document [children]
@@ -30,6 +32,7 @@
 (defn document
   "Creates a new document."
   ([children]
+   ;; TODO: check that children all have unique IDs, but not in production.
    (cond
      (= (type children) dll/DoublyLinkedList)
      (->Document children)
@@ -53,11 +56,12 @@
   ;; TODO: no, keep the UUID on the first and then assigna random to the second
    (let [target-paragraph (-> (:children doc)
                               (get (-> sel :start :paragraph)))
+         paragraph-type (:type target-paragraph)
          [left-runs, right-runs] (-> target-paragraph
                                      (get :runs)
                                      (p/split-runs (sel/caret sel)))]
-     [(p/paragraph (:uuid target-paragraph) left-runs)
-      (p/paragraph new-uuid right-runs)]))
+     [(p/paragraph (:uuid target-paragraph) paragraph-type left-runs)
+      (p/paragraph new-uuid paragraph-type right-runs)]))
   ([doc sel]
    (split-paragraph doc sel (random-uuid))))
 
@@ -169,18 +173,20 @@
 (defn insert-paragraph-before
   "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.
    Optionally takes a UUID to assign to the new paragraph. Returns a new document."
-  ([doc uuid new-para-uuid]
-   (replace-paragraph-with doc uuid [(assoc (p/paragraph) :uuid new-para-uuid) ((:children doc) uuid)]))
+  ([doc uuid new-para-uuid type]
+   (replace-paragraph-with doc uuid [(assoc (p/paragraph) :uuid new-para-uuid :type type),
+                                     (get (:children doc) uuid)]))
   ([doc uuid]
-   (insert-paragraph-before doc uuid (random-uuid))))
+   (insert-paragraph-before doc uuid (random-uuid) :body)))
 
 (defn insert-paragraph-after
   "Inserts an empty paragraph into the document immediately after the paragraph with UUID `uuid`.
    Optionally takes a UUID to assign to the new paragraph. Returns a new document."
-  ([doc uuid new-para-uuid]
-   (replace-paragraph-with doc uuid [((:children doc) uuid) (assoc (p/paragraph) :uuid new-para-uuid)]))
+  ([doc uuid new-para-uuid type]
+   (replace-paragraph-with doc uuid [((:children doc) uuid),
+                                     (assoc (p/paragraph) :uuid new-para-uuid :type type)]))
   ([doc uuid]
-   (insert-paragraph-after doc uuid (random-uuid))))
+   (insert-paragraph-after doc uuid (random-uuid) :body)))
 
 ;; TODO: insert-after and insert-before functions which take a doc, a paragraph uuid/index, and a paragraph,
 ;; and inserts that paragraph either before or after the paragraph with the uuid/index provided.
@@ -195,8 +201,7 @@
         ; First char of first paragraph, do nothing
         doc
         ; First char of a different paragraph, merge with previous
-        (let [prev-para (dll/prev (:children doc) para-uuid)]
-          (merge-paragraph-with-previous doc para-uuid)))
+        (merge-paragraph-with-previous doc para-uuid))
       ; Not the first char of the selected paragraph, normal backspace
       (update-in doc [:children para-uuid] delete sel))))
 
@@ -228,23 +233,23 @@
    Optionally takes a UUID to assign to the new paragraph, otherwise
    a random one will be used."
   ([doc sel new-uuid]
+   {:pre [(sel/single? sel)]}
    (let [caret (sel/caret sel)
          uuid (-> sel :start :paragraph)
-         para ((:children doc) uuid)]
-     (if (sel/range? sel)
-       ;; TODO: this never happens because editor-state/enter collapses the sel beforehand
-       (-> (delete doc sel)
-           (enter (sel/collapse-start sel) new-uuid))
-       (cond
-         (= caret 0)
-         (insert-paragraph-before doc uuid new-uuid)
+         para ((:children doc) uuid)
+         new-para-type (if (contains? types-preserved-on-enter (:type para))
+                         (:type para)
+                         :body)]
+     (cond
+       (= caret 0)
+       (insert-paragraph-before doc uuid new-uuid new-para-type)
 
-         (= caret (len para))
-         (insert-paragraph-after doc uuid new-uuid)
+       (= caret (len para))
+       (insert-paragraph-after doc uuid new-uuid new-para-type)
 
-         :else
-         (let [[para1 para2] (split-paragraph doc sel new-uuid)]
-           (replace-paragraph-with doc uuid [para1 para2]))))))
+       :else
+       (let [[para1 para2] (split-paragraph doc sel new-uuid)]
+         (replace-paragraph-with doc uuid [para1 para2])))))
   ([doc sel]
    (enter doc sel (random-uuid))))
 

@@ -1,11 +1,9 @@
 (ns slate.measurement
   "Functions for measuring the widths of text as they will appear in the actual DOM."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [slate.view :refer [formats->css-classes paragraph-type->css-class]]))
 
-(defn- formats->classes [formats]
-  (map #(str (name %) "-format") formats))
-
-(defn- create-elem [font-size font-family]
+(defn- create-elem! [font-size font-family]
   (let [elem (.createElement js/document "div")
         style (.-style elem)]
     (set! (.-visibility style) "hidden")
@@ -19,29 +17,31 @@
     (set! (.-fontWeight style) "normal")
     elem))
 
-(defn- apply-css [elem formats]
-  (let [css-classes (formats->classes formats)]
+(defn- apply-css! [elem formats paragraph-type]
+  (let [css-classes (-> (formats->css-classes formats)
+                        (conj (paragraph-type->css-class paragraph-type)))]
     (set! (.-className elem) (str/join " " css-classes))))
 
 (defn measure
-  "Helper function for `ruler`. Not private, so it **can** be used directly, but generally should not be."
+  "Helper function for `ruler`. Not private and __can__ be used directly, but generally should not be."
   ([elem cache text]
-   (measure elem cache text #{}))
+   (measure elem cache text #{} :body))
   ([elem cache text formats]
-   (let [formats-hash (hash (seq formats))]
-     (->> text
-          (map (fn [char]
-                 (let [cache-key (str char "-" formats-hash)
-                       cache-val (aget cache cache-key)]
-                   (if cache-val
-                     cache-val
-                     (do
-                       (apply-css elem formats)
-                       (set! (.-innerHTML elem) char)
-                       (aset cache cache-key (.. elem (getBoundingClientRect) -width)))))))
-          (reduce +)))))
-
-;; TODO: change names of next two functions to be `caching-measure-fn` and `caching-measure-fn-for-elem`.
+   (throw "Invalid arity of measurement function!")
+   #_(measure elem cache text formats nil))
+  ([elem cache text formats paragraph-type]
+   (let [formats-hash (hash (seq formats))
+         type-hash (hash paragraph-type)
+         measure-char (fn [char]
+                        (let [cache-key (str char "-" formats-hash "-" type-hash)
+                              cache-val (aget cache cache-key)]
+                          (if cache-val
+                            cache-val
+                            (do
+                              (apply-css! elem formats paragraph-type)
+                              (set! (.-innerHTML elem) char)
+                              (aset cache cache-key (.. elem (getBoundingClientRect) -width))))))]
+     (->> text (map measure-char) (reduce +)))))
 
 (defn ruler
   "Given valid CSS values for a font size and family (e.g. `12px` and `Arial`),
@@ -61,16 +61,17 @@
    will be cheaper."
   [font-size font-family]
   (let [cache #js {}
-        elem (create-elem font-size font-family)]
+        elem (create-elem! font-size font-family)]
     (.. js/document -body (appendChild elem))
-    (fn [& args] (apply measure (concat [elem cache] args)))))
+    (fn [& args] (apply measure elem cache args))))
 
 (defn ruler-for-elem
   "Returns a measurement function for the given DOM element.
-   The measurement-fn takes two parameters:
 
-   - text to measure the width of
-   - formats, a set of formats for the element
+   The measurement-fn takes three parameters:
+   - `text`: string to measure the width of
+   - `formats`: set of formats for the element
+   - `paragraph-type`: __(optional)__ the type of the paragraph, such as `:h1` or `:h2` (default `:body`)
 
    And returns the width the text will take up, in pixels."
   [elem]
@@ -83,4 +84,5 @@
   "For testing, returns every char width as 10px.
    Meant to simulate a function created with `ruler`."
   ([str] (* 10 (.-length str)))
-  ([str _formats] (* 10 (.-length str))))
+  ([str _formats] (* 10 (.-length str)))
+  ([str _formats _paragraph-type] (* 10 (.-length str))))

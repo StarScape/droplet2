@@ -93,26 +93,26 @@
    paragraphs selectively."
   [*ui-state]
   (let [{:keys [dom-elem history measure-fn] :as ui-state} @*ui-state
-        {:keys [doc selection]} (history/current-state history)
+        {:keys [doc] :as editor-state} (history/current-state history)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         viewmodels (vm/from-doc doc dom-elem-width measure-fn)
         new-ui-state (assoc ui-state :viewmodels viewmodels)
         viewmodels (map #(get viewmodels (:uuid %)) (:children doc))]
-    (view/insert-all! dom-elem viewmodels selection)
+    (view/insert-all! dom-elem viewmodels editor-state)
     (reset! *ui-state new-ui-state)))
 
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
-  [dom-elem editor-state viewmodels changelist]
+  [dom-elem editor-state prev-state viewmodels changelist]
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
-      (view/insert-para! dom-elem uuid (get viewmodels uuid) doc selection))
+      (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
     (doseq [uuid deleted-uuids]
-      (view/remove-para! dom-elem uuid))
+      (view/remove-para! dom-elem uuid editor-state prev-state))
     (doseq [uuid changed-uuids]
-      (view/update-para! dom-elem uuid (get viewmodels uuid) selection))))
+      (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))))
 
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."
@@ -129,7 +129,6 @@
 (definterceptor increase-font-size!
   {:manual? true}
   [*ui-state]
-  #p "Hello?"
   (let [new-font-size (+ font-size-delta (view/font-size (:dom-elem @*ui-state)))]
     (when (<= new-font-size font-size-max)
       (set-font-size! *ui-state new-font-size))))
@@ -160,6 +159,7 @@
                                 :viewmodels new-vms)]
         (sync-dom! (:dom-elem new-ui-state)
                    (:editor-state restored-update)
+                   (history/current-state history)
                    (:viewmodels new-ui-state)
                    changelist)
         (reset! *ui-state new-ui-state)))))
@@ -182,6 +182,7 @@
                                 :viewmodels new-vms)]
         (sync-dom! (:dom-elem new-ui-state)
                    (:editor-state restored-update)
+                   (history/current-state history)
                    (:viewmodels new-ui-state)
                    changelist)
         (reset! *ui-state new-ui-state)))))
@@ -206,6 +207,7 @@
                          (update-viewmodels-to-history-tip))]
     (sync-dom! (:dom-elem new-ui-state)
                (:editor-state editor-update)
+               editor-state
                (:viewmodels new-ui-state)
                (:changelist editor-update))
 
@@ -224,7 +226,7 @@
 (defn fire-interceptor!
   [*ui-state interceptor event]
   (if (:manual? interceptor)
-    ;; Manual interceptors don't rely on Slate's default data-loop
+    ;; Manual interceptors circumvent Slate's default data-loop and just fire as regular functions
     (interceptor *ui-state event)
     (fire-normal-interceptor! *ui-state interceptor event)))
 
@@ -315,7 +317,7 @@
   (let [dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem dom-elem)
         editor-state (or editor-state (es/editor-state))
-        interceptors-map #p (-> (interceptors/interceptor-map)
+        interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
         *ui-state (atom {:id (random-uuid)

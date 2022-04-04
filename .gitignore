@@ -20,3 +20,5 @@ commit.txt
 # Output/build dirs
 public/js/
 out/
+
+Session.vim

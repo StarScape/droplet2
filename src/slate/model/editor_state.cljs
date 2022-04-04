@@ -203,6 +203,19 @@
                   (changelist :changed-uuids (set/union (sel/all-uuids selection)
                                                         (sel/all-uuids new-selection)))))
 
+;; TODO: test
+(defn toggle-paragraph-type
+  [{:keys [selection doc] :as editor-state} type]
+  (let [start-uuid (sel/start-para selection)
+        end-uuid (sel/end-para selection)
+        selected-paragraphs (dll/range (:children doc) start-uuid end-uuid)
+        set-paragraph-type-true? (not-every? #(= (:type %) type) selected-paragraphs)
+        type-to-set (if set-paragraph-type-true? type :body)
+        selected-paragraphs-updated (map #(assoc % :type type-to-set) selected-paragraphs)
+        new-doc (update doc :children dll/replace-range start-uuid end-uuid selected-paragraphs-updated)]
+    (->EditorUpdate (assoc editor-state :doc new-doc)
+                    (changelist :changed-uuids (sel/all-uuids selection)))))
+
 (defn auto-surround
   ([{:keys [doc selection] :as editor-state} opening closing]
    (if (sel/single? selection)
