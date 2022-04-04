@@ -67,11 +67,11 @@
 
 (defn ruler-for-elem
   "Returns a measurement function for the given DOM element.
-   The measurement-fn takes two parameters:
 
+   The measurement-fn takes three parameters:
    - `text`: string to measure the width of
    - `formats`: set of formats for the element
-   - `paragraph-type`: __(optional)__ the type of the paragraph, such as :h1 or :h2 (default `nil`)
+   - `paragraph-type`: __(optional)__ the type of the paragraph, such as `:h1` or `:h2` (default `:body`)
 
    And returns the width the text will take up, in pixels."
   [elem]
