@@ -648,7 +648,7 @@
 (defn start-of-line-selection
   "Returns a Selection that moves the cursor to the beginning of the current line."
   [{:keys [selection]} viewmodels]
-  (let [new-offset (:start-offset (line-with-caret viewmodels selection))]
+  (let [new-offset (:start-offset (line-with-caret viewmodels (sel/smart-collapse selection)))]
     (sel/selection [(sel/caret-para selection) new-offset])))
 
 (defn start-of-line
@@ -661,7 +661,7 @@
   "Returns a Selection that moves the cursor to the beginning of the current line."
   [{:keys [doc selection]} viewmodels]
   (let [paragraph (get (:children doc) (sel/caret-para selection))
-        caret-line (line-with-caret viewmodels selection)
+        caret-line (line-with-caret viewmodels (sel/smart-collapse selection))
         end-offset (:end-offset caret-line)
         ;; Decrement by 1 if it's not last line to account for space at the end of each line
         new-offset (if (= end-offset (sl/len paragraph))

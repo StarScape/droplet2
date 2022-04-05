@@ -38,11 +38,11 @@
 ;;   DONE: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
 ;; DONE: :between paragraphs are not rendered correctly whenever drag with mouse
 ;; DONE: Bug - pressing down on last paragraph throws error
+;; DONE: Bug - range select anything, then pressing cmd+left OR cmd+right throws error
 
-;; TODO: Bug - range select anything, then pressing cmd+left OR cmd+right throws error
-;; TODO: Undo maybe broken? (test with lists)
 ;; TODO: if start of paragraph is a space, shift+option+left won't select that space even when its the only thing left to select
 ;; TODO: resize works incorrectly when there is an h1 or h2 since they are absolutely sized
+;; TODO: Undo maybe broken? (test with lists)
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
 ;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
 ;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
