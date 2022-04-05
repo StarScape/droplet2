@@ -36,10 +36,11 @@
 ;;   DONE: Bug - completely delete second paragraph in olist, once gone you are left with two separate lists
 ;;   DONE: De-listify on double enter from list item paragraph (a la everyothertexteditor)
 ;;   DONE: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
+;; DONE: :between paragraphs are not rendered correctly whenever drag with mouse
+;; DONE: Bug - pressing down on last paragraph throws error
 
-;; TODO: :between paragraphs are not rendered correctly whenever drag with mouse
+;; TODO: Bug - range select anything, then pressing cmd+left OR cmd+right throws error
 ;; TODO: Undo maybe broken? (test with lists)
-;; TODO: Bug - range select anything, then pressing cmd+left OR cmd+right results in error
 ;; TODO: if start of paragraph is a space, shift+option+left won't select that space even when its the only thing left to select
 ;; TODO: resize works incorrectly when there is an h1 or h2 since they are absolutely sized
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
@@ -91,7 +92,7 @@
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p1") 0]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p4") 0]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 
