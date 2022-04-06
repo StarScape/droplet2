@@ -110,7 +110,7 @@
       (cond
         (whitespace? first-char)
         (let [idx (until-non-whitespace text start-offset)
-              char (nth text idx)]
+              char (nth text idx "")]
           (if (separator? char)
             (until-non-separator text idx)
             (until-non-word text idx)))
@@ -138,7 +138,7 @@
       (cond
         (whitespace? before-start)
         (let [idx (back-until-non-whitespace text start-offset)
-              char-before-idx (nth text (dec idx))]
+              char-before-idx (nth text (dec idx) "")]
           (if (separator? char-before-idx)
             (back-until-non-separator text idx)
             (back-until-non-word text idx)))

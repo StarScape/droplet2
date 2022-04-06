@@ -40,7 +40,8 @@
 ;; DONE: Bug - pressing down on last paragraph throws error
 ;; DONE: Bug - range select anything, then pressing cmd+left OR cmd+right throws error
 
-;; TODO: if start of paragraph is a space, shift+option+left won't select that space even when its the only thing left to select
+;; PROG: if start of paragraph is a space, trying to select it with shift+option+left throws index out of bounds (same happens at end of paragraph)
+
 ;; TODO: resize works incorrectly when there is an h1 or h2 since they are absolutely sized
 ;; TODO: Undo maybe broken? (test with lists)
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
@@ -72,7 +73,7 @@
 (def hidden-input (.querySelector js/document "#hidden-input"))
 
 (def paragraphs
-  [(paragraph (uuid "p1") :h1 [(run "A Title")])
+  [(paragraph (uuid "p1") :h1 [(run " A Title ")])
    (paragraph (uuid "p2") :h2 [(run "A subtitle")])
    (paragraph (uuid "s1") :ul [(run "A bullet")])
    (paragraph (uuid "s2") :ul [(run "And anotha")])
@@ -92,7 +93,7 @@
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p4") 0]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p1") 8]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

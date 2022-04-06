@@ -586,7 +586,7 @@
                                                        :last-line-in-paragraph? caret-in-first-line?
                                                        :measure-fn measure-fn
                                                        :paragraph-type (:type destination-para))]
-    (nav/autoset-formats doc (sel/selection [#p new-uuid prev-line-offset]))))
+    (nav/autoset-formats doc (sel/selection [new-uuid prev-line-offset]))))
 
 (defn up
   "Move the caret up into the next line. Returns an EditorUpdate.

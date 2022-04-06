@@ -75,6 +75,14 @@
   (testing "next-word from last offset of last paragraph should return itself"
     (is (= (selection ["p2" 8]) (next-word doc (selection ["p2" 8]))))))
 
+(deftest prev-word-test
+  (testing "works when start of string is space"
+    (is (= 0 (prev-word-offset " Foo bar " 1)))))
+
+(deftest next-word-test
+  (testing "works when end of string is space"
+    (is (= 9 (next-word-offset " Foo bar " 8)))))
+
 (deftest prev-word-paragraph-test
   (testing "starting from within word goes to first char of the word"
     (is (= 6 (caret (prev-word para (selection ["p1" 9]))))))
