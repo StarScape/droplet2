@@ -3,11 +3,20 @@
   (:require [clojure.string :as str]
             [slate.view :refer [formats->css-classes paragraph-type->css-class]]))
 
-(defn- create-elem! [font-size font-family]
+(defn- create-elem!
+  "Creates measurement element and adds it to the DOM."
+  [editor-id font-size font-family]
   (let [outer-elem (.createElement js/document "div")
+        outer-elem-id (str "measurement-elem-" #p editor-id)
         elem (.createElement js/document "div")
         outer-style (.-style outer-elem)
         style (.-style elem)]
+    ;; A new measurement function will be generated whenever the parameters (font size, font
+    ;; style) change, so clean up any previous element associated with the same document UUID.
+    (when-let [previous-elem (.getElementById js/document outer-elem-id)]
+      (.remove previous-elem))
+    (set! (.-id outer-elem) #p outer-elem-id)
+
     ;; Set font-size on outer element since h1/h2 use relative font sizes (em)
     (set! (.-fontSize outer-style) font-size)
     (set! (.-visibility outer-style) "hidden")
@@ -31,7 +40,7 @@
   "Helper function for `ruler`. Not private and __can__ be used directly, but generally should not be."
   ([elem cache text]
    (measure elem cache text #{} :body))
-  ([elem cache text formats]
+  ([_elem _cache _text _formats]
    (throw "Invalid arity of measurement function!")
    #_(measure elem cache text formats nil))
   ([elem cache text formats paragraph-type]
@@ -64,9 +73,9 @@
    Measurements are made by capturing the width of a hidden DOM element, but
    a cache of these values is maintained in the background, so subsequent calls
    will be cheaper."
-  [font-size font-family]
+  [editor-id font-size font-family]
   (let [cache #js {}
-        elem (create-elem! font-size font-family)]
+        elem (create-elem! editor-id font-size font-family)]
     (fn [& args] (apply measure elem cache args))))
 
 (defn ruler-for-elem
@@ -78,11 +87,11 @@
    - `paragraph-type`: __(optional)__ the type of the paragraph, such as `:h1` or `:h2` (default `:body`)
 
    And returns the width the text will take up, in pixels."
-  [elem]
+  [uuid elem]
   (let [style (js/getComputedStyle elem)]
-    (ruler
-     (.getPropertyValue style "font-size")
-     (.getPropertyValue style "font-family"))))
+    (ruler uuid
+           (.getPropertyValue style "font-size")
+           (.getPropertyValue style "font-family"))))
 
 (defn fake-measure-fn
   "For testing, returns every char width as 10px.

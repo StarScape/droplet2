@@ -121,9 +121,9 @@
 
 (defn set-font-size!
   [*ui-state new-size]
-  (let [{:keys [dom-elem]} @*ui-state]
+  (let [{:keys [id dom-elem]} @*ui-state]
     (set! (.. dom-elem -style -fontSize) (str new-size "px"))
-    (swap! *ui-state assoc :measure-fn (ruler-for-elem dom-elem))
+    (swap! *ui-state assoc :measure-fn (ruler-for-elem id dom-elem))
     (full-dom-render! *ui-state)))
 
 (definterceptor increase-font-size!
@@ -314,13 +314,14 @@
    Optional:
    :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
   [& {:keys [editor-state dom-elem hidden-input]}]
-  (let [dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        measure-fn (ruler-for-elem dom-elem)
+  (let [uuid (random-uuid)
+        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
+        measure-fn (ruler-for-elem uuid dom-elem)
         editor-state (or editor-state (es/editor-state))
         interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
-        *ui-state (atom {:id (random-uuid)
+        *ui-state (atom {:id uuid
                          ;; TODO: get width
                          :viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)
                          :history (history/init editor-state)

@@ -9,45 +9,7 @@
             [slate.model.selection :as sel]
             [slate.core :as sl]))
 
-;; DONE: add cmd+left and cmd+right shortcuts to go to start/end of line
-;; DONE: Handle resizing of the text area
-;; DONE: Handle font resizing of the text area
-;; DONE: Add support for h1 and h2
-;;   DONE: support rendering h1 and h2 correctly
-;;   DONE: fix click and other measurement operations
-;;   DONE: selections spanning >2 paragraphs not highlighting between paragraphs correctly, fix
-;;   DONE: bug: goto para3 (empty para), shift+up twice, shift+down twice (looks like incorrectly collapsing after first shift+down)
-;;   DONE: going down from end of first paragraph (h1) results in cursor way further to the left than it should be
-;;   DONE: Bug going up from end of second para (h2)
-;;   DONE: make sure tests are fixed
-;;   DONE: add interceptors for h1 and h2
-;;   WONT: support preserving type on pressing enter
-
-;; TODO: Add support for ordered and unordered lists (prefer using actual <ul> / <ol> elements)
-;;   DONE: Render correctly
-;;   DONE: Delete correctly (ensure <ul>/<ol> element is removed when last list item is removed)
-;;   DONE: Fix enter (currently inserting _above_ the first list-paragraph)
-;;   DONE: Update correctly
-;;   DONE: Interceptors for ul and ol
-;;   DONE: Hitting backspace on an empty paragraph should convert the paragraph to a :body para, not remove it
-;;   DONE: Switching a ul to an ol or viceversa causes an error
-;;   DONE: Preserve paragraph type on enter, if current paragraph is a list
-;;   DONE: Bug - press enter after last item in olist, is not merged correctly into previous olist
-;;   DONE: Bug - completely delete second paragraph in olist, once gone you are left with two separate lists
-;;   DONE: De-listify on double enter from list item paragraph (a la everyothertexteditor)
-;;   DONE: Handle up/down operation correctly (account for the fact that lists are offset to the right a bit more)
-;; DONE: :between paragraphs are not rendered correctly whenever drag with mouse
-;; DONE: Bug - pressing down on last paragraph throws error
-;; DONE: Bug - range select anything, then pressing cmd+left OR cmd+right throws error
-;; DONE: if start of paragraph is a space, trying to select it with shift+option+left throws index out of bounds (same happens at end of paragraph)
-
-;; PROG: resize works incorrectly when there is an h1 or h2 since they are absolutely sized
-
 ;; TODO: Undo maybe broken? (test with lists)
-;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
-;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
-;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
-;;       left/right) interceptors.
 ;; TODO: change measurement ns to cleanup measurement DOM element whenever the font size switched, etc.
 ;;       We can do this by simple setting the ID of that element to "${uuid-of-editor}-measure-elem", or similar,
 ;;       and then providing a cleanup function that must be called after the font-size (or any other operation for
@@ -59,6 +21,10 @@
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: cmd+shift+right, cmd+shift+left
+;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
+;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
+;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
+;;       left/right) interceptors.
 ;; TODO: don't fire ' autocomplete if char immediately before or after cursor is alphanumeric,
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
