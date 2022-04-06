@@ -4,17 +4,22 @@
             [slate.view :refer [formats->css-classes paragraph-type->css-class]]))
 
 (defn- create-elem! [font-size font-family]
-  (let [elem (.createElement js/document "div")
+  (let [outer-elem (.createElement js/document "div")
+        elem (.createElement js/document "div")
+        outer-style (.-style outer-elem)
         style (.-style elem)]
-    (set! (.-visibility style) "hidden")
-    (set! (.-position style) "absolute")
+    ;; Set font-size on outer element since h1/h2 use relative font sizes (em)
+    (set! (.-fontSize outer-style) font-size)
+    (set! (.-visibility outer-style) "hidden")
+    (set! (.-position outer-style) "absolute")
     (set! (.-whiteSpace style) "pre")
     (set! (.-margin style) 0)
     (set! (.-padding style) 0)
-    (set! (.-fontSize style) font-size)
     (set! (.-fontFamily style) font-family)
     (set! (.-fontStyle style) "normal")
     (set! (.-fontWeight style) "normal")
+    (.appendChild outer-elem elem)
+    (.. js/document -body (appendChild outer-elem))
     elem))
 
 (defn- apply-css! [elem formats paragraph-type]
@@ -62,7 +67,6 @@
   [font-size font-family]
   (let [cache #js {}
         elem (create-elem! font-size font-family)]
-    (.. js/document -body (appendChild elem))
     (fn [& args] (apply measure elem cache args))))
 
 (defn ruler-for-elem
