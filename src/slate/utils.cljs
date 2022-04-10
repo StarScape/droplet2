@@ -22,3 +22,8 @@
   [s val]
   {:pre [(set? s)]}
   (if (contains? s val) (disj s val) (conj s val)))
+
+(defn some!
+  "Returns x if x is non-nil, otherwise throws error. (For use in dev, not production.)"
+  [x]
+  (if (some? x) x (throw (js/Error. (str "val " x " cannot be nil!")))))

@@ -1,7 +1,7 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [clojure.spec.alpha :as s]
-            [slate.model.editor-state :as es]
+            [slate.model.editor-state :as es :refer [>>=]]
             [slate.model.history :as history]
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
@@ -60,21 +60,22 @@
 
 (defn update-history
   [history editor-update interceptor]
-  ;; if normal:
-  ;;   Just update tip, integrate into backstack after debounced timeout
   ;; if completion:
   ;;   Take state before interceptor fired, add that to the backstack immediately.
   ;;   Then set the tip to the result of the completion interceptor.
+  ;; if normal:
+  ;;   Just update tip, integrate into backstack after debounced timeout
   (if (and (:add-to-history-immediately? interceptor)
            (:include-in-history? interceptor))
     (-> history
         (history/add-tip-to-backstack)
         (history/set-tip editor-update))
-    (history/set-tip history editor-update)))
+    (history/set-tip history (es/merge-updates (:tip history) editor-update))))
 
 (defn add-tip-to-backstack!
   [*ui-state]
   {:pre [(instance? Atom *ui-state)]}
+  ;; #p "Add tip to backstack."
   (swap! *ui-state update :history history/add-tip-to-backstack))
 
 (defn add-tip-to-backstack-after-wait!
@@ -108,10 +109,13 @@
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
+      #_(js/console.log (str "Inserting " uuid))
       (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
     (doseq [uuid deleted-uuids]
+      #_(js/console.log (str "Removing " uuid))
       (view/remove-para! dom-elem uuid editor-state prev-state))
     (doseq [uuid changed-uuids]
+      #_(js/console.log (str "Updating " uuid))
       (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))))
 
 (defn handle-resize!

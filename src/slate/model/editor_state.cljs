@@ -19,7 +19,7 @@
 (defprotocol Monad
   "Standard monad interface. See any of the myriad monad tutorials online for deeper explanations of its mechanics.
   EditorUpdates are modeled as monads. Every operation on EditorState can return a new EditorUpdate. They can then be
-  chained using bind."
+  chained using bind, which will automatically combine changelists."
   (bind [ma, a->b] [ma, a->b, args]
     "Bind operation. Takes a monad of type a, a function of a to b, and a produces a monad of type b.
      Second arity also takes a list of arguments to be passed in to the function after its first arg.")
@@ -315,7 +315,7 @@
                        (changelist :changed-uuids (set changed-uuids)))))))
 
 (defn merge-changelists
-  "Takes two transactions and returns a third that combines them. UUIDs are rearranged
+  "Takes two changelists and returns a third that combines them. UUIDs are rearranged
    as necessary according to the following rules:
 
    - If a pid is **deleted**:
@@ -326,35 +326,30 @@
      - And then deleted: remove from both inserted and deleted
      - And then changed: move to inserted.
 
-   The :doc and :selection properties of the returned transaction will be those of c2.
+   It is assumed that c2 happened immediately after c1. You cannot supply random
+   changelists on wholly unrelated editor states, or states at different points in time.
 
-   It is assumed that c2 is a transaction that happened immediately after c1. You cannot simply
-   randomly transactions on wholly unrelated editor states, or states at different points in time.
-
-   The purpose of this is so that we can combine many transactions, but still only re-render the document once."
+   The purpose of this is so that we can roll many EditorUpdates into one, and re-render the document only once."
   [c1 c2]
-  (if (:resolved? c1)
-    c2
-    (let [deleted-then-inserted (set (filter #(contains? (:deleted-uuids c1) %) (:inserted-uuids c2)))
-          changed-then-deleted  (set (filter #(contains? (:changed-uuids c1) %) (:deleted-uuids c2)))
-          inserted-then-deleted (set (filter #(contains? (:inserted-uuids c1) %) (:deleted-uuids c2)))
-          inserted-then-changed (set (filter #(contains? (:inserted-uuids c1) %) (:changed-uuids c2)))
+  (let [deleted-then-inserted (set (filter #(contains? (:deleted-uuids c1) %) (:inserted-uuids c2)))
+        changed-then-deleted  (set (filter #(contains? (:changed-uuids c1) %) (:deleted-uuids c2)))
+        inserted-then-deleted (set (filter #(contains? (:inserted-uuids c1) %) (:deleted-uuids c2)))
+        inserted-then-changed (set (filter #(contains? (:inserted-uuids c1) %) (:changed-uuids c2)))
 
-          new-deleted (-> (set/union (:deleted-uuids c1) (:deleted-uuids c2))
-                          (set/difference deleted-then-inserted inserted-then-deleted)
-                          (set/union changed-then-deleted))
-          new-changed (-> (set/union (:changed-uuids c1) (:changed-uuids c2))
-                          (set/difference changed-then-deleted inserted-then-changed)
-                          (set/union deleted-then-inserted))
-          new-inserted (-> (set/union (:inserted-uuids c1) (:inserted-uuids c2))
-                           (set/difference inserted-then-deleted deleted-then-inserted)
-                           (set/union inserted-then-changed))]
-      {
-       ;; :resolved? false
-       ;; :base-state-hash (:base-state-hash c1)
-       :deleted-uuids new-deleted
-       :changed-uuids new-changed
-       :inserted-uuids new-inserted})))
+        new-deleted (-> (set/union (:deleted-uuids c1) (:deleted-uuids c2))
+                        (set/difference deleted-then-inserted inserted-then-deleted)
+                        (set/union changed-then-deleted))
+        new-changed (-> (set/union (:changed-uuids c1) (:changed-uuids c2))
+                        (set/difference changed-then-deleted inserted-then-changed)
+                        (set/union deleted-then-inserted))
+        new-inserted (-> (set/union (:inserted-uuids c1) (:inserted-uuids c2))
+                         (set/difference inserted-then-deleted deleted-then-inserted)
+                         (set/union inserted-then-changed))]
+    {;; :resolved? false
+     ;; :base-state-hash (:base-state-hash c1)
+     :deleted-uuids new-deleted
+     :changed-uuids new-changed
+     :inserted-uuids new-inserted}))
 
 (defn reverse-changelist
   "Taking a changelist that contains update information to go from state A to state B,
@@ -363,6 +358,12 @@
   {:inserted-uuids deleted-uuids
    :changed-uuids changed-uuids
    :deleted-uuids inserted-uuids})
+
+(defn merge-updates
+  "Merges the changelists of `editor-update1` and `editor-update2`."
+  [editor-update1 editor-update2]
+  (let [merged-changelists (merge-changelists (:changelist editor-update1) (:changelist editor-update2))]
+    (assoc editor-update2 :changelist merged-changelists)))
 
 (comment
   (def p1 (p/paragraph [(r/run "foo" #{:italic})

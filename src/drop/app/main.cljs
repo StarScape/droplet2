@@ -9,12 +9,8 @@
             [slate.model.selection :as sel]
             [slate.core :as sl]))
 
-;; TODO: Undo maybe broken? (test with lists)
-;; TODO: change measurement ns to cleanup measurement DOM element whenever the font size switched, etc.
-;;       We can do this by simple setting the ID of that element to "${uuid-of-editor}-measure-elem", or similar,
-;;       and then providing a cleanup function that must be called after the font-size (or any other operation for
-;;       which a new measurement-fn must be created). Alternatively, just delete the existing DOM elem each time (ruler-for-elem)
-;;       is called. This may actually be less error prone.
+;; DONE: Undo broken when trying to undo the insertion of a paragraph.
+
 ;; TODO: Copy and paste
 ;;   TODO: to/from droplet doc
 ;;   TODO: to/from outside source
@@ -59,7 +55,7 @@
    (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p1") 7]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p2") 10]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

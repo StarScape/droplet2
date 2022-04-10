@@ -7,7 +7,7 @@
   "Creates measurement element and adds it to the DOM."
   [editor-id font-size font-family]
   (let [outer-elem (.createElement js/document "div")
-        outer-elem-id (str "measurement-elem-" #p editor-id)
+        outer-elem-id (str "measurement-elem-" editor-id)
         elem (.createElement js/document "div")
         outer-style (.-style outer-elem)
         style (.-style elem)]
@@ -15,7 +15,7 @@
     ;; style) change, so clean up any previous element associated with the same document UUID.
     (when-let [previous-elem (.getElementById js/document outer-elem-id)]
       (.remove previous-elem))
-    (set! (.-id outer-elem) #p outer-elem-id)
+    (set! (.-id outer-elem) outer-elem-id)
 
     ;; Set font-size on outer element since h1/h2 use relative font sizes (em)
     (set! (.-fontSize outer-style) font-size)
