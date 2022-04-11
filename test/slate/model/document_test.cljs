@@ -80,6 +80,15 @@
                       (paragraph "i2" [(run "inserted paragraph 2")])
                       (paragraph "i3" [(run "inserted paragraph 3aaabbbcccddd")])]))))
 
+  (testing "multi-paragraph insert with duplicate UUIDs"
+    (let [result (sl/insert doc (selection ["p2" 0]) [p1 p2])
+          children (:children result)]
+      (is (= 3 (count children)))
+      (is (= p1 (first children)))
+      (is (= (:runs (second children)) (:runs p1)))
+      (is (not= (:uuid (second children)) (:uuid p1)))
+      (is (= (:runs (nth children 2)) [(run "aaabbbcccdddaaabbbcccddd")]))))
+
   (testing "multi-paragraph insert at the end of a paragraph"
     (is (= (sl/insert doc (selection ["p1" 14]) to-insert)
            (sl/insert doc (selection ["p1" 14]) (into (dll) to-insert))

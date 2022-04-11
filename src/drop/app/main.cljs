@@ -11,9 +11,10 @@
 
 ;; DONE: Undo broken when trying to undo the insertion of a paragraph.
 
-;; TODO: Copy and paste
-;;   TODO: to/from droplet doc
-;;   TODO: to/from outside source
+;; PROG: Copy and paste to/from droplet doc
+;; TODO: bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
+
+;; TODO: Copy and paste to/from outside source
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: cmd+shift+right, cmd+shift+left
@@ -43,6 +44,7 @@
    (paragraph (uuid "p3") [(run "Hello world, this is an example of a paragraph ")
                            (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                            (run "Don't know what else to say. Hmmmm..." #{:bold})])
+   (paragraph (uuid "p4") [(run "And another paragraph here")])
    (paragraph (uuid "div2") [(run)])
    (paragraph (uuid "ol1") :ul [(run "Bullet 1")])
    (paragraph (uuid "ol2") :ul [(run "Bullet 2")])
@@ -52,10 +54,10 @@
    (paragraph (uuid "ul2") :ol [(run "Ordered item 2")])
    (paragraph (uuid "ul3") :ol [(run "Ordered item 3")])
    (paragraph (uuid "div3") [(run)])
-   (paragraph (uuid "p4") [(run "And this is paragraph número dos.")])])
+   (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p2") 10]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p3") 0] [(uuid "p4") 26]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

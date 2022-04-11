@@ -67,9 +67,10 @@
   ;;   Just update tip, integrate into backstack after debounced timeout
   (if (and (:add-to-history-immediately? interceptor)
            (:include-in-history? interceptor))
-    (-> history
-        (history/add-tip-to-backstack)
-        (history/set-tip editor-update))
+    (do #p "true!"
+        (-> history
+            (history/add-tip-to-backstack)
+            (history/set-tip editor-update)))
     (history/set-tip history (es/merge-updates (:tip history) editor-update))))
 
 (defn add-tip-to-backstack!
@@ -290,7 +291,24 @@
              (fire-interceptor! *ui-state undo! e)
              (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 
+        ;;  "insertFromPaste"
+        ;;  (js/console.log e)
+
          nil)))
+
+    (.addEventListener
+     hidden-input "cut"
+     (fn [e] (fire-interceptor! *ui-state (get-interceptor :cut) e)))
+    (.addEventListener
+     hidden-input "copy"
+     (fn [e] (fire-interceptor! *ui-state (get-interceptor :copy) e)))
+    (.addEventListener
+     hidden-input "paste" (fn [e]
+                            (fire-interceptor! *ui-state (get-interceptor :paste) e))
+     #_(fn [e]
+         (js/console.log (.. e -clipboardData -types))
+         (js/console.log (.. e -clipboardData (getData "text/plain")))
+         (js/console.log (.. e -clipboardData (getData "text/html")))))
 
     (.addEventListener js/window "resize" #(handle-resize! *ui-state))))
 

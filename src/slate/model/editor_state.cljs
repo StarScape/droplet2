@@ -103,7 +103,7 @@
 (defmethod insert [EditorState [Paragraph]]
   [{:keys [doc selection] :as editor-state}, paragraphs]
   (if (sel/range? selection)
-    (-> editor-state (delete) (insert paragraphs))
+    (-> (delete editor-state) (>>= insert paragraphs))
     (let [last-paragraph (peek paragraphs)
           new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
                              (nav/autoset-formats last-paragraph))]
@@ -290,13 +290,13 @@
   (ctrl+shift+left [editor-state] (selectable-fallthrough-left editor-state nav/ctrl+shift+left))
 
   ;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
-  ;; Selectable
+  m/Selectable
   ;; (char-at [{:keys [doc selection]}]
   ;;   (char-at doc selection))
   ;; (char-before [{:keys [doc selection]}]
   ;;   (char-before doc selection))
-  ;; (selected-content [{:keys [doc selection]}]
-  ;;   (selected-content doc selection))
+  (selected-content [{:keys [doc selection]}]
+    (m/selected-content doc selection))
   ;; (formatting [{:keys [doc selection]}]
   ;;   (formatting doc selection))
   Formattable

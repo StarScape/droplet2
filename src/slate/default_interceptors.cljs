@@ -11,7 +11,8 @@
             [slate.model.navigation :as nav]
             [slate.model.selection :as sel]
             [slate.utils :as utils]
-            [slate.view :as view]))
+            [slate.view :as view]
+            [slate.clipboard :as clipboard]))
 
 ;; TODO: for interceptors that aren't dependent on the viewmodel or DOM state, there's no reason
 ;; I couldn't write unit tests for them. Should probably do that, so I can quickly identify any
@@ -192,11 +193,29 @@
   [editor-state _ _]
   (es/toggle-paragraph-type editor-state :ol))
 
+;; Clipboard
+(definterceptor cut
+  {:add-to-history-immediately? true}
+  [editor-state _ e]
+  (clipboard/cut editor-state e))
+
+(definterceptor copy
+  [editor-state _ e]
+  (clipboard/copy editor-state e))
+
+(definterceptor paste
+  {:add-to-history-immediately? true}
+  [editor-state _ e]
+  (clipboard/paste editor-state e))
+
 (def universal-interceptors
   {:click click
    :drag drag
    :insert insert
    :delete delete
+   :cut cut
+   :copy copy
+   :paste paste
    :enter enter
    :tab tab
    :left left

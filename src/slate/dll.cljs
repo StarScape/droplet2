@@ -155,6 +155,14 @@
 
 (defn node-uuid [node] (:uuid (.-value node)))
 
+(defn- dedupe-val-uuid
+  "If `val`'s UUID already exists in `dll`, returns `val` with a new UUID.
+   Otherwise returns `val` as-is."
+  [val dll]
+  (if (contains? dll (:uuid val))
+    (assoc val :uuid (random-uuid))
+    val))
+
 (defn- assoc-node
   "Helper function for creating a new [[Node]] based on the value of an old one.
    Takes keywords for the keys and works the same way you would expect assoc to
@@ -201,7 +209,8 @@
   "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `next-uuid`."
   [^DoublyLinkedList dll next-uuid val]
   {:pre [(seq dll) (contains? dll next-uuid)]}
-  (let [prev-uuid (.-prev-uuid (get (.-entries-map dll) next-uuid))
+  (let [val (dedupe-val-uuid val dll)
+        prev-uuid (.-prev-uuid (get (.-entries-map dll) next-uuid))
         new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
         new-first-uuid (if (= (.-first-uuid dll) next-uuid)
                          (:uuid val)
@@ -212,7 +221,8 @@
   "Inserts `val` into the double-linked list `dll` immediately after the node with uuid = `prev-uuid`."
   [^DoublyLinkedList dll prev-uuid val]
   {:pre [(seq dll) (contains? dll prev-uuid)]}
-  (let [next-uuid (.-next-uuid (get (.-entries-map dll) prev-uuid))
+  (let [val (dedupe-val-uuid val dll)
+        next-uuid (.-next-uuid (get (.-entries-map dll) prev-uuid))
         new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
         new-last-uuid (if (= (.-last-uuid dll) prev-uuid)
                         (:uuid val)

@@ -37,12 +37,15 @@
    and therefore a 'paragraph offset into a run' would not make sense.
    Basically, this is a set of common operations on paragraphs and documents."
   (char-at
+    [container]
     [container sel]
     "Returns the character under the block cursor at the given single selection `sel`")
   (char-before
+    [container]
     [container sel]
     "Returns the character immediately before the block cursor at the given single selection `sel`")
   (selected-content
+    [container]
     [container sel]
     "Returns the content within the range-selection inside the container, either as a vector
     of runs or a list (probably a dll) of paragraphs, depending which is appropriate.")

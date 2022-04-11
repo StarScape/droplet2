@@ -146,7 +146,7 @@
         (insert (sel/collapse-start sel) runs))))
 
 (defmethod insert [Document Selection [Paragraph]]
-[doc sel paragraphs]
+  [doc sel paragraphs]
   (if (sel/single? sel)
     (insert-paragraphs-into-doc doc sel paragraphs)
     (-> (delete doc sel)
