@@ -7,12 +7,14 @@
             [slate.model.editor-state :refer [editor-state] :as es]
             [slate.model.history :as history]
             [slate.model.selection :as sel]
-            [slate.core :as sl]))
+            [slate.core :as sl]
+            [slate.utils :as utils]))
 
 ;; DONE: Undo broken when trying to undo the insertion of a paragraph.
 
 ;; PROG: Copy and paste to/from droplet doc
-;; TODO: bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
+;; DONE: Bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
+;; TODO: Bug - select list paragraph, copy, paste, then undo results in error thrown
 
 ;; TODO: Copy and paste to/from outside source
 ;; TODO: Find and replace
@@ -49,6 +51,7 @@
    (paragraph (uuid "ol1") :ul [(run "Bullet 1")])
    (paragraph (uuid "ol2") :ul [(run "Bullet 2")])
    (paragraph (uuid "ol3") :ul [(run "Bullet 3")])
+   (paragraph (uuid "emptyboi")[(run "")])
    (paragraph [(run "(Take a break.)")])
    (paragraph (uuid "ul1") :ol [(run "Ordered item 1")])
    (paragraph (uuid "ul2") :ol [(run "Ordered item 2")])
@@ -57,9 +60,13 @@
    (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p3") 0] [(uuid "p4") 26]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "ol1") 0]
+                                                                        :end [(uuid "ol3") 8]
+                                                                        :between #{(uuid "ol2")}))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
+
+(set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state))))
 
 (defn update-formats-elem
   [_key _atom _old-state new-state]
