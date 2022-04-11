@@ -104,11 +104,16 @@
   [{:keys [doc selection] :as editor-state}, paragraphs]
   (if (sel/range? selection)
     (-> (delete editor-state) (>>= insert paragraphs))
-    (let [last-paragraph (peek paragraphs)
+    (let [dedupe-para-uuid #(if (contains? (:children doc) (:uuid %))
+                              (assoc % :uuid (random-uuid))
+                              %)
+          paragraphs (map dedupe-para-uuid paragraphs)
+          new-doc (insert doc selection paragraphs)
+          last-paragraph (last paragraphs)
           new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
                              (nav/autoset-formats last-paragraph))]
       (->EditorUpdate (assoc editor-state
-                             :doc (insert doc selection paragraphs)
+                             :doc new-doc
                              :selection new-selection)
                       (changelist :changed-uuids #{(sel/start-para selection)}
                                   :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))

@@ -67,10 +67,9 @@
   ;;   Just update tip, integrate into backstack after debounced timeout
   (if (and (:add-to-history-immediately? interceptor)
            (:include-in-history? interceptor))
-    (do #p "true!"
-        (-> history
-            (history/add-tip-to-backstack)
-            (history/set-tip editor-update)))
+    (-> history
+        (history/add-tip-to-backstack)
+        (history/set-tip editor-update))
     (history/set-tip history (es/merge-updates (:tip history) editor-update))))
 
 (defn add-tip-to-backstack!

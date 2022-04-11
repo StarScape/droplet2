@@ -97,7 +97,8 @@
    The selection MUST be a single-selection. This is just a helper and
    it's assumed any deleting of a range selection has already been done."
   [doc sel paragraphs]
-  {:pre [(sel/single? sel)]}
+  {:pre [(sel/single? sel)
+         (sequential? paragraphs)]}
   (let [target-para-uuid (-> sel :start :paragraph)
         target-para (get (:children doc) target-para-uuid)
         sel-caret (sel/caret sel)
@@ -107,7 +108,9 @@
             (p/delete-after sel-caret)
             (insert-end (:runs (first paragraphs))))
 
-        last-paragraph-in-list (peek paragraphs)
+        last-paragraph-in-list (if (satisfies? IStack paragraphs)
+                                 (peek paragraphs)
+                                 (last paragraphs))
         last-paragraph
         (-> target-para
             (p/delete-before sel-caret)
