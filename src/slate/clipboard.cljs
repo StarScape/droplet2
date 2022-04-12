@@ -18,7 +18,7 @@
   [editor-state _event]
   (if-let [clipboard-data @clipboard]
     (let [update (model/insert editor-state clipboard-data)]
-      ;; #p update
-      #_(frequencies (map :uuid #p (-> update :editor-state :doc :children)))
+      ;; update
+      #_(frequencies (map :uuid (-> update :editor-state :doc :children)))
       update)
     (es/identity-update editor-state)))

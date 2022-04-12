@@ -15,8 +15,13 @@
 ;; PROG: Copy and paste to/from droplet doc
 ;; DONE: Bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
 ;; DONE: Bug - select list paragraph, copy, paste, then undo results in error thrown
+;; TODO: selected-content returns list of Paragraphs when multiple whole paragraphs selected, but list of runs when
+;;       a single paragraph is selected in its entirety.
 
 ;; TODO: Copy and paste to/from outside source
+;;   TODO: plain text
+;;   TODO: rich text
+
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: cmd+shift+right, cmd+shift+left
@@ -60,9 +65,8 @@
    (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "ol1") 0]
-                                                                        :end [(uuid "ol3") 8]
-                                                                        :between #{(uuid "ol2")}))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "p1") 0]
+                                                                        :end [(uuid "p1") 7]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

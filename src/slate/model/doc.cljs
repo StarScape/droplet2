@@ -107,10 +107,10 @@
         first-paragraph
         (-> target-para
             (p/delete-after sel-caret)
-            (insert-end (:runs first-paragraph-in-list))
+            (insert-end first-paragraph-in-list)
             ;; TODO: should this be conditional based on the selection offset or something?
             ;; Is this current behavior intuitive?
-            (assoc :type (:type first-paragraph-in-list)))
+            #_(assoc :type (:type first-paragraph-in-list)))
 
         last-paragraph-in-list (if (satisfies? IStack paragraphs)
                                  (peek paragraphs)
@@ -118,9 +118,9 @@
         last-paragraph
         (-> target-para
             (p/delete-before sel-caret)
-            (insert-start (:runs last-paragraph-in-list))
+            (insert-start last-paragraph-in-list)
             (assoc :uuid (:uuid last-paragraph-in-list)
-                   :type (:type last-paragraph-in-list)))
+                   #_#_:type (:type last-paragraph-in-list)))
 
         ;; TODO: optimize for case where `paragraphs` is DLL?
         in-between-paragraphs

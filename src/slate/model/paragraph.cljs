@@ -169,7 +169,11 @@
 
 (defmethod insert [Paragraph Selection Paragraph]
   [para sel para-to-insert]
-  (insert para sel (:runs para-to-insert)))
+  (let [new-type (if (zero? (-> sel :start :offset))
+                   (:type para-to-insert)
+                   (:type para))]
+    (assoc (insert para sel (:runs para-to-insert))
+           :type new-type)))
 
 ;; TODO: these might stand some mild testing
 (defmethod insert-start [Paragraph [r/Run]]
@@ -180,6 +184,10 @@
   [para run]
   (insert para (selection [(:uuid para) 0]) run))
 
+(defmethod insert-start [Paragraph Paragraph]
+  [para para-to-insert]
+  (insert para (selection [(:uuid para) 0]) para-to-insert))
+
 (defmethod insert-end [Paragraph [r/Run]]
   [para runs]
   (insert para (selection [(:uuid para) (len para)]) runs))
@@ -187,6 +195,10 @@
 (defmethod insert-end [Paragraph r/Run]
   [para run]
   (insert para (selection [(:uuid para) (len para)]) run))
+
+(defmethod insert-end [Paragraph Paragraph]
+  [para para-to-insert]
+  (insert para (selection [(:uuid para) (len para)]) para-to-insert))
 
 (defn- paragraph-single-delete [para sel]
   (if (zero? (sel/caret sel))
@@ -239,6 +251,12 @@
     (throw "This should never happen, check formatting-before function.")
     (formatting-at para (sel/shift-single sel -1))))
 
+(defn whole-paragraph-selected?
+  "Returns true if the selection encompasses the whole paragraph."
+  [paragraph sel]
+  (and (= (:start sel) {:offset 0, :paragraph (:uuid paragraph)})
+       (= (:end sel) {:offset (len paragraph), :paragraph (:uuid paragraph)})))
+
 (extend-type Paragraph
   Selectable
   (char-at [para sel]
@@ -252,7 +270,10 @@
       (char-at para (sel/shift-single sel -1))))
 
   ;; TODO: should this return a paragraph instead of a list of runs?
-  (selected-content [para sel] (second (separate-selected (:runs para) sel)))
+  (selected-content [para sel]
+    (if (whole-paragraph-selected? para sel)
+      para
+      (second (separate-selected (:runs para) sel))))
 
   (formatting
    ([para] (formatting para (selection [(:uuid para) 0]

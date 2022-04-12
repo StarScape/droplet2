@@ -75,7 +75,7 @@
 (defn add-tip-to-backstack!
   [*ui-state]
   {:pre [(instance? Atom *ui-state)]}
-  ;; #p "Add tip to backstack."
+  ;; "Add tip to backstack."
   (swap! *ui-state update :history history/add-tip-to-backstack))
 
 (defn add-tip-to-backstack-after-wait!
