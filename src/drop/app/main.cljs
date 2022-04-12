@@ -15,8 +15,9 @@
 ;; PROG: Copy and paste to/from droplet doc
 ;; DONE: Bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
 ;; DONE: Bug - select list paragraph, copy, paste, then undo results in error thrown
-;; TODO: selected-content returns list of Paragraphs when multiple whole paragraphs selected, but list of runs when
+;; DONE: selected-content returns list of Paragraphs when multiple whole paragraphs selected, but list of runs when
 ;;       a single paragraph is selected in its entirety.
+;; DONE: implement cut
 
 ;; TODO: Copy and paste to/from outside source
 ;;   TODO: plain text
