@@ -14,7 +14,7 @@
 
 ;; PROG: Copy and paste to/from droplet doc
 ;; DONE: Bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
-;; TODO: Bug - select list paragraph, copy, paste, then undo results in error thrown
+;; DONE: Bug - select list paragraph, copy, paste, then undo results in error thrown
 
 ;; TODO: Copy and paste to/from outside source
 ;; TODO: Find and replace

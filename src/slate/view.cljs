@@ -300,18 +300,13 @@
   (let [elem (js/document.getElementById (str uuid))
         prev-elem (.-previousElementSibling elem)
         next-elem (.-nextElementSibling elem)
-        old-children (-> prev-state :doc :children)
-        new-children (-> editor-state :doc :children)
-        prev-para-uuid (:uuid (dll/prev old-children uuid))
-        next-para-uuid (:uuid (dll/next old-children uuid))
-        prev-para-type (:type (get new-children prev-para-uuid))
-        next-para-type (:type (get new-children next-para-uuid))]
-    (if (and (not= prev-para-type list-type)
-             (not= next-para-type list-type))
+        parent-elem (.-parentElement elem)]
+    (if (and (not= parent-elem editor-elem)
+             (zero? (.. parent-elem -children -length)))
       ;; Only item in the list, remove parent so there is no dangling <ul>/<ol>
       (.remove (.-parentElement elem))
       ;; Other items in list, keep <ul>/<ol>
-      (.remove elem))
+      (do (js/console.log (str "removing " elem)) (.remove elem)))
     (merge-list-elems-if-needed! prev-elem next-elem)))
 
 (defmulti insert-para!

@@ -36,6 +36,22 @@
       min-height: 1em;
     }
 
+    .paragraph:hover::after {
+      position: absolute;
+      max-width: 50px;
+      padding: 2px;
+      border-radius: 2px;
+      background-color: rgba(30, 30, 30, 0.813);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      content: attr(id);
+      font-size: 10px;
+      color: rgb(255, 255, 255);
+      /* left: -10px; */
+      transform: translateY(-15px);
+    }
+
     .text-caret {
       /* TODO: make this not take up space inside paragraph */
       position: absolute;
