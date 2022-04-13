@@ -192,6 +192,24 @@
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
 
+  (testing "inserting a plain string with newlines produces new paragraphs"
+    (let [result (sl/insert (editor-state doc (selection ["p1" 3])) "inserted\ninserted2")
+          children (-> result :editor-state :doc :children)
+          para1 (nth children 0)
+          para2 (nth children 1)
+          para3 (nth children 2)]
+      (is (= (:runs para1) [(run "foo" #{:italic})
+                            (run "inserted")]))
+      (is (= (:runs para2) [(run "inserted2")
+                            (run "bar" #{:bold :italic})
+                            (run "bizz" #{:italic})
+                            (run "buzz" #{:bold})]))
+      (is (= para3 p2))
+      (is (= (-> result :editor-state :selection) (selection [(:uuid para2) 9])))
+      (is (= (:changelist result) {:changed-uuids #{"p1"}
+                                   :inserted-uuids #{(:uuid para2)}
+                                   :deleted-uuids #{}}))))
+
   (testing "when given a range-selection, deletes before inserting"
     (is (= (sl/insert (editor-state doc (selection ["p1" 1] ["p2" 11])) (run "(inserted!)" #{}))
            (->EditorUpdate

@@ -1,5 +1,6 @@
 (ns slate.model.editor-state
   (:require [clojure.set :as set]
+            [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [slate.dll :as dll]
             [slate.model.common :refer [TextContainer
@@ -138,8 +139,11 @@
 
 (defmethod insert [EditorState js/String]
   [{:keys [selection] :as editor-state} text]
-  ;; Insert string == insert run with current active formats
-  (insert editor-state (r/run text (:formats selection))))
+  (let [paragraphs (str/split-lines text)]
+    (if (< 1 (count paragraphs))
+      (insert editor-state (map #(p/paragraph [(r/run %)]) paragraphs))
+      ;; Insert string == insert run with current active formats
+      (insert editor-state (r/run text (:formats selection))))))
 
 (defmethod delete [EditorState]
   [{:keys [doc selection] :as editor-state}]

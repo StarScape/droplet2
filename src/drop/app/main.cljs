@@ -20,8 +20,10 @@
 ;; DONE: implement cut
 ;; DONE: bug - pasting anything at the very start of a paragraph resets its type to :body
 
-;; TODO: Copy and paste to/from outside source
-;;   TODO: plain text to Slate
+;; PROG: Copy and paste to/from outside source
+;;   PROG: plain text to Slate
+;;   DONE: inserting a string with newline characters should result in multiple paragraphs being inserted
+
 ;;   TODO: plain text from Slate to other
 ;;   TODO: rich text to Slate from other
 ;;   TODO: plain text from Slate to other

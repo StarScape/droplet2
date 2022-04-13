@@ -297,12 +297,17 @@
 
     (.addEventListener
      hidden-input "cut"
-     (fn [e] (fire-interceptor! *ui-state (get-interceptor :cut) e)))
+     (fn [e]
+       (.preventDefault e)
+       (fire-interceptor! *ui-state (get-interceptor :cut) e)))
     (.addEventListener
      hidden-input "copy"
-     (fn [e] (fire-interceptor! *ui-state (get-interceptor :copy) e)))
+     (fn [e]
+       (.preventDefault e)
+       (fire-interceptor! *ui-state (get-interceptor :copy) e)))
     (.addEventListener
      hidden-input "paste" (fn [e]
+                            (.preventDefault e)
                             (fire-interceptor! *ui-state (get-interceptor :paste) e))
      #_(fn [e]
          (js/console.log (.. e -clipboardData -types))
