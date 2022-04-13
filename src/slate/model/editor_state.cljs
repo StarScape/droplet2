@@ -97,8 +97,18 @@
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
 (defmethod insert [EditorState [Run]]
-  [editor-state runs]
-  (insert editor-state (p/paragraph runs)))
+  [{:keys [doc selection] :as editor-state}, runs]
+  (if (sel/range? selection)
+    (-> (delete editor-state)
+        (>>= insert runs))
+    (let [new-doc (insert doc selection runs)
+          runs-len (reduce + (map len runs))
+          new-sel (->> (sel/shift-single selection runs-len)
+                       (nav/autoset-formats new-doc))]
+      (->EditorUpdate (assoc editor-state
+                             :doc new-doc
+                             :selection new-sel)
+                      (changelist :changed-uuids #{(sel/start-para selection)})))))
 
 (defmethod insert [EditorState [Paragraph]]
   [{:keys [doc selection] :as editor-state}, paragraphs]

@@ -76,6 +76,52 @@
              :inserted-uuids #{}
              :deleted-uuids #{}}))))
 
+  (testing "inserting runs at start of paragraph retains type"
+    (is (= (sl/insert (editor-state (document [(paragraph "p1" :h1 [(run "foo" #{:italic})
+                                                                    (run "bar" #{:bold :italic})
+                                                                    (run "bizz" #{:italic})
+                                                                    (run "buzz" #{:bold})])
+                                               (paragraph "p2" [(run "aaa" #{})
+                                                                (run "bbb" #{})
+                                                                (run "ccc" #{})
+                                                                (run "ddd" #{})])])
+                                    (selection ["p1" 0]))
+                      [(run "Hello!") (run "Goodbye!" #{:italic})])
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" :h1 [(run "Hello!" #{})
+                                                                    (run "Goodbye!foo" #{:italic})
+                                                                    (run "bar" #{:bold :italic})
+                                                                    (run "bizz" #{:italic})
+                                                                    (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 14] :formats #{:italic})})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
+
+  (testing "inserting paragraph at start of paragraph changes type to inserted paragraph"
+    (is (= (sl/insert (editor-state (document [(paragraph "p1" :h1 [(run "foo" #{:italic})
+                                                                    (run "bar" #{:bold :italic})
+                                                                    (run "bizz" #{:italic})
+                                                                    (run "buzz" #{:bold})])
+                                               (paragraph "p2" [(run "aaa" #{})
+                                                                (run "bbb" #{})
+                                                                (run "ccc" #{})
+                                                                (run "ddd" #{})])])
+                                    (selection ["p1" 0]))
+                      (paragraph (uuid "foo-para") :ol [(run "Hello!") (run "Goodbye!" #{:italic})]))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph "p1" :ol [(run "Hello!" #{})
+                                                                    (run "Goodbye!foo" #{:italic})
+                                                                    (run "bar" #{:bold :italic})
+                                                                    (run "bizz" #{:italic})
+                                                                    (run "buzz" #{:bold})])
+                                               p2])
+                               :selection (selection ["p1" 14] :formats #{:italic})})
+            {:changed-uuids #{"p1"}
+             :inserted-uuids #{}
+             :deleted-uuids #{}}))))
+
   (testing "insert run at end of paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p2" 12])) (run "Goodbye!" #{:italic}))
            (->EditorUpdate

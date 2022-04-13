@@ -12,16 +12,19 @@
 
 ;; DONE: Undo broken when trying to undo the insertion of a paragraph.
 
-;; PROG: Copy and paste to/from droplet doc
+;; DONE: Copy and paste to/from droplet doc
 ;; DONE: Bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
 ;; DONE: Bug - select list paragraph, copy, paste, then undo results in error thrown
 ;; DONE: selected-content returns list of Paragraphs when multiple whole paragraphs selected, but list of runs when
 ;;       a single paragraph is selected in its entirety.
 ;; DONE: implement cut
+;; DONE: bug - pasting anything at the very start of a paragraph resets its type to :body
 
 ;; TODO: Copy and paste to/from outside source
-;;   TODO: plain text
-;;   TODO: rich text
+;;   TODO: plain text to Slate
+;;   TODO: plain text from Slate to other
+;;   TODO: rich text to Slate from other
+;;   TODO: plain text from Slate to other
 
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
@@ -38,6 +41,7 @@
 ;; TODO: Make a React element that encapsulates the editor. This should live at the app level, not in Slate.
 ;; TODO: Set up Electron
 ;; TODO: File saving/loading
+;; TODO: DOCX export/import
 ;; TODO: Interface design/impl
 
 (def fake-editor (.getElementById js/document "fake-editor"))
@@ -66,8 +70,8 @@
    (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "p1") 0]
-                                                                        :end [(uuid "p1") 7]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "p4") 0]
+                                                                        :end [(uuid "p4") 1]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

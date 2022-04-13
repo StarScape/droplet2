@@ -86,7 +86,6 @@
   "Helper function. For document inserts where we only have to worry about a single paragraph,
    meaning we can basically just delegate to the paragraph insert function and replace the paragraph."
   [doc sel content]
-  {:pre [(satisfies? TextContainer content)]}
   (let [target-uuid (-> sel :start :paragraph)
         target-para (get (:children doc) target-uuid)
         new-para (insert target-para sel content)]
@@ -149,7 +148,7 @@
 (defmethod insert [Document Selection [Run]]
   [doc sel runs]
   (if (sel/single? sel)
-    (insert-into-single-paragraph doc sel (p/paragraph runs))
+    (insert-into-single-paragraph doc sel runs)
     (-> (delete doc sel)
         (insert (sel/collapse-start sel) runs))))
 
