@@ -1,5 +1,10 @@
 (ns slate.clipboard
-  (:require [slate.model.common :as model :refer [selected-content]]
+  (:require [clojure.string :as str]
+            [slate.model.common :as model :refer [TextContainer
+                                                  selected-content
+                                                  text]]
+            [slate.model.run :as r :refer [Run]]
+            [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.editor-state :as es :refer [>>=]]
             [slate.model.selection :as sel]))
 
@@ -12,11 +17,26 @@
 ;; in the clipboard is from itself, it will just pull the stashed content from this atom instead.
 (def *clipboard (atom nil))
 
+(defn- content-text [content]
+  (let [first-child (first content)]
+    (cond
+      (satisfies? TextContainer content)
+      (text content)
+
+      (satisfies? TextContainer first-child)
+      (cond
+        (= Run (type first-child))
+        (reduce str (map text content))
+
+        (= Paragraph (type first-child))
+        (str/join "\n" (map text content))))))
+
 (defn copy-to-clipboard!
   "Copies the content to the clipboard atom with a unique id matching that added to the system clipboard."
   [content event]
   (let [copy-id (str (random-uuid))]
     (.. event -clipboardData (setData "slate-copy-id" copy-id))
+    (.. event -clipboardData (setData mime-plaintext (content-text content)))
     (reset! *clipboard {:content content
                         :copy-id copy-id})))
 
@@ -42,7 +62,7 @@
   (let [clipboard-data @*clipboard
         slate-copy-id (.. event -clipboardData (getData "slate-copy-id"))
         paste-from-slate? (= slate-copy-id (:copy-id clipboard-data))
-        plain-text? (.. event -clipboardData -types (includes "text/plain"))]
+        plain-text? (.. event -clipboardData -types (includes mime-plaintext))]
     (cond
       paste-from-slate?
       (model/insert editor-state (:content clipboard-data))

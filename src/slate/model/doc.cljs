@@ -1,21 +1,22 @@
 (ns slate.model.doc
   (:require [clojure.set :as set]
             [slate.dll :as dll :refer [dll]]
-            [slate.model.common :refer [TextContainer
-                                        Selectable
-                                        Formattable
-                                        insert
-                                        delete
-                                        insert-start
-                                        insert-end
-                                        len
-                                        selected-content
-                                        toggle-format
-                                        apply-format
-                                        remove-format
-                                        formatting
-                                        char-before
-                                        char-at]]
+            [slate.model.common :as sl :refer [TextContainer
+                                               Selectable
+                                               Formattable
+                                               insert
+                                               delete
+                                               insert-start
+                                               insert-end
+                                               text
+                                               len
+                                               selected-content
+                                               toggle-format
+                                               apply-format
+                                               remove-format
+                                               formatting
+                                               char-before
+                                               char-at]]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.selection :as sel :refer [Selection]]))
@@ -26,6 +27,7 @@
 
 (defrecord Document [children]
   TextContainer
+  (text [doc] (reduce str (map text (:children doc))))
   (len [doc] (reduce #(+ %1 (len %2)) 0 (:children doc)))
   (blank? [doc] (zero? (len doc))))
 

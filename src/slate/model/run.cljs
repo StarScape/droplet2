@@ -10,6 +10,7 @@
 
 (defrecord Run [text formats]
   TextContainer
+  (text [r] (:text r))
   (len [r] (count (:text r)))
   (blank? [r] (or (= "" (:text r)) (= nil (:text r))))
 

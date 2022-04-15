@@ -21,10 +21,10 @@
 ;; DONE: bug - pasting anything at the very start of a paragraph resets its type to :body
 
 ;; PROG: Copy and paste to/from outside source
-;;   PROG: plain text to Slate
+;;   DONE: plain text to Slate
 ;;   DONE: inserting a string with newline characters should result in multiple paragraphs being inserted
+;;   DONE: plain text from Slate to other
 
-;;   TODO: plain text from Slate to other
 ;;   TODO: rich text to Slate from other
 ;;   TODO: plain text from Slate to other
 
@@ -73,7 +73,7 @@
 (def doc (document paragraphs))
 
 (def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "p4") 0]
-                                                                        :end [(uuid "p4") 1]))
+                                                                        :end [(uuid "p4") 5]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

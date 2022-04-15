@@ -9,6 +9,7 @@
                                         delete
                                         insert-start
                                         insert-end
+                                        text
                                         len
                                         blank?
                                         apply-format
@@ -22,6 +23,7 @@
 
 (defrecord Paragraph [uuid runs type]
   TextContainer
+  (text [p] (reduce str (map text (:runs p))))
   (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p)))
   (blank? [p] (zero? (len p))))
 

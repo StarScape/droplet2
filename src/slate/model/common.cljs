@@ -2,11 +2,13 @@
   "Protocols and multi-fns used across different model data types.")
 
 (defprotocol TextContainer
-  (len [this] "Returns the number of chars in container (run/paragraph).")
+  (text [s] "Returns the text within the container, as a string.")
+  (len [this] "Returns the number of chars in container.")
   (blank? [this] "Returns true if the text container is empty."))
 
 (extend-type string
   TextContainer
+  (text [s] s)
   (len [s] (count s))
   (blank? [s] (zero? (count s))))
 
