@@ -10,24 +10,7 @@
             [slate.core :as sl]
             [slate.utils :as utils]))
 
-;; DONE: Undo broken when trying to undo the insertion of a paragraph.
-
-;; DONE: Copy and paste to/from droplet doc
-;; DONE: Bug - select two paragraphs, copy, paste directly after, then press up -- cursor is duplicated incorrectly.
-;; DONE: Bug - select list paragraph, copy, paste, then undo results in error thrown
-;; DONE: selected-content returns list of Paragraphs when multiple whole paragraphs selected, but list of runs when
-;;       a single paragraph is selected in its entirety.
-;; DONE: implement cut
-;; DONE: bug - pasting anything at the very start of a paragraph resets its type to :body
-
-;; PROG: Copy and paste to/from outside source
-;;   DONE: plain text to Slate
-;;   DONE: inserting a string with newline characters should result in multiple paragraphs being inserted
-;;   DONE: plain text from Slate to other
-
-;;   TODO: rich text to Slate from other
-;;   TODO: plain text from Slate to other
-
+;; TODO: Copy (and maybe paste) rich text
 ;; TODO: Find and replace
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: cmd+shift+right, cmd+shift+left

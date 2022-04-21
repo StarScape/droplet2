@@ -15,6 +15,7 @@
             [slate.model.selection :as sel]
             [slate.model.navigation :as nav :refer [Navigable]]))
 
+(declare identity-update)
 (declare merge-changelists)
 
 (defprotocol Monad
@@ -213,6 +214,25 @@
                                    :changed-uuids #{uuid})))))
   ([editor-state]
    (enter editor-state (random-uuid))))
+
+(defn replace-paragraph
+  "Returns an editor-update replacing the paragraph with uuid `:uuid` with `new-paragraph`.
+   If the selection is inside the paragraph replaced, and its offset is invalidated (i.e.
+   the new paragraph is shorter than the one previously there, and the selection's start or
+   end offset is greater than the new paragraph's length), it will be reset to the end of the
+   paragraph."
+  [{:keys [doc selection] :as _editor-state} uuid new-paragraph]
+  (let [new-doc (assoc-in doc [:children uuid] (assoc new-paragraph :uuid uuid))
+        adjust-side (fn [{:keys [paragraph offset] :as side}]
+                      (if (and (= paragraph uuid)
+                               (> offset (m/len new-paragraph)))
+                        {:paragraph paragraph, :offset (m/len new-paragraph)}
+                        side))
+        new-selection (-> selection
+                          (update :start adjust-side)
+                          (update :end adjust-side))]
+    (->EditorUpdate (editor-state new-doc new-selection)
+                    (changelist :changed-uuids #{uuid}))))
 
 ;; TODO: Auto-set :formats on selection
 (defn set-selection
