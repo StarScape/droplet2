@@ -3,10 +3,49 @@
 Slate is the rich text editor engine that sits at the core of Droplet. It is designed as an internal library, meaning:
 
 1. Code inside of the `slate` namespace should *never* be dependent on anything in the other parts of Droplet.
-2. Even if not done currently, *in principle* it should be possible to pick up Slate and drop it into a totally separate application.
+2. Even if not done currently, _in principle_ it should be possible to pick up Slate and drop it into a totally separate application.
 
 Most of the code you might need to consume from the main Droplet code is inside of the `slate.core` namespace.
 
-```
-TODO: add a brief overview of the high-level architecture of Slate (Runs, Paras, Doc, Selection, viewmodel layer, etc).
-```
+> Yes, I accidentally named it Slate without realizing there's already another web-based rich text editor called [SlateJS](https://github.com/ianstormtaylor/slate). Whoops.
+
+# Bird's Eye View
+
+Slate does not use a `<textarea>`, [content editable](https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Editable_content), or any other built-in text editing mechanism or libraries. Instead, similar to VSCode, it:
+
+- Maintains its own data-model for the state of the editor, behind the scenes
+- Uses a hidden `<input>` to capture key presses and other events
+- Updates the data model accordingly for each event
+- Renders the data model as HTML. Everything -- text, the text cursor and selection, etc, is just HTML.
+
+This means __a lot__ more flexibility, but also that there's more functionality that Slate has to implement itself. Basically all the browser is responsible for is (a) rendering text, and (b) handling keyboard input.
+
+## Core Data Model
+
+See `./model/`.
+
+The atomic unit of Slate is the __`Run`__, which is a string with a set of formats attached, e.g. `#{:italic :bold}`.
+
+A __`Paragraph`__ contains one or more `Runs`, plus a paragraph type, which default to `:body` (`:ol` and `:ul` are also supported, for ordered and unordered lists). Each paragraph has a UUID. _Note_: a paragraph's `Run`s can never be adjacent to another `Run` with the exact same formatting, e.g. run1 having formatting `#{:italic}` cannot be directly next to run2 having formatting `#{:italic}`. If run2 instead has formatting of, for example, `#{:italic :bold}`, then this is a legal state.
+
+A __`Document`__ contains the list of all paragraphs in the document (and possibly some other metadata, if that ever becomes necessary).
+
+A __`Selection`__ consists of a start paragraph (the paragraph's UUID), an offset into that paragraph, an end paragraph and an offset into that paragraph, plus a `:backwards?` field. If the start and end of the selection are the same, it is a single selection, i.e. a normal text caret. `Selection`s keep track of a few other things as well, see `selection.cljs` for details.
+
+The __`EditorState`__ contains both the current `Document` and the current `Selection`, which forms the complete state of the editor at any one point time. Most operations on a `EditorState`, rather than returning a new `EditorState`, return `EditorUpdate`s, which contain both an `EditorState` plus a changelist, so that paragraphs in the DOM can be selectively updated instead of rerendering everything (or diffing). There are some mechanisms in place to make dealing with this a bit more elegant and allowing chaining `EditorState` functions, see `editor_state.cljs` for details.
+
+The __`history`__ object (currently just a plain map and not a record, as it implements no protocols) contains the editor history, contains the editor's change history, defined as a succesion of `EditorUpdate`s. There is also a `:tip` field, a "current working state" that has not yet been integrated into the history backstack.
+
+## UI Layer
+
+The __`viewmmodel`__ is an intermediate stage for each paragraph where the width of each character is measured and the paragraph is split into lines. This information _has_ to be kept track of because some operations (up/down, goto start/end of line) are dependent on line layout.
+
+The __`view`__ namespace contains all the code that has to deal directly with the DOM. By far the nastiest code in the whole project is in here, but it's mostly self-contained.
+
+The __`EditorUIState`__ contains the whole state needed to render the UI and handle updates. This is the only thing within Slate stored in an atom. The core update loop of Slate is in `editor_ui_state.cljs`.
+
+## Other stuff
+
+The interceptor systems (see `interceptors.clj(s)` and `default_interceptors.cljs`) handles shortcuts and input events.
+
+The `dll.cljs` namespace contains the data structure that a `Document`s `Paragraph`s are stored in, which has some unique constraints, due to reasons listed there.

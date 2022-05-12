@@ -26,7 +26,7 @@
 ;; TODO: Make a React element that encapsulates the editor. This should live at the app level, not in Slate.
 ;; TODO: Set up Electron
 ;; TODO: File saving/loading
-;; TODO: DOCX export/import
+;; TODO: DOCX export/import w/ pandoc
 ;; TODO: Interface design/impl
 
 (def fake-editor (.getElementById js/document "fake-editor"))
