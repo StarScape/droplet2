@@ -4,7 +4,7 @@ Source code for the Droplet app.
 
 # Status
 
-Droplet is under heavy development and should be considered in the pre-alpha stage. No UI work has been done yet, and Electron integration, file saving and loading,import/export, etc, are all still `TODO`™.
+Droplet is under heavy development and should be considered in the pre-alpha stage. No UI work has been done yet, and Electron integration, file saving and loading, import/export, etc, are all still `TODO`™.
 
 However, the rich text editor is _mostly_ complete and stable. It supports:
 
@@ -12,15 +12,16 @@ However, the rich text editor is _mostly_ complete and stable. It supports:
 - Common text editing shortcuts: ⌥+→ / ⌥+← to jump between words, ⌘+→ / ⌘+← to jump to start/end of line, etc.
 - Full undo and redo
 - Copy and paste (plain text supported to and from Droplet to other apps; rich text currently only supported Droplet-to-Droplet)
-- Find and replace (currently no interface)
+- Find and replace (currently no UI)
 - A rich "interceptor" system for handling shortcuts and editor actions in an easily-extensible manner
 - A fully-immutable document models, which means __tests__! Rich text editors are finnicky and full of edges cases, and being able to trivially unit test any editor action in isolation is a life saver.
+- Some fancy-pants completions, like completing -- to an em dash and auto-surrounding parens and quotations.
 
 More details on the structure of the editor in `src/slate/README.md`.
 
 # Development
 
-Just jack-in to your favorite `shadow-cljs`-compatible ClojureScript REPL and visit `localhost:8080`.
+Just jack-in to your favorite `shadow-cljs`-compatible ClojureScript REPL and visit `localhost:8080`. This will load the test page.
 
 ## Testing
 
