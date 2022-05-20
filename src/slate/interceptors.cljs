@@ -9,6 +9,7 @@
 ;; An Interceptor is a a function of (EditorState, EditorUiState?, Event?) -> EditorUpdate
 (defrecord Interceptor [interceptor-fn
                         input-name
+                        should-fire?
                         include-in-history?
                         add-to-history-immediately?
                         manual?]

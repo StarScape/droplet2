@@ -151,7 +151,14 @@
   (es/auto-surround editor-state \"))
 
 (definterceptor auto-surround-single-quote
-  {:add-to-history-immediately? true}
+  {:add-to-history-immediately? true
+   :should-fire? (fn [{:keys [selection] :as editor-state}]
+                   ;; Fire if the selection is a range or if it is a single
+                   ;; selection with a non-blank character before and after it.
+                   (or (sel/range? selection)
+                       (and (not (nav/content? (m/char-before editor-state)))
+                            (or (= (sel/caret selection) (m/len (es/current-paragraph editor-state)))
+                                (not (nav/word? (m/char-at editor-state)))))))}
   [editor-state _ui-state _e]
   (es/auto-surround editor-state \'))
 

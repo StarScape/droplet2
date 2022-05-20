@@ -234,6 +234,12 @@
     (->EditorUpdate (editor-state new-doc new-selection)
                     (changelist :changed-uuids #{uuid}))))
 
+(defn current-paragraph
+  "Returns current paragraph if selection is a single selection."
+  [{:keys [selection doc]}]
+  {:pre [(sel/single? selection)]}
+  (get (:children doc) (sel/caret-para selection)))
+
 ;; TODO: Auto-set :formats on selection
 (defn set-selection
   "Returns a new EditorUpdate with the selection set to `new-selection`."
@@ -330,10 +336,10 @@
 
   ;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
   m/Selectable
-  ;; (char-at [{:keys [doc selection]}]
-  ;;   (char-at doc selection))
-  ;; (char-before [{:keys [doc selection]}]
-  ;;   (char-before doc selection))
+  (char-at [{:keys [doc selection]}]
+    (m/char-at doc selection))
+  (char-before [{:keys [doc selection]}]
+    (m/char-before doc selection))
   (selected-content [{:keys [doc selection]}]
     (m/selected-content doc selection))
   ;; (formatting [{:keys [doc selection]}]

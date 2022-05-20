@@ -27,11 +27,15 @@
    will just be called as a normal function, **which is passed the EditorUIState atom** (not just it's contents) and the event. This exists because
    it is occasionally useful to hook into the interceptor system to execute operations that have nothing to do with Slate's editor surface
    itself, such as file-saving on a shortcut, or the undo and redo operations, which behave a little differently than the normal interceptor
-   paths."
-  [{:keys [input-name include-in-history? add-to-history-immediately? manual?]
+   paths.
+
+   `:should-fire?`: **Default `(constantly true)`**. A predicate which takes the current editor-state and returns true if the interceptor
+   should fire, false otherwise."
+  [{:keys [input-name include-in-history? add-to-history-immediately? manual? should-fire?]
     :or {include-in-history? true
          add-to-history-immediately? false
-         manual? false}}
+         manual? false
+         should-fire? '(constantly true)}}
    arglist, & fn-body]
   (assert input-name "Input name is required for interceptor macro.")
   (when (not include-in-history?)
@@ -41,6 +45,7 @@
                       :manual? ~manual?
                       :include-in-history? ~include-in-history?
                       :add-to-history-immediately? ~add-to-history-immediately?
+                      :should-fire? ~should-fire?
                       :interceptor-fn (fn [~@arglist] ~@fn-body)}))
 
 ;; TODO: 

@@ -262,9 +262,11 @@
 (extend-type Paragraph
   Selectable
   (char-at [para sel]
-    (let [[run-idx run-offset] (at-offset (:runs para) (sel/caret sel))
-          run-text (:text ((:runs para) run-idx))]
-      (nth run-text run-offset)))
+    (if (>= (sel/caret sel) (len para))
+      "" #_(throw (js/Error. "char-at given offset >= length of paragraph"))
+      (let [[run-idx run-offset] (at-offset (:runs para) (sel/caret sel))
+            run-text (:text ((:runs para) run-idx))]
+        (nth run-text run-offset))))
 
   (char-before [para sel]
     (if (zero? (sel/caret sel))

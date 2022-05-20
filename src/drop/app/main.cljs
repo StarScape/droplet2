@@ -10,20 +10,21 @@
             [slate.core :as sl]
             [slate.utils :as utils]))
 
-;; TODO: Copy (and maybe paste) rich text
-;; TODO: Find and replace
+;; PROG: don't fire ' autocomplete if char immediately before or after cursor is alphanumeric,
+;; TODO: Bug with char-at at last spot in paragraph.
+
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: cmd+shift+right, cmd+shift+left
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
 ;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
 ;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
 ;;       left/right) interceptors.
-;; TODO: don't fire ' autocomplete if char immediately before or after cursor is alphanumeric,
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
 ;; TODO: Handle case of click, hold, type some stuff, THEN release
 ;; TODO: Make a React element that encapsulates the editor. This should live at the app level, not in Slate.
+;; TODO: Copy (and maybe paste) rich text
 ;; TODO: Set up Electron
 ;; TODO: File saving/loading
 ;; TODO: DOCX export/import w/ pandoc
@@ -55,8 +56,7 @@
    (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection :start [(uuid "p4") 0]
-                                                                        :end [(uuid "p4") 5]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p3") 179]))
                          :dom-elem fake-editor
                          :hidden-input hidden-input))
 

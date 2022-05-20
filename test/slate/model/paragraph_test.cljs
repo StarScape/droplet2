@@ -260,7 +260,8 @@
     (is (= "f" (sl/char-at mypara (selection ["123" 0]))))
     (is (= "o" (sl/char-at mypara (selection ["123" 1]))))
     (is (= "o" (sl/char-at mypara (selection ["123" 2]))))
-    (is (thrown? js/Error (sl/char-at mypara (selection ["123" 3]))))))
+    (is (= "" (sl/char-at mypara (selection ["123" 3]))))
+    #_(is (thrown? js/Error (sl/char-at mypara (selection ["123" 3]))))))
 
 (deftest char-before-test
   (let [mypara (paragraph "123" [(run "foo")])]
@@ -268,4 +269,5 @@
     (is (= "f" (sl/char-before mypara (selection ["123" 1]))))
     (is (= "o" (sl/char-before mypara (selection ["123" 2]))))
     (is (= "o" (sl/char-before mypara (selection ["123" 3]))))
-    (is (thrown? js/Error (sl/char-before mypara (selection ["123" 4]))))))
+    (is (= "" (sl/char-before mypara (selection ["123" 4]))))
+    #_(is (thrown? js/Error (sl/char-before mypara (selection ["123" 4]))))))
