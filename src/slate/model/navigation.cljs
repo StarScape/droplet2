@@ -433,7 +433,7 @@
          (-> sel
              (assoc :start new-caret, :backwards? true)
              (sel/add-to-between (sel/start-para sel)))
-         ;; Forwards range-selection
+         ;; Forwards range selection
          (-> (if (and (< (:offset new-caret) (-> sel :start :offset))
                       (= (:paragraph new-caret) (-> sel :start :paragraph)))
                (assoc sel :start new-caret, :end (:start sel), :backwards? true)

@@ -49,7 +49,7 @@
   (selected-content
     [container]
     [container sel]
-    "Returns the content within the range-selection inside the container, either as a vector
+    "Returns the content within the range selection inside the container, either as a vector
     of runs or a list (probably a dll) of paragraphs, depending which is appropriate.")
   (formatting
     [container]

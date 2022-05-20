@@ -144,6 +144,11 @@
   [editor-state _ _]
   (nav/end editor-state))
 
+(definterceptor select-all
+  {:include-in-history? false}
+  [editor-state _ _]
+  (es/select-all editor-state))
+
 ;; Auto-surrounding ;;
 (definterceptor auto-surround-double-quote
   {:add-to-history-immediately? true}
@@ -244,6 +249,7 @@
    :ctrl+shift+left ctrl+shift+left
    :ctrl+right ctrl+right
    :ctrl+shift+right ctrl+shift+right
+   :ctrl+a select-all
    :ctrl+i ctrl+i
    :ctrl+b ctrl+b
    ;; TODO: should these be in universal-interceptors?
@@ -259,12 +265,13 @@
    :alt+shift+left ctrl+shift+left
    :alt+right ctrl+right
    :alt+shift+right ctrl+shift+right
-   :cmd+i ctrl+i
-   :cmd+b ctrl+b
    :cmd+left start-of-line
    :cmd+right end-of-line
    :cmd+up start-of-doc
    :cmd+down end-of-doc
+   :cmd+a select-all
+   :cmd+i ctrl+i
+   :cmd+b ctrl+b
    :cmd+1 h1
    :cmd+2 h2
    :cmd+u ulist

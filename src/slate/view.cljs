@@ -82,7 +82,7 @@
 ;; value up and down a bunch of different cycles of the callstack.
 (declare ^:dynamic *selection-ongoing?*)
 
-(def caret-elem "<span class='text-caret'></span>")
+(def caret-elem "<span class='slate-text-caret'></span>")
 
 (defn- caret-in-span? [span pid selection]
   (let [span-start (:start-offset span)
@@ -122,12 +122,12 @@
       {:inside-sel (:text span)}
       {:after-sel (:text span)})
     (let [text (:text span)
-          p1 (-> selection :start :paragraph)
-          p2 (-> selection :end :paragraph)
-          start (if (and (= pid p1) (not selection-ongoing?))
+          start-para (-> selection :start :paragraph)
+          end-para (-> selection :end :paragraph)
+          start (if (and (= pid start-para) (not selection-ongoing?))
                   (- (-> selection :start :offset) (:start-offset span))
                   0)
-          end (if (= pid p2)
+          end (if (= pid end-para)
                 (- (-> selection :end :offset) (:start-offset span))
                 (count text))]
       {:before-sel (not-empty (.substring text 0 start))
@@ -167,7 +167,7 @@
          (when (and (:backwards? selection) (caret-in-span? span pid selection))
            caret-elem)
 
-         (<span> inside-sel (conj format-classes "range-selection"))
+         (<span> inside-sel (conj format-classes "slate-range-selection"))
 
          (when (or (and (caret-in-span? span pid selection)
                         (not (:backwards? selection)))
@@ -184,8 +184,6 @@
   (str "<div class='line'>"
        (apply str (map #(vm-span->dom % selection pid para-length) (:spans line)))
        "</div>"))
-
-(declare ^:dynamic *list-ongoing?*)
 
 (defn vm-para->dom
   "Convert viewmodel to DOM element. Returns HTML string."
@@ -306,7 +304,7 @@
       ;; Only item in the list, remove parent so there is no dangling <ul>/<ol>
       (.remove (.-parentElement elem))
       ;; Other items in list, keep <ul>/<ol>
-      (do (js/console.log (str "removing " elem)) (.remove elem)))
+      (.remove elem))
     (merge-list-elems-if-needed! prev-elem next-elem)))
 
 (defmulti insert-para!

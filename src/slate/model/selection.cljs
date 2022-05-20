@@ -131,7 +131,7 @@
 
 (defn shift-start
   "Expands or contracts the left side of the selection by `n` characters (can be positive or negative).
-   If selection is not a range-selection it is made one. Note the returned selection will always be backwards,
+   If selection is not a range selection it is made one. Note the returned selection will always be backwards,
    unless it is a single selection."
   [sel n]
   {:pre [(if (single? sel) (<= n 0) true)]

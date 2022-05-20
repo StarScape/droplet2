@@ -10,16 +10,20 @@
       font-kerning: none !important;
     }
 
-    #fake-editor {
-      white-space: pre;
-    }
-
-    .my-boxes {
+    .editors {
       display: flex;
-      font-family: serif;
     }
 
-    .my-box {
+    /* TODO: take this completely out of flow if possible */
+    #hidden-input {
+      opacity: 0;
+      position: absolute;
+      left: -10;
+      pointer-events: none;
+    }
+
+    .slate-editor {
+      white-space: pre;
       width: 100vw;
       height: 100vh;
       margin: 0;
@@ -27,7 +31,12 @@
       border: 1px solid grey;
 
       font-size: 15px;
-      /*font-family: monospace;*/
+      font-family: serif;
+      user-select: none;
+    }
+
+    .slate-editor:hover {
+      cursor: text;
     }
 
     .paragraph {
@@ -36,23 +45,16 @@
       min-height: 1em;
     }
 
-    /* .paragraph:hover::after {
-      position: absolute;
-      max-width: 50px;
-      padding: 2px;
-      border-radius: 2px;
-      background-color: rgba(30, 30, 30, 0.813);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      content: attr(id);
-      font-size: 10px;
-      color: rgb(255, 255, 255);
-      transform: translateY(-15px);
-    } */
+    /**
+     * When there is an empty paragraph with just a caret in it, we need to render a _bit_
+     * of text, so that the height of the paragraph is set to the same as any other, this solves
+     * that.
+     */
+    .line::after {
+      content: " ";
+    }
 
-    .text-caret {
-      /* TODO: make this not take up space inside paragraph */
+    .slate-text-caret {
       position: absolute;
       height: 1em;
       width: 1px;
@@ -61,12 +63,12 @@
       animation-delay: 0.5s;
     }
 
-    .range-selection {
+    .slate-range-selection {
       background-color: #b4ddff;
     }
 
     /* Range selection when it is not in focus */
-    .range-selection-blurred {
+    .slate-range-selection-blurred {
       background-color: #e0e1e2;
     }
 
@@ -74,26 +76,6 @@
       50% {
         opacity: 0;
       }
-    }
-
-    #fake-editor {
-      user-select: none;
-    }
-
-    #fake-editor:hover {
-      cursor: text;
-    }
-
-    /* TODO: make this completely gone. */
-    #hidden-input {
-      opacity: 0;
-      position: absolute;
-      left: -10;
-      pointer-events: none;
-    }
-
-    .hidden {
-      opacity: 0;
     }
 
     ul, ol {
@@ -122,10 +104,9 @@
   <div>
     <span id='formats' style='margin-right: 30px;'>Formats: </span>
   </div>
-  <div class='my-boxes'>
-    <div class='my-box document' id='fake-editor'></div>
-
-    <!-- <div class='my-box' id='fake-editor-dom-layout' contenteditable="true">
+  <div class='editors'>
+    <div class='slate-editor'></div>
+    <!-- <div class='slate-editor' id='slate-editor-dom-layout' contenteditable="true">
       <p class="paragraph h1-format">A Title</p>
       <p class="paragraph h2-format">A subtitle</p>
       <p class="paragraph"></p>

@@ -248,6 +248,17 @@
                   (changelist :changed-uuids (set/union (sel/all-uuids selection)
                                                         (sel/all-uuids new-selection)))))
 
+(defn select-all
+  [{:keys [selection doc] :as editor-state}]
+  (let [start-side (:start (nav/start doc))
+        end-side (:end (nav/end doc))
+        between (-> doc :children (dll/uuids-between (:paragraph start-side) (:paragraph end-side)) (set))
+        new-selection (assoc selection
+                             :start start-side
+                             :end end-side
+                             :between between)]
+    (set-selection editor-state new-selection)))
+
 ;; TODO: test
 (defn toggle-paragraph-type
   [{:keys [selection doc] :as editor-state} type]

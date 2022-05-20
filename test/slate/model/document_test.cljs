@@ -119,7 +119,7 @@
                                        (run "buzz" #{:bold})])
                       p2]))))
 
-  (testing "when given a range-selection, deletes before inserting"
+  (testing "when given a range selection, deletes before inserting"
     (is (= (sl/insert doc (selection ["p1" 1] ["p2" 11]) (run "(inserted!)" #{}))
            (document [(paragraph "p1" [(run "f" #{:italic}), (run "(inserted!)d")])]))))
 
