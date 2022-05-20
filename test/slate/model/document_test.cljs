@@ -338,14 +338,16 @@
     (is (= "f" (sl/char-at doc (selection ["p1" 0]))))
     (is (= "o" (sl/char-at doc (selection ["p1" 1]))))
     (is (= "z" (sl/char-at doc (selection ["p1" 13]))))
-    (is (thrown? js/Error (sl/char-at doc (selection ["p1" 14])))))
+    (is (= "" (sl/char-at doc (selection ["p1" 14]))))
+    #_(is (thrown? js/Error (sl/char-at doc (selection ["p1" 14])))))
 
   (testing "works in other paragraphs"
     (is (= "a" (sl/char-at doc (selection ["p2" 0]))))
     (is (= "b" (sl/char-at doc (selection ["p2" 3]))))
     (is (= "c" (sl/char-at doc (selection ["p2" 7]))))
     (is (= "d" (sl/char-at doc (selection ["p2" 11]))))
-    (is (thrown? js/Error (sl/char-at doc (selection ["p2" 12]))))))
+    (is (= "" (sl/char-at doc (selection ["p2" 12]))))
+    #_(is (thrown? js/Error (sl/char-at doc (selection ["p2" 12]))))))
 
 (deftest char-before-test
   (testing "works in 1st paragraph"

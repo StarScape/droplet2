@@ -238,7 +238,23 @@
   "Registers event listeners for the editor surface with their default interceptors."
   [*ui-state]
   (swap! *ui-state assoc :add-tip-to-backstack-callback #(add-tip-to-backstack-after-wait! *ui-state))
-  (let [get-interceptor (partial interceptors/find-interceptor (:interceptors @*ui-state))
+  (let [#_#_get-interceptor (partial interceptors/find-interceptor (:interceptors @*ui-state))
+        get-interceptor (fn [pattern]
+                          (let [ui-state @*ui-state
+                                current-editor-state (history/current-state (:history ui-state))
+                                matching-interceptor (interceptors/find-interceptor (:interceptors ui-state) pattern)]
+                            (when (and matching-interceptor
+                                       ((:should-fire? matching-interceptor) current-editor-state))
+                              matching-interceptor)))
+        get-completion (fn [key-pressed]
+                         (let [{:keys [interceptors history input-history]} @*ui-state
+                               current-editor-state (history/current-state history)
+                               matching-interceptor (interceptors/find-completion key-pressed interceptors input-history)]
+                           (when (and matching-interceptor
+                                      ((:should-fire? matching-interceptor) current-editor-state))
+                             matching-interceptor)))
+
+        #_(partial interceptors/find-interceptor (:interceptors @*ui-state))
         {editor-elem :dom-elem, hidden-input :hidden-input} @*ui-state]
     (let [editor-surface-clicked? (atom false :validator boolean?)
           mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
@@ -277,10 +293,9 @@
      (fn [e]
        (case (.-inputType e)
          "insertText"
-         (let [{:keys [interceptors input-history]} @*ui-state
-               ;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
+         (let [;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
                completion-interceptor (when (= 1 (.. e -data -length))
-                                        (interceptors/find-completion (.-data e) interceptors input-history))
+                                        (get-completion (.-data e)))
                interceptor (or completion-interceptor (get-interceptor :insert))]
            (fire-interceptor! *ui-state interceptor e))
 

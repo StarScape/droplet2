@@ -47,6 +47,13 @@
     true
     false))
 
+(defn content?
+  "Is argument a content char?"
+  [char]
+  (and (not (whitespace? char))
+       (not= "" char)
+       (not= nil char)))
+
 (defn word?
   "Is argument a word char?"
   [char]
