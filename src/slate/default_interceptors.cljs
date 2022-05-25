@@ -104,25 +104,63 @@
   [editor-state _ui-state _e]
   (nav/ctrl+shift+right editor-state))
 
+(def horizontal-start-pos (atom nil))
+(def vertical-nav-events #{:up :down :shift+up :shift+down})
+
+(defn vertical-nav-remember-start-offset
+  "When a user navigates up or down using the arrow keys, the editor looks for the offset in
+   the line above or below the current line that is closest to that of the current caret, and
+   navigates to that offset.
+
+   When a user _continually_ travels up and down in the document using the arrow keys,
+   the editor does not look for location in the next/previous line closest to the _current_
+   caret, but rather closest to the offset of where the caret was when the user _began_ navigating
+   up and down.
+
+   For example, consider a document that looks like this, with the cursor at the end of the first line:
+
+   ```
+   this is the first line, a reasonably long one
+   2nd
+   And this is the final line.
+   ```
+
+   If the user presses down once, they will end up at the end of the second line, which is intuitive.
+   If they press down again, what happens? If we look for an offset based only on the current position
+   of the text caret, then we will end up something near the end of 'And' in the 3rd line, but if the user
+   were repeatedly pressing down in a long document, that would be jarring considering how far to the right
+   side they began. We can get around this and make the behavior more intuitive by remembering the pixel
+   offset that vertical navigation began at.
+
+   This function will do that, calling the supplied vertical navigation function, remembering the start
+   offset when appropriate, and return an EditorUpdate."
+  [vertical-nav-fn editor-state {:keys [input-history viewmodels measure-fn]}]
+  (let [last-event-vertical-nav? (vertical-nav-events (peek input-history))
+        start-pos (when last-event-vertical-nav? @horizontal-start-pos)
+        down-update (vertical-nav-fn editor-state viewmodels measure-fn start-pos)]
+    (when-not last-event-vertical-nav?
+      (reset! horizontal-start-pos (view/caret-px (:editor-state down-update) viewmodels measure-fn)))
+    down-update))
+
 (definterceptor down
   {:include-in-history? false}
   [editor-state ui-state _e]
-  (view/down editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
+  (vertical-nav-remember-start-offset view/down editor-state ui-state))
 
 (definterceptor shift+down
   {:include-in-history? false}
   [editor-state ui-state _e]
-  (view/shift+down editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
+  (vertical-nav-remember-start-offset view/shift+down editor-state ui-state))
 
 (definterceptor up
   {:include-in-history? false}
   [editor-state ui-state _e]
-  (view/up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
+  (vertical-nav-remember-start-offset view/up editor-state ui-state))
 
 (definterceptor shift+up
   {:include-in-history? false}
   [editor-state ui-state _e]
-  (view/shift+up editor-state (:viewmodels ui-state) (:measure-fn ui-state)))
+  (vertical-nav-remember-start-offset view/shift+up editor-state ui-state))
 
 (definterceptor start-of-line
   {:include-in-history? false}

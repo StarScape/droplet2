@@ -456,11 +456,15 @@
 
 (defn caret-px
   "Returns the horizontal offset of the text caret from the document's edge, in pixels."
-  [selection line paragraph-type measure-fn]
-  (let [spans-before-caret (spans-before-offset line (sel/caret selection))]
-    (reduce (fn [width span]
-              (+  width (measure-fn (:text span) (:formats span) paragraph-type)))
-            0 spans-before-caret)))
+  ([selection line paragraph-type measure-fn]
+   (let [spans-before-caret (spans-before-offset line (sel/caret selection))]
+     (reduce (fn [width span]
+               (+  width (measure-fn (:text span) (:formats span) paragraph-type)))
+             0 spans-before-caret)))
+  ([{:keys [selection doc]} viewmodels measure-fn]
+   (let [caret-paragraph (get (:children doc) (sel/caret-para selection))
+         caret-line (line-with-caret viewmodels (sel/smart-collapse selection))]
+     (caret-px selection caret-line (:type caret-paragraph) measure-fn))))
 
 (defn chars-and-formats [span] (map #(hash-map :char %, :formats (:formats span)) (:text span)))
 
@@ -504,7 +508,7 @@
 
 (defn down-selection
   "Move the caret down into the next line. Returns a new Selection."
-  [editor-state viewmodels measure-fn]
+  [editor-state viewmodels measure-fn horizontal-start-pos]
   (let [{:keys [selection doc]} editor-state
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
@@ -530,7 +534,8 @@
         new-uuid (:uuid destination-para)
         initial-para-margin (:left (margins (.getElementById js/document para-uuid)))
         dest-para-margin (:left (margins (.getElementById js/document (:uuid destination-para))))
-        caret-offset-px (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn))
+        caret-offset-px (or horizontal-start-pos
+                            (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
         next-line-offset (nearest-line-offset-to-pixel :line next-line
                                                        :target-px (- caret-offset-px dest-para-margin)
                                                        :last-line-in-paragraph? (= next-line
@@ -542,15 +547,15 @@
 (defn down
   "Move the caret down into the next line. Returns an EditorUpdate.
    This is not in the model code because it requires the viewmodel to work."
-  [{:keys [selection] :as editor-state} viewmodels measure-fn]
-  (let [new-selection (down-selection editor-state viewmodels measure-fn)
+  [{:keys [selection] :as editor-state} viewmodels measure-fn horizontal-start-pos]
+  (let [new-selection (down-selection editor-state viewmodels measure-fn horizontal-start-pos)
         changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
     (es/->EditorUpdate (assoc editor-state :selection new-selection)
                        (es/changelist :changed-uuids changed-uuids))))
 
 (defn up-selection
   "Move the caret up into the next line. Returns a new Selection."
-  [editor-state viewmodels measure-fn]
+  [editor-state viewmodels measure-fn horizontal-start-pos]
   (let [{:keys [selection doc]} editor-state
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
@@ -573,7 +578,8 @@
         new-uuid (:uuid destination-para)
         initial-para-margin (:left (margins (.getElementById js/document para-uuid)))
         dest-para-margin (:left (margins (.getElementById js/document (:uuid destination-para))))
-        caret-offset-px (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn))
+        caret-offset-px (or horizontal-start-pos
+                            (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
         prev-line-offset (nearest-line-offset-to-pixel :line prev-line
                                                        :target-px (- caret-offset-px dest-para-margin)
                                                        :last-line-in-paragraph? caret-in-first-line?
@@ -584,18 +590,18 @@
 (defn up
   "Move the caret up into the next line. Returns an EditorUpdate.
    This is not in the model code because it requires the viewmodel to work."
-  [{:keys [selection] :as editor-state} viewmodels measure-fn]
-  (let [new-selection (up-selection editor-state viewmodels measure-fn)
+  [{:keys [selection] :as editor-state} viewmodels measure-fn horizontal-start-pos]
+  (let [new-selection (up-selection editor-state viewmodels measure-fn horizontal-start-pos)
         changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
     (es/->EditorUpdate (assoc editor-state :selection new-selection)
                        (es/changelist :changed-uuids changed-uuids))))
 
 (defn shift+down
   "Move the caret down into the next line. Returns an EditorUpdate."
-  [editor-state viewmodels measure-fn]
+  [editor-state viewmodels measure-fn horizontal-start-pos]
   ;; TODO: go to end of line if down-selection == selection (aka it's the last para)
   (let [{:keys [selection]} editor-state
-        down-sel (down-selection editor-state viewmodels measure-fn)
+        down-sel (down-selection editor-state viewmodels measure-fn horizontal-start-pos)
         down-para (sel/caret-para down-sel)
         down-offset (sel/caret down-sel)
         down-caret {:paragraph down-para, :offset down-offset}
@@ -616,10 +622,10 @@
 
 (defn shift+up
   "Move the caret up into the next line. Returns an EditorUpdate."
-  [editor-state viewmodels measure-fn]
+  [editor-state viewmodels measure-fn horizontal-start-pos]
   ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
   (let [{:keys [selection]} editor-state
-        up-sel (up-selection editor-state viewmodels measure-fn)
+        up-sel (up-selection editor-state viewmodels measure-fn horizontal-start-pos)
         up-para (sel/caret-para up-sel)
         up-offset (sel/caret up-sel)
         up-caret {:paragraph up-para, :offset up-offset}
