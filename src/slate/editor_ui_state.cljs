@@ -253,12 +253,14 @@
                            (when (and matching-interceptor
                                       ((:should-fire? matching-interceptor) current-editor-state))
                              matching-interceptor)))
-
-        #_(partial interceptors/find-interceptor (:interceptors @*ui-state))
-        {editor-elem :dom-elem, hidden-input :hidden-input} @*ui-state]
-    (let [editor-surface-clicked? (atom false :validator boolean?)
-          mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
-
+        {editor-elem :dom-elem, hidden-input :hidden-input} @*ui-state
+        editor-surface-clicked? (atom false :validator boolean?)
+        bind-hidden-input-event! (fn [event-name handler]
+                                  (.addEventListener hidden-input event-name
+                                                     (fn [e]
+                                                       (when-not @editor-surface-clicked?
+                                                         (handler e)))))]
+    (let [mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
       (.addEventListener editor-elem "mousedown"
                          (fn [e]
                            (.preventDefault e)
@@ -280,16 +282,14 @@
       (.addEventListener js/window "mouseup"
                          (fn [_e]
                            (reset! editor-surface-clicked? false))))
-    (.addEventListener
-     hidden-input
-     "keydown"
+
+    (bind-hidden-input-event! "keydown"
      (fn [e]
        (when-let [interceptor-fn (get-interceptor e)]
          (.preventDefault e)
          (fire-interceptor! *ui-state interceptor-fn e))))
-    (.addEventListener
-     hidden-input
-     "beforeinput"
+
+    (bind-hidden-input-event! "beforeinput"
      (fn [e]
        (case (.-inputType e)
          "insertText"
@@ -305,29 +305,22 @@
              (fire-interceptor! *ui-state undo! e)
              (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 
-        ;;  "insertFromPaste"
-        ;;  (js/console.log e)
-
          nil)))
 
-    (.addEventListener
-     hidden-input "cut"
+    (bind-hidden-input-event! "cut"
      (fn [e]
        (.preventDefault e)
        (fire-interceptor! *ui-state (get-interceptor :cut) e)))
-    (.addEventListener
-     hidden-input "copy"
+
+    (bind-hidden-input-event! "copy"
      (fn [e]
        (.preventDefault e)
        (fire-interceptor! *ui-state (get-interceptor :copy) e)))
-    (.addEventListener
-     hidden-input "paste" (fn [e]
-                            (.preventDefault e)
-                            (fire-interceptor! *ui-state (get-interceptor :paste) e))
-     #_(fn [e]
-         (js/console.log (.. e -clipboardData -types))
-         (js/console.log (.. e -clipboardData (getData "text/plain")))
-         (js/console.log (.. e -clipboardData (getData "text/html")))))
+
+    (bind-hidden-input-event! "paste"
+     (fn [e]
+       (.preventDefault e)
+       (fire-interceptor! *ui-state (get-interceptor :paste) e)))
 
     (.addEventListener js/window "resize" #(handle-resize! *ui-state))))
 
