@@ -10,10 +10,8 @@
             [slate.core :as sl]
             [slate.utils :as utils]))
 
-;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
-;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
-;;       navigation with left/right arrows, inserting text, etc. Ideally all logic for this should be _confined_ to the up/down (and possibly
-;;       left/right) interceptors.
+;; TODO: test up/down rememberance with good example doc
+
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
@@ -51,7 +49,7 @@
    (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p3") 0]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p3") 5]))
                          :dom-elem slate-editor
                          :hidden-input hidden-input))
 

@@ -12,7 +12,8 @@
             [slate.model.selection :as sel]
             [slate.utils :as utils]
             [slate.view :as view]
-            [slate.clipboard :as clipboard]))
+            [slate.clipboard :as clipboard]
+            [slate.extras :as extras]))
 
 ;; TODO: for interceptors that aren't dependent on the viewmodel or DOM state, there's no reason
 ;; I couldn't write unit tests for them. Should probably do that, so I can quickly identify any
@@ -104,7 +105,6 @@
   [editor-state _ui-state _e]
   (nav/ctrl+shift+right editor-state))
 
-(def horizontal-start-pos (atom nil))
 (def vertical-nav-events #{:up :down :shift+up :shift+down})
 
 (defn vertical-nav-remember-start-offset
@@ -134,12 +134,15 @@
 
    This function will do that, calling the supplied vertical navigation function, remembering the start
    offset when appropriate, and return an EditorUpdate."
-  [vertical-nav-fn editor-state {:keys [input-history viewmodels measure-fn]}]
+  [vertical-nav-fn editor-state {:keys [input-history viewmodels measure-fn] :as ui-state}]
   (let [last-event-vertical-nav? (vertical-nav-events (peek input-history))
-        start-pos (when last-event-vertical-nav? @horizontal-start-pos)
+        start-pos (when last-event-vertical-nav?
+                    (extras/get ui-state :horizontal-start-pos nil))
         down-update (vertical-nav-fn editor-state viewmodels measure-fn start-pos)]
     (when-not last-event-vertical-nav?
-      (reset! horizontal-start-pos (view/caret-px (:editor-state down-update) viewmodels measure-fn)))
+      (extras/set! ui-state
+                   :horizontal-start-pos
+                   (view/caret-px (:editor-state down-update) viewmodels measure-fn)))
     down-update))
 
 (definterceptor down
