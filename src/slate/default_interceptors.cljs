@@ -134,6 +134,18 @@
   [editor-state ui-state _e]
   (view/end-of-line editor-state (:viewmodels ui-state)))
 
+(definterceptor expand-to-end-of-line
+  {:include-in-history? false}
+  [editor-state ui-state _e]
+  (let [end-of-line-point (view/end-of-line-selection editor-state (:viewmodels ui-state))]
+    (es/expand-caret-right editor-state end-of-line-point)))
+
+(definterceptor expand-to-start-of-line
+  {:include-in-history? false}
+  [editor-state ui-state _e]
+  (let [end-of-line-point (view/start-of-line-selection editor-state (:viewmodels ui-state))]
+    (es/expand-caret-left editor-state end-of-line-point)))
+
 (definterceptor start-of-doc
   {:include-in-history? false}
   [editor-state _ _]
@@ -267,6 +279,8 @@
    :alt+shift+right ctrl+shift+right
    :cmd+left start-of-line
    :cmd+right end-of-line
+   :cmd+shift+left expand-to-start-of-line
+   :cmd+shift+right expand-to-end-of-line
    :cmd+up start-of-doc
    :cmd+down end-of-doc
    :cmd+a select-all

@@ -1,7 +1,8 @@
 (ns slate.model.selection
   "Functions for creating and manipulating Selection objects,
    a basic building block of the editor which indicate where
-   the text cursor and selection are.")
+   the text cursor and selection are."
+  (:require [clojure.set :as set]))
 
 (defrecord Selection
   [start end between backwards? formats])
@@ -187,17 +188,21 @@
       (collapse-start sel)
       (collapse-end sel))))
 
-(defn all-uuids
-  "Returns a set of **all** the paragraphs' UUIDs which are
-  inside the selection (i.e. :start, :between, and :end)."
-  [sel]
-  (conj (:between sel) (-> sel :start :paragraph) (-> sel :end :paragraph)))
-
 (defn toggle-format
   "Add format `f` to :formats if it is not present, removes it if it is."
   [{:keys [formats] :as sel} f]
   (assoc sel :formats (if (contains? formats f)
                         (disj formats f)
                         (conj formats f))))
+
+(defn all-uuids
+  "Returns a set of **all** the paragraphs' UUIDs which are
+  inside the selection (i.e. :start, :between, and :end).
+
+   If passed multiple selections, will return the union of all UUIDs for each selection."
+  ([& sels]
+   (reduce (fn [uuids, sel]
+             (set/union uuids (conj (:between sel) (-> sel :start :paragraph) (-> sel :end :paragraph))))
+           #{} sels)))
 
 ;; TODO: change :paragraph in :start and :end to :uuid

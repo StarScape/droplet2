@@ -215,6 +215,12 @@
   ([editor-state]
    (enter editor-state (random-uuid))))
 
+(defn current-paragraph
+  "Returns current paragraph if selection is a single selection."
+  [{:keys [selection doc]}]
+  {:pre [(sel/single? selection)]}
+  (get (:children doc) (sel/caret-para selection)))
+
 (defn replace-paragraph
   "Returns an editor-update replacing the paragraph with uuid `:uuid` with `new-paragraph`.
    If the selection is inside the paragraph replaced, and its offset is invalidated (i.e.
@@ -233,12 +239,6 @@
                           (update :end adjust-side))]
     (->EditorUpdate (editor-state new-doc new-selection)
                     (changelist :changed-uuids #{uuid}))))
-
-(defn current-paragraph
-  "Returns current paragraph if selection is a single selection."
-  [{:keys [selection doc]}]
-  {:pre [(sel/single? selection)]}
-  (get (:children doc) (sel/caret-para selection)))
 
 ;; TODO: Auto-set :formats on selection
 (defn set-selection
@@ -298,12 +298,92 @@
                        (changelist :changed-uuids (sel/all-uuids selection))))))
   ([editor-state surround] (auto-surround editor-state surround surround)))
 
+(defn after-anchor?
+  "Returns true if the right-expanded caret new-caret comes after old-caret
+   in the document. This assumes you can only jump ahead one paragraph at a time."
+  [new-caret old-selection]
+  {:pre [(sel/single? new-caret), (:backwards? old-selection)]}
+  (let [new-caret-side (:start new-caret)
+        old-sel-anchor (:end old-selection)]
+    (cond
+      (= (:paragraph old-sel-anchor) (:paragraph new-caret-side))
+      (>= (:offset new-caret-side) (:offset old-sel-anchor))
+
+      (= (:paragraph new-caret-side) (:paragraph old-sel-anchor))
+      true
+
+      :else
+      false)))
+
+(defn before-anchor?
+  "Returns true if the left-expanded caret new-caret comes before old-caret's
+   anchor in the document. This assume you can only jump back one paragraph
+   at a time. "
+  [new-caret old-selection]
+  {:pre [(sel/single? new-caret), (not (:backwards? old-selection))]}
+  (let [new-caret-side (:start new-caret)
+        old-sel-anchor (:start old-selection)]
+    (cond
+      (= (:paragraph old-sel-anchor) (:paragraph new-caret-side))
+      (< (:offset new-caret-side) (:offset old-sel-anchor))
+
+      (= (:paragraph new-caret-side) (:paragraph old-sel-anchor))
+      true
+
+      :else
+      false)))
+
+(defn expand-caret-right
+  [{:keys [selection] :as editor-state} new-caret]
+  {:pre [(sel/single? new-caret)]}
+  (let [new-caret-side (:start new-caret) ; single sel so :start or :end the same
+        new-selection (if (:backwards? selection)
+                        ;; backwards selection
+                        (if (after-anchor? new-caret selection)
+                          (-> selection
+                              (assoc :start (:end selection))
+                              (assoc :end new-caret-side)
+                              (assoc :backwards? false))
+                          (assoc selection :start new-caret-side))
+                        ;; forwards selection
+                        (let [s (assoc selection :end new-caret-side)
+                              old-sel-end-para (-> selection :end :paragraph)]
+                          (if (not= old-sel-end-para (:paragraph new-caret-side))
+                            (sel/add-to-between s old-sel-end-para)
+                            s)))
+        new-selection (sel/remove-ends-from-between new-selection)
+        new-editor-state (assoc editor-state :selection new-selection)]
+    (->EditorUpdate new-editor-state
+                    (changelist :changed-uuids (sel/all-uuids selection new-caret)))))
+
+(defn expand-caret-left
+  [{:keys [selection] :as editor-state} new-caret]
+  {:pre [(sel/single? new-caret)]}
+  (let [new-caret-side (:start new-caret) ; single sel so :start or :end the same
+        new-selection (if (not (:backwards? selection))
+                        ;; forwards selection
+                        (if (before-anchor? new-caret selection)
+                          (-> selection
+                              (assoc :end (:start selection))
+                              (assoc :start new-caret-side)
+                              (assoc :backwards? true))
+                          (assoc selection :end new-caret-side))
+                        ;; backwards selection
+                        (let [s (assoc selection :start new-caret-side)
+                              old-sel-start-para (-> selection :start :paragraph)]
+                          (if (not= old-sel-start-para (:paragraph new-caret-side))
+                            (sel/add-to-between s old-sel-start-para)
+                            s)))
+        new-selection (sel/remove-ends-from-between new-selection)
+        new-editor-state (assoc editor-state :selection new-selection)]
+    (->EditorUpdate new-editor-state
+                    (changelist :changed-uuids (sel/all-uuids selection new-caret)))))
+
 (defn- nav-fallthrough
   [{:keys [doc selection] :as editor-state}, nav-method]
   (let [new-selection (nav-method doc selection)]
     (->EditorUpdate (assoc editor-state :selection new-selection)
-                    (changelist :changed-uuids (set/union (sel/all-uuids new-selection)
-                                                          (sel/all-uuids selection))))))
+                    (changelist :changed-uuids (sel/all-uuids selection new-selection)))))
 (defn- selectable-fallthrough-right
   [{:keys [doc selection] :as editor-state}, selectable-method]
   (let [new-selection (selectable-method doc selection)

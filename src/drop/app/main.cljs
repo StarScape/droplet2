@@ -10,7 +10,6 @@
             [slate.core :as sl]
             [slate.utils :as utils]))
 
-;; TODO: cmd+a to select all
 ;; TODO: cmd+shift+right, cmd+shift+left
 ;; TODO: when _only_ going up and down, support remembering the pixel offset where the up/down operation _began_, instead of
 ;;       just going up/down from the previous. The remembering should be cancelled if any other operation is performed, including
