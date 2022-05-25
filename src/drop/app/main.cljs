@@ -18,7 +18,6 @@
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
-;; TODO: Handle case of click, hold, type some stuff, THEN release
 ;; TODO: Make a React element that encapsulates the editor. This should live at the app level, not in Slate.
 ;; TODO: Copy (and maybe paste) rich text
 ;; TODO: Set up Electron

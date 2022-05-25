@@ -121,7 +121,12 @@
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."
   [*ui-state]
-  (full-dom-render! *ui-state))
+  (full-dom-render! *ui-state)
+  ;; Add :resize to input-history if not already present
+  (swap! *ui-state (fn [ui-state]
+                     (if (= :resize (peek (:input-history ui-state)))
+                       ui-state
+                       (update ui-state :input-history interceptors/add-to-input-history :resize)))))
 
 (defn set-font-size!
   [*ui-state new-size]
