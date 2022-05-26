@@ -10,8 +10,6 @@
             [slate.core :as sl]
             [slate.utils :as utils]))
 
-;; TODO: test up/down remembering feature with good example doc
-
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState

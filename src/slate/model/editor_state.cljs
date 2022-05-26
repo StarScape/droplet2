@@ -384,6 +384,7 @@
   (let [new-selection (nav-method doc selection)]
     (->EditorUpdate (assoc editor-state :selection new-selection)
                     (changelist :changed-uuids (sel/all-uuids selection new-selection)))))
+
 (defn- selectable-fallthrough-right
   [{:keys [doc selection] :as editor-state}, selectable-method]
   (let [new-selection (selectable-method doc selection)

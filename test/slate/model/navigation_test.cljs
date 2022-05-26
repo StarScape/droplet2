@@ -1,8 +1,9 @@
 (ns slate.model.navigation-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [slate.model.navigation :as nav :refer [next-char prev-char
-                                              next-word prev-word
-                                              next-word-offset prev-word-offset]]
+                                                    next-word prev-word
+                                                    next-word-offset prev-word-offset
+                                                    next-clause-offset prev-clause-offset]]
             [slate.model.common :as m]
             [slate.model.run :as r]
             [slate.model.paragraph :as p]
@@ -331,3 +332,26 @@
                   (prev-word-offset text)
                   (prev-word-offset text)
                   (prev-word-offset text))))))
+
+
+(def clause-offset-test-string "Hello! This is a sentence, which you, being a person of dignity and grace, might logically ask, 'What kind of sentence?' Any kind, really")
+
+(deftest next-clause-test
+  ;; testing with -offset version of function for simplicity's sake
+  (= 6 (next-clause-offset clause-offset-test-string 0))
+  (= 6 (next-clause-offset clause-offset-test-string 1))
+  (= 6 (next-clause-offset clause-offset-test-string 5))
+  (= 26 (next-clause-offset clause-offset-test-string 6))
+  (= 137 (next-clause-offset clause-offset-test-string 131)))
+
+(deftest prev-clause-test
+  ;; testing with -offset version of function for simplicity's sake
+  (= 0 (prev-clause-offset clause-offset-test-string 0))
+  (= 0 (prev-clause-offset clause-offset-test-string 3))
+  (= 0 (prev-clause-offset clause-offset-test-string 5))
+  (= 0 (prev-clause-offset clause-offset-test-string 6))
+  (= 0 (prev-clause-offset clause-offset-test-string 7))
+  (= 7 (prev-clause-offset clause-offset-test-string 15))
+  (= 27 (prev-clause-offset clause-offset-test-string 33))
+  (= 96 (prev-clause-offset clause-offset-test-string 103))
+  (= 131 (prev-clause-offset clause-offset-test-string 137)))

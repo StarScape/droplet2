@@ -20,7 +20,7 @@
 
 (def clause-separators
   (set/union sentence-separators
-             #{"," ":" ";"}))
+             #{"," ";" ":" "\u2014"}))
 
 (def word-separators
   (set/union
@@ -109,7 +109,7 @@
   [text start-offset]
   {:pre [(and (nat-int? start-offset)
               (<= start-offset (.-length text)))]
-   :post [(and (nat-int? start-offset)
+   :post [(and (nat-int? %)
                (<= % (.-length text)))]}
   (if (>= start-offset (count text))
     (count text)
@@ -137,7 +137,7 @@
   [text start-offset]
   {:pre [(and (nat-int? start-offset)
               (<= start-offset (.-length text)))]
-   :post [(and (nat-int? start-offset)
+   :post [(and (nat-int? %)
                (<= % (.-length text)))]}
   (if (<= start-offset 0)
     0
@@ -163,6 +163,30 @@
 ;; TODO: Something to think about for the future -- add functions for navigating between
 ;; clauses, sentences, and paragraphs. Tentative keybinds for this: ctrl+)/ctrl+(, ctrl+]/ctrl+[,
 ;; and ctrl+}, ctrl+{, respectively.
+
+(defn next-clause-offset
+  "Helper function for `next-clause` but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
+  [text start-offset]
+  (let [offset (until text start-offset clause-separators)]
+    (if (< offset (count text))
+      (inc offset)
+      offset)))
+
+(defn prev-clause-offset
+  "Helper function for `prev-clause` but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
+  [text start-offset]
+  (let [start-offset (if (and (pos? start-offset)
+                              (whitespace? (nth text (dec start-offset))))
+                       (dec start-offset)
+                       start-offset)
+        offset (if (pos? start-offset)
+                 (back-until text (dec start-offset) clause-separators)
+                 (back-until text start-offset clause-separators))]
+    (if (whitespace? (nth text offset))
+      (inc offset)
+      offset)))
 
 (defprotocol Navigable
   "Methods for navigating around. Implemented for Paragraphs, Documents, and EditorStates.
