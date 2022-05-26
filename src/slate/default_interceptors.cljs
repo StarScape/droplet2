@@ -138,12 +138,12 @@
   (let [last-event-vertical-nav? (vertical-nav-events (peek input-history))
         start-pos (when last-event-vertical-nav?
                     (extras/get ui-state :horizontal-start-pos nil))
-        down-update (vertical-nav-fn editor-state viewmodels measure-fn start-pos)]
+        vertical-nav-update (vertical-nav-fn editor-state viewmodels measure-fn start-pos)]
     (when-not last-event-vertical-nav?
       (extras/set! ui-state
                    :horizontal-start-pos
-                   (view/caret-px (:editor-state down-update) viewmodels measure-fn)))
-    down-update))
+                   (view/caret-px editor-state viewmodels measure-fn)))
+    vertical-nav-update))
 
 (definterceptor down
   {:include-in-history? false}
