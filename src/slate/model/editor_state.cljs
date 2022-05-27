@@ -419,6 +419,10 @@
   (prev-char [editor-state] (nav-fallthrough editor-state nav/prev-char))
   (next-word [editor-state] (nav-fallthrough editor-state nav/next-word))
   (prev-word [editor-state] (nav-fallthrough editor-state nav/prev-word))
+  (next-clause [editor-state] (nav-fallthrough editor-state nav/next-clause))
+  (prev-clause [editor-state] (nav-fallthrough editor-state nav/prev-clause))
+  (next-sentence [editor-state] (nav-fallthrough editor-state nav/next-sentence))
+  (prev-sentence [editor-state] (nav-fallthrough editor-state nav/prev-sentence))
 
   nav/Selectable
   (shift+right [editor-state] (selectable-fallthrough-right editor-state nav/shift+right))
@@ -438,18 +442,18 @@
   ;;   (formatting doc selection))
   Formattable
   (toggle-format
-   [{:keys [doc selection] :as editor-state} format]
-   (if (sel/single? selection)
-     (->EditorUpdate (update editor-state :selection sel/toggle-format format)
+    [{:keys [doc selection] :as editor-state} format]
+    (if (sel/single? selection)
+      (->EditorUpdate (update editor-state :selection sel/toggle-format format)
                      ;; Include changelist in case we want to render
                      ;; the caret different depending on formatting
-                     (changelist :changed-uuids #{(sel/caret-para selection)}))
-     (let [doc-children (:children doc)
-           start-para-uuid (-> selection :start :paragraph)
-           end-para-uuid (-> selection :end :paragraph)
-           changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)]
-       (->EditorUpdate (assoc editor-state :doc (m/toggle-format doc selection format))
-                       (changelist :changed-uuids (set changed-uuids)))))))
+                      (changelist :changed-uuids #{(sel/caret-para selection)}))
+      (let [doc-children (:children doc)
+            start-para-uuid (-> selection :start :paragraph)
+            end-para-uuid (-> selection :end :paragraph)
+            changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)]
+        (->EditorUpdate (assoc editor-state :doc (m/toggle-format doc selection format))
+                        (changelist :changed-uuids (set changed-uuids)))))))
 
 (defn merge-changelists
   "Takes two changelists and returns a third that combines them. UUIDs are rearranged

@@ -105,6 +105,26 @@
   [editor-state _ui-state _e]
   (nav/ctrl+shift+right editor-state))
 
+(definterceptor next-clause
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/next-clause editor-state))
+
+(definterceptor prev-clause
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/prev-clause editor-state))
+
+(definterceptor next-sentence
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/next-sentence editor-state))
+
+(definterceptor prev-sentence
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/prev-sentence editor-state))
+
 (def vertical-nav-events #{:up :down :shift+up :shift+down})
 
 (defn vertical-nav-remember-start-offset
@@ -322,6 +342,10 @@
    :cmd+right end-of-line
    :cmd+shift+left expand-to-start-of-line
    :cmd+shift+right expand-to-end-of-line
+   :cmd+0 next-clause
+   :cmd+9 prev-clause
+   (keyword "cmd+]") next-sentence
+   (keyword "cmd+[") prev-sentence
    :cmd+up start-of-doc
    :cmd+down end-of-doc
    :cmd+a select-all

@@ -160,10 +160,6 @@
         :else
         (back-until-non-word text start-offset)))))
 
-;; TODO: Something to think about for the future -- add functions for navigating between
-;; clauses, sentences, and paragraphs. Tentative keybinds for this: ctrl+)/ctrl+(, ctrl+]/ctrl+[,
-;; and ctrl+}, ctrl+{, respectively.
-
 (defn next-clause-offset
   "Helper function for `next-clause` but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
@@ -188,40 +184,94 @@
       (inc offset)
       offset)))
 
+;; TODO: add support for '...'
+
+(defn next-sentence-offset
+  "Helper function for `next-clause` but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
+  [text start-offset]
+  (let [offset (until text start-offset sentence-separators)]
+    (if (< offset (count text))
+      (inc offset)
+      offset)))
+
+(defn prev-sentence-offset
+  "Helper function for `prev-clause` but taking a plain string and offset instead of a paragraph and selection.
+   Returns the new offset, NOT a selection."
+  [text start-offset]
+  (let [start-offset (if (and (pos? start-offset)
+                              (whitespace? (nth text (dec start-offset))))
+                       (dec start-offset)
+                       start-offset)
+        offset (if (pos? start-offset)
+                 (back-until text (dec start-offset) sentence-separators)
+                 (back-until text start-offset sentence-separators))]
+    (if (whitespace? (nth text offset))
+      (inc offset)
+      offset)))
+
 (defprotocol Navigable
   "Methods for navigating around. Implemented for Paragraphs, Documents, and EditorStates.
   All methods return a new Selection, except for on EditorStates, which returns EditorUpdates."
   (start
-   [this]
-   "Go to start of Paragraph or Document.")
+    [this]
+    "Go to start of Paragraph or Document.")
 
   (end
-   [this]
-   "Go to end of Paragraph or Document.")
+    [this]
+    "Go to end of Paragraph or Document.")
 
   (next-char
-   [this sel]
-   [editor-state]
-   "Move forward by 1 character, or returns the same selection if not possible.
+    [this sel]
+    [editor-state]
+    "Move forward by 1 character, or returns the same selection if not possible.
     Equivalent to pressing the right arrow on the keyboard.")
 
   (prev-char
-   [this sel]
-   [editor-state]
-   "Move backward by 1 character, or return the same selection if not possible.
+    [this sel]
+    [editor-state]
+    "Move backward by 1 character, or return the same selection if not possible.
     Equivalent to pressing the left arrow on the keyboard.")
 
   (next-word
-   [this sel]
-   [editor-state]
-   "Returns selection after jumping to the end of the next word from selection `sel`.
+    [this sel]
+    [editor-state]
+    "Returns selection after jumping to the end of the next word from selection `sel`.
     Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac).")
 
   (prev-word
-   [this sel]
-   [editor-state]
-   "Returns selection after jumping to the start of the previous word from selection `sel`.
-    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac)."))
+    [this sel]
+    [editor-state]
+    "Returns selection after jumping to the start of the previous word from selection `sel`.
+    Equivalent to the standard behavior of ctrl+right (Windows/Linux) or option+right (Mac).")
+
+  (next-clause
+    [this sel]
+    [editor-state]
+    "Returns selection (or EditorUpdate) after jumping ahead to the end of the next clause (defined as
+    the end of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
+    and semicolons).")
+
+  (prev-clause
+    [this sel]
+    [editor-state]
+    "Returns selection (or EditorUpdate) after jumping back to the start of the current clause (defined as
+    the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
+    and semicolons).")
+
+  (next-sentence
+    [this sel]
+    [editor-state]
+    "Returns selection (or EditorUpdate) after jumping ahead to the end of the next clause (defined as
+    the end of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
+    and semicolons).")
+
+  (prev-sentence
+    [this sel]
+    [editor-state]
+    "Returns selection (or EditorUpdate) after jumping back to the start of the current clause (defined as
+    the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
+    and semicolons)."))
 
 (defprotocol Selectable
   "Methods for expanding and contracting selections."
@@ -286,16 +336,58 @@
       sel))
 
   (next-word [para sel]
-    (let [text (apply str (map :text (:runs para)))
+    (let [text (m/text para)
           collapsed (smart-collapse sel)
           offset (next-word-offset text (caret collapsed))]
       (autoset-formats para (sel/set-single collapsed offset))))
 
   (prev-word [para sel]
-    (let [text (apply str (map :text (:runs para)))
+    (let [text (m/text para)
           collapsed (smart-collapse sel)
           offset (prev-word-offset text (caret collapsed))]
+      (autoset-formats para (sel/set-single collapsed offset))))
+
+  (next-clause [para sel]
+    (let [text (m/text para)
+          collapsed (smart-collapse sel)
+          offset (next-clause-offset text (caret collapsed))]
+      (autoset-formats para (sel/set-single collapsed offset))))
+
+  (prev-clause [para sel]
+    (let [text (m/text para)
+          collapsed (smart-collapse sel)
+          offset (prev-clause-offset text (caret collapsed))]
+      (autoset-formats para (sel/set-single collapsed offset))))
+
+  (next-sentence [para sel]
+    (let [text (m/text para)
+          collapsed (smart-collapse sel)
+          offset (next-sentence-offset text (caret collapsed))]
+      (autoset-formats para (sel/set-single collapsed offset))))
+
+  (prev-sentence [para sel]
+    (let [text (m/text para)
+          collapsed (smart-collapse sel)
+          offset (prev-sentence-offset text (caret collapsed))]
       (autoset-formats para (sel/set-single collapsed offset)))))
+
+(defn next-method [doc sel paragraph-fn]
+  (let [collapsed (smart-collapse sel)
+        para-uuid (sel/start-para collapsed)
+        para ((:children doc) para-uuid)]
+    (if (and (= (sel/caret collapsed) (m/len para))
+             (not= para (dll/last (:children doc))))
+      (start (dll/next (:children doc) para))
+      (paragraph-fn ((:children doc) (sel/start-para collapsed)) collapsed))))
+
+(defn prev-method [doc sel paragraph-fn]
+  (let [collapsed (smart-collapse sel)
+        para-uuid (sel/start-para collapsed)
+        para ((:children doc) para-uuid)]
+    (if (and (= 0 (sel/caret collapsed))
+             (not= para (dll/first (:children doc))))
+      (end (dll/prev (:children doc) para))
+      (paragraph-fn ((:children doc) (sel/start-para collapsed)) collapsed))))
 
 (extend-type Document
   Navigable
@@ -332,22 +424,22 @@
           (prev-char para sel)))))
 
   (next-word [doc sel]
-    (let [collapsed (smart-collapse sel)
-          para-uuid (sel/start-para collapsed)
-          para ((:children doc) para-uuid)]
-      (if (and (= (sel/caret collapsed) (m/len para))
-               (not= para (dll/last (:children doc))))
-        (start (dll/next (:children doc) para))
-        (next-word ((:children doc) (sel/start-para collapsed)) collapsed))))
+    (next-method doc sel next-word))
 
   (prev-word [doc sel]
-    (let [collapsed (smart-collapse sel)
-          para-uuid (sel/start-para collapsed)
-          para ((:children doc) para-uuid)]
-      (if (and (= 0 (sel/caret collapsed))
-               (not= para (dll/first (:children doc))))
-        (end (dll/prev (:children doc) para))
-        (prev-word ((:children doc) (sel/start-para collapsed)) collapsed))))
+    (prev-method doc sel prev-word))
+
+  (next-clause [doc sel]
+    (next-method doc sel next-clause))
+
+  (prev-clause [doc sel]
+    (next-method doc sel prev-clause))
+
+  (next-sentence [doc sel]
+    (next-method doc sel next-sentence))
+
+  (prev-sentence [doc sel]
+    (next-method doc sel prev-sentence))
 
   ;; TODO: It's possible these can be cleaned up, but *write tests* before
   ;; trying to make them more elegant. That will make it a lot easier to prove
