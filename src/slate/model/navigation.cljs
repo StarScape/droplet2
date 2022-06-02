@@ -196,17 +196,16 @@
   "Helper function for `prev-clause` but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  (let [start-offset (if (and (pos? start-offset)
-                              (whitespace? (nth text (dec start-offset))))
-                       (dec start-offset)
-                       start-offset)
-        offset (if (pos? start-offset)
-                 (back-until text (dec start-offset) sentence-separators)
-                 (back-until text start-offset sentence-separators))
-        foo (get text offset)]
-    (if (whitespace? (nth text offset))
-      (inc offset)
-      offset)))
+  (let [prev-sentence-end (as-> start-offset offset
+                          (back-until text offset (complement sentence-separators))
+                          (back-until text offset sentence-separators))
+        current-sentence-start (until-non-whitespace text prev-sentence-end)]
+    ;; If there is another sentence before the current one that was just navigated to the start of,
+    ;; there will be leading whitespace. Place the cursor in front of that leading whitespace if applicable.
+    (if (or (zero? prev-sentence-end)
+            (= current-sentence-start start-offset))
+      prev-sentence-end
+      current-sentence-start)))
 
 (defprotocol Navigable
   "Methods for navigating around. Implemented for Paragraphs, Documents, and EditorStates.
