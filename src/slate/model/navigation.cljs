@@ -167,39 +167,30 @@
   ;; (let [start-offset (if )])
   (as-> start-offset offset
     (until text offset clause-separators)
-    (until text offset (complement clause-separators)))
-  #_(let [offset (until text start-offset clause-separators)]
-    (if (< offset (count text))
-      (inc offset)
-      offset)))
+    (until text offset (complement clause-separators))))
 
 (defn prev-clause-offset
   "Helper function for `prev-clause` but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  (let [start-offset (if (and (pos? start-offset)
-                              #p (whitespace? (nth text (dec start-offset))))
-                       (dec start-offset)
-                       start-offset)
-        offset (if (pos? start-offset)
-                 (back-until text (dec start-offset) clause-separators)
-                 (back-until text start-offset clause-separators))]
-    (if (whitespace? (nth text offset))
-      (inc offset)
-      offset)))
+  (let [prev-clause-end (as-> start-offset offset
+                          (back-until text offset (complement clause-separators))
+                          (back-until text offset clause-separators))
+        current-clause-start (until-non-whitespace text prev-clause-end)]
+    ;; If there is another clause before the current one that was just navigated to the start of,
+    ;; there will be leading whitespace. Place the cursor in front of that leading whitespace if applicable.
+    (if (or (zero? prev-clause-end)
+            (= current-clause-start start-offset))
+      prev-clause-end
+      current-clause-start)))
 
 (defn next-sentence-offset
-  "Helper function for `next-clause` but taking a plain string and offset instead of a paragraph and selection.
+  "Helper function for `next-sentence` but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  (let [offset (until text start-offset sentence-separators)
-        offset (if (= (get text (inc offset)) ".")
-                 ;; Skip over additional periods in the case of ellipses
-                 (until text offset (complement sentence-separators))
-                 offset)]
-    (if (< offset (count text))
-      (inc offset)
-      offset)))
+  (as-> start-offset offset
+    (until text offset sentence-separators)
+    (until text offset (complement sentence-separators))))
 
 (defn prev-sentence-offset
   "Helper function for `prev-clause` but taking a plain string and offset instead of a paragraph and selection.

@@ -356,16 +356,25 @@
     (= 41 (next-clause-offset clause-offset-test-string2 9)) ;  Hello...| ->  Hello...what seems to be the issue here?|
     ))
 
-(next-clause-test)
-
 (deftest prev-clause-test
+  (testing "works for all edge cases"
   ;; testing with -offset version of function for simplicity's sake
-  (= 0 (prev-clause-offset clause-offset-test-string 0))
-  (= 0 (prev-clause-offset clause-offset-test-string 3))
-  (= 0 (prev-clause-offset clause-offset-test-string 5))
-  (= 0 (prev-clause-offset clause-offset-test-string 6))
-  (= 0 (prev-clause-offset clause-offset-test-string 7))
-  (= 7 (prev-clause-offset clause-offset-test-string 15))
-  (= 27 (prev-clause-offset clause-offset-test-string 33))
-  (= 96 (prev-clause-offset clause-offset-test-string 103))
-  (= 131 (prev-clause-offset clause-offset-test-string 137)))
+    (= 0 (prev-clause-offset clause-offset-test-string 0)) ; |Hello! -> |Hello!
+    (= 0 (prev-clause-offset clause-offset-test-string 3)) ; Hel|llo! -> |Hello!
+    (= 0 (prev-clause-offset clause-offset-test-string 4)) ; Hell|o! -> |Hello!
+    (= 0 (prev-clause-offset clause-offset-test-string 5)) ; Hello|! -> |Hello!
+    (= 0 (prev-clause-offset clause-offset-test-string 6)) ; Hello!| -> |Hello!
+    (= 6 (prev-clause-offset clause-offset-test-string 7)) ; Hello! | -> Hello!|
+    (= 7 (prev-clause-offset clause-offset-test-string 15)) ; Hello! This is |a sentence, -> Hello! |This is a sentence,
+    (= 27 (prev-clause-offset clause-offset-test-string 33)) ; This is a sentence, which |you, -> This is a sentence, |which you,
+    (= 96 (prev-clause-offset clause-offset-test-string 103)) ; might logically ask, 'What k|ind of sentence?' -> might logically ask, |'What kind of sentence?'
+    (= 131 (prev-clause-offset clause-offset-test-string 137)) ; Any kind, really| -> Any kind, |really
+
+    (= 9 (prev-clause-offset clause-offset-test-string2 41)) ;  Hello...what seems to be the issue here?| ->  Hello...|what seems to be the issue here?
+    (= 9 (prev-clause-offset clause-offset-test-string2 40)) ;  Hello...what seems to be the issue here|? ->  Hello...|what seems to be the issue here?
+    (= 9 (prev-clause-offset clause-offset-test-string2 30)) ;  Hello...what seems to be the |issue here? ->  Hello...|what seems to be the issue here?
+    (= 9 (prev-clause-offset clause-offset-test-string2 10)) ;  Hello...w|hat seems to be the |issue here? ->  Hello...|what seems to be the issue here?
+    (= 0 (prev-clause-offset clause-offset-test-string2 9)) ;  Hello...|what seems to be the |issue here? ->  |Hello...what seems to be the issue here?
+    (= 0 (prev-clause-offset clause-offset-test-string2 8)) ;  Hello..|.what seems to be the |issue here? ->  |Hello...what seems to be the issue here?
+    (= 0 (prev-clause-offset clause-offset-test-string2 4))) ;  Hel|lo...what seems to be the |issue here? ->  |Hello...what seems to be the issue here?
+  )
