@@ -335,14 +335,28 @@
 
 
 (def clause-offset-test-string "Hello! This is a sentence, which you, being a person of dignity and grace, might logically ask, 'What kind of sentence?' Any kind, really")
+(def clause-offset-test-string2 " Hello...what seems to be the issue here?")
 
 (deftest next-clause-test
-  ;; testing with -offset version of function for simplicity's sake
-  (= 6 (next-clause-offset clause-offset-test-string 0))
-  (= 6 (next-clause-offset clause-offset-test-string 1))
-  (= 6 (next-clause-offset clause-offset-test-string 5))
-  (= 26 (next-clause-offset clause-offset-test-string 6))
-  (= 137 (next-clause-offset clause-offset-test-string 131)))
+  (testing "works for all edge cases"
+    (= 6 (next-clause-offset clause-offset-test-string 0)) ; |Hello! -> Hello!|
+    (= 6 (next-clause-offset clause-offset-test-string 1)) ; H|ello! -> Hello!|
+    (= 6 (next-clause-offset clause-offset-test-string 5)) ; Hello|! -> Hello!|
+    (= 26 (next-clause-offset clause-offset-test-string 6)) ; Hello!| -> Hello! This is a sentence,|
+    (= 37 (next-clause-offset clause-offset-test-string 26)) ; Hello! This is a sentence,| -> This is a sentence, which you,|
+    (= 137 (next-clause-offset clause-offset-test-string 130)) ; Any kind,| really -> Any kid, really|
+    (= 137 (next-clause-offset clause-offset-test-string 131)) ; Any kind, |really -> Any kid, really|
+    (= 137 (next-clause-offset clause-offset-test-string 137)) ; Any kind, really| -> Any kind, really|
+
+    (= 9 (next-clause-offset clause-offset-test-string2 0)) ; | Hello... ->  Hello...|
+    (= 9 (next-clause-offset clause-offset-test-string2 1)) ;  |Hello... ->  Hello...|
+    (= 9 (next-clause-offset clause-offset-test-string2 2)) ;  H|ello... ->  Hello...|
+    (= 9 (next-clause-offset clause-offset-test-string2 6)) ;  Hello|... ->  Hello...|
+    (= 9 (next-clause-offset clause-offset-test-string2 7)) ;  Hello|... ->  Hello...|
+    (= 41 (next-clause-offset clause-offset-test-string2 9)) ;  Hello...| ->  Hello...what seems to be the issue here?|
+    ))
+
+(next-clause-test)
 
 (deftest prev-clause-test
   ;; testing with -offset version of function for simplicity's sake

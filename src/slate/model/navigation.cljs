@@ -164,7 +164,11 @@
   "Helper function for `next-clause` but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  (let [offset (until text start-offset clause-separators)]
+  ;; (let [start-offset (if )])
+  (as-> start-offset offset
+    (until text offset clause-separators)
+    (until text offset (complement clause-separators)))
+  #_(let [offset (until text start-offset clause-separators)]
     (if (< offset (count text))
       (inc offset)
       offset)))
@@ -174,7 +178,7 @@
    Returns the new offset, NOT a selection."
   [text start-offset]
   (let [start-offset (if (and (pos? start-offset)
-                              (whitespace? (nth text (dec start-offset))))
+                              #p (whitespace? (nth text (dec start-offset))))
                        (dec start-offset)
                        start-offset)
         offset (if (pos? start-offset)
@@ -184,13 +188,15 @@
       (inc offset)
       offset)))
 
-;; TODO: add support for '...'
-
 (defn next-sentence-offset
   "Helper function for `next-clause` but taking a plain string and offset instead of a paragraph and selection.
    Returns the new offset, NOT a selection."
   [text start-offset]
-  (let [offset (until text start-offset sentence-separators)]
+  (let [offset (until text start-offset sentence-separators)
+        offset (if (= (get text (inc offset)) ".")
+                 ;; Skip over additional periods in the case of ellipses
+                 (until text offset (complement sentence-separators))
+                 offset)]
     (if (< offset (count text))
       (inc offset)
       offset)))
@@ -205,7 +211,8 @@
                        start-offset)
         offset (if (pos? start-offset)
                  (back-until text (dec start-offset) sentence-separators)
-                 (back-until text start-offset sentence-separators))]
+                 (back-until text start-offset sentence-separators))
+        foo (get text offset)]
     (if (whitespace? (nth text offset))
       (inc offset)
       offset)))
@@ -433,13 +440,13 @@
     (next-method doc sel next-clause))
 
   (prev-clause [doc sel]
-    (next-method doc sel prev-clause))
+    (prev-method doc sel prev-clause))
 
   (next-sentence [doc sel]
     (next-method doc sel next-sentence))
 
   (prev-sentence [doc sel]
-    (next-method doc sel prev-sentence))
+    (prev-method doc sel prev-sentence))
 
   ;; TODO: It's possible these can be cleaned up, but *write tests* before
   ;; trying to make them more elegant. That will make it a lot easier to prove

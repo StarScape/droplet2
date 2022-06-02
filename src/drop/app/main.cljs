@@ -10,6 +10,10 @@
             [slate.core :as sl]
             [slate.utils :as utils]))
 
+;; TODO: semantic nav functions: support for ...
+;; TODO: semantic nav functions: cmd+( or cmd+[ at the start of a paragraph with leading
+;;                               whitespace doesn't go to end of prev paragraph.
+
 ;; TODO: Nav functions for moving between clauses, sentences, and paragraphs
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
@@ -30,7 +34,7 @@
    (paragraph (uuid "s1") :ul [(run "A bullet")])
    (paragraph (uuid "s2") :ul [(run "And anotha")])
    (paragraph (uuid "div1") [(run)])
-   (paragraph (uuid "p3") [(run "Hello world, this is an example of a paragraph ")
+   (paragraph (uuid "p3") [(run " Hello world, this is an example of a paragraph ")
                            (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
                            (run "Don't know what else to say. Hmmmm..." #{:bold})])
    (paragraph (uuid "p4") [(run "And another paragraph here")])
@@ -38,7 +42,7 @@
    (paragraph (uuid "ol1") :ul [(run "Bullet 1")])
    (paragraph (uuid "ol2") :ul [(run "Bullet 2")])
    (paragraph (uuid "ol3") :ul [(run "Bullet 3")])
-   (paragraph (uuid "emptyboi")[(run "")])
+   (paragraph (uuid "emptyboi") [(run "")])
    (paragraph [(run "(Take a break.)")])
    (paragraph (uuid "ul1") :ol [(run "Ordered item 1")])
    (paragraph (uuid "ul2") :ol [(run "Ordered item 2")])
@@ -47,7 +51,7 @@
    (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])])
 (def doc (document paragraphs))
 
-(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p3") 5]))
+(def *ui-state (sl/init! :editor-state (editor-state doc (sel/selection [(uuid "p3") 1 #_179]))
                          :dom-elem slate-editor
                          :hidden-input hidden-input))
 
