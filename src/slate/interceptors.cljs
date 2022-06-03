@@ -169,7 +169,7 @@
 
 (defmethod find-interceptor js/KeyboardEvent
   [interceptor-map event]
-  (get-in interceptor-map [:shortcuts #p (event->key-set event)]))
+  (get-in interceptor-map [:shortcuts (event->key-set event)]))
 
 (defn reg-interceptor
   "Takes interceptor map, an interceptor pattern, and an interceptor

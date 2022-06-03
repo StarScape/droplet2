@@ -133,7 +133,6 @@
 (definterceptor expand-right-sentence
   {:include-in-history? false}
   [editor-state _ _]
-  #p "Hello?"
   (es/expand-caret-right editor-state (-> (nav/next-sentence editor-state) :editor-state :selection)))
 
 (definterceptor prev-sentence

@@ -290,7 +290,6 @@
 
     (bind-hidden-input-event! "keydown"
      (fn [e]
-       #p "keydown"
        (when-let [interceptor-fn (get-interceptor e)]
          (.preventDefault e)
          (fire-interceptor! *ui-state interceptor-fn e))))

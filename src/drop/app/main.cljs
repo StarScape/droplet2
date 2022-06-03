@@ -10,18 +10,14 @@
             [slate.core :as sl]
             [slate.utils :as utils]))
 
-;; PROG: Nav functions for moving between clauses, sentences, and paragraphs
-;; TODO: semantic nav - cmd+shift versions of each navigator
-;; TODO: semantic nav - fix cmd+shift+] not firing correctly
-
-;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
-;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
-;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
 ;; TODO: Make a React element that encapsulates the editor. This should live at the app level, not in Slate.
-;; TODO: Copy (and maybe paste) rich text
 ;; TODO: Set up Electron
 ;; TODO: File saving/loading
+;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
+;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
+;; TODO: Copy (and maybe paste) rich text
 ;; TODO: DOCX export/import w/ pandoc
+;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Interface design/impl
 
 (def slate-editor (.querySelector js/document ".slate-editor"))
