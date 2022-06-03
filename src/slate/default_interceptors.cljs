@@ -110,30 +110,61 @@
   [editor-state _ _]
   (nav/next-clause editor-state))
 
+(definterceptor expand-right-clause
+  {:include-in-history? false}
+  [editor-state _ _]
+  (es/expand-caret-right editor-state (-> (nav/next-clause editor-state) :editor-state :selection)))
+
 (definterceptor prev-clause
   {:include-in-history? false}
   [editor-state _ _]
   (nav/prev-clause editor-state))
+
+(definterceptor expand-left-clause
+  {:include-in-history? false}
+  [editor-state _ _]
+  (es/expand-caret-left editor-state (-> (nav/prev-clause editor-state) :editor-state :selection)))
 
 (definterceptor next-sentence
   {:include-in-history? false}
   [editor-state _ _]
   (nav/next-sentence editor-state))
 
+(definterceptor expand-right-sentence
+  {:include-in-history? false}
+  [editor-state _ _]
+  #p "Hello?"
+  (es/expand-caret-right editor-state (-> (nav/next-sentence editor-state) :editor-state :selection)))
+
 (definterceptor prev-sentence
   {:include-in-history? false}
   [editor-state _ _]
   (nav/prev-sentence editor-state))
+
+(definterceptor expand-left-sentence
+  {:include-in-history? false}
+  [editor-state _ _]
+  (es/expand-caret-left editor-state (-> (nav/prev-sentence editor-state) :editor-state :selection)))
+
+(definterceptor next-paragraph
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/next-paragraph editor-state))
+
+(definterceptor expand-right-paragraph
+  {:include-in-history? false}
+  [editor-state _ _]
+  (es/expand-caret-right editor-state (-> (nav/next-paragraph editor-state) :editor-state :selection)))
 
 (definterceptor prev-paragraph
   {:include-in-history? false}
   [editor-state _ _]
   (nav/prev-paragraph editor-state))
 
-(definterceptor next-paragraph
+(definterceptor expand-left-paragraph
   {:include-in-history? false}
   [editor-state _ _]
-  (nav/next-paragraph editor-state))
+  (es/expand-caret-left editor-state (-> (nav/prev-paragraph editor-state) :editor-state :selection)))
 
 (def vertical-nav-events #{:up :down :shift+up :shift+down})
 
@@ -353,11 +384,17 @@
    :cmd+shift+left expand-to-start-of-line
    :cmd+shift+right expand-to-end-of-line
    :cmd+0 next-clause
+   :cmd+shift+0 expand-right-clause
    :cmd+9 prev-clause
+   :cmd+shift+9 expand-left-clause
    (keyword "cmd+]") next-sentence
+   (keyword "cmd+shift+]") expand-right-sentence
    (keyword "cmd+[") prev-sentence
+   (keyword "cmd+shift+[") expand-left-sentence
    (keyword "cmd+,") prev-paragraph
+   (keyword "cmd+shift+,") expand-left-paragraph
    :cmd+. next-paragraph
+   :cmd+shift+. expand-right-paragraph
    :cmd+up start-of-doc
    :cmd+down end-of-doc
    :cmd+a select-all

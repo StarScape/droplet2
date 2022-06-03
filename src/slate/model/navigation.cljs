@@ -270,10 +270,9 @@
     the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
-  ;; These should really not be in this protocol when they are only implemented
-  ;; for EditorStates, but this will do for now.
-  (prev-paragraph [editor-state])
-  (next-paragraph [editor-state]))
+  ;; These should really not be in this protocol when they are only implemented for EditorState, but this will do for now.
+  (next-paragraph [editor-state])
+  (prev-paragraph [editor-state]))
 
 (defprotocol Selectable
   "Methods for expanding and contracting selections."
