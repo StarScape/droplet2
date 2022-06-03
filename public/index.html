@@ -47,8 +47,8 @@
 
     /**
      * When there is an empty paragraph with just a caret in it, we need to render a _bit_
-     * of text, so that the height of the paragraph is set to the same as any other, this solves
-     * that.
+     * of text, so that the height of the paragraph is set to the same as any other ('font height' is
+     * not possible to get programmatically). This solves that.
      */
     .line::after {
       content: " ";
@@ -99,13 +99,15 @@
 </head>
 <body>
 
-  <!-- Hidden input for capturing keystrokes -->
   <input id='hidden-input' type='text' autofocus />
-  <div>
+  <div id="reagent-main"></div>
+
+  <!-- Hidden input for capturing keystrokes -->
+  <!-- <div>
     <span id='formats' style='margin-right: 30px;'>Formats: </span>
   </div>
-  <div class='editors'>
-    <div class='slate-editor'></div>
+  <div class='editors'> -->
+    <!-- <div class='slate-editor'></div> -->
     <!-- <div class='slate-editor' id='slate-editor-dom-layout' contenteditable="true">
       <p class="paragraph h1-format">A Title</p>
       <p class="paragraph h2-format">A subtitle</p>
@@ -126,7 +128,7 @@
 
     <!-- <input id='override-checkbox' type="checkbox" name="override">
     <label for="override">Override</label>  -->
-  </div>
+  <!-- </div> -->
 
   <script src="js/main.js" type="text/javascript"></script>
 

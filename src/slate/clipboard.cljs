@@ -13,8 +13,9 @@
 
 ;; JS's clipboardData store its data as a string, so it's more efficient, when
 ;; pasting from Droplet straight back into Droplet, to not bother with serializing
-;; and deserializing an object and just stash it in a local atom. If Slate sees that the data
-;; in the clipboard is from itself, it will just pull the stashed content from this atom instead.
+;; and deserializing an object=, and instead just stash it in a local atom. If Slate
+;; sees that the data in the clipboard is from itself, it will just pull the stashed
+;; content from this atom instead.
 (def *clipboard (atom nil))
 
 (defn- content-text [content]
