@@ -415,14 +415,49 @@
       (->EditorUpdate (assoc editor-state :selection new-selection)
                       (changelist :changed-uuids (set/union #{(-> new-selection :start :paragraph)}
                                                             (sel/all-uuids selection))))))
-  (next-char [editor-state] (nav-fallthrough editor-state nav/next-char))
-  (prev-char [editor-state] (nav-fallthrough editor-state nav/prev-char))
-  (next-word [editor-state] (nav-fallthrough editor-state nav/next-word))
-  (prev-word [editor-state] (nav-fallthrough editor-state nav/prev-word))
-  (next-clause [editor-state] (nav-fallthrough editor-state nav/next-clause))
-  (prev-clause [editor-state] (nav-fallthrough editor-state nav/prev-clause))
-  (next-sentence [editor-state] (nav-fallthrough editor-state nav/next-sentence))
-  (prev-sentence [editor-state] (nav-fallthrough editor-state nav/prev-sentence))
+  (next-char [editor-state]
+    (nav-fallthrough editor-state nav/next-char))
+
+  (prev-char [editor-state]
+    (nav-fallthrough editor-state nav/prev-char))
+
+  (next-word [editor-state]
+    (nav-fallthrough editor-state nav/next-word))
+
+  (prev-word [editor-state]
+    (nav-fallthrough editor-state nav/prev-word))
+
+  (next-clause [editor-state]
+    (nav-fallthrough editor-state nav/next-clause))
+
+  (prev-clause [editor-state]
+    (nav-fallthrough editor-state nav/prev-clause))
+
+  (next-sentence [editor-state]
+    (nav-fallthrough editor-state nav/next-sentence))
+
+  (prev-sentence [editor-state]
+    (nav-fallthrough editor-state nav/prev-sentence))
+
+  (prev-paragraph [{:keys [doc selection] :as editor-state}]
+    (let [caret-uuid (sel/caret-para selection)
+          paragraph (get (:children doc) caret-uuid)
+          prev-paragraph (dll/prev (:children doc) (sel/caret-para selection))]
+      (if (pos? (sel/caret selection))
+        (->EditorUpdate (assoc editor-state :selection (nav/start paragraph))
+                        (changelist :changed-uuids #{caret-uuid}))
+        (->EditorUpdate (assoc editor-state :selection (nav/end prev-paragraph))
+                        (changelist :changed-uuids #{caret-uuid, (:uuid prev-paragraph)})))))
+
+  (next-paragraph [{:keys [doc selection] :as editor-state}]
+    (let [caret-uuid (sel/caret-para selection)
+          paragraph (get (:children doc) caret-uuid)
+          next-paragraph (dll/next (:children doc) (sel/caret-para selection))]
+      (if (= (m/len paragraph) (sel/caret selection))
+        (->EditorUpdate (assoc editor-state :selection (nav/start next-paragraph))
+                        (changelist :changed-uuids #{caret-uuid, (:uuid next-paragraph)}))
+        (->EditorUpdate (assoc editor-state :selection (nav/end paragraph))
+                           (changelist :changed-uuids #{caret-uuid})))))
 
   nav/Selectable
   (shift+right [editor-state] (selectable-fallthrough-right editor-state nav/shift+right))

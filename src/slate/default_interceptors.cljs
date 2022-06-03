@@ -125,6 +125,16 @@
   [editor-state _ _]
   (nav/prev-sentence editor-state))
 
+(definterceptor prev-paragraph
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/prev-paragraph editor-state))
+
+(definterceptor next-paragraph
+  {:include-in-history? false}
+  [editor-state _ _]
+  (nav/next-paragraph editor-state))
+
 (def vertical-nav-events #{:up :down :shift+up :shift+down})
 
 (defn vertical-nav-remember-start-offset
@@ -346,6 +356,8 @@
    :cmd+9 prev-clause
    (keyword "cmd+]") next-sentence
    (keyword "cmd+[") prev-sentence
+   (keyword "cmd+,") prev-paragraph
+   :cmd+. next-paragraph
    :cmd+up start-of-doc
    :cmd+down end-of-doc
    :cmd+a select-all

@@ -268,7 +268,12 @@
     [editor-state]
     "Returns selection (or EditorUpdate) after jumping back to the start of the current clause (defined as
     the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
-    and semicolons)."))
+    and semicolons).")
+
+  ;; These should really not be in this protocol when they are only implemented
+  ;; for EditorStates, but this will do for now.
+  (prev-paragraph [editor-state])
+  (next-paragraph [editor-state]))
 
 (defprotocol Selectable
   "Methods for expanding and contracting selections."
