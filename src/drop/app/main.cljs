@@ -20,6 +20,7 @@
 ;; TODO: File saving/loading
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Learn about TailwindCSS
+;; TODO: Look into React animation libraries
 ;; TODO: Interface design/impl
 ;; TODO: DOCX export/import w/ pandoc
 
