@@ -5,11 +5,16 @@
   "scripts": {
     "node-test": "./scripts/node_test.sh || true",
     "browser-test": "./scripts/browser_test.sh || true",
-    "test": "./scripts/test.sh || true"
+    "test": "./scripts/test.sh || true",
+    "watch-stories": "shadow-cljs watch stories",
+    "start-stories": "start-storybook",
+    "storybook-dev": "concurrently npm:watch-stories npm:start-stories"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@storybook/react": "^6.5.7",
+    "concurrently": "^7.2.1",
     "karma": "^6.3.1",
     "karma-chrome-launcher": "^3.1.0",
     "karma-cljs-test": "^0.1.0",

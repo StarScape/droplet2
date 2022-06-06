@@ -12,12 +12,17 @@
          :nrepl {:init-ns user}
          :devtools {:preloads [hashp.core]}}
    :node-test {:target :node-test
-               :ns-regexp "(?<!browser)-test$" ;; all ns's ending in '-test' but not '-browser-test'
+               :ns-regexp "(?<!browser)-test$" ;; every ns ending in '-test' but not '-browser-test'
                :output-to "out/node_test.js"}
    :browser-test {:target :karma
-                  :ns-regexp "-browser-test$"
+                  :ns-regexp "-browser-test$" ;; every ns ending in 'browser-test'
                   :output-to "out/browser_test.js"}
    :test-dll {:target :node-test
               :ns-regexp "slate.dll-test$"
               :output-to "out/dll_test.js"
-              :autorun true}}}
+              :autorun true}
+   ;; Storybook stories
+   :stories  {:target :npm-module
+            ;;   :entries [drop.stories.test-story]
+              :ns-regexp  "drop.stories.*$"
+              :output-dir "public/js/stories"}}}
