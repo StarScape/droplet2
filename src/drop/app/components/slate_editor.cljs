@@ -16,8 +16,15 @@
 ;;         elem (js/document.getElementById "formats")]
 ;;     (set! (.-innerHTML elem) formats-str)))
 
-;; Hidden input element used by editor
-(def hidden-input (.querySelector js/document "#hidden-input"))
+(defn get-or-create-hidden-input
+  "Gets or instantiates the hidden <input> used by the editor."
+  []
+  (let [input (.querySelector js/document "#hidden-input")]
+    (if input
+      input
+      (do
+        (.. js/document -body (insertAdjacentHTML "afterbegin" "<input id='hidden-input' type='text' autofocus />"))
+        (.querySelector js/document "#hidden-input")))))
 
 (defn- init-test-editor-state []
   (let [paragraphs [(paragraph (uuid "p1") :h1 [(run "A Title")])
@@ -49,6 +56,6 @@
     [:div.slate-editor {:ref (fn [elem]
                                (reset! *ui-state (sl/init! :editor-state (init-test-editor-state)
                                                            :dom-elem elem
-                                                           :hidden-input hidden-input))
+                                                           :hidden-input (get-or-create-hidden-input)))
                                ;; Utility for viewing editor history from console
                                (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state)))))}]))
