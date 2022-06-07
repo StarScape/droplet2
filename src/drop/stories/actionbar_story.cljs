@@ -1,10 +1,12 @@
 (ns drop.stories.actionbar-story
   (:require [drop.app.components.actionbar :refer [actionbar]]
+            [drop.stories.helper :as helper]
             [reagent.core :as r]))
 
 (def ^:export default
-  #js {:title "Actionbar"
-       :component (r/reactify-component actionbar)})
+  (helper/->default
+   {:title "Actionbar"
+    :component actionbar}))
 
 (defn ^:export Basic []
   (r/as-element [:<>
