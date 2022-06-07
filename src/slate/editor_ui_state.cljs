@@ -354,7 +354,7 @@
    :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
   [& {:keys [editor-state dom-elem hidden-input]}]
   (let [uuid (random-uuid)
-        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
+        dom-elem-width (.-width (.getBoundingClientRect #p dom-elem))
         measure-fn (ruler-for-elem uuid dom-elem)
         editor-state (or editor-state (es/editor-state))
         interceptors-map (-> (interceptors/interceptor-map)

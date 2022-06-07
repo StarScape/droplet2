@@ -11,6 +11,9 @@
          :modules {:main {:init-fn drop.app.main/main}}
          :nrepl {:init-ns user}
          :devtools {:preloads [hashp.core]}}
+   :electron {:target :node-script
+              :main drop.electron.core/main
+              :output-to "public/js/electron.js"}
    :node-test {:target :node-test
                :ns-regexp "(?<!browser)-test$" ;; every ns ending in '-test' but not '-browser-test'
                :output-to "out/node_test.js"}

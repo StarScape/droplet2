@@ -52,8 +52,10 @@
     (editor-state doc selection)))
 
 (defn slate-editor []
+  (println "Rendering editor element")
   (with-let [*ui-state (atom nil)]
     [:div.slate-editor {:ref (fn [elem]
+                               (js/console.log (str "elem ref: " elem))
                                (reset! *ui-state (sl/init! :editor-state (init-test-editor-state)
                                                            :dom-elem elem
                                                            :hidden-input (get-or-create-hidden-input)))

@@ -1,0 +1,1 @@
+Source for all code running in the main electron process (NodeJS).

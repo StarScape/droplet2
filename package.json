@@ -2,13 +2,15 @@
   "name": "droplet",
   "version": "1.0.0",
   "author": "Jack Arrignton",
+  "main": "public/js/electron.js",
   "scripts": {
     "node-test": "./scripts/node_test.sh || true",
     "browser-test": "./scripts/browser_test.sh || true",
     "test": "./scripts/test.sh || true",
     "watch-stories": "shadow-cljs watch stories",
     "start-stories": "start-storybook -p 9090",
-    "storybook-dev": "concurrently npm:watch-stories npm:start-stories"
+    "storybook-dev": "concurrently npm:watch-stories npm:start-stories",
+    "dev": "concurrently \"shadow-cljs watch electron app\" \"wait-on http://localhost:8080 && electron .\""
   },
   "devDependencies": {
     "@storybook/addon-essentials": "^6.5.7",
@@ -21,6 +23,8 @@
     "source-map-support": "^0.5.19"
   },
   "dependencies": {
+    "electron": "^19.0.3",
+    "electron-is-dev": "^2.0.0",
     "i": "^0.3.7",
     "object-hash": "^2.0.3",
     "react": "^17.0.2",

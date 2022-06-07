@@ -12,11 +12,8 @@
             [drop.app.components.core :as components]
             [reagent.dom :as rdom]))
 
-;; PROG: Basic React stuff
-;; TODO: Set up Storybook
-;; TODO: Basic format bar element
+;; PROG: Set up Electron
 
-;; TODO: Set up Electron
 ;; TODO: File saving/loading
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Learn about TailwindCSS
@@ -38,5 +35,4 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn ^:dev/after-load reload []
-  #_(mount-main-component))
-
+  (mount-main-component))
