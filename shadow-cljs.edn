@@ -23,6 +23,5 @@
               :autorun true}
    ;; Storybook stories
    :stories  {:target :npm-module
-            ;;   :entries [drop.stories.test-story]
-              :ns-regexp  "drop.stories.*$"
-              :output-dir "public/js/stories"}}}
+              :ns-regexp  "drop.stories.*-story$"
+              :output-dir "out/js/stories"}}}

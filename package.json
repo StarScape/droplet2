@@ -1,7 +1,7 @@
 {
-  "name": "drop",
+  "name": "droplet",
   "version": "1.0.0",
-  "description": "",
+  "author": "Jack Arrignton",
   "scripts": {
     "node-test": "./scripts/node_test.sh || true",
     "browser-test": "./scripts/browser_test.sh || true",
@@ -10,8 +10,6 @@
     "start-stories": "start-storybook",
     "storybook-dev": "concurrently npm:watch-stories npm:start-stories"
   },
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
     "@storybook/react": "^6.5.7",
     "concurrently": "^7.2.1",
