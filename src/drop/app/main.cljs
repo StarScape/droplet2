@@ -25,6 +25,10 @@
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Copy (and maybe paste) rich text
 
+(defn remove-old-hidden-inputs []
+  (-> (.querySelectorAll js/document ".hidden-input")
+      (.forEach (fn [elem] (.remove #p elem)))))
+
 (defn mount-main-component []
   (let [elem (js/document.getElementById "reagent-main")]
     (rdom/render [components/app] elem)))
@@ -35,4 +39,5 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn ^:dev/after-load reload []
+  (remove-old-hidden-inputs)
   (mount-main-component))

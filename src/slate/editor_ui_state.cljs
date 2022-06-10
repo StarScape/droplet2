@@ -219,7 +219,6 @@
                editor-state
                (:viewmodels new-ui-state)
                (:changelist editor-update))
-
     (reset! *ui-state new-ui-state)
 
     (cond
@@ -341,6 +340,8 @@
      :ctrl+= increase-font-size!
      :ctrl+- decrease-font-size!}))
 
+
+
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be updated throughout the lifetime of the editor. Takes a series
@@ -348,18 +349,18 @@
 
    Required:
    :dom-elem - The DOM element that the editor will be displayed in
-   :hidden-input - The hidden <input> element needed by the editor to capture keystrokes
 
    Optional:
    :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
-  [& {:keys [editor-state dom-elem hidden-input]}]
+  [& {:keys [editor-state dom-elem]}]
   (let [uuid (random-uuid)
-        dom-elem-width (.-width (.getBoundingClientRect #p dom-elem))
+        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem uuid dom-elem)
         editor-state (or editor-state (es/editor-state))
         interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
+        hidden-input (view/create-hidden-input!)
         *ui-state (atom {:id uuid
                          ;; TODO: get width
                          :viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)

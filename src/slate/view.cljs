@@ -813,3 +813,12 @@
                                        :backwards? true
                                        :between (set (dll/uuids-between (:children doc) current-uuid started-uuid))))]
     (nav/autoset-formats doc raw-selection)))
+
+
+(defn create-hidden-input!
+  "Creates hidden input element used to capture keystrokes."
+  []
+  (let [hidden-input-id (str (random-uuid))]
+    (.. js/document -body (insertAdjacentHTML "afterbegin"
+                                              (str "<input id='" hidden-input-id "' class='hidden-input' type='text' autofocus />")))
+    (.getElementById js/document hidden-input-id)))
