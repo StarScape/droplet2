@@ -12,8 +12,6 @@
             [drop.app.components.core :as components]
             [reagent.dom :as rdom]))
 
-;; PROG: Set up Electron
-
 ;; TODO: File saving/loading
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Learn about TailwindCSS
@@ -27,7 +25,7 @@
 
 (defn remove-old-hidden-inputs []
   (-> (.querySelectorAll js/document ".hidden-input")
-      (.forEach (fn [elem] (.remove #p elem)))))
+      (.forEach (fn [elem] (.remove elem)))))
 
 (defn mount-main-component []
   (let [elem (js/document.getElementById "reagent-main")]
