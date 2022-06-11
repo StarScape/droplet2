@@ -819,6 +819,9 @@
   "Creates hidden input element used to capture keystrokes."
   []
   (let [hidden-input-id (str (random-uuid))]
+    #_(js/console.log (str "adding hidden-input " hidden-input-id))
     (.. js/document -body (insertAdjacentHTML "afterbegin"
                                               (str "<input id='" hidden-input-id "' class='hidden-input' type='text' autofocus />")))
-    (.getElementById js/document hidden-input-id)))
+    (let [elem (.getElementById js/document hidden-input-id)]
+      (.focus elem)
+      elem)))

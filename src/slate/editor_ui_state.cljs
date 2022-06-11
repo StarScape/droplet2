@@ -340,8 +340,6 @@
      :ctrl+= increase-font-size!
      :ctrl+- decrease-font-size!}))
 
-
-
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be updated throughout the lifetime of the editor. Takes a series

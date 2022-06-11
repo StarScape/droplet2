@@ -42,11 +42,9 @@
     (editor-state doc selection)))
 
 (defn slate-editor []
-  (with-let [*ui-state (atom nil)
-             ref-callback (fn [elem]
-                            (when elem
-                              (reset! *ui-state (sl/init! :editor-state (init-test-editor-state)
-                                                          :dom-elem elem))
+  [:div.slate-editor {:ref (fn [elem]
+                             (when elem
+                               (let [*ui-state (sl/init! :editor-state (init-test-editor-state)
+                                                         :dom-elem elem)]
                                  ;; Utility for viewing editor history from console
-                              (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state))))))]
-    [:div.slate-editor {:ref ref-callback}]))
+                                 (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state)))))))}])
