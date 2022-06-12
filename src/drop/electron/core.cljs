@@ -33,3 +33,8 @@
   (.on app "window-all-closed" #(when-not (= js/process.platform "darwin")
                                   (.quit app)))
   (.on app "ready" init-browser))
+
+(try
+  ((js/require "electron-reloader") js/module)
+  (catch js/Object e
+       (.log js/console e)))
