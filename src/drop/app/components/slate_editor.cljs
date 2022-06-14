@@ -7,7 +7,8 @@
             [slate.model.selection :as sel]
             [slate.core :as sl]
             [slate.utils :as utils]
-            [reagent.core :as r :refer [with-let]]))
+            [reagent.core :as r]
+            ["electron" :refer [ipcRenderer]]))
 
 ;; (defn update-formats-elem
 ;;   [_key _atom _old-state new-state]
@@ -45,6 +46,11 @@
   [:div.slate-editor {:ref (fn [elem]
                              (when elem
                                (let [*ui-state (sl/init! :editor-state (init-test-editor-state)
-                                                         :dom-elem elem)]
+                                                         :dom-elem elem
+                                                         :on-save (fn [serialized]
+                                                                    (.send ipcRenderer "save-file" serialized))
+                                                         :on-load (fn [*ui-state filename]
+                                                                    (let [file-contents (.sendSync ipcRenderer "open-file" filename)]
+                                                                      (sl/load-file! *ui-state file-contents))))]
                                  ;; Utility for viewing editor history from console
                                  (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state)))))))}])

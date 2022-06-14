@@ -23,7 +23,19 @@ More details on the structure of the editor in `src/slate/README.md`.
 
 # Development
 
-Just jack-in to your favorite `shadow-cljs`-compatible ClojureScript REPL and visit `localhost:8080`. This will load the test page.
+**Start shadow-cljs builds:**
+
+```
+shadow-cljs watch electron app
+```
+
+**Start up Electron**. Normally should be done in a separate terminal so that the electron process can be restarted, but if there's no need to modify the main NodeJS process's code then it can be started with `&&`.
+
+```
+electron .
+```
+
+REPL can then be jacked into.
 
 ## Testing
 

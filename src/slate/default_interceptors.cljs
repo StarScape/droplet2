@@ -333,6 +333,18 @@
   [editor-state _ e]
   (clipboard/paste editor-state e))
 
+(definterceptor save
+  {:manual? true}
+  [*ui-state]
+  (let [ui-state @*ui-state
+        history (:history ui-state) ]
+    ((:on-save ui-state) (prn-str history))))
+
+(definterceptor open
+  {:manual? true}
+  [*ui-state]
+  ((:on-load @*ui-state) *ui-state "/Users/jack/Desktop/test.drop"))
+
 (def universal-interceptors
   {:click click
    :drag drag
@@ -402,7 +414,9 @@
    :cmd+1 h1
    :cmd+2 h2
    :cmd+u ulist
-   :cmd+o olist})
+   :cmd+o olist
+   :cmd+s save
+   :cmd+shift+o open})
 
 (def default-interceptors
   (merge universal-interceptors (if (utils/is-mac?)

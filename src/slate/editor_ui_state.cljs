@@ -1,8 +1,14 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [clojure.spec.alpha :as s]
-            [slate.model.editor-state :as es :refer [>>=]]
+            [clojure.edn :as edn]
             [slate.model.history :as history]
+            [slate.model.editor-state :as es :refer [>>= map->EditorState map->EditorUpdate]]
+            [slate.model.doc :refer [map->Document]]
+            [slate.model.paragraph :refer [map->Paragraph]]
+            [slate.model.run :refer [map->Run]]
+            [slate.model.selection :refer [map->Selection]]
+            [slate.dll :refer [dll]]
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
@@ -35,6 +41,15 @@
 (def ^:const font-size-min 10)
 (def ^:const font-size-max 70)
 (def ^:const font-size-delta "Amount to increase/decrease font size by each time." 5)
+
+(def slate-types-readers
+  {'slate.model.selection.Selection map->Selection
+   'slate.model.run.Run map->Run
+   'slate.model.paragraph.Paragraph map->Paragraph
+   'slate.model.doc.Document map->Document
+   'slate.model.editor-state.EditorState map->EditorState
+   'slate.model.editor-state.EditorUpdate map->EditorUpdate
+   'DoublyLinkedList #(apply dll %)})
 
 (defn elem-width
   "Returns the width of the UIState's dom element, in pixels."
@@ -101,6 +116,13 @@
         viewmodels (map #(get viewmodels (:uuid %)) (:children doc))]
     (view/insert-all! dom-elem viewmodels editor-state)
     (reset! *ui-state new-ui-state)))
+
+(defn load-file!
+  [*ui-state file-contents-str]
+  (let [deserialized-history (edn/read-string {:readers slate-types-readers} file-contents-str)]
+    (cancel-add-tip-to-backstack! *ui-state)
+    (swap! *ui-state assoc :history deserialized-history)
+    (full-dom-render! *ui-state)))
 
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
@@ -329,7 +351,7 @@
     (.addEventListener js/window "resize" #(handle-resize! *ui-state))))
 
 (def manual-interceptors
-  "Some manual interceptors that are not pure and therefore defined here rather than default_interceptors."
+  "Some manual interceptors that are defined here rather than default_interceptors."
   (if utils/is-mac?
     {:cmd+z undo!
      :cmd+shift+z redo!
@@ -350,7 +372,7 @@
 
    Optional:
    :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
-  [& {:keys [editor-state dom-elem]}]
+  [& {:keys [editor-state dom-elem on-save on-load], :or {on-save #(), on-load #()}}]
   (let [uuid (random-uuid)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem uuid dom-elem)
@@ -360,7 +382,6 @@
                              (interceptors/reg-interceptors manual-interceptors))
         hidden-input (view/create-hidden-input!)
         *ui-state (atom {:id uuid
-                         ;; TODO: get width
                          :viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)
                          :history (history/init editor-state)
                          :add-tip-to-backstack-timer-id nil
@@ -368,7 +389,9 @@
                          :hidden-input hidden-input
                          :measure-fn measure-fn
                          :input-history []
-                         :interceptors interceptors-map})]
+                         :interceptors interceptors-map
+                         :on-save on-save
+                         :on-load on-load})]
     (init-event-handlers! *ui-state)
     (full-dom-render! *ui-state)
 

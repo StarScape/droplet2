@@ -814,7 +814,6 @@
                                        :between (set (dll/uuids-between (:children doc) current-uuid started-uuid))))]
     (nav/autoset-formats doc raw-selection)))
 
-
 (defn create-hidden-input!
   "Creates hidden input element used to capture keystrokes."
   []

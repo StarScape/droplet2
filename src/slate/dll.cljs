@@ -144,9 +144,8 @@
 
   IPrintWithWriter
   (-pr-writer [dll writer opts]
-    (-write writer "#DoublyLinkedList [")
-    (-write writer (seq dll))
-    (-write writer "]"))
+    (-write writer "#DoublyLinkedList")
+    (-write writer (vec dll)))
   #_(-pr-writer [dll writer opts]
                 (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
                 (-write writer ", first-uuid: ") (-write writer (.-first-uuid dll))

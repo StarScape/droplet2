@@ -18,3 +18,5 @@
   (:require [slate.editor-ui-state :as ui-state]))
 
 (def init! ui-state/init!)
+
+(def load-file! ui-state/load-file!)
