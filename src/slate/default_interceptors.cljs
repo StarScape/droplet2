@@ -335,15 +335,20 @@
 
 (definterceptor save
   {:manual? true}
-  [*ui-state]
-  (let [ui-state @*ui-state
-        history (:history ui-state) ]
+  [*ui-state _]
+  (let [{:keys [history] :as ui-state} @*ui-state]
     ((:on-save ui-state) (prn-str history))))
+
+(definterceptor save-as
+  {:manual? true}
+  [*ui-state _]
+  (let [{:keys [history] :as ui-state} @*ui-state]
+    ((:on-save-as ui-state) (prn-str history))))
 
 (definterceptor open
   {:manual? true}
-  [*ui-state]
-  ((:on-load @*ui-state) *ui-state "/Users/jack/Desktop/test.drop"))
+  [*ui-state _]
+  ((:on-load @*ui-state) *ui-state))
 
 (def universal-interceptors
   {:click click
@@ -416,6 +421,7 @@
    :cmd+u ulist
    :cmd+o olist
    :cmd+s save
+   :cmd+shift+s save-as
    :cmd+shift+o open})
 
 (def default-interceptors

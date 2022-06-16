@@ -2,8 +2,9 @@
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [clojure.spec.alpha :as s]
             [clojure.edn :as edn]
+            [drop.utils :as drop-utils]
             [slate.model.history :as history]
-            [slate.model.editor-state :as es :refer [>>= map->EditorState map->EditorUpdate]]
+            [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
             [slate.model.doc :refer [map->Document]]
             [slate.model.paragraph :refer [map->Paragraph]]
             [slate.model.run :refer [map->Run]]
@@ -50,6 +51,11 @@
    'slate.model.editor-state.EditorState map->EditorState
    'slate.model.editor-state.EditorUpdate map->EditorUpdate
    'DoublyLinkedList #(apply dll %)})
+
+(defn deserialize
+  "Parses the EDN of the saved editor file and returns the data structure (atm, the :history map)."
+  [edn-str]
+  (edn/read-string {:readers slate-types-readers} edn-str))
 
 (defn elem-width
   "Returns the width of the UIState's dom element, in pixels."
@@ -119,7 +125,7 @@
 
 (defn load-file!
   [*ui-state file-contents-str]
-  (let [deserialized-history (edn/read-string {:readers slate-types-readers} file-contents-str)]
+  (let [deserialized-history (deserialize file-contents-str)]
     (cancel-add-tip-to-backstack! *ui-state)
     (swap! *ui-state assoc :history deserialized-history)
     (full-dom-render! *ui-state)))
@@ -371,19 +377,23 @@
    :dom-elem - The DOM element that the editor will be displayed in
 
    Optional:
-   :editor-state - The initial editor-state to load into the editor. Will default to an empty document."
-  [& {:keys [editor-state dom-elem on-save on-load], :or {on-save #(), on-load #()}}]
+   :editor-state - The initial EditorState to load into the editor. Will default to an empty document.
+   OR
+   :history - The restored, deserialized history object."
+  [& {:keys [editor-state history dom-elem on-save on-save-as on-open]
+      :or {on-save #(), on-save-as #(), on-open #()}}]
   (let [uuid (random-uuid)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem uuid dom-elem)
         editor-state (or editor-state (es/editor-state))
+        history (or history (history/init editor-state))
         interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
         hidden-input (view/create-hidden-input!)
         *ui-state (atom {:id uuid
-                         :viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)
-                         :history (history/init editor-state)
+                         :viewmodels (vm/from-doc (:doc (history/current-state history)) dom-elem-width measure-fn)
+                         :history history
                          :add-tip-to-backstack-timer-id nil
                          :dom-elem dom-elem
                          :hidden-input hidden-input
@@ -391,7 +401,8 @@
                          :input-history []
                          :interceptors interceptors-map
                          :on-save on-save
-                         :on-load on-load})]
+                         :on-save-as on-save-as
+                         :on-load on-open})]
     (init-event-handlers! *ui-state)
     (full-dom-render! *ui-state)
 

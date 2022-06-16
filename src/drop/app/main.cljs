@@ -23,6 +23,9 @@
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Copy (and maybe paste) rich text
 
+;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to
+;; repro, upgrade shadow-cljs and then fire the save interceptor with cmd+s
+
 (defn remove-old-hidden-inputs []
   (-> (.querySelectorAll js/document ".hidden-input")
       (.forEach (fn [elem] (.remove elem)))))

@@ -1,56 +1,40 @@
 (ns drop.app.components.slate-editor
   (:require [slate.editor-ui-state :as ui-state]
-            [slate.model.run :refer [run]]
-            [slate.model.paragraph :refer [paragraph]]
-            [slate.model.doc :refer [document]]
-            [slate.model.editor-state :refer [editor-state] :as es]
-            [slate.model.selection :as sel]
             [slate.core :as sl]
             [slate.utils :as utils]
-            [reagent.core :as r]
             ["electron" :refer [ipcRenderer]]))
 
-;; (defn update-formats-elem
-;;   [_key _atom _old-state new-state]
-;;   (let [sel (:selection (history/current-state (:history new-state)))
-;;         formats-str (str "Formats: " (str/join \, (:formats sel)))
-;;         elem (js/document.getElementById "formats")]
-;;     (set! (.-innerHTML elem) formats-str)))
+;; TODO: persist dis bih
+(def *open-file (atom nil))
 
-(defn- init-test-editor-state []
-  (let [paragraphs [(paragraph (uuid "p1") :h1 [(run "A Title")])
-                    (paragraph (uuid "p2") :h2 [(run "A subtitle")])
-                    (paragraph (uuid "s1") :ul [(run "A bullet")])
-                    (paragraph (uuid "s2") :ul [(run "And anotha")])
-                    (paragraph (uuid "div1") [(run)])
-                    (paragraph (uuid "p3") [(run "Hello world, this is an example of a paragraph ")
-                                            (run "that I might want to split into lines. I'm really just typing a bunch of random stuff in here. " #{:italic})
-                                            (run "Don't know what else to say. Hmmmm..." #{:bold})])
-                    (paragraph (uuid "p4") [(run "And another paragraph here")])
-                    (paragraph (uuid "div2") [(run)])
-                    (paragraph (uuid "ol1") :ul [(run "Bullet 1")])
-                    (paragraph (uuid "ol2") :ul [(run "Bullet 2")])
-                    (paragraph (uuid "ol3") :ul [(run "Bullet 3")])
-                    (paragraph (uuid "emptyboi") [(run "")])
-                    (paragraph [(run "(Take a break.)")])
-                    (paragraph (uuid "ul1") :ol [(run "Ordered item 1")])
-                    (paragraph (uuid "ul2") :ol [(run "Ordered item 2")])
-                    (paragraph (uuid "ul3") :ol [(run "Ordered item 3")])
-                    (paragraph (uuid "div3") [(run)])
-                    (paragraph (uuid "p5") [(run "And this is paragraph número dos.")])]
-        doc (document paragraphs)
-        selection (sel/selection [(uuid "p3") 1])]
-    (editor-state doc selection)))
+(defn slate-editor [file-deserialized]
+  [:div.slate-editor
+   {:ref (fn [elem]
+           (when elem
+             (let [on-save-as (fn [serialized]
+                                (-> (.invoke ipcRenderer "save-file-as" serialized)
+                                    (.then #(reset! *open-file %))
+                                    (.catch #())))
+                   *ui-state (sl/init! :history file-deserialized
+                                       :dom-elem elem
+                                       :on-save (fn [serialized]
+                                                  (if @*open-file
+                                                    (.send ipcRenderer "save-file" @*open-file serialized)
+                                                    (on-save-as serialized)))
+                                       :on-save-as on-save-as
+                                       :on-open (fn [*ui-state]
+                                                  (-> (.invoke ipcRenderer "choose-file")
+                                                      (.then (fn [[file-path contents]]
+                                                               (reset! *open-file file-path)
+                                                               (sl/load-file! *ui-state contents)))
+                                                      (.catch #(js/console.log %)))))]
+               ;; Utility for viewing editor history from console
+               (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state)))))))}])
 
-(defn slate-editor []
-  [:div.slate-editor {:ref (fn [elem]
-                             (when elem
-                               (let [*ui-state (sl/init! :editor-state (init-test-editor-state)
-                                                         :dom-elem elem
-                                                         :on-save (fn [serialized]
-                                                                    (.send ipcRenderer "save-file" serialized))
-                                                         :on-load (fn [*ui-state filename]
-                                                                    (let [file-contents (.sendSync ipcRenderer "open-file" filename)]
-                                                                      (sl/load-file! *ui-state file-contents))))]
-                                 ;; Utility for viewing editor history from console
-                                 (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state)))))))}])
+(defn main-editor []
+  (let [current-file @*open-file]
+    (if current-file
+      (let [file-contents (.sendSync ipcRenderer "read-file" current-file)
+            deserialized (ui-state/deserialize file-contents)]
+        (slate-editor deserialized))
+      (slate-editor nil))))

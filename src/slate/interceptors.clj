@@ -109,4 +109,12 @@
    '(definterceptor click
       [editor-state full-ui-state event]
       (+ 1 2 3)))
+
+  (macroexpand
+   '(interceptor
+      {:input-name :foo
+       :manual? true}
+      [*ui-state _]
+      (let [{:keys [history] :as ui-state} @*ui-state]
+        ((:on-save ui-state) (prn-str history)))))
   )

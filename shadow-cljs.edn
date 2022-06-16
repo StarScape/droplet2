@@ -1,7 +1,8 @@
 {:source-paths ["src" "test"]
  :dependencies [[hashp "0.2.0"]
                 [cider/cider-nrepl "0.24.0"]
-                [reagent "1.1.1"]]
+                [reagent "1.1.1"]
+                #_[org.clojure/core.async "1.4.627"]]
  :dev-http {8080 "public"}
  :nrepl {:port 3333}
  :builds
