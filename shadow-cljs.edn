@@ -12,7 +12,7 @@
          :modules {:main {:init-fn drop.app.main/main}}
          :nrepl {:init-ns user}
          :devtools {:preloads [hashp.core]}
-         ;; Allows requiring electron in the NS form instead of calling js/require
+         ;; Allows requiring electron in the NS form instead of calling (js/require ...)
          ;; see https://clojurians-log.clojureverse.org/shadow-cljs/2020-08-14/1597438743.184900
          :js-options {:js-provider :require}}
    :electron {:target :node-script

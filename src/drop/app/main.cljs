@@ -12,7 +12,9 @@
             [drop.app.components.core :as components]
             [reagent.dom :as rdom]))
 
-;; TODO: File saving/loading
+;; PROG: File saving/loading
+;; TODO: look into using localStorage instead of passing data across threads
+
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Learn about TailwindCSS
 ;; TODO: Look into React animation libraries

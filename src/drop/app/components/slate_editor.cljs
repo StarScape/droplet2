@@ -1,11 +1,14 @@
 (ns drop.app.components.slate-editor
-  (:require [slate.editor-ui-state :as ui-state]
+  (:require [drop.app.persistent-atom :refer [persistent-atom]]
+            [slate.editor-ui-state :as ui-state]
             [slate.core :as sl]
             [slate.utils :as utils]
             ["electron" :refer [ipcRenderer]]))
 
 ;; TODO: persist dis bih
 (def *open-file (atom nil))
+
+(def foo (persistent-atom ::foo {:a 13}))
 
 (defn slate-editor [file-deserialized]
   [:div.slate-editor

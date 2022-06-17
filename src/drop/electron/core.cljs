@@ -3,58 +3,53 @@
             ["electron-is-dev" :as is-dev?]
             ["electron-window-state" :as window-state-keeper]
             ["fs" :as fs]
-            ["path" :as path]
-            #_#_[cljs.core.async :refer [go]]
-            [cljs.core.async.interop :refer-macros [<p!]]
-            [clojure.edn :as edn]))
+            [drop.electron.utils :refer [on-ipc handle-ipc]]
+            [drop.electron.persistent-atoms :as p-atoms]))
 
 (js/console.log "Evaluating main electron file...")
 
 (def main-window (atom nil))
 
-(defn on-ipc [channel handler]
-  (.on ipcMain channel handler))
-
-(defn handle-ipc [channel handler]
-  (.handle ipcMain channel handler))
-
 (defn reg-ipc-handlers! []
+  (p-atoms/reg-handler!)
+
   (on-ipc "save-file"
     (fn [_ file-path file-contents]
-      (fs/writeFileSync file-path file-contents)))
+      (fs/writeFile file-path file-contents
+                    (fn [err] (when err (js/console.error err))))))
 
   (handle-ipc "save-file-as"
     (fn [_ file-contents]
       (js/Promise.
-      (fn [resolve, reject]
-        (-> (.showSaveDialog dialog @main-window
+       (fn [resolve, reject]
+         (-> (.showSaveDialog dialog @main-window
                               (clj->js {:title "Save As..."
                                         :filters [{:name "Droplet File"
-                                                  :extensions [".drop"]}]}))
-            (.then (fn [result]
+                                                   :extensions [".drop"]}]}))
+             (.then (fn [result]
                       (if ^js (.-canceled result)
                         (reject "canceled")
                         (do
                           (fs/writeFileSync ^js (.-filePath result) file-contents)
                           (resolve ^js (.-filePath result))))))
-            (.catch #()))))))
+             (.catch #())))))) 
 
   (handle-ipc "choose-file"
-    (fn [e]
+    (fn [_]
       (js/Promise.
-      (fn [resolve, reject]
-        (-> (.showOpenDialog dialog @main-window
+       (fn [resolve, reject]
+         (-> (.showOpenDialog dialog @main-window
                               (clj->js {:title "Open .drop"
                                         :filters [{:name "Droplet File"
-                                                  :extensions [".drop"]}]
+                                                   :extensions [".drop"]}]
                                         :properties ["openFile"]}))
-            (.then (fn [result]
+             (.then (fn [result]
                       (js/console.log result)
                       (if-not ^js (.-canceled result)
                         (let [file-path (nth ^js (.-filePaths result) 0)]
                           (fs/readFile file-path "utf8" #(resolve #js [file-path %2])))
                         (reject "canceled"))))
-            (.catch #()))))))
+             (.catch #()))))))
 
   (on-ipc "read-file"
     (fn [e file-path]
