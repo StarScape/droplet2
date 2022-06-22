@@ -13,7 +13,7 @@
             [reagent.dom :as rdom]))
 
 ;; PROG: File saving/loading
-;; TODO: look into using localStorage instead of passing data across threads
+;; TODO: look into using localStorage instead of passing data across threads (can wait)
 
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Learn about TailwindCSS
