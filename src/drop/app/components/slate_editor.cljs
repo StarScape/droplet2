@@ -1,16 +1,18 @@
 (ns drop.app.components.slate-editor
   (:require [drop.app.persistent-atom :refer [persistent-atom]]
+            [drop.app.components.actionbar :refer [actionbar]]
             [slate.editor-ui-state :as ui-state]
             [slate.core :as sl]
+            [slate.default-interceptors :as ints]
             [slate.utils :as utils]
             ["electron" :refer [ipcRenderer]]))
 
 ;; TODO: persist dis bih
 (def *open-file (atom nil))
 
-(def foo (persistent-atom ::foo {:a 13}))
+;; (def foo (persistent-atom ::foo {:a 13}))
 
-(defn slate-editor [file-deserialized]
+(defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
   [:div.slate-editor
    {:ref (fn [elem]
            (when elem
@@ -18,7 +20,8 @@
                                 (-> (.invoke ipcRenderer "save-file-as" serialized)
                                     (.then #(reset! *open-file %))
                                     (.catch #())))
-                   *ui-state (sl/init! :history file-deserialized
+                   *ui-state (sl/init! :*atom ui-state-atom
+                                       :history file-deserialized
                                        :dom-elem elem
                                        :on-save (fn [serialized]
                                                   (if @*open-file
@@ -35,9 +38,20 @@
                (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state)))))))}])
 
 (defn main-editor []
-  (let [current-file @*open-file]
-    (if current-file
-      (let [file-contents (.sendSync ipcRenderer "read-file" current-file)
-            deserialized (ui-state/deserialize file-contents)]
-        (slate-editor deserialized))
-      (slate-editor nil))))
+  (let [*slate-instance (atom nil)
+        current-file @*open-file
+        deserialized-file-contents (if current-file
+                                     (let [file-contents (.sendSync ipcRenderer "read-file" current-file)]
+                                       (ui-state/deserialize file-contents))
+                                     nil)]
+    [:div
+     [slate-editor {:file-deserialized deserialized-file-contents
+                    :ui-state-atom *slate-instance}]
+     [actionbar #{} #(let [interceptor (case %
+                                         :italic ints/italic
+                                         :bold ints/bold
+                                         :h1 ints/h1
+                                         :h2 ints/h2
+                                         :ol ints/olist
+                                         :ul ints/ulist)]
+                       (ui-state/fire-interceptor! *slate-instance #p interceptor (js/Event. "keydown")))]]))

@@ -374,14 +374,18 @@
    of keyword arguments:
 
    Required:
+
    :dom-elem - The DOM element that the editor will be displayed in
 
    Optional:
+
    :editor-state - The initial EditorState to load into the editor. Will default to an empty document.
    OR
-   :history - The restored, deserialized history object."
-  [& {:keys [editor-state history dom-elem on-save on-save-as on-open]
-      :or {on-save #(), on-save-as #(), on-open #()}}]
+   :history - The restored, deserialized history object.
+
+   :*atom IAtom into which the editor state will be intialized If one is not provided, an atom will be initialized and returned."
+  [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open]
+      :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
   (let [uuid (random-uuid)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem uuid dom-elem)
@@ -390,20 +394,20 @@
         interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
-        hidden-input (view/create-hidden-input!)
-        *ui-state (atom {:id uuid
-                         :viewmodels (vm/from-doc (:doc (history/current-state history)) dom-elem-width measure-fn)
-                         :history history
-                         :add-tip-to-backstack-timer-id nil
-                         :dom-elem dom-elem
-                         :hidden-input hidden-input
-                         :measure-fn measure-fn
-                         :input-history []
-                         :interceptors interceptors-map
-                         :on-save on-save
-                         :on-save-as on-save-as
-                         :on-load on-open})]
-    (init-event-handlers! *ui-state)
-    (full-dom-render! *ui-state)
+        hidden-input (view/create-hidden-input!)]
+    (reset! *atom {:id uuid
+                   :viewmodels (vm/from-doc (:doc (history/current-state history)) dom-elem-width measure-fn)
+                   :history history
+                   :add-tip-to-backstack-timer-id nil
+                   :dom-elem dom-elem
+                   :hidden-input hidden-input
+                   :measure-fn measure-fn
+                   :input-history []
+                   :interceptors interceptors-map
+                   :on-save on-save
+                   :on-save-as on-save-as
+                   :on-load on-open})
+    (init-event-handlers! *atom)
+    (full-dom-render! *atom)
 
-    *ui-state))
+    *atom))

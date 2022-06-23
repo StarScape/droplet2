@@ -294,11 +294,11 @@
       (>>= m/insert "—")))
 
 ;; Formatting
-(definterceptor ctrl+i
+(definterceptor italic
   [editor-state _ _]
   (m/toggle-format editor-state :italic))
 
-(definterceptor ctrl+b
+(definterceptor bold
   [editor-state _ _]
   (m/toggle-format editor-state :bold))
 
@@ -380,8 +380,8 @@
    :ctrl+right ctrl+right
    :ctrl+shift+right ctrl+shift+right
    :ctrl+a select-all
-   :ctrl+i ctrl+i
-   :ctrl+b ctrl+b
+   :ctrl+i italic
+   :ctrl+b bold
    ;; TODO: should these be in universal-interceptors?
    :pageup start-of-line
    :pagedown end-of-line
@@ -414,8 +414,8 @@
    :cmd+up start-of-doc
    :cmd+down end-of-doc
    :cmd+a select-all
-   :cmd+i ctrl+i
-   :cmd+b ctrl+b
+   :cmd+i italic
+   :cmd+b bold
    :cmd+1 h1
    :cmd+2 h2
    :cmd+u ulist
