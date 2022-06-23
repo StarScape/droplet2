@@ -5,6 +5,7 @@
             [slate.core :as sl]
             [slate.default-interceptors :as ints]
             [slate.utils :as utils]
+            [reagent.core :as r]
             ["electron" :refer [ipcRenderer]]))
 
 ;; TODO: persist dis bih
@@ -38,20 +39,24 @@
                (set! js/dumpHistory #(js/console.log (utils/pretty-history-stack (:history @*ui-state)))))))}])
 
 (defn main-editor []
-  (let [*slate-instance (atom nil)
+  (let [active-formats (r/atom #{})
+        *slate-instance (atom nil)
         current-file @*open-file
         deserialized-file-contents (if current-file
                                      (let [file-contents (.sendSync ipcRenderer "read-file" current-file)]
                                        (ui-state/deserialize file-contents))
                                      nil)]
-    [:div
-     [slate-editor {:file-deserialized deserialized-file-contents
-                    :ui-state-atom *slate-instance}]
-     [actionbar #{} #(let [interceptor (case %
-                                         :italic ints/italic
-                                         :bold ints/bold
-                                         :h1 ints/h1
-                                         :h2 ints/h2
-                                         :ol ints/olist
-                                         :ul ints/ulist)]
-                       (ui-state/fire-interceptor! *slate-instance #p interceptor (js/Event. "keydown")))]]))
+    (add-watch *slate-instance :watcher (fn [_key _atom _old-state _new-state]
+                                          (reset! active-formats (ui-state/active-formats @*slate-instance))))
+    (fn []
+      [:div
+       [slate-editor {:file-deserialized deserialized-file-contents
+                      :ui-state-atom *slate-instance}]
+       [actionbar @active-formats #(let [interceptor (case %
+                                                       :italic ints/italic
+                                                       :bold ints/bold
+                                                       :h1 ints/h1
+                                                       :h2 ints/h2
+                                                       :ol ints/olist
+                                                       :ul ints/ulist)]
+                                     (ui-state/fire-interceptor! *slate-instance interceptor (js/Event. "keydown")))]])))

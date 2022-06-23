@@ -10,12 +10,12 @@
 
 (defn button [text active? on-click]
   [:button {:on-click on-click
-            :style {:background-color (if active? "lightblue" "default")}}
+            :style {:background-color (if active? "lightblue" "white")}}
    text])
 
 (defn actionbar [active-formats on-format-toggle]
   [:div
-   [button "i" (active-formats :italic) #(on-format-toggle #p :italic)]
+   [button "i" (active-formats :italic) #(on-format-toggle :italic)]
    [button "b" (active-formats :bold) #(on-format-toggle :bold)]
    [button "s" (active-formats :strikethrough) #(on-format-toggle :strikethrough)]
    [button "h1" (active-formats :h1) #(on-format-toggle :h1)]

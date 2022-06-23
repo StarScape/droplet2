@@ -1,14 +1,14 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]])
-  (:require [clojure.spec.alpha :as s]
-            [clojure.edn :as edn]
-            [drop.utils :as drop-utils]
+  (:require [clojure.edn :as edn]
+            [clojure.spec.alpha :as s]
+            [slate.model.common :as m]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
             [slate.model.doc :refer [map->Document]]
             [slate.model.paragraph :refer [map->Paragraph]]
             [slate.model.run :refer [map->Run]]
-            [slate.model.selection :refer [map->Selection]]
+            [slate.model.selection :as sel :refer [map->Selection]]
             [slate.dll :refer [dll]]
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
@@ -61,6 +61,18 @@
   "Returns the width of the UIState's dom element, in pixels."
   [ui-state]
   (.-width (.getBoundingClientRect (:dom-elem ui-state))))
+
+(defn active-formats [ui-state]
+  (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
+        paragraph-type (if (sel/single? selection)
+                         (:type (get (:children doc) (sel/caret-para selection)))
+                         (let [selected (m/selected-content state)]
+                           (when (apply = (map :type selected))
+                             (:type (first selected)))))
+        selection-formats (-> state :selection :formats)]
+    (if (some? paragraph-type)
+      (conj selection-formats paragraph-type)
+      selection-formats)))
 
 (defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
@@ -383,7 +395,7 @@
    OR
    :history - The restored, deserialized history object.
 
-   :*atom IAtom into which the editor state will be intialized If one is not provided, an atom will be initialized and returned."
+   :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
   [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open]
       :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
   (let [uuid (random-uuid)
