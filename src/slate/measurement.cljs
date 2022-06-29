@@ -24,7 +24,7 @@
     (set! (.-whiteSpace style) "pre")
     (set! (.-margin style) 0)
     (set! (.-padding style) 0)
-    (set! (.-fontFamily style) #p font-family)
+    (set! (.-fontFamily style) font-family)
     (set! (.-fontStyle style) "normal")
     (set! (.-fontWeight style) "normal")
     (.appendChild outer-elem elem)
@@ -89,8 +89,6 @@
    And returns the width the text will take up, in pixels."
   [uuid elem shadow-root]
   (let [style (js/getComputedStyle elem)]
-    (set! js/window.foobar elem)
-    ;; (js-debugger)
     (ruler uuid
            shadow-root
            (.getPropertyValue style "font-size")

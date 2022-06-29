@@ -1,7 +1,9 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]])
+  (:require-macros [garden.def :refer [defkeyframes]])
   (:require [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
+            [garden.core :refer [css]]
             [slate.model.common :as m]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
@@ -380,102 +382,63 @@
      :ctrl+= increase-font-size!
      :ctrl+- decrease-font-size!}))
 
-(def style
-"body {
-  /* TODO: for now globally disabled for simplicity, either set manually on all elements or use shadow DOM. */
-  font-kerning: none !important;
-}
+(defkeyframes blink
+  [:50%
+   {:opacity 0}])
 
-/* TODO: take this completely out of flow if possible */
-.hidden-input {
-  opacity: 0;
-  position: absolute;
-  left: -10000px;
-  width: 0px;
-  height: 0px;
-  pointer-events: none;
-  z-index: -1000;
-}
+(def shadow-elem-style
+  [[:body {:font-kerning "none !important"}]
+   [:.hidden-input {:opacity 0
+                    :position "absolute"
+                    :right "10000px"
+                    :z-index -10000
+                    :width "0px"
+                    :height "0px"
+                    :pointer-events "none"}]
+   [:.slate-editor {:white-space "pre"
+                    :width "95vw"
+                    :height "70vh"
+                    :margin 0
+                    :padding 0
+                    :border "1px solid grey"
+                    :font-size "15px"
+                    :font-family "serif"
+                    :user-select "none"}
+    [:&:hover {:cursor "text"}]]
+   [:.paragraph {:margin "0px"
+                 :padding 0
+                 :min-height "1em"}]
+   ;; When there is an empty paragraph with just a caret in it, we need to render a _bit_
+   ;; of text, so that the height of the paragraph is set to the same as any other ('font height' is
+   ;; not possible to get programmatically) . This solves that.
+   [:.line::after {:content "\" \""}]
+   [:.slate-text-caret {:position "absolute"
+                        :width "1px"
+                        :background-color "black"
+                        :animation "blink 1.2s infinite"
+                        :animation-delay "0.5s"}
+    [:&::after {:content "\" \""}]]
+   [:.slate-range-selection {:background-color "#b4ddff"}]
+   [:.slate-range-selection-blurred {:background-color "#e0e1e2"}]
+   blink
+   [:ul :ol {:padding 0
+             :margin 0}]
+   [:.ul-format :.ol-format {:display "list-item"
+                             :margin-left "1.25em"}]
+   [:.ul-format {:list-style-type "disc"}]
+   [:.ol-format {:list-style-type "decimal"}]
+   [:.h1-format {:font-size "2em"}]
+   [:.h2-format {:font-size "1.25em"}]
+   [:.italic-format {:font-style "italic !important"}]
+   [:.bold-format {:font-weight "bold !important"}]
+   [:.underline-format {:text-decoration "line-through !important"}]])
 
-.slate-editor {
-  white-space: pre;
-  width: 95vw;
-  height: 70vh;
-  margin: 0;
-  padding: 0;
-  border: 1px solid grey;
-
-  font-size: 15px;
-  font-family: serif;
-  user-select: none;
-}
-
-.slate-editor:hover {
-  cursor: text;
-}
-
-.paragraph {
-  margin: 0px;
-  padding: 0;
-  min-height: 1em;
-}
-
-/**
-  * When there is an empty paragraph with just a caret in it, we need to render a _bit_
-  * of text, so that the height of the paragraph is set to the same as any other ('font height' is
-  * not possible to get programmatically). This solves that.
-  */
-.line::after {
-  content: \" \";
-}
-
-.slate-text-caret {
-  position: absolute;
-  width: 1px;
-  background-color: black;
-  animation: blink 1.2s infinite;
-  animation-delay: 0.5s;
-}
-
-.slate-text-caret::after {
-  content: \" \";
-}
-
-.slate-range-selection {
-  background-color: #b4ddff;
-}
-
-/* Range selection when it is not in focus */
-.slate-range-selection-blurred {
-  background-color: #e0e1e2;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
-}
-
-ul, ol {
-  padding: 0;
-  margin: 0;
-}
-
-.ul-format, .ol-format {
-  display: list-item;
-  margin-left: 1.25em;
-}
-.ul-format { list-style-type: disc; }
-.ol-format { list-style-type: decimal; }
-.h1-format { font-size: 2em; }
-.h2-format { font-size: 1.25em; }
-.italic-format { font-style: italic !important; }
-.bold-format { font-weight: bold !important; }
-.underline-format { text-decoration: line-through !important; }")
+(print (apply css shadow-elem-style))
 
 (defn init-shadow-dom! [slate-top-level-elem]
   (.attachShadow slate-top-level-elem #js {:mode "open"})
-  (set! (.. slate-top-level-elem -shadowRoot -innerHTML) (str "<style>" style "</style>"))
+  (set! (.. slate-top-level-elem -shadowRoot -innerHTML)
+        (str "<style>" (apply css shadow-elem-style) "</style>"))
 
   ;; There are some things you cannot do (like set outerHTML on elements, among other
   ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
