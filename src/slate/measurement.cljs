@@ -5,7 +5,7 @@
 
 (defn- create-elem!
   "Creates measurement element and adds it to the DOM."
-  [editor-id font-size font-family]
+  [editor-id shadow-root font-size font-family]
   (let [outer-elem (.createElement js/document "div")
         outer-elem-id (str "measurement-elem-" editor-id)
         elem (.createElement js/document "div")
@@ -24,11 +24,11 @@
     (set! (.-whiteSpace style) "pre")
     (set! (.-margin style) 0)
     (set! (.-padding style) 0)
-    (set! (.-fontFamily style) font-family)
+    (set! (.-fontFamily style) #p font-family)
     (set! (.-fontStyle style) "normal")
     (set! (.-fontWeight style) "normal")
     (.appendChild outer-elem elem)
-    (.. js/document -body (appendChild outer-elem))
+    (.appendChild shadow-root outer-elem)
     elem))
 
 (defn- apply-css! [elem formats paragraph-type]
@@ -73,9 +73,9 @@
    Measurements are made by capturing the width of a hidden DOM element, but
    a cache of these values is maintained in the background, so subsequent calls
    will be cheaper."
-  [editor-id font-size font-family]
+  [editor-id shadow-root font-size font-family]
   (let [cache #js {}
-        elem (create-elem! editor-id font-size font-family)]
+        elem (create-elem! editor-id shadow-root font-size font-family)]
     (fn [& args] (apply measure elem cache args))))
 
 (defn ruler-for-elem
@@ -87,9 +87,12 @@
    - `paragraph-type`: __(optional)__ the type of the paragraph, such as `:h1` or `:h2` (default `:body`)
 
    And returns the width the text will take up, in pixels."
-  [uuid elem]
+  [uuid elem shadow-root]
   (let [style (js/getComputedStyle elem)]
+    (set! js/window.foobar elem)
+    ;; (js-debugger)
     (ruler uuid
+           shadow-root
            (.getPropertyValue style "font-size")
            (.getPropertyValue style "font-family"))))
 

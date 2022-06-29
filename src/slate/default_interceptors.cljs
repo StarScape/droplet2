@@ -54,6 +54,7 @@
   (let [new-sel (view/mouse-event->selection event
                                              (:doc editor-state)
                                              (:viewmodels ui-state)
+                                             (:dom-elem ui-state)
                                              (:measure-fn ui-state))]
     (es/set-selection editor-state new-sel)))
 
@@ -63,6 +64,7 @@
   (es/set-selection editor-state (view/drag event
                                             (:doc editor-state)
                                             (:viewmodels ui-state)
+                                            (:dom-elem ui-state)
                                             (:measure-fn ui-state))))
 
 (definterceptor left
@@ -194,11 +196,11 @@
 
    This function will do that, calling the supplied vertical navigation function, remembering the start
    offset when appropriate, and return an EditorUpdate."
-  [vertical-nav-fn editor-state {:keys [input-history viewmodels measure-fn] :as ui-state}]
+  [vertical-nav-fn editor-state {:keys [input-history viewmodels dom-elem measure-fn] :as ui-state}]
   (let [last-event-vertical-nav? (vertical-nav-events (peek input-history))
         start-pos (when last-event-vertical-nav?
                     (extras/get ui-state :horizontal-start-pos nil))
-        vertical-nav-update (vertical-nav-fn editor-state viewmodels measure-fn start-pos)]
+        vertical-nav-update (vertical-nav-fn editor-state viewmodels dom-elem measure-fn start-pos)]
     (when-not last-event-vertical-nav?
       (extras/set! ui-state
                    :horizontal-start-pos

@@ -14,7 +14,7 @@
 ;; (def foo (persistent-atom ::foo {:a 13}))
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
-  [:div.slate-editor
+  [:div.react-slate-elem
    {:ref (fn [elem]
            (when elem
              (let [on-save-as (fn [serialized]

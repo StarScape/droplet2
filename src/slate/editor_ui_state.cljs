@@ -170,9 +170,9 @@
 
 (defn set-font-size!
   [*ui-state new-size]
-  (let [{:keys [id dom-elem]} @*ui-state]
+  (let [{:keys [id dom-elem shadow-root]} @*ui-state]
     (set! (.. dom-elem -style -fontSize) (str new-size "px"))
-    (swap! *ui-state assoc :measure-fn (ruler-for-elem id dom-elem))
+    (swap! *ui-state assoc :measure-fn (ruler-for-elem id dom-elem shadow-root))
     (full-dom-render! *ui-state)))
 
 (definterceptor increase-font-size!
@@ -380,6 +380,111 @@
      :ctrl+= increase-font-size!
      :ctrl+- decrease-font-size!}))
 
+(def style
+"body {
+  /* TODO: for now globally disabled for simplicity, either set manually on all elements or use shadow DOM. */
+  font-kerning: none !important;
+}
+
+/* TODO: take this completely out of flow if possible */
+.hidden-input {
+  opacity: 0;
+  position: absolute;
+  left: -10000px;
+  width: 0px;
+  height: 0px;
+  pointer-events: none;
+  z-index: -1000;
+}
+
+.slate-editor {
+  white-space: pre;
+  width: 95vw;
+  height: 70vh;
+  margin: 0;
+  padding: 0;
+  border: 1px solid grey;
+
+  font-size: 15px;
+  font-family: serif;
+  user-select: none;
+}
+
+.slate-editor:hover {
+  cursor: text;
+}
+
+.paragraph {
+  margin: 0px;
+  padding: 0;
+  min-height: 1em;
+}
+
+/**
+  * When there is an empty paragraph with just a caret in it, we need to render a _bit_
+  * of text, so that the height of the paragraph is set to the same as any other ('font height' is
+  * not possible to get programmatically). This solves that.
+  */
+.line::after {
+  content: \" \";
+}
+
+.slate-text-caret {
+  position: absolute;
+  width: 1px;
+  background-color: black;
+  animation: blink 1.2s infinite;
+  animation-delay: 0.5s;
+}
+
+.slate-text-caret::after {
+  content: \" \";
+}
+
+.slate-range-selection {
+  background-color: #b4ddff;
+}
+
+/* Range selection when it is not in focus */
+.slate-range-selection-blurred {
+  background-color: #e0e1e2;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+ul, ol {
+  padding: 0;
+  margin: 0;
+}
+
+.ul-format, .ol-format {
+  display: list-item;
+  margin-left: 1.25em;
+}
+.ul-format { list-style-type: disc; }
+.ol-format { list-style-type: decimal; }
+.h1-format { font-size: 2em; }
+.h2-format { font-size: 1.25em; }
+.italic-format { font-style: italic !important; }
+.bold-format { font-weight: bold !important; }
+.underline-format { text-decoration: line-through !important; }")
+
+(defn init-shadow-dom! [slate-top-level-elem]
+  (.attachShadow slate-top-level-elem #js {:mode "open"})
+  (set! (.. slate-top-level-elem -shadowRoot -innerHTML) (str "<style>" style "</style>"))
+
+  ;; There are some things you cannot do (like set outerHTML on elements, among other
+  ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
+  ;; so a top-level wrapper element is desirable over inserting straight into the shadow DOM.
+  (let [editor-elem (doto (js/document.createElement "div")
+                      (.. -classList (add "slate-editor")))]
+    (.. slate-top-level-elem -shadowRoot (appendChild editor-elem))
+    editor-elem))
+
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be updated throughout the lifetime of the editor. Takes a series
@@ -398,20 +503,23 @@
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
   [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open]
       :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
+  ;; Slate operates inside a shadow DOM to prevent global styles from interfering
   (let [uuid (random-uuid)
+        editor-elem (init-shadow-dom! dom-elem)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        measure-fn (ruler-for-elem uuid dom-elem)
+        measure-fn (ruler-for-elem uuid editor-elem (.-shadowRoot dom-elem))
         editor-state (or editor-state (es/editor-state))
         history (or history (history/init editor-state))
         interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
-        hidden-input (view/create-hidden-input!)]
+        hidden-input (view/create-hidden-input! dom-elem)]
     (reset! *atom {:id uuid
                    :viewmodels (vm/from-doc (:doc (history/current-state history)) dom-elem-width measure-fn)
                    :history history
                    :add-tip-to-backstack-timer-id nil
-                   :dom-elem dom-elem
+                   :shadow-root (.-shadow-root dom-elem)
+                   :dom-elem editor-elem
                    :hidden-input hidden-input
                    :measure-fn measure-fn
                    :input-history []

@@ -9,6 +9,19 @@
             [slate.dll :as dll]))
 
 ;; Utility functions
+(defn paragraph-uuid->dom-id
+  [uuid]
+  (str "p-" uuid))
+
+(defn dom-id->paragraph-uuid
+  [dom-id]
+  (uuid (.substr dom-id 2)))
+
+(defn get-paragraph-elem
+  [editor-elem paragraph-or-uuid]
+  (let [dom-id (paragraph-uuid->dom-id (or (:uuid paragraph-or-uuid) paragraph-or-uuid))]
+    (.querySelector editor-elem (str "#" dom-id))))
+
 (defn match-elem-in-path
   "Returns the first element in the event's path that satisfies the given selector string
    (e.g. '.someClass'), or null if one is not found. Will throw a SYNTAX_ERR if the selector
@@ -192,7 +205,7 @@
         pid (-> viewmodel :paragraph :uuid)
         para (:paragraph viewmodel)]
     (binding [*selection-ongoing?* (contains? (:between selection) pid)]
-      (str "<div class='paragraph " (paragraph-type->css-class (:type para)) "' id='" pid "'>"
+      (str "<div class='paragraph " (paragraph-type->css-class (:type para)) "' id='p-" pid "'>"
            (apply str (map #(vm-line->dom % selection pid (sl/len para)) lines))
            "</div>"))))
 
@@ -207,11 +220,11 @@
 (defn- next-dom-paragraph-after
   "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom.
    If no paragraphs are found at all, returns `nil`."
-  [uuid paragraphs-dll]
+  [editor-elem uuid paragraphs-dll]
   (loop [node (dll/next paragraphs-dll uuid)]
     (if (nil? node)
       nil
-      (let [elem (js/document.getElementById (str (:uuid node)))]
+      (let [elem (get-paragraph-elem editor-elem node)]
         (if (some? elem)
           elem
           (recur (dll/next paragraphs-dll node)))))))
@@ -219,11 +232,11 @@
 (defn- next-dom-paragraph-before
   "Returns the next paragraph before the one with UUID `uuid` that currently has a node in the dom.
    If no paragraphs are found at all, returns `nil`."
-  [uuid paragraphs-dll]
+  [editor-elem uuid paragraphs-dll]
   (loop [node (dll/prev paragraphs-dll uuid)]
     (if (nil? node)
       nil
-      (let [elem (js/document.getElementById (str (:uuid node)))]
+      (let [elem (get-paragraph-elem editor-elem node)]
         (if (some? elem)
           elem
           (recur (dll/prev paragraphs-dll node)))))))
@@ -258,10 +271,10 @@
   (let [tag-name (name list-type)
         rendered-paragraph (vm-para->dom viewmodel selection)
         p-elem (js/document.createElement "p")
-        next-p-elem (next-dom-paragraph-after uuid (:children doc))
+        next-p-elem (next-dom-paragraph-after editor-elem uuid (:children doc))
         next-p-inside-same-list-elem? (when next-p-elem
                                         (= (.. next-p-elem -parentNode -tagName toLowerCase) tag-name))
-        prev-p-elem (next-dom-paragraph-before uuid (:children doc))
+        prev-p-elem (next-dom-paragraph-before editor-elem uuid (:children doc))
         prev-p-inside-same-list-elem? (when prev-p-elem
                                         (= (.. prev-p-elem -parentNode -tagName toLowerCase) tag-name))
         p-outer-html (if (or next-p-inside-same-list-elem?
@@ -295,7 +308,7 @@
 
 (defn remove-list-para!
   [list-type editor-elem uuid editor-state prev-state]
-  (let [elem (js/document.getElementById (str uuid))
+  (let [elem (get-paragraph-elem editor-elem uuid)
         prev-elem (.-previousElementSibling elem)
         next-elem (.-nextElementSibling elem)
         parent-elem (.-parentElement elem)]
@@ -321,7 +334,7 @@
   [editor-elem uuid viewmodel {:keys [doc selection] :as _editor-state}]
   (let [rendered-paragraph (vm-para->dom viewmodel selection)
         paragraph-elem (js/document.createElement "p")
-        node-to-insert-before (when-some [next-paragraph-elem (next-dom-paragraph-after uuid (:children doc))]
+        node-to-insert-before (when-some [next-paragraph-elem (next-dom-paragraph-after editor-elem uuid (:children doc))]
                                 (if (= editor-elem (.-parentNode next-paragraph-elem))
                                   next-paragraph-elem
                                   (do
@@ -347,10 +360,10 @@
   (insert-list-para! :ol editor-elem uuid viewmodel editor-state))
 
 (defmethod remove-para! :default
-  [_editor-elem uuid _ _]
+  [editor-elem uuid _ _]
   ;; TODO: check to see if the paragraphs before and after uuid are both list paragraphs
   ;; of the same type, and merge if so
-  (let [p-elem (js/document.getElementById (str uuid))
+  (let [p-elem (get-paragraph-elem editor-elem uuid)
         prev-elem (.-previousElementSibling p-elem)
         next-elem (.-nextElementSibling p-elem)]
     (.remove p-elem)
@@ -366,7 +379,7 @@
 
 ;; Currently all paragraph types update the same, no special logic/multimethod needed
 (defn update-para! [editor-elem uuid viewmodel editor-state prev-state]
-  (let [paragraph-elem (.getElementById js/document (str uuid))
+  (let [paragraph-elem (get-paragraph-elem editor-elem uuid)
         type-changed? (not= (-> editor-state :doc :children (get uuid) :type)
                             (-> prev-state :doc :children (get uuid) :type))]
     (if type-changed?
@@ -469,7 +482,7 @@
 (defn chars-and-formats [span] (map #(hash-map :char %, :formats (:formats span)) (:text span)))
 
 (defn nearest-line-offset-to-pixel
-  "Takes a viewmodel Line and a distance from the left side of the editor-element in pixels,
+  "Takes a viewmodel Line and a distance from the left side of the editor-elem in pixels,
    and returns the paragraph offset that is closest to that pixel position.
 
    Arguments:
@@ -508,7 +521,7 @@
 
 (defn down-selection
   "Move the caret down into the next line. Returns a new Selection."
-  [editor-state viewmodels measure-fn horizontal-start-pos]
+  [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   (let [{:keys [selection doc]} editor-state
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
@@ -532,8 +545,8 @@
                                  viewmodel
                                  (-> (:children doc) (dll/next para-uuid) (:uuid) (viewmodels)))
         new-uuid (:uuid destination-para)
-        initial-para-margin (:left (margins (.getElementById js/document para-uuid)))
-        dest-para-margin (:left (margins (.getElementById js/document (:uuid destination-para))))
+        initial-para-margin (:left (margins (get-paragraph-elem editor-elem para-uuid)))
+        dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:uuid destination-para))))
         caret-offset-px (or horizontal-start-pos
                             (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
         next-line-offset (nearest-line-offset-to-pixel :line next-line
@@ -547,15 +560,15 @@
 (defn down
   "Move the caret down into the next line. Returns an EditorUpdate.
    This is not in the model code because it requires the viewmodel to work."
-  [{:keys [selection] :as editor-state} viewmodels measure-fn horizontal-start-pos]
-  (let [new-selection (down-selection editor-state viewmodels measure-fn horizontal-start-pos)
+  [{:keys [selection] :as editor-state} viewmodels editor-elem measure-fn horizontal-start-pos]
+  (let [new-selection (down-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)
         changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
     (es/->EditorUpdate (assoc editor-state :selection new-selection)
                        (es/changelist :changed-uuids changed-uuids))))
 
 (defn up-selection
   "Move the caret up into the next line. Returns a new Selection."
-  [editor-state viewmodels measure-fn horizontal-start-pos]
+  [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   (let [{:keys [selection doc]} editor-state
         collapsed-sel (sel/smart-collapse selection)
         para-uuid (sel/caret-para collapsed-sel)
@@ -576,8 +589,8 @@
                         (:lines)
                         (peek)))
         new-uuid (:uuid destination-para)
-        initial-para-margin (:left (margins (.getElementById js/document para-uuid)))
-        dest-para-margin (:left (margins (.getElementById js/document (:uuid destination-para))))
+        initial-para-margin (:left (margins (get-paragraph-elem editor-elem para-uuid)))
+        dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:uuid destination-para))))
         caret-offset-px (or horizontal-start-pos
                             (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
         prev-line-offset (nearest-line-offset-to-pixel :line prev-line
@@ -590,18 +603,18 @@
 (defn up
   "Move the caret up into the next line. Returns an EditorUpdate.
    This is not in the model code because it requires the viewmodel to work."
-  [{:keys [selection] :as editor-state} viewmodels measure-fn horizontal-start-pos]
-  (let [new-selection (up-selection editor-state viewmodels measure-fn horizontal-start-pos)
+  [{:keys [selection] :as editor-state} viewmodels editor-elem measure-fn horizontal-start-pos]
+  (let [new-selection (up-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)
         changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
     (es/->EditorUpdate (assoc editor-state :selection new-selection)
                        (es/changelist :changed-uuids changed-uuids))))
 
 (defn shift+down
   "Move the caret down into the next line. Returns an EditorUpdate."
-  [editor-state viewmodels measure-fn horizontal-start-pos]
+  [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   ;; TODO: go to end of line if down-selection == selection (aka it's the last para)
   (let [{:keys [selection]} editor-state
-        down-sel (down-selection editor-state viewmodels measure-fn horizontal-start-pos)
+        down-sel (down-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)
         down-para (sel/caret-para down-sel)
         down-offset (sel/caret down-sel)
         down-caret {:paragraph down-para, :offset down-offset}
@@ -622,10 +635,10 @@
 
 (defn shift+up
   "Move the caret up into the next line. Returns an EditorUpdate."
-  [editor-state viewmodels measure-fn horizontal-start-pos]
+  [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
   (let [{:keys [selection]} editor-state
-        up-sel (up-selection editor-state viewmodels measure-fn horizontal-start-pos)
+        up-sel (up-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)
         up-para (sel/caret-para up-sel)
         up-offset (sel/caret up-sel)
         up-caret {:paragraph up-para, :offset up-offset}
@@ -715,10 +728,10 @@
 
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its UUID."
-  [paragraphs-dll client-y prev-event]
+  [paragraphs-dll editor-elem client-y prev-event]
   ;; (println "Finding overlap!")
   (let [para->bounds (fn [{:keys [uuid]}]
-                       (let [bounding-rect (.getBoundingClientRect (.getElementById js/document (str uuid)))]
+                       (let [bounding-rect (.getBoundingClientRect (get-paragraph-elem editor-elem uuid))]
                          {:uuid uuid
                           :top (.-top bounding-rect)
                           :bottom (.-bottom bounding-rect)}))
@@ -741,7 +754,7 @@
             prev-para (match-elem-in-path prev-event ".paragraph")
             ;; Start searching at either the paragraph the
             ;; previous event took place in, or the first one
-            start-uuid (if prev-para (uuid (.-id prev-para)) (:uuid (first paragraphs-dll)))
+            start-uuid (if prev-para (dom-id->paragraph-uuid (.-id prev-para)) (:uuid (first paragraphs-dll)))
             advance (if (and prev-para (neg? (- client-y (.-y prev-event))))
                          dll/prev
                          dll/next)]
@@ -772,16 +785,16 @@
    nearest paragraph is to get its bounding rect and compare. We don't want to have to search through the
    entire list of paragraphs and figure out which one is intersecting the mouse, so instead we can pass in
    a paragraph to start searching at."
-  ([event doc viewmodels measure-fn]
+  ([event doc viewmodels editor-elem measure-fn]
    (let [paragraph-in-path (match-elem-in-path event ".paragraph")
          paragraph-uuid (if paragraph-in-path
-                          (.-id paragraph-in-path)
-                          (find-overlapping-paragraph (:children doc) (.-y event) *last-mousedown-event*))
+                          (dom-id->paragraph-uuid (.-id paragraph-in-path))
+                          (find-overlapping-paragraph (:children doc) editor-elem (.-y event) *last-mousedown-event*))
          ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
          ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
          ; will still be valid, however, so we can just grab the current element like this.
-         paragraph-elem (.getElementById js/document paragraph-uuid)
-         vm (get viewmodels (uuid (.-id paragraph-elem)))
+         paragraph-elem (get-paragraph-elem editor-elem paragraph-uuid)
+         vm (get viewmodels paragraph-uuid)
          sel (clicked-location (.-x event) (.-y event) paragraph-elem vm measure-fn)]
      sel)))
 
@@ -796,9 +809,9 @@
       :backward)))
 
 (defn drag
-  [mousemove-event doc viewmodels measure-fn]
-  (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels measure-fn)
-        currently-at (mouse-event->selection mousemove-event doc viewmodels measure-fn)
+  [mousemove-event doc viewmodels editor-elem measure-fn]
+  (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels editor-elem measure-fn)
+        currently-at (mouse-event->selection mousemove-event doc viewmodels editor-elem measure-fn)
         started-uuid (sel/caret-para started-at)
         started-offset (sel/caret started-at)
         current-uuid (sel/caret-para currently-at)
@@ -816,8 +829,12 @@
 
 (defn create-hidden-input!
   "Creates hidden input element used to capture keystrokes."
-  []
-  (let [hidden-input-id (str (random-uuid))]
-    (.. js/document -body (insertAdjacentHTML "afterbegin"
-                                              (str "<input id='" hidden-input-id "' class='hidden-input' type='text' autofocus />")))
-    (.getElementById js/document hidden-input-id)))
+  [top-level-editor-elem]
+  (let [hidden-input-id (str (random-uuid))
+        hidden-input (js/document.createElement "input")]
+    (set! (.-id hidden-input) hidden-input-id)
+    (set! (.-className hidden-input) "hidden-input")
+    (.setAttribute hidden-input "type" "text")
+    (.setAttribute hidden-input "autofocus" "true")
+    (.. top-level-editor-elem -shadowRoot (appendChild hidden-input))
+    hidden-input))
