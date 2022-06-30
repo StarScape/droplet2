@@ -172,9 +172,9 @@
 
 (defn set-font-size!
   [*ui-state new-size]
-  (let [{:keys [id dom-elem shadow-root]} @*ui-state]
+  (let [{:keys [dom-elem shadow-root]} @*ui-state]
     (set! (.. dom-elem -style -fontSize) (str new-size "px"))
-    (swap! *ui-state assoc :measure-fn (ruler-for-elem id dom-elem shadow-root))
+    (swap! *ui-state assoc :measure-fn (ruler-for-elem dom-elem shadow-root))
     (full-dom-render! *ui-state)))
 
 (definterceptor increase-font-size!
@@ -433,9 +433,10 @@
    [:.bold-format {:font-weight "bold !important"}]
    [:.underline-format {:text-decoration "line-through !important"}]])
 
-(print (apply css shadow-elem-style))
-
-(defn init-shadow-dom! [slate-top-level-elem]
+(defn- init-shadow-dom!
+  "Initializes the shadow dom within the top level container element where the Slate instance lives,
+   and creates and returns the editor element within."
+  [slate-top-level-elem]
   (.attachShadow slate-top-level-elem #js {:mode "open"})
   (set! (.. slate-top-level-elem -shadowRoot -innerHTML)
         (str "<style>" (apply css shadow-elem-style) "</style>"))
@@ -470,7 +471,7 @@
   (let [uuid (random-uuid)
         editor-elem (init-shadow-dom! dom-elem)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        measure-fn (ruler-for-elem uuid editor-elem (.-shadowRoot dom-elem))
+        measure-fn (ruler-for-elem editor-elem (.-shadowRoot dom-elem))
         editor-state (or editor-state (es/editor-state))
         history (or history (history/init editor-state))
         interceptors-map (-> (interceptors/interceptor-map)

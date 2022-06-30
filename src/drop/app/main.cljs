@@ -28,10 +28,6 @@
 ;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to
 ;; repro, upgrade shadow-cljs and then fire the save interceptor with cmd+s
 
-(defn remove-old-hidden-inputs []
-  (-> (.querySelectorAll js/document ".hidden-input")
-      (.forEach (fn [elem] (.remove elem)))))
-
 (defn mount-main-component []
   (let [elem (js/document.getElementById "reagent-main")]
     (rdom/render [components/app] elem)))
@@ -42,5 +38,4 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn ^:dev/after-load reload []
-  (remove-old-hidden-inputs)
   (mount-main-component))

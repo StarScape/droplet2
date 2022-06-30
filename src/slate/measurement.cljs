@@ -5,17 +5,16 @@
 
 (defn- create-elem!
   "Creates measurement element and adds it to the DOM."
-  [editor-id shadow-root font-size font-family]
+  [shadow-root font-size font-family]
   (let [outer-elem (.createElement js/document "div")
-        outer-elem-id (str "measurement-elem-" editor-id)
         elem (.createElement js/document "div")
         outer-style (.-style outer-elem)
         style (.-style elem)]
     ;; A new measurement function will be generated whenever the parameters (font size, font
     ;; style) change, so clean up any previous element associated with the same document UUID.
-    (when-let [previous-elem (.getElementById js/document outer-elem-id)]
+    (when-let [previous-elem (.querySelector shadow-root (str "." "measurement-elem"))]
       (.remove previous-elem))
-    (set! (.-id outer-elem) outer-elem-id)
+    (set! (.-className outer-elem) "measurement-elem")
 
     ;; Set font-size on outer element since h1/h2 use relative font sizes (em)
     (set! (.-fontSize outer-style) font-size)
@@ -73,9 +72,9 @@
    Measurements are made by capturing the width of a hidden DOM element, but
    a cache of these values is maintained in the background, so subsequent calls
    will be cheaper."
-  [editor-id shadow-root font-size font-family]
+  [shadow-root font-size font-family]
   (let [cache #js {}
-        elem (create-elem! editor-id shadow-root font-size font-family)]
+        elem (create-elem! shadow-root font-size font-family)]
     (fn [& args] (apply measure elem cache args))))
 
 (defn ruler-for-elem
@@ -87,12 +86,9 @@
    - `paragraph-type`: __(optional)__ the type of the paragraph, such as `:h1` or `:h2` (default `:body`)
 
    And returns the width the text will take up, in pixels."
-  [uuid elem shadow-root]
+  [elem shadow-root]
   (let [style (js/getComputedStyle elem)]
-    (ruler uuid
-           shadow-root
-           (.getPropertyValue style "font-size")
-           (.getPropertyValue style "font-family"))))
+    (ruler shadow-root (.getPropertyValue style "font-size") (.getPropertyValue style "font-family"))))
 
 (defn fake-measure-fn
   "For testing, returns every char width as 10px.
