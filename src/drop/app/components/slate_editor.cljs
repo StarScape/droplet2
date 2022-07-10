@@ -9,9 +9,8 @@
             ["electron" :refer [ipcRenderer]]))
 
 ;; TODO: persist dis bih
-(def *open-file (atom nil))
-
-;; (def foo (persistent-atom ::foo {:a 13}))
+;; (def *open-file (atom nil))
+(def *open-file (persistent-atom ::open-file nil))
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
   [:div.react-slate-elem

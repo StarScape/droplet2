@@ -10,7 +10,8 @@
 
 (defn button [text active? on-click]
   [:button {:on-click on-click
-            :style {:background-color (if active? "lightblue" "white")}}
+            :class [(if active? "bg-blue-300" "bg-white") "p-2"]
+            #_#_:style {:background-color (if active? "lightblue" "white")}}
    text])
 
 (defn actionbar [active-formats on-format-toggle]

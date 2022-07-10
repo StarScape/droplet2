@@ -34,7 +34,7 @@
           edn-string (peek queue)]
       (when edn-string
         (swap! *writer-queues update atom-name pop)
-        (fs/writeFile (persistent-atom-name->file-path atom-name) edn-string
+        (fs/writeFile #p (persistent-atom-name->file-path atom-name) edn-string
                       (fn [_]
                         (swap! *currently-writing disj atom-name)
                         (if (empty? (get @*writer-queues atom-name))
@@ -52,7 +52,8 @@
   (on-ipc "get-atom-value"
           (fn [event atom-name]
             (let [file-path (persistent-atom-name->file-path atom-name)
-                  return-val (if (fs/existsSync file-path)
-                               #js [true, (fs/readFileSync file-path "utf8")]
+                  _ #p (string? file-path)
+                  return-val (if (fs/existsSync #p file-path)
+                               #js [true, (fs/readFileSync #p file-path "utf8")]
                                #js [false, nil])]
               (set! (.-returnValue event) return-val)))))
