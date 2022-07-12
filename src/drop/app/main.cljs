@@ -12,8 +12,10 @@
             [drop.app.components.core :as components]
             [reagent.dom :as rdom]))
 
-;; PROG: File saving/loading
-;; TODO: look into using localStorage instead of passing data across threads (can wait)
+;; BUG: persistent atom causes issues with live-reloading.
+;; It's nothing with persistent-atom specifically; something is happen when file loading
+
+;; BUG: going down from bottom line takes me back to the top
 
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Learn about TailwindCSS

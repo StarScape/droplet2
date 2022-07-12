@@ -20,6 +20,7 @@
     (set! (.-fontSize outer-style) font-size)
     (set! (.-visibility outer-style) "hidden")
     (set! (.-position outer-style) "absolute")
+    (set! (.-top outer-style) "0px")
     (set! (.-whiteSpace style) "pre")
     (set! (.-margin style) 0)
     (set! (.-padding style) 0)

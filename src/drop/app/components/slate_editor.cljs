@@ -9,12 +9,15 @@
             ["electron" :refer [ipcRenderer]]))
 
 ;; TODO: persist dis bih
-;; (def *open-file (atom nil))
-(def *open-file (persistent-atom ::open-file nil))
+;; (defonce *open-file (atom nil))
+(defonce *open-file (persistent-atom ::open-file nil))
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
   [:div.react-slate-elem
-   {:ref (fn [elem]
+   {:class "flex-1"
+    :style {:max-width "800px"
+            :min-width "300px"}
+    :ref (fn [elem]
            (when elem
              (let [on-save-as (fn [serialized]
                                 (-> (.invoke ipcRenderer "save-file-as" serialized)
@@ -24,11 +27,13 @@
                                        :history file-deserialized
                                        :dom-elem elem
                                        :on-save (fn [serialized]
+                                                  #p "on-save"
                                                   (if @*open-file
                                                     (.send ipcRenderer "save-file" @*open-file serialized)
                                                     (on-save-as serialized)))
                                        :on-save-as on-save-as
                                        :on-open (fn [*ui-state]
+                                                  #p "on-open"
                                                   (-> (.invoke ipcRenderer "choose-file")
                                                       (.then (fn [[file-path contents]]
                                                                (reset! *open-file file-path)
@@ -47,15 +52,19 @@
                                      nil)]
     (add-watch *slate-instance :watcher (fn [_key _atom _old-state _new-state]
                                           (reset! active-formats (ui-state/active-formats @*slate-instance))))
+    #p (some? deserialized-file-contents)
     (fn []
-      [:div
-       [slate-editor {:file-deserialized deserialized-file-contents
-                      :ui-state-atom *slate-instance}]
-       [actionbar @active-formats #(let [interceptor (case %
-                                                       :italic ints/italic
-                                                       :bold ints/bold
-                                                       :h1 ints/h1
-                                                       :h2 ints/h2
-                                                       :ol ints/olist
-                                                       :ul ints/ulist)]
-                                     (ui-state/fire-interceptor! *slate-instance interceptor (js/Event. "keydown")))]])))
+      [:<>
+       [:div {:class "h-screen flex flex-row justify-center"}
+        [slate-editor {:file-deserialized deserialized-file-contents
+                       :ui-state-atom *slate-instance}]]
+       [actionbar {:class "fixed bottom-0 w-screen bg-green-500"
+                   :active-formats @active-formats
+                   :on-format-toggle #(let [interceptor (case %
+                                                          :italic ints/italic
+                                                          :bold ints/bold
+                                                          :h1 ints/h1
+                                                          :h2 ints/h2
+                                                          :ol ints/olist
+                                                          :ul ints/ulist)]
+                                        (ui-state/fire-interceptor! *slate-instance interceptor (js/Event. "keydown")))}]])))

@@ -10,5 +10,4 @@
   "Main app component."
   []
   [:div
-   [main-editor]
-   [:div {:class "bg-red-400"} "Hello?"]])
+   [main-editor]])

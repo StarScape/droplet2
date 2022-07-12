@@ -396,13 +396,14 @@
                     :height "0px"
                     :pointer-events "none"}]
    [:.slate-editor {:white-space "pre"
-                    :width "95vw"
-                    :height "70vh"
+                    ;; :background-color "red"
+                    :box-sizing "border-box"
+                    :height "100%"
                     :margin 0
                     :padding 0
-                    :border "1px solid grey"
-                    :font-size "15px"
-                    :font-family "serif"
+                    :padding-top "20px"
+                    :font-size "17px"
+                    :font-family "sans-serif"
                     :user-select "none"}
     [:&:hover {:cursor "text"}]]
    [:.paragraph {:margin "0px"
@@ -413,8 +414,9 @@
    ;; not possible to get programmatically) . This solves that.
    [:.line::after {:content "\" \""}]
    [:.slate-text-caret {:position "absolute"
-                        :width "1px"
-                        :background-color "black"
+                        :width "2px"
+                        :border-radius "3px"
+                        :background-color "#008cff"
                         :animation "blink 1.2s infinite"
                         :animation-delay "0.5s"}
     [:&::after {:content "\" \""}]]
@@ -437,7 +439,11 @@
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
    and creates and returns the editor element within."
   [slate-top-level-elem]
-  (.attachShadow slate-top-level-elem #js {:mode "open"})
+  ;; Cannot instatiate shadow DOM twice when hot-reloading
+  (if-not (.-shadowRoot slate-top-level-elem)
+    (.attachShadow slate-top-level-elem #js {:mode "open"})
+    (js/console.log "THERE IS A SHADOW ROOT ALREADY"))
+
   (set! (.. slate-top-level-elem -shadowRoot -innerHTML)
         (str "<style>" (apply css shadow-elem-style) "</style>"))
 

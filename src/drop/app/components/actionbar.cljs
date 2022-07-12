@@ -14,12 +14,13 @@
             #_#_:style {:background-color (if active? "lightblue" "white")}}
    text])
 
-(defn actionbar [active-formats on-format-toggle]
-  [:div
-   [button "i" (active-formats :italic) #(on-format-toggle :italic)]
-   [button "b" (active-formats :bold) #(on-format-toggle :bold)]
-   [button "s" (active-formats :strikethrough) #(on-format-toggle :strikethrough)]
-   [button "h1" (active-formats :h1) #(on-format-toggle :h1)]
-   [button "h2" (active-formats :h2) #(on-format-toggle :h2)]
-   [button "ol" (active-formats :ol) #(on-format-toggle :ol)]
-   [button "ul" (active-formats :ul) #(on-format-toggle :ul)]])
+(defn actionbar [{:keys [class active-formats on-format-toggle]
+                  :or {class []}}]
+  [:div {:class class}
+   [button [:span.italic "I"] (active-formats :italic) #(on-format-toggle :italic)]
+   [button [:span.font-bold "B"] (active-formats :bold) #(on-format-toggle :bold)]
+   [button [:span.line-through "S"] (active-formats :strikethrough) #(on-format-toggle :strikethrough)]
+   [button [:span "H" [:sub.font-semibold "1"]] (active-formats :h1) #(on-format-toggle :h1)]
+   [button [:span "H" [:sub.font-semibold "2"]] (active-formats :h2) #(on-format-toggle :h2)]
+   [button "#" (active-formats :ol) #(on-format-toggle :ol)]
+   [button "•" (active-formats :ul) #(on-format-toggle :ul)]])
