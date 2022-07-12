@@ -16,6 +16,7 @@
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
 ;; BUG: going down from bottom line takes me back to the top
+;; BUG: going down from the last char of the last paragraph makes the cursor go back 1 char
 
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Learn about TailwindCSS

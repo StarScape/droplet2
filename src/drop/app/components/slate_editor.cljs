@@ -27,13 +27,11 @@
                                        :history file-deserialized
                                        :dom-elem elem
                                        :on-save (fn [serialized]
-                                                  #p "on-save"
                                                   (if @*open-file
                                                     (.send ipcRenderer "save-file" @*open-file serialized)
                                                     (on-save-as serialized)))
                                        :on-save-as on-save-as
                                        :on-open (fn [*ui-state]
-                                                  #p "on-open"
                                                   (-> (.invoke ipcRenderer "choose-file")
                                                       (.then (fn [[file-path contents]]
                                                                (reset! *open-file file-path)
@@ -52,13 +50,12 @@
                                      nil)]
     (add-watch *slate-instance :watcher (fn [_key _atom _old-state _new-state]
                                           (reset! active-formats (ui-state/active-formats @*slate-instance))))
-    #p (some? deserialized-file-contents)
     (fn []
       [:<>
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
-       [actionbar {:class "fixed bottom-0 w-screen bg-green-500"
+       [actionbar {:class "fixed bottom-0 w-screen bg-white"
                    :active-formats @active-formats
                    :on-format-toggle #(let [interceptor (case %
                                                           :italic ints/italic

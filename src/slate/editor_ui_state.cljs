@@ -396,15 +396,15 @@
                     :height "0px"
                     :pointer-events "none"}]
    [:.slate-editor {:white-space "pre"
-                    ;; :background-color "red"
                     :box-sizing "border-box"
                     :height "100%"
                     :margin 0
                     :padding 0
                     :padding-top "20px"
-                    :font-size "17px"
-                    :font-family "sans-serif"
-                    :user-select "none"}
+                    :font-size "16px"
+                    :font-family "'Merriweather', serif"
+                    :user-select "none"
+                    :color "#202124"}
     [:&:hover {:cursor "text"}]]
    [:.paragraph {:margin "0px"
                  :padding 0
@@ -415,12 +415,15 @@
    [:.line::after {:content "\" \""}]
    [:.slate-text-caret {:position "absolute"
                         :width "2px"
-                        :border-radius "3px"
+                        :border-radius "2px"
                         :background-color "#008cff"
                         :animation "blink 1.2s infinite"
                         :animation-delay "0.5s"}
     [:&::after {:content "\" \""}]]
-   [:.slate-range-selection {:background-color "#b4ddff"}]
+   [:.slate-range-selection {:background-color "#b4ddff"
+                             :border-radius "3px"
+                             :padding "1px"}]
+   ;; TODO: this is the wrong approach. Use a CSS variable for this and change it when the program isn't focused
    [:.slate-range-selection-blurred {:background-color "#e0e1e2"}]
    blink
    [:ul :ol {:padding 0
