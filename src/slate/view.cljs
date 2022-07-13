@@ -500,7 +500,7 @@
            offset (:start-offset line)
            offset-px 0]
       (if (= chars-i (count chars-with-formats))
-        (if (not last-line-in-paragraph?)
+        (if #p (not last-line-in-paragraph?)
           ;; There is an invisible space at the end of each line - place the text caret directly in
           ;; front of it, and the caret will be rendered at the start of the next line. However, it
           ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
@@ -530,32 +530,34 @@
         caret-line (line-with-caret viewmodels collapsed-sel)
         ;; Caret on last line in paragraph?
         caret-in-last-line? (= caret-line (peek (:lines viewmodel)))
-        last-para? (= para-uuid (:uuid (dll/last (:children doc))))
-        destination-para (if (or last-para? (not caret-in-last-line?))
-                           para
-                           (dll/next (:children doc) para-uuid))
-        next-line (if (not caret-in-last-line?)
-                    (line-below-caret viewmodels collapsed-sel)
-                    (->> destination-para
-                         (:uuid)
-                         (get viewmodels)
-                         (:lines)
-                         (first)))
-        next-line-vm-paragraph (if (not caret-in-last-line?)
-                                 viewmodel
-                                 (-> (:children doc) (dll/next para-uuid) (:uuid) (viewmodels)))
-        new-uuid (:uuid destination-para)
-        initial-para-margin (:left (margins (get-paragraph-elem editor-elem para-uuid)))
-        dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:uuid destination-para))))
-        caret-offset-px (or horizontal-start-pos
-                            (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
-        next-line-offset (nearest-line-offset-to-pixel :line next-line
-                                                       :target-px (- caret-offset-px dest-para-margin)
-                                                       :last-line-in-paragraph? (= next-line
-                                                                                   (peek (:lines next-line-vm-paragraph)))
-                                                       :measure-fn measure-fn
-                                                       :paragraph-type (:type destination-para))]
-    (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset]))))
+        last-para? (= para-uuid (:uuid (dll/last (:children doc))))]
+    (if (and caret-in-last-line? last-para?)
+      collapsed-sel
+      (let [destination-para (if (or #p last-para? (not caret-in-last-line?))
+                               para
+                               (dll/next (:children doc) para-uuid))
+            next-line (if (not #p caret-in-last-line?)
+                        (line-below-caret viewmodels collapsed-sel)
+                        (->> destination-para
+                             (:uuid)
+                             (get viewmodels)
+                             (:lines)
+                             (first)))
+            next-line-vm-paragraph (if (not caret-in-last-line?)
+                                     viewmodel
+                                     (-> (:children doc) (dll/next para-uuid) (:uuid) (viewmodels)))
+            new-uuid (:uuid destination-para)
+            initial-para-margin (:left (margins (get-paragraph-elem editor-elem para-uuid)))
+            dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:uuid destination-para))))
+            caret-offset-px (or horizontal-start-pos
+                                (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
+            next-line-offset (nearest-line-offset-to-pixel :line next-line
+                                                           :target-px (- caret-offset-px dest-para-margin)
+                                                           :last-line-in-paragraph? (= next-line
+                                                                                       (peek (:lines next-line-vm-paragraph)))
+                                                           :measure-fn measure-fn
+                                                           :paragraph-type (:type destination-para))]
+        (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset]))))))
 
 (defn down
   "Move the caret down into the next line. Returns an EditorUpdate.

@@ -422,7 +422,7 @@
     [:&::after {:content "\" \""}]]
    [:.slate-range-selection {:background-color "#b4ddff"
                              :border-radius "3px"
-                             :padding "1px"}]
+                             :z-index 1000}]
    ;; TODO: this is the wrong approach. Use a CSS variable for this and change it when the program isn't focused
    [:.slate-range-selection-blurred {:background-color "#e0e1e2"}]
    blink
@@ -443,9 +443,8 @@
    and creates and returns the editor element within."
   [slate-top-level-elem]
   ;; Cannot instatiate shadow DOM twice when hot-reloading
-  (if-not (.-shadowRoot slate-top-level-elem)
-    (.attachShadow slate-top-level-elem #js {:mode "open"})
-    (js/console.log "THERE IS A SHADOW ROOT ALREADY"))
+  (when-not (.-shadowRoot slate-top-level-elem)
+    (.attachShadow slate-top-level-elem #js {:mode "open"}))
 
   (set! (.. slate-top-level-elem -shadowRoot -innerHTML)
         (str "<style>" (apply css shadow-elem-style) "</style>"))
