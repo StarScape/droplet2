@@ -15,11 +15,7 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
-;; BUG: going down from bottom line takes me back to the top
-;; BUG: going down from the last char of the last paragraph makes the cursor go back 1 char
-
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
-;; TODO: Learn about TailwindCSS
 ;; TODO: Look into React animation libraries
 ;; TODO: Interface design/impl
 ;; TODO: DOCX export/import w/ pandoc
