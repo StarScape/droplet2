@@ -55,7 +55,7 @@
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
-       [actionbar {:class "fixed bottom-0 w-screen bg-white"
+       [actionbar {:class "flex fixed bottom-0 w-screen bg-white"
                    :active-formats @active-formats
                    :on-format-toggle #(let [interceptor (case %
                                                           :italic ints/italic

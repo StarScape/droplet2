@@ -15,6 +15,9 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
+;; BUG: italicize the last work in the document, up till the very end. It will italicize correctly but the italic button is not hightlighted.
+;; It's not consistent, I think the styles on the selection object are simply not getting updated correctly.
+
 ;; TODO: Investigate fonts that looks good _without_ kerning (Merriweather seems to do well)
 ;; TODO: Look into React animation libraries
 ;; TODO: Interface design/impl

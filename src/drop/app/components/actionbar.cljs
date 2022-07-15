@@ -8,11 +8,15 @@
 ;;         elem (js/document.getElementById "formats")]
 ;;     (set! (.-innerHTML elem) formats-str)))
 
+(defn spacer []
+  [:div.w-3])
+
 (defn button [img-url active? on-click]
   [:button {:on-click on-click
             :class [(if active? "bg-blue-300" "bg-white") "p-2"]
             #_#_:style {:background-color (if active? "lightblue" "white")}}
-   [:img {:style {:width "25px"} :src img-url}]])
+   [:img {:src img-url
+          :style {:width "15px"}}]])
 
 (defn actionbar [{:keys [class active-formats on-format-toggle]
                   :or {class []}}]
@@ -20,7 +24,9 @@
    [button "icons/italic.svg" (active-formats :italic) #(on-format-toggle :italic)]
    [button "icons/bold.svg" (active-formats :bold) #(on-format-toggle :bold)]
    [button "icons/strikethrough.svg" (active-formats :strikethrough) #(on-format-toggle :strikethrough)]
+   [spacer]
    [button "icons/h1.svg" (active-formats :h1) #(on-format-toggle :h1)]
    [button "icons/h2.svg" (active-formats :h2) #(on-format-toggle :h2)]
+   [spacer]
    [button "icons/numbered.svg" (active-formats :ol) #(on-format-toggle :ol)]
    [button "icons/bulleted.svg" (active-formats :ol) #(on-format-toggle :ol)]])
