@@ -9,11 +9,13 @@
 ;;     (set! (.-innerHTML elem) formats-str)))
 
 (defn spacer []
-  [:div.w-3])
+  [:div {:class "w-1.5"}])
 
 (defn button [img-url active? on-click]
   [:button {:on-click on-click
-            :class [(if active? "bg-blue-300" "bg-white") "p-2"]
+            ;; TODO: add light blue color to tailwind sheet
+            :class [(if active? "bg-blue-300" "bg-white")
+                    "m-0.5" "p-2" "rounded-md"]
             #_#_:style {:background-color (if active? "lightblue" "white")}}
    [:img {:src img-url
           :style {:width "15px"}}]])
