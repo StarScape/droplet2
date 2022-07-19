@@ -4,7 +4,6 @@
   (:require [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
             [clojure.set :as set]
-            [garden.core :refer [css]]
             [slate.model.common :as m]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
@@ -18,6 +17,7 @@
             [slate.measurement :refer [ruler-for-elem]]
             [slate.view :as view]
             [slate.viewmodel :as vm]
+            [slate.style :as style]
             [slate.utils :as utils]))
 
 (s/def ::id uuid?)
@@ -171,6 +171,14 @@
                      (if (= :resize (peek (:input-history ui-state)))
                        ui-state
                        (update ui-state :input-history interceptors/add-to-input-history :resize)))))
+
+(defn handle-focus-in!
+  [*ui-state]
+  (style/gain-focus! (:shadow-root @*ui-state)))
+
+(defn handle-focus-out!
+  [*ui-state]
+  (style/lose-focus! (:shadow-root @*ui-state)))
 
 (defn set-font-size!
   [*ui-state new-size]
@@ -370,6 +378,16 @@
        (.preventDefault e)
        (fire-interceptor! *ui-state (get-interceptor :paste) e)))
 
+    (bind-hidden-input-event! "focusout"
+     (fn [e]
+       (.preventDefault e)
+       (handle-focus-out! *ui-state)))
+
+    (bind-hidden-input-event! "focusin"
+     (fn [e]
+       (.preventDefault e)
+       (handle-focus-in! *ui-state)))
+
     (.addEventListener js/window "resize" #(handle-resize! *ui-state))))
 
 (def manual-interceptors
@@ -384,62 +402,6 @@
      :ctrl+= increase-font-size!
      :ctrl+- decrease-font-size!}))
 
-(defkeyframes blink
-  [:50%
-   {:opacity 0}])
-
-(def shadow-elem-style
-  [[:body {:font-kerning "none !important"}]
-   [:.hidden-input {:opacity 0
-                    :position "absolute"
-                    :right "10000px"
-                    :z-index -10000
-                    :width "0px"
-                    :height "0px"
-                    :pointer-events "none"}]
-   [:.slate-editor {:white-space "pre"
-                    :box-sizing "border-box"
-                    :height "100%"
-                    :margin 0
-                    :padding 0
-                    :padding-top "20px"
-                    :font-size "16px"
-                    :font-family "'Merriweather', serif"
-                    :user-select "none"
-                    :color "#202124"}
-    [:&:hover {:cursor "text"}]]
-   [:.paragraph {:margin "0px"
-                 :padding 0
-                 :min-height "1em"}]
-   ;; When there is an empty paragraph with just a caret in it, we need to render a _bit_
-   ;; of text, so that the height of the paragraph is set to the same as any other ('font height' is
-   ;; not possible to get programmatically) . This solves that.
-   [:.line::after {:content "\" \""}]
-   [:.slate-text-caret {:position "absolute"
-                        :width "2px"
-                        :border-radius "2px"
-                        :background-color "#008cff"
-                        :animation "blink 1.2s infinite"
-                        :animation-delay "0.5s"}
-    [:&::after {:content "\" \""}]]
-   [:.slate-range-selection {:background-color "#b4ddff"
-                             :border-radius "3px"
-                             :z-index 1000}]
-   ;; TODO: this is the wrong approach. Use a CSS variable for this and change it when the program isn't focused
-   [:.slate-range-selection-blurred {:background-color "#e0e1e2"}]
-   blink
-   [:ul :ol {:padding 0
-             :margin 0}]
-   [:.ul-format :.ol-format {:display "list-item"
-                             :margin-left "1.25em"}]
-   [:.ul-format {:list-style-type "disc"}]
-   [:.ol-format {:list-style-type "decimal"}]
-   [:.h1-format {:font-size "2em"}]
-   [:.h2-format {:font-size "1.25em"}]
-   [:.italic-format {:font-style "italic !important"}]
-   [:.bold-format {:font-weight "bold !important"}]
-   [:.underline-format {:text-decoration "line-through !important"}]])
-
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
    and creates and returns the editor element within."
@@ -449,7 +411,7 @@
     (.attachShadow slate-top-level-elem #js {:mode "open"}))
 
   (set! (.. slate-top-level-elem -shadowRoot -innerHTML)
-        (str "<style>" (apply css shadow-elem-style) "</style>"))
+        (str "<style>" style/shadow-elem-css-rendered "</style>"))
 
   ;; There are some things you cannot do (like set outerHTML on elements, among other
   ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
@@ -492,7 +454,7 @@
                    :viewmodels (vm/from-doc (:doc (history/current-state history)) dom-elem-width measure-fn)
                    :history history
                    :add-tip-to-backstack-timer-id nil
-                   :shadow-root (.-shadow-root dom-elem)
+                   :shadow-root (.-shadowRoot dom-elem)
                    :dom-elem editor-elem
                    :hidden-input hidden-input
                    :measure-fn measure-fn
