@@ -1,9 +1,15 @@
 (ns slate.utils
   "General purpose utilities, such as high-order or collection-
    manipulation functions not found in the standard library."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.set :as set]))
 
 (defn is-mac? [] true) ;; just return true for now in development
+
+(defn common-elements [& colls]
+  (let [freqs (map frequencies colls)]
+    (mapcat (fn [e] (repeat (apply min (map #(% e) freqs)) e))
+            (apply set/intersection (map (comp set keys) freqs)))))
 
 (defn pretty-paragraph [para]
   (str "|(" (-> (:uuid para) (str) (.substr 0 5)) ", " (:type para) "), \""

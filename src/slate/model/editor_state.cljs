@@ -473,8 +473,8 @@
     (m/char-before doc selection))
   (selected-content [{:keys [doc selection]}]
     (m/selected-content doc selection))
-  ;; (formatting [{:keys [doc selection]}]
-  ;;   (formatting doc selection))
+  (formatting [{:keys [doc selection]}]
+    (m/formatting doc selection))
   Formattable
   (toggle-format
     [{:keys [doc selection] :as editor-state} format]

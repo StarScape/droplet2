@@ -500,7 +500,7 @@
            offset (:start-offset line)
            offset-px 0]
       (if (= chars-i (count chars-with-formats))
-        (if #p (not last-line-in-paragraph?)
+        (if (not last-line-in-paragraph?)
           ;; There is an invisible space at the end of each line - place the text caret directly in
           ;; front of it, and the caret will be rendered at the start of the next line. However, it
           ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
@@ -533,10 +533,10 @@
         last-para? (= para-uuid (:uuid (dll/last (:children doc))))]
     (if (and caret-in-last-line? last-para?)
       collapsed-sel
-      (let [destination-para (if (or #p last-para? (not caret-in-last-line?))
+      (let [destination-para (if (or last-para? (not caret-in-last-line?))
                                para
                                (dll/next (:children doc) para-uuid))
-            next-line (if (not #p caret-in-last-line?)
+            next-line (if (not caret-in-last-line?)
                         (line-below-caret viewmodels collapsed-sel)
                         (->> destination-para
                              (:uuid)

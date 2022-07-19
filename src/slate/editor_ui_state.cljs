@@ -3,6 +3,7 @@
   (:require-macros [garden.def :refer [defkeyframes]])
   (:require [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
+            [clojure.set :as set]
             [garden.core :refer [css]]
             [slate.model.common :as m]
             [slate.model.history :as history]
@@ -66,15 +67,16 @@
 
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
+        selected (m/selected-content state)
         paragraph-type (if (sel/single? selection)
                          (:type (get (:children doc) (sel/caret-para selection)))
-                         (let [selected (m/selected-content state)]
-                           (when (apply = (map :type selected))
-                             (:type (first selected)))))
-        selection-formats (-> state :selection :formats)]
+                         (when (apply = (map :type selected))
+                           (:type (first selected))))
+        formats (-> (m/formatting state)
+                    (set/union (:formats selection)))]
     (if (some? paragraph-type)
-      (conj selection-formats paragraph-type)
-      selection-formats)))
+      (conj formats paragraph-type)
+      formats)))
 
 (defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's

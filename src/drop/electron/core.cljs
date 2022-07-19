@@ -15,13 +15,13 @@
 
   (on-ipc "save-file"
     (fn [_ file-path file-contents]
-      #p "save-file"
+      ;; #p "save-file"
       (fs/writeFile file-path file-contents
                     (fn [err] (when err (js/console.error err))))))
 
   (handle-ipc "save-file-as"
     (fn [_ file-contents]
-      #p "save-file-as"
+      ;; #p "save-file-as"
       (js/Promise.
        (fn [resolve, reject]
          (-> (.showSaveDialog dialog @main-window
@@ -38,7 +38,7 @@
 
   (handle-ipc "choose-file"
     (fn [_]
-      #p "choose-file"
+      ;; #p "choose-file"
       (js/Promise.
        (fn [resolve, reject]
          (-> (.showOpenDialog dialog @main-window
@@ -56,7 +56,7 @@
 
   (on-ipc "read-file"
     (fn [e file-path]
-      #p "read-file"
+      ;; #p "read-file"
       (let [file-contents (fs/readFileSync file-path "utf8")]
         (js/console.log file-contents)
         (set! (.-returnValue e) file-contents)))))
