@@ -58,7 +58,7 @@
     (fn [e file-path]
       ;; #p "read-file"
       (let [file-contents (fs/readFileSync file-path "utf8")]
-        (js/console.log file-contents)
+        #_(js/console.log file-contents)
         (set! (.-returnValue e) file-contents)))))
 
 (defn init-browser []
@@ -69,6 +69,8 @@
                      :y (.-y window-state)
                      :width (.-width window-state)
                      :height (.-height window-state)
+                     :minWidth 500
+                     :minHeight 500
                      :webPreferences #js {:nodeIntegration true
                                           :contextIsolation false}})
         source-path (if is-dev?
