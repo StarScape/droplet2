@@ -837,6 +837,6 @@
     (set! (.-id hidden-input) hidden-input-id)
     (set! (.-className hidden-input) "hidden-input")
     (.setAttribute hidden-input "type" "text")
-    (.setAttribute hidden-input "autofocus" "true")
+    (.setAttribute hidden-input "autofocus" "autofocus")
     (.. top-level-editor-elem -shadowRoot (appendChild hidden-input))
     hidden-input))
