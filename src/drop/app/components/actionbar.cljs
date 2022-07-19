@@ -14,7 +14,7 @@
 (defn button [img-url active? on-click]
   [:button {:on-click on-click
             ;; TODO: add light blue color to tailwind sheet
-            :class [(if active? "bg-blue-300" "bg-white")
+            :class [(if active? "bg-light-blue" "bg-white")
                     "m-0.5" "p-2" "rounded-md"]
             #_#_:style {:background-color (if active? "lightblue" "white")}}
    [:img {:src img-url
