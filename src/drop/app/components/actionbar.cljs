@@ -22,7 +22,8 @@
 
 (defn actionbar [{:keys [class active-formats on-format-toggle]
                   :or {class []}}]
-  [:div {:class class}
+  [:div {:class class
+         :on-click #(js/console.log "hello?")}
    [button "icons/italic.svg" (active-formats :italic) #(on-format-toggle :italic)]
    [button "icons/bold.svg" (active-formats :bold) #(on-format-toggle :bold)]
    [button "icons/strikethrough.svg" (active-formats :strikethrough) #(on-format-toggle :strikethrough)]

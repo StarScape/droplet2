@@ -300,6 +300,10 @@
   [editor-state _ _]
   (m/toggle-format editor-state :italic))
 
+(definterceptor strikethrough
+  [editor-state _ _]
+  (m/toggle-format editor-state :strikethrough))
+
 (definterceptor bold
   [editor-state _ _]
   (m/toggle-format editor-state :bold))
@@ -417,6 +421,7 @@
    :cmd+down end-of-doc
    :cmd+a select-all
    :cmd+i italic
+   :cmd+t strikethrough
    :cmd+b bold
    :cmd+1 h1
    :cmd+2 h2

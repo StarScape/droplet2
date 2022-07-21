@@ -57,6 +57,7 @@
    [:.h1-format {:font-size "2em"}]
    [:.h2-format {:font-size "1.25em"}]
    [:.italic-format {:font-style "italic !important"}]
+   [:.strikethrough-format {:text-decoration "line-through"}]
    [:.bold-format {:font-weight "bold !important"}]
    [:.underline-format {:text-decoration "line-through !important"}]])
 

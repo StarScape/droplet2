@@ -59,9 +59,11 @@
                    :active-formats @active-formats
                    :on-format-toggle #(let [interceptor (case %
                                                           :italic ints/italic
+                                                          :strikethrough ints/strikethrough
                                                           :bold ints/bold
                                                           :h1 ints/h1
                                                           :h2 ints/h2
                                                           :ol ints/olist
                                                           :ul ints/ulist)]
+                                        #p (:hidden-input @*slate-instance)
                                         (ui-state/fire-interceptor! *slate-instance interceptor (js/Event. "keydown")))}]])))
