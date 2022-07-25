@@ -12,18 +12,16 @@
   [:div {:class "w-1.5"}])
 
 (defn button [img-url active? on-click]
-  [:button {:on-click on-click
-            ;; TODO: add light blue color to tailwind sheet
+  [:button {:on-mouse-down #(.preventDefault %) ; prevent losing focus
+            :on-click on-click
             :class [(if active? "bg-light-blue" "bg-white")
-                    "m-0.5" "p-2" "rounded-md"]
-            #_#_:style {:background-color (if active? "lightblue" "white")}}
+                    "m-0.5" "p-2" "rounded-md"]}
    [:img {:src img-url
           :style {:width "15px"}}]])
 
 (defn actionbar [{:keys [class active-formats on-format-toggle]
                   :or {class []}}]
-  [:div {:class class
-         :on-click #(js/console.log "hello?")}
+  [:div {:class class}
    [button "icons/italic.svg" (active-formats :italic) #(on-format-toggle :italic)]
    [button "icons/bold.svg" (active-formats :bold) #(on-format-toggle :bold)]
    [button "icons/strikethrough.svg" (active-formats :strikethrough) #(on-format-toggle :strikethrough)]
