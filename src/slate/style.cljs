@@ -20,10 +20,9 @@
                     :pointer-events "none"}]
    [:.slate-editor {:white-space "pre"
                     :box-sizing "border-box"
-                    :height "100%"
                     :margin 0
-                    :padding 0
                     :padding-top "20px"
+                    :padding-bottom "70vh"
                     :font-size "16px"
                     :font-family "'Merriweather', serif"
                     :user-select "none"
@@ -36,13 +35,14 @@
    ;; of text, so that the height of the paragraph is set to the same as any other ('font height' is
    ;; not possible to get programmatically) . This solves that.
    [:.line::after {:content "\" \""}]
-   [:.slate-text-caret {:position "absolute"
-                        :width "2px"
-                        :border-radius "2px"
-                        :background-color "var(--text-caret-color)"
-                        :animation "blink 1.2s infinite"
-                        :animation-delay "0.5s"}
-    [:&::after {:content "\" \""}]]
+   [:.slate-text-caret {:position "relative"}
+    [:&::after {:position "absolute"
+                :content "\" \""
+                :width "2px"
+                :border-radius "2px"
+                :background-color "var(--text-caret-color)"
+                :animation "blink-anim 1.2s infinite"
+                :animation-delay "0.5s"}]]
    [:.slate-range-selection {:background-color "var(--range-selection-color)"
                              :border-radius "3px"
                              :z-index 1000}]

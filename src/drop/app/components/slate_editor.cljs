@@ -13,10 +13,8 @@
 (defonce *open-file (persistent-atom ::open-file nil))
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
-  [:div.react-slate-elem
-   {:class "flex-1"
-    :style {:max-width "800px"
-            :min-width "300px"}
+  [:div
+   {:class "react-slate-elem flex-1 overflow-y-scroll"
     :ref (fn [elem]
            (when elem
              (let [on-save-as (fn [serialized]

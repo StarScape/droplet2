@@ -18,6 +18,11 @@
 ;; BUG: italicize the last work in the document, up till the very end. It will italicize correctly but the italic button is not hightlighted.
 ;; It's not consistent, I think the styles on the selection object are simply not getting updated correctly.
 
+;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
+;; sync-dom is called might be a reasonable solution
+
+;; BUG: blink is broken
+
 ;; TODO: fullscreen
 ;; TODO: find and replace UI
 ;; TODO: wordcount UI

@@ -320,7 +320,7 @@
       (.addEventListener editor-elem "mousedown"
                          (fn [e]
                            (.preventDefault e)
-                           (.focus hidden-input)
+                           (.focus hidden-input #js {:preventScroll true})
                            (reset! editor-surface-clicked? true)
                            (reset! mousedown-event e)
                            (fire-interceptor! *ui-state (get-interceptor :click) e)))
@@ -406,20 +406,25 @@
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
    and creates and returns the editor element within."
   [slate-top-level-elem]
-  ;; Cannot instatiate shadow DOM twice when hot-reloading
-  (when-not (.-shadowRoot slate-top-level-elem)
-    (.attachShadow slate-top-level-elem #js {:mode "open"}))
+  (set! (.-innerHTML slate-top-level-elem) "")
+  (let [shadow-dom-wrapper (js/document.createElement "div")
+        shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
+    (set! (.-maxWidth shadow-dom-wrapper-style) "800px")
+    (set! (.-minWidth shadow-dom-wrapper-style) "300px")
+    (set! (.-margin shadow-dom-wrapper-style) "0 auto")
+    (.appendChild slate-top-level-elem shadow-dom-wrapper)
 
-  (set! (.. slate-top-level-elem -shadowRoot -innerHTML)
-        (str "<style>" style/shadow-elem-css-rendered "</style>"))
+    (.attachShadow shadow-dom-wrapper #js {:mode "open"})
+    (set! (.. shadow-dom-wrapper -shadowRoot -innerHTML)
+          (str "<style>" style/shadow-elem-css-rendered "</style>"))
 
-  ;; There are some things you cannot do (like set outerHTML on elements, among other
-  ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
-  ;; so a top-level wrapper element is desirable over inserting straight into the shadow DOM.
-  (let [editor-elem (doto (js/document.createElement "div")
-                      (.. -classList (add "slate-editor")))]
-    (.. slate-top-level-elem -shadowRoot (appendChild editor-elem))
-    editor-elem))
+    ;; There are some things you cannot do (like set outerHTML on elements, among other
+    ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
+    ;; so a top-level wrapper element is desirable over inserting straight into the shadow DOM.
+    (let [editor-elem (doto (js/document.createElement "div")
+                        (.. -classList (add "slate-editor")))]
+      (.. shadow-dom-wrapper -shadowRoot (appendChild editor-elem))
+      [editor-elem, (.-shadowRoot shadow-dom-wrapper)])))
 
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
@@ -441,20 +446,23 @@
       :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
   (let [uuid (random-uuid)
-        editor-elem (init-shadow-dom! dom-elem)
+        [editor-elem, shadow-root] #p (init-shadow-dom! dom-elem)
+        ;; TODO: replace with width of elem inside shadow-root
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        measure-fn (ruler-for-elem editor-elem (.-shadowRoot dom-elem))
+        measure-fn (ruler-for-elem editor-elem shadow-root)
         editor-state (or editor-state (es/editor-state))
         history (or history (history/init editor-state))
         interceptors-map (-> (interceptors/interceptor-map)
                              (interceptors/reg-interceptors default-interceptors)
                              (interceptors/reg-interceptors manual-interceptors))
-        hidden-input (view/create-hidden-input! dom-elem)]
+        hidden-input (view/create-hidden-input! shadow-root)]
+    ;; Focus hidden input without scrolling to it (it will be at the bottom)
+    (.focus hidden-input #js {:preventScroll true})
     (reset! *atom {:id uuid
                    :viewmodels (vm/from-doc (:doc (history/current-state history)) dom-elem-width measure-fn)
                    :history history
                    :add-tip-to-backstack-timer-id nil
-                   :shadow-root (.-shadowRoot dom-elem)
+                   :shadow-root shadow-root
                    :dom-elem editor-elem
                    :hidden-input hidden-input
                    :measure-fn measure-fn

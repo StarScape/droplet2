@@ -831,12 +831,11 @@
 
 (defn create-hidden-input!
   "Creates hidden input element used to capture keystrokes."
-  [top-level-editor-elem]
+  [shadow-root]
   (let [hidden-input-id (str (random-uuid))
         hidden-input (js/document.createElement "input")]
     (set! (.-id hidden-input) hidden-input-id)
     (set! (.-className hidden-input) "hidden-input")
     (.setAttribute hidden-input "type" "text")
-    (.setAttribute hidden-input "autofocus" "autofocus")
-    (.. top-level-editor-elem -shadowRoot (appendChild hidden-input))
+    (.appendChild shadow-root hidden-input)
     hidden-input))
