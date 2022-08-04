@@ -9,8 +9,12 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
+
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
+
+;; TODO: cut release
+;; BUG: does not render correctly on initial startup. Subsequent call are fine
 
 ;; TODO: fullscreen
 ;; TODO: find and replace UI
@@ -27,8 +31,6 @@
 
 ;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to
 ;; repro, upgrade shadow-cljs and then fire the save interceptor with cmd+
-
-(js/console.log (str "DEV: " utils/DEV))
 
 (when utils/DEV
   (st/instrument))

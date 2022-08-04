@@ -1,6 +1,6 @@
 #!/bin/bash
 
-shadow-cljs compile node-test && node out/node_test.js
+shadow-cljs compile node-test && node dev_out/node_test.js
 ecode=$?
 
 if [ $ecode -eq 0 ]

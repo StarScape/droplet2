@@ -13,6 +13,7 @@
     "dev-watch": "concurrently \"shadow-cljs watch electron app\" \"npx tailwindcss -i ./src/index.css -o ./public/index.css --watch\""
   },
   "devDependencies": {
+    "electron": "^19.0.3",
     "@storybook/addon-essentials": "^6.5.7",
     "@storybook/react": "^6.5.7",
     "concurrently": "^7.2.1",
@@ -25,7 +26,6 @@
     "wait-on": "^6.0.1"
   },
   "dependencies": {
-    "electron": "^19.0.3",
     "electron-is-dev": "^2.0.0",
     "electron-window-state": "^5.0.3",
     "i": "^0.3.7",

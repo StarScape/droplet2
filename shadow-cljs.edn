@@ -28,17 +28,17 @@
    ;; Tests that only need Node to run
    :node-test {:target :node-test
                :ns-regexp "(?<!browser)-test$" ;; every ns ending in '-test' but not '-browser-test'
-               :output-to "out/node_test.js"}
+               :output-to "dev_out/node_test.js"}
    ;; Tests that require a headless browser to run
    :browser-test {:target :karma
                   :ns-regexp "-browser-test$" ;; every ns ending in 'browser-test'
-                  :output-to "out/browser_test.js"}
+                  :output-to "dev_out/browser_test.js"}
    ;; Test just for DLL code, for developmenet convenience
    :test-dll {:target :node-test
               :ns-regexp "slate.dll-test$"
-              :output-to "out/dll_test.js"
+              :output-to "dev_out/dll_test.js"
               :autorun true}
    ;; Storybook stories
    :stories  {:target :npm-module
               :ns-regexp  "drop.stories.*-story$"
-              :output-dir "out/js/stories"}}}
+              :output-dir "dev_out/js/stories"}}}

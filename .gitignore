@@ -20,6 +20,6 @@ commit.txt
 # Output/build dirs
 public/js/
 public/*.css
-out/
+dev_out/
 
 Session.vim
