@@ -1,6 +1,8 @@
 (ns drop.utils
   "Universal utilties (not specific to any submodule).")
 
+(goog-define DEV false)
+
 (def no-op "No-op function" #())
 
 (defn debounce [ms f]

@@ -8,25 +8,32 @@
  :dev-http {8080 "public"}
  :nrepl {:port 3333}
  :builds
+  ;; Renderer process
   {:app {:target :browser
          :output-dir "public/js" ;; NOTE: relative to server root
          :asset-path "/js"
          :modules {:main {:init-fn drop.app.main/main}}
          :nrepl {:init-ns user}
          :devtools {:preloads [hashp.core]}
+         :dev {:closure-defines {drop.utils/DEV true}}
+         :release {:closure-defines {drop.utils/DEV false}}
          ;; Allows requiring electron in the NS form instead of calling (js/require ...)
          ;; see https://clojurians-log.clojureverse.org/shadow-cljs/2020-08-14/1597438743.184900
          :js-options {:js-provider :require}}
+   ;; Electron (main) process
    :electron {:target :node-script
               :main drop.electron.core/main
               :devtools {:preloads [hashp.core]}
               :output-to "public/js/electron.js"}
+   ;; Tests that only need Node to run
    :node-test {:target :node-test
                :ns-regexp "(?<!browser)-test$" ;; every ns ending in '-test' but not '-browser-test'
                :output-to "out/node_test.js"}
+   ;; Tests that require a headless browser to run
    :browser-test {:target :karma
                   :ns-regexp "-browser-test$" ;; every ns ending in 'browser-test'
                   :output-to "out/browser_test.js"}
+   ;; Test just for DLL code, for developmenet convenience
    :test-dll {:target :node-test
               :ns-regexp "slate.dll-test$"
               :output-to "out/dll_test.js"

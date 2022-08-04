@@ -1,10 +1,10 @@
 (ns drop.app.main
   (:require [drop.app.components.core :as components]
+            [drop.utils :as utils]
             [reagent.dom :as rdom]
             [orchestra.core :refer-macros [defn-spec]]
             [orchestra-cljs.spec.test :as st]
-            [clojure.spec.alpha :as s]
-            ["electron" :as e :refer [app ipcRenderer]]))
+            [clojure.spec.alpha :as s]))
 
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
@@ -28,8 +28,10 @@
 ;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to
 ;; repro, upgrade shadow-cljs and then fire the save interceptor with cmd+
 
-;; TODO: only do if dev
-(st/instrument)
+(js/console.log (str "DEV: " utils/DEV))
+
+(when utils/DEV
+  (st/instrument))
 
 (defn mount-main-component []
   (let [elem (js/document.getElementById "reagent-main")]
