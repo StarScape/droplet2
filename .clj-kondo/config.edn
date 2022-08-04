@@ -1,5 +1,6 @@
 {:skip-comments true
  :lint-as {slate.interceptors/definterceptor clojure.core/defn
+           orchestra.core/defn-spec clojure.core/defn
            garden.def/defkeyframes clojure.core/def
            reagent.core/with-let clojure.core/let}
  :linters {:unresolved-symbol {:exclude [(slate.interceptors/interceptor)

@@ -1,27 +1,16 @@
 (ns drop.app.main
-  (:require [clojure.string :as str]
-            [slate.editor-ui-state :as ui-state]
-            [slate.model.run :refer [run]]
-            [slate.model.paragraph :refer [paragraph]]
-            [slate.model.doc :refer [document]]
-            [slate.model.editor-state :refer [editor-state] :as es]
-            [slate.model.history :as history]
-            [slate.model.selection :as sel]
-            [slate.core :as sl]
-            [slate.utils :as utils]
-            [drop.app.components.core :as components]
-            [reagent.dom :as rdom]))
+  (:require [drop.app.components.core :as components]
+            [reagent.dom :as rdom]
+            [orchestra.core :refer-macros [defn-spec]]
+            [orchestra-cljs.spec.test :as st]
+            [clojure.spec.alpha :as s]
+            ["electron" :as e :refer [app ipcRenderer]]))
 
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
-;; BUG: italicize the last work in the document, up till the very end. It will italicize correctly but the italic button is not hightlighted.
-;; It's not consistent, I think the styles on the selection object are simply not getting updated correctly.
-
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
-
-;; BUG: blink is broken
 
 ;; TODO: fullscreen
 ;; TODO: find and replace UI
@@ -37,7 +26,10 @@
 ;; TODO: Copy (and maybe paste) rich text
 
 ;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to
-;; repro, upgrade shadow-cljs and then fire the save interceptor with cmd+s
+;; repro, upgrade shadow-cljs and then fire the save interceptor with cmd+
+
+;; TODO: only do if dev
+(st/instrument)
 
 (defn mount-main-component []
   (let [elem (js/document.getElementById "reagent-main")]

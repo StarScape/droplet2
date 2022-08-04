@@ -3,6 +3,7 @@
                 [cider/cider-nrepl "0.24.0"]
                 [reagent "1.1.1"]
                 [garden "1.3.10"]
+                [orchestra "2021.01.01-1"]
                 #_[org.clojure/core.async "1.4.627"]]
  :dev-http {8080 "public"}
  :nrepl {:port 3333}

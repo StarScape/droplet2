@@ -215,6 +215,3 @@
                   :else
                   (throw "Error in history/init: argument must be either an EditorUpdate or EditorState."))]
     {:tip nil, :backstack [initial], :current-state-index 0}))
-
-;; TODO: look into orchestra instead of using this
-(stest/instrument)

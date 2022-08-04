@@ -404,7 +404,7 @@
 
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
-   and creates and returns the editor element within."
+   and creates and returns the [editor element within shadow dom, shadowRoot]"
   [slate-top-level-elem]
   (set! (.-innerHTML slate-top-level-elem) "")
   (let [shadow-dom-wrapper (js/document.createElement "div")
@@ -446,7 +446,7 @@
       :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
   (let [uuid (random-uuid)
-        [editor-elem, shadow-root] #p (init-shadow-dom! dom-elem)
+        [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
         ;; TODO: replace with width of elem inside shadow-root
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         measure-fn (ruler-for-elem editor-elem shadow-root)

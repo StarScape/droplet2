@@ -73,7 +73,7 @@
                      :minHeight 500
                      :webPreferences #js {:nodeIntegration true
                                           :contextIsolation false}})
-        source-path (if is-dev?
+        source-path (if #p is-dev?
                       "http://localhost:8080"
                       (str "file://" js/__dirname "/../index.html"))]
     (when is-dev?
