@@ -10,7 +10,8 @@
     "watch-stories": "shadow-cljs watch stories",
     "start-stories": "start-storybook -p 9090",
     "storybook-dev": "concurrently npm:watch-stories npm:start-stories",
-    "dev-watch": "concurrently \"shadow-cljs watch electron app\" \"npx tailwindcss -i ./src/index.css -o ./public/index.css --watch\""
+    "dev-watch": "concurrently \"shadow-cljs watch electron app\" \"npx tailwindcss -i ./src/index.css -o ./public/index.css --watch\"",
+    "build": "rm ./public/js/* && shadow-cljs release electron app"
   },
   "devDependencies": {
     "electron": "^19.0.3",
