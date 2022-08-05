@@ -30,4 +30,4 @@
    [button "icons/h2.svg" (active-formats :h2) #(on-format-toggle :h2)]
    [spacer]
    [button "icons/numbered.svg" (active-formats :ol) #(on-format-toggle :ol)]
-   [button "icons/bulleted.svg" (active-formats :ol) #(on-format-toggle :ol)]])
+   [button "icons/bulleted.svg" (active-formats :ul) #(on-format-toggle :ul)]])

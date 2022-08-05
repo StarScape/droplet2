@@ -15,7 +15,7 @@
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
   [:div
-   {:class "react-slate-elem flex-1 overflow-y-scroll"
+   {:class "react-slate-elem flex-1 overflow-y-auto"
     :ref (fn [elem]
            (when elem
              (let [on-save-as (fn [serialized]

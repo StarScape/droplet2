@@ -61,7 +61,7 @@
         #_(js/console.log file-contents)
         (set! (.-returnValue e) file-contents)))))
 
-(defn init-browser []
+(defn init-window []
   (let [window-state (window-state-keeper #js {:defaultWidth 1200
                                                :defaultHeight 900})
         window (BrowserWindow.
@@ -93,5 +93,12 @@
                :autoSubmit false})
 
   (.on app "window-all-closed" #(when-not (= js/process.platform "darwin") (.quit app)))
-  (.on app "ready" init-browser)
+  (.on app "ready" init-window)
+  #_(.. app (whenReady) (then (fn []
+                                (js/console.log "whenReady")
+                                (.on app "activate" #(js/console.log "activate!")))))
+  (.on app "activate" (fn []
+                        (when (zero? (.. BrowserWindow (getAllWindows) -length))
+                          (init-window))))
+
   (reg-ipc-handlers!))

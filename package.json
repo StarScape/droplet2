@@ -12,7 +12,7 @@
     "start-stories": "start-storybook -p 9090",
     "storybook-dev": "concurrently npm:watch-stories npm:start-stories",
     "dev-watch": "concurrently \"shadow-cljs watch electron app\" \"npx tailwindcss -i ./src/index.css -o ./public/index.css --watch\"",
-    "build-release-files": "rm ./public/js/* && shadow-cljs release electron app",
+    "build-release-files": "rm ./public/js/* ./public/index.css && shadow-cljs release electron app && npx tailwindcss -i ./src/index.css -o ./public/index.css --minify",
     "build-release-installer-mac": "electron-builder -m",
     "build-release-installers": "electron-builder -mwl",
     "build-release-mac": "npm:build-release-files && npm:build-release-installer-mac",
