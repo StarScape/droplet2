@@ -9,12 +9,15 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
+;; BUG: on initial startup, try drag selecting and selection is wrongly offset to the right by about 50px or so
+;; Dissappears after a hard reload
 
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
 
-;; TODO: cut release
-;; BUG: does not render correctly on initial startup. Subsequent call are fine
+;; TODO: Hitting 'x' (not cmd+q) and then reopening does not work on macOS release build
+;; TODO: fix menubar
+;; TODO
 
 ;; TODO: Set app title to include current file name
 ;; TODO: add * to app title bar when file has been modified but not saved

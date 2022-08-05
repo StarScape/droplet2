@@ -2,7 +2,7 @@
 
 Source code for the Droplet app.
 
-# Status
+<!-- # Status
 
 https://user-images.githubusercontent.com/4681820/168147023-92a1065a-1467-45d1-b1f0-dc04c96760ca.mov
 
@@ -19,7 +19,7 @@ However, the rich text editor is _mostly_ complete and stable. It supports:
 - A fully-immutable document models, which means __tests__! Rich text editors are finnicky and full of edges cases, and being able to trivially unit test any editor action in isolation is a life saver.
 - Some fancy-pants completions, like completing -- to an em dash and auto-surrounding parens and quotations.
 
-More details on the structure of the editor in `src/slate/README.md`.
+More details on the structure of the editor in `src/slate/README.md`. -->
 
 # Development
 
@@ -69,7 +69,8 @@ shadow-cljs compile test-dll
 
 That build is set to autorun `:autorun true`, so there is no need for any additional step.
 
-## Output directories
+## Output/other directories
 
 - Browser code is output to `public/js/`.
 - Test code is ouput to `dev_out/`.
+- When building, installers are output to `dist/`

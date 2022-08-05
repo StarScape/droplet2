@@ -21,5 +21,6 @@ commit.txt
 public/js/
 public/*.css
 dev_out/
+dist/
 
 Session.vim

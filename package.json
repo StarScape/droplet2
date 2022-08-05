@@ -2,6 +2,7 @@
   "name": "droplet",
   "version": "1.0.0",
   "author": "Jack Arrignton",
+  "license": "Proprietary",
   "main": "public/js/electron.js",
   "scripts": {
     "node-test": "./scripts/node_test.sh || true",
@@ -11,13 +12,18 @@
     "start-stories": "start-storybook -p 9090",
     "storybook-dev": "concurrently npm:watch-stories npm:start-stories",
     "dev-watch": "concurrently \"shadow-cljs watch electron app\" \"npx tailwindcss -i ./src/index.css -o ./public/index.css --watch\"",
-    "build": "rm ./public/js/* && shadow-cljs release electron app"
+    "build-release-files": "rm ./public/js/* && shadow-cljs release electron app",
+    "build-release-installer-mac": "electron-builder -m",
+    "build-release-installers": "electron-builder -mwl",
+    "build-release-mac": "npm:build-release-files && npm:build-release-installer-mac",
+    "build-releases": "npm:build-release-files && npm:build-release-installers"
   },
   "devDependencies": {
-    "electron": "^19.0.3",
     "@storybook/addon-essentials": "^6.5.7",
     "@storybook/react": "^6.5.7",
     "concurrently": "^7.2.1",
+    "electron": "^19.0.3",
+    "electron-builder": "^23.3.3",
     "karma": "^6.3.1",
     "karma-chrome-launcher": "^3.1.0",
     "karma-cljs-test": "^0.1.0",
