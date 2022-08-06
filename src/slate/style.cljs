@@ -24,7 +24,7 @@
                     :padding-top "20px"
                     :padding-bottom "70vh"
                     :font-size "16px"
-                    :font-family "'Merriweather', serif"
+                    :font-family "Merriweather, serif"
                     :user-select "none"
                     :color "#202124"}
     [:&:hover {:cursor "text"}]]

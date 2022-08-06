@@ -11,15 +11,18 @@
 
 ;; BUG: on initial startup, try drag selecting and selection is wrongly offset to the right by about 50px or so
 ;; Dissappears after a hard reload
-
-;; BUG: Hit ctrl+o to start an olist and both the olist and ulist are highlighted in the actionbar
+;; https://stackoverflow.com/questions/4712242/wait-for-fonts-to-load-before-rendering-web-page
 
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
 
-;; TODO: Hitting 'x' (not cmd+q) and then reopening does not work on macOS release build
+;; TODO: try a different approach with click/drag events that fall outside of the paragraph: make an invisible :after element for
+;; each one with a width of 100vw, give it a high z-index, and test for it clicking clicked, dragged on rather than doing math to
+;; find an overlapping element
+;; EDIT: holy shit, there is a document.elementFromPoint method that I never knew existed...
+
+;; TODO: render font locally
 ;; TODO: fix menubar
-;; TODO: Minimize CSS
 
 ;; TODO: Set app title to include current file name
 ;; TODO: add * to app title bar when file has been modified but not saved

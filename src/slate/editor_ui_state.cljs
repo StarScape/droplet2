@@ -409,9 +409,11 @@
   (set! (.-innerHTML slate-top-level-elem) "")
   (let [shadow-dom-wrapper (js/document.createElement "div")
         shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
+    (set! (.-className shadow-dom-wrapper) "slate-shadow-dom-wrapper")
     (set! (.-maxWidth shadow-dom-wrapper-style) "800px")
     (set! (.-minWidth shadow-dom-wrapper-style) "300px")
     (set! (.-margin shadow-dom-wrapper-style) "0 auto")
+
     (.appendChild slate-top-level-elem shadow-dom-wrapper)
 
     (.attachShadow shadow-dom-wrapper #js {:mode "open"})
@@ -445,33 +447,34 @@
   [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open]
       :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-  (let [uuid (random-uuid)
-        [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
-        ;; TODO: replace with width of elem inside shadow-root
-        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        measure-fn (ruler-for-elem editor-elem shadow-root)
-        editor-state (or editor-state (es/editor-state))
-        history (or history (history/init editor-state))
-        interceptors-map (-> (interceptors/interceptor-map)
-                             (interceptors/reg-interceptors default-interceptors)
-                             (interceptors/reg-interceptors manual-interceptors))
-        hidden-input (view/create-hidden-input! shadow-root)]
-    ;; Focus hidden input without scrolling to it (it will be at the bottom)
-    (.focus hidden-input #js {:preventScroll true})
-    (reset! *atom {:id uuid
-                   :viewmodels (vm/from-doc (:doc (history/current-state history)) dom-elem-width measure-fn)
-                   :history history
-                   :add-tip-to-backstack-timer-id nil
-                   :shadow-root shadow-root
-                   :dom-elem editor-elem
-                   :hidden-input hidden-input
-                   :measure-fn measure-fn
-                   :input-history []
-                   :interceptors interceptors-map
-                   :on-save on-save
-                   :on-save-as on-save-as
-                   :on-load on-open})
-    (init-event-handlers! *atom)
-    (full-dom-render! *atom)
+  (.. js/document -fonts (load "italic 16px Merriweather")
+      ;; TODO: use core-async of something to clean this up
+      (then #(let [uuid (random-uuid)
+                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
+                   available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
+                   measure-fn (ruler-for-elem editor-elem shadow-root)
+                   editor-state (or editor-state (es/editor-state))
+                   history (or history (history/init editor-state))
+                   interceptors-map (-> (interceptors/interceptor-map)
+                                        (interceptors/reg-interceptors default-interceptors)
+                                        (interceptors/reg-interceptors manual-interceptors))
+                   hidden-input (view/create-hidden-input! shadow-root)]
+                ;; Focus hidden input without scrolling to it (it will be at the bottom)
+               (.focus hidden-input #js {:preventScroll true})
+               (reset! *atom {:id uuid
+                              :viewmodels (vm/from-doc (:doc (history/current-state history)) available-width measure-fn)
+                              :history history
+                              :add-tip-to-backstack-timer-id nil
+                              :shadow-root shadow-root
+                              :dom-elem editor-elem
+                              :hidden-input hidden-input
+                              :measure-fn measure-fn
+                              :input-history []
+                              :interceptors interceptors-map
+                              :on-save on-save
+                              :on-save-as on-save-as
+                              :on-load on-open})
+               (init-event-handlers! *atom)
+               (full-dom-render! *atom)
 
-    *atom))
+               *atom))))
