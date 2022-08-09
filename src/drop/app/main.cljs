@@ -17,7 +17,6 @@
 ;; find an overlapping element
 ;; EDIT: holy shit, there is a document.elementFromPoint method that I never knew existed...
 
-;; TODO: render font locally
 ;; TODO: fix menubar
 
 ;; TODO: Set app title to include current file name

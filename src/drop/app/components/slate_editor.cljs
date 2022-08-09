@@ -9,6 +9,13 @@
             [reagent.core :as r]
             ["electron" :refer [ipcRenderer]]))
 
+(def *full-screen? (atom false))
+
+(.on ipcRenderer "change-full-screen-status"
+     (fn [event, message-contents]
+       (reset! *full-screen? message-contents)
+       #_(js/console.log (str "Received, now " @*full-screen?))))
+
 ;; TODO: persist dis bih
 ;; (defonce *open-file (atom nil))
 (defonce *open-file (persistent-atom ::open-file nil))

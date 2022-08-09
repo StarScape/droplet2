@@ -3,6 +3,7 @@
             ["electron-is-dev" :as is-dev?]
             ["electron-window-state" :as window-state-keeper]
             ["fs" :as fs]
+            ["path" :as path]
             [drop.electron.utils :refer [on-ipc handle-ipc]]
             [drop.electron.persistent-atoms :as p-atoms]))
 
@@ -72,7 +73,8 @@
                      :minWidth 500
                      :minHeight 500
                      :webPreferences #js {:nodeIntegration true
-                                          :contextIsolation false}})
+                                          :contextIsolation false
+                                          #_#_:preload (path/join js/__dirname "preload.js")}})
         source-path (if is-dev?
                       "http://localhost:8080"
                       (str "file://" js/__dirname "/../index.html"))]
@@ -81,7 +83,15 @@
     (reset! main-window window)
     (.manage window-state window)
     (.loadURL ^js/electron.BrowserWindow window source-path)
-    (.on ^js/electron.BrowserWindow @main-window "closed" #(reset! main-window nil))
+
+    (.on ^js/electron.BrowserWindow window "closed"
+         #(reset! main-window nil))
+
+    (.on ^js/electron.BrowserWindow window "enter-full-screen"
+         #(.. window -webContents (send "change-full-screen-status", true)))
+    (.on ^js/electron.BrowserWindow window "leave-full-screen"
+         #(.. window -webContents (send "change-full-screen-status", false)))
+
     (js/console.log "Initialized Electron browser window")))
 
 (defn main []

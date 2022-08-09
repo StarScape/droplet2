@@ -1,6 +1,5 @@
 (ns drop.app.persistent-atom
-  (:require [clojure.edn :as edn]
-            ["electron" :refer [ipcRenderer]]))
+  (:require [clojure.edn :as edn]))
 
 (defn atom-name->local-storage-key [atom-name]
   (str "prst-atom-" (str atom-name)))
