@@ -444,11 +444,11 @@
    :history - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open]
+  [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open on-change]
       :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
   (.. js/document -fonts (load "16px Merriweather")
-      ;; TODO: use core-async of something to clean this up
+      ;; TODO: use core-async or something to clean this up
       (then #(let [uuid (random-uuid)
                    [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
                    available-width (.-width (.getBoundingClientRect (.-host shadow-root)))

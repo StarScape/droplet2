@@ -7,7 +7,8 @@
             [slate.default-interceptors :as ints]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
-            ["electron" :refer [ipcRenderer]]))
+            ["electron" :refer [ipcRenderer]]
+            ["path" :as path]))
 
 (def *full-screen? (atom false))
 
@@ -16,9 +17,18 @@
        (reset! *full-screen? message-contents)
        #_(js/console.log (str "Received, now " @*full-screen?))))
 
+(defn set-title!
+  [full-path]
+  (let [file-name (path/basename full-path)
+        title (or file-name "Droplet")]
+    (set! js/document.title title)))
+
 ;; TODO: persist dis bih
 ;; (defonce *open-file (atom nil))
-(defonce *open-file (persistent-atom ::open-file nil))
+(defonce *open-file (doto (persistent-atom ::open-file nil)
+                      (add-watch :change-title (fn [_ _ _ new-val]
+                                                 (set-title! new-val)))))
+(set-title! @*open-file)
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
   [:div

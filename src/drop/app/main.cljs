@@ -18,6 +18,7 @@
 ;; EDIT: holy shit, there is a document.elementFromPoint method that I never knew existed...
 
 ;; TODO: fix menubar
+;; TODO: auto-transparent-tify actionbar when in fullscreen, after debounce
 
 ;; TODO: Set app title to include current file name
 ;; TODO: add * to app title bar when file has been modified but not saved
