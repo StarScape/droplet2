@@ -447,7 +447,7 @@
   [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open]
       :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-  (.. js/document -fonts (load "italic 16px Merriweather")
+  (.. js/document -fonts (load "16px Merriweather")
       ;; TODO: use core-async of something to clean this up
       (then #(let [uuid (random-uuid)
                    [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
