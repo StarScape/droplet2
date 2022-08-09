@@ -19,6 +19,7 @@
 
 ;; TODO: fix menubar
 ;; TODO: auto-transparent-tify actionbar when in fullscreen, after debounce
+;; TODO: allow making new file with ctrl+n or menubar
 
 ;; TODO: Set app title to include current file name
 ;; TODO: add * to app title bar when file has been modified but not saved

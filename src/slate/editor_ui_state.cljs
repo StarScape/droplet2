@@ -353,30 +353,35 @@
                completion-interceptor (when (= 1 (.. e -data -length))
                                         (get-completion (.-data e)))
                interceptor (or completion-interceptor (get-interceptor :insert))]
-           (fire-interceptor! *ui-state interceptor e))
+           (fire-interceptor! *ui-state interceptor e)
+           ((:on-change @*ui-state)))
 
          "deleteContentBackward"
          (let [{:keys [input-history]} @*ui-state]
            (if (= :completion (peek input-history))
              (fire-interceptor! *ui-state undo! e)
-             (fire-interceptor! *ui-state (get-interceptor :delete) e)))
+             (fire-interceptor! *ui-state (get-interceptor :delete) e))
+           ((:on-change @*ui-state)))
 
          nil)))
 
     (bind-hidden-input-event! "cut"
      (fn [e]
        (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :cut) e)))
+       (fire-interceptor! *ui-state (get-interceptor :cut) e)
+       ((:on-change @*ui-state))))
 
     (bind-hidden-input-event! "copy"
      (fn [e]
        (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :copy) e)))
+       (fire-interceptor! *ui-state (get-interceptor :copy) e)
+       ((:on-change @*ui-state))))
 
     (bind-hidden-input-event! "paste"
      (fn [e]
        (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :paste) e)))
+       (fire-interceptor! *ui-state (get-interceptor :paste) e)
+       ((:on-change @*ui-state))))
 
     (bind-hidden-input-event! "focusout"
      (fn [e]
@@ -473,7 +478,8 @@
                               :interceptors interceptors-map
                               :on-save on-save
                               :on-save-as on-save-as
-                              :on-load on-open})
+                              :on-load on-open
+                              :on-change on-change})
                (init-event-handlers! *atom)
                (full-dom-render! *atom)
 

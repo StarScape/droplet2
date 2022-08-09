@@ -18,14 +18,18 @@
        #_(js/console.log (str "Received, now " @*full-screen?))))
 
 (defn set-title!
-  [full-path]
-  (let [file-name (path/basename full-path)
-        title (or file-name "Droplet")]
+  [{:keys [path saved?] :as ar}]
+  (let [file-name (when path (path/basename #p path))
+        title (or file-name "Droplet")
+        title (if (and path (not saved?))
+                (str title "*")
+                title)]
     (set! js/document.title title)))
 
 ;; TODO: persist dis bih
 ;; (defonce *open-file (atom nil))
-(defonce *open-file (doto (persistent-atom ::open-file nil)
+(defonce *open-file (doto (persistent-atom ::open-file {:path nil
+                                                        :saved? false})
                       (add-watch :change-title (fn [_ _ _ new-val]
                                                  (set-title! new-val)))))
 (set-title! @*open-file)
@@ -37,22 +41,27 @@
            (when elem
              (let [on-save-as (fn [serialized]
                                 (-> (.invoke ipcRenderer "save-file-as" serialized)
-                                    (.then #(reset! *open-file %))
+                                    (.then #(reset! *open-file {:path %, :saved? true}))
                                     (.catch #())))
                    *ui-state (sl/init! :*atom ui-state-atom
                                        :history file-deserialized
                                        :dom-elem elem
-                                       :on-save (fn [serialized]
-                                                  (if @*open-file
-                                                    (.send ipcRenderer "save-file" @*open-file serialized)
-                                                    (on-save-as serialized)))
-                                       :on-save-as on-save-as
                                        :on-open (fn [*ui-state]
                                                   (-> (.invoke ipcRenderer "choose-file")
                                                       (.then (fn [[file-path contents]]
-                                                               (reset! *open-file file-path)
+                                                               (reset! *open-file {:path file-path
+                                                                                   :saved? true})
                                                                (sl/load-file! *ui-state contents)))
-                                                      (.catch #(js/console.log %)))))]
+                                                      (.catch #(js/console.log %))))
+                                       :on-change (fn []
+                                                    (swap! *open-file assoc :saved? false))
+                                       :on-save (fn [serialized]
+                                                  (if @*open-file
+                                                    (do
+                                                      (.send ipcRenderer "save-file" (:path @*open-file) serialized)
+                                                      (swap! *open-file assoc :saved? true))
+                                                    (on-save-as serialized)))
+                                       :on-save-as on-save-as)]
                ;; Utility for viewing editor history from console
                (when utils/DEV
                  (set! js/dumpHistory #(js/console.log (slate-utils/pretty-history-stack (:history @*ui-state))))))))}])
@@ -60,7 +69,7 @@
 (defn main-editor []
   (let [active-formats (r/atom #{})
         *slate-instance (atom nil)
-        current-file @*open-file
+        current-file (:path @*open-file)
         deserialized-file-contents (if current-file
                                      (let [file-contents (.sendSync ipcRenderer "read-file" current-file)]
                                        (ui-state/deserialize file-contents))
