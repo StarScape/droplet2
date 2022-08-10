@@ -69,10 +69,15 @@
 (defn main-editor []
   (let [active-formats (r/atom #{})
         current-file (:path @*open-file)
-        deserialized-file-contents (if current-file
-                                     (let [file-contents (.sendSync ipcRenderer "read-file" current-file)]
-                                       (ui-state/deserialize file-contents))
-                                     nil)]
+        deserialized-file-contents (when current-file
+                                     (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
+                                       (if error?
+                                         (do
+                                           (on-new!)
+                                           ;; Slate instance will default to an empty history object
+                                           ;; when receiving nil, so propagating nil  works fine.
+                                           nil)
+                                         (ui-state/deserialize file-contents))))]
     (add-watch *slate-instance :watcher (fn [_key _atom _old-state _new-state]
                                           (reset! active-formats (ui-state/active-formats @*slate-instance))))
     (fn []

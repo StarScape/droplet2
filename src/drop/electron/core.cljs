@@ -60,9 +60,11 @@
   (on-ipc "read-file"
     (fn [e file-path]
       ;; #p "read-file"
-      (let [file-contents (fs/readFileSync file-path "utf8")]
-        #_(js/console.log file-contents)
-        (set! (.-returnValue e) file-contents)))))
+      (try
+        (let [file-contents (fs/readFileSync file-path "utf8")]
+          (set! (.-returnValue e) #js [false, file-contents]))
+        (catch js/Error _
+          (set! (.-returnValue e) #js [true, ""]))))))
 
 (defn init-app-menu [window]
   (let [template (clj->js [{:label (.-name app)
@@ -142,5 +144,4 @@
   (.on app "activate" (fn []
                         (when (zero? (.. BrowserWindow (getAllWindows) -length))
                           (init-window))))
-
   (reg-ipc-handlers!))

@@ -12,7 +12,6 @@
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
 
-
 ;; TODO: Ensure that app fails gracefully when last opened file no longer exists
 ;; TODO: auto-transparent-tify actionbar when in fullscreen, after debounce
 
