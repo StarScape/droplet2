@@ -19,7 +19,7 @@
 
 (defn set-title!
   [{:keys [path saved?] :as ar}]
-  (let [file-name (when path (path/basename #p path))
+  (let [file-name (when path (path/basename path))
         title (or file-name "Droplet")
         title (if (and path (not saved?))
                 (str title "*")
@@ -46,6 +46,9 @@
                    *ui-state (sl/init! :*atom ui-state-atom
                                        :history file-deserialized
                                        :dom-elem elem
+                                       :on-new (fn []
+                                                 (reset! *open-file {:path nil
+                                                                     :saved? false}))
                                        :on-open (fn [*ui-state]
                                                   (-> (.invoke ipcRenderer "choose-file")
                                                       (.then (fn [[file-path contents]]

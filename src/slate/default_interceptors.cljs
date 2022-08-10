@@ -386,15 +386,21 @@
    :ctrl+right ctrl+right
    :ctrl+shift+right ctrl+shift+right
    :ctrl+a select-all
-   :ctrl+i italic
-   :ctrl+b bold
    ;; TODO: should these be in universal-interceptors?
    :pageup start-of-line
    :pagedown end-of-line
    :home start-of-doc
    :end end-of-doc
    :ctrl+1 h1
-   :ctrl+2 h2})
+   :ctrl+2 h2
+   :ctrl+i italic
+   :ctrl+t strikethrough
+   :ctrl+b bold
+   :ctrl+u ulist
+   :ctrl+o olist
+   :ctrl+s save
+   :ctrl+shift+s save-as
+   :ctrl+shift+o open})
 
 (def mac-interceptors
   {:alt+left ctrl+left

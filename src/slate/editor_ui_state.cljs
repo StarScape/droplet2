@@ -248,6 +248,19 @@
                    changelist)
         (reset! *ui-state new-ui-state)))))
 
+(definterceptor new-file!
+  {:manual? true}
+  [*ui-state _]
+  (let [{:keys [shadow-root measure-fn] :as ui-state} @*ui-state
+        editor-state (es/editor-state)
+        available-width (.-width (.getBoundingClientRect (.-host shadow-root)))]
+    (swap! *ui-state merge {:viewmodels (vm/from-doc (:doc editor-state) available-width measure-fn)
+                            :history (history/init editor-state)
+                            :add-tip-to-backstack-timer-id nil
+                            :input-history []})
+    (full-dom-render! *ui-state)
+    ((:on-new ui-state))))
+
 (defn fire-normal-interceptor!
   "This the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
@@ -401,11 +414,13 @@
     {:cmd+z undo!
      :cmd+shift+z redo!
      :cmd+= increase-font-size!
-     :cmd+- decrease-font-size!}
+     :cmd+- decrease-font-size!
+     :cmd+n new-file!}
     {:ctrl+z undo!
      :ctrl+shift+z redo!
      :ctrl+= increase-font-size!
-     :ctrl+- decrease-font-size!}))
+     :ctrl+- decrease-font-size!
+     :ctrl+n new-file!}))
 
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
@@ -449,8 +464,8 @@
    :history - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom editor-state history dom-elem on-save on-save-as on-open on-change]
-      :or {*atom (atom nil), on-save #(), on-save-as #(), on-open #()}}]
+  [& {:keys [*atom editor-state history dom-elem on-new on-save on-save-as on-open on-change]
+      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-change #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
   (.. js/document -fonts (load "16px Merriweather")
       ;; TODO: use core-async or something to clean this up
@@ -476,6 +491,7 @@
                               :measure-fn measure-fn
                               :input-history []
                               :interceptors interceptors-map
+                              :on-new on-new
                               :on-save on-save
                               :on-save-as on-save-as
                               :on-load on-open

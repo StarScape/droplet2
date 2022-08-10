@@ -21,11 +21,13 @@
 ;; TODO: auto-transparent-tify actionbar when in fullscreen, after debounce
 ;; TODO: allow making new file with ctrl+n or menubar
 
-;; TODO: Set app title to include current file name
-;; TODO: add * to app title bar when file has been modified but not saved
-;; TODO: Ensure that app behaves fails gracefully when last opened file no longer exists
+;; TODO: Ensure that app fails gracefully when last opened file no longer exists
 
-;; TODO: fullscreen
+;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
+;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
+;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
+
+;; TODO: fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: find and replace UI
 ;; TODO: wordcount UI
 ;; TODO: command pallette
