@@ -19,7 +19,6 @@
 
 ;; TODO: fix menubar
 ;; TODO: auto-transparent-tify actionbar when in fullscreen, after debounce
-;; TODO: allow making new file with ctrl+n or menubar
 
 ;; TODO: Ensure that app fails gracefully when last opened file no longer exists
 

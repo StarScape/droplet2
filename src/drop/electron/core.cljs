@@ -1,11 +1,13 @@
 (ns drop.electron.core
-  (:require ["electron" :refer [app BrowserWindow crashReporter ipcMain dialog]]
+  (:require ["electron" :refer [app BrowserWindow Menu crashReporter ipcMain dialog]]
             ["electron-is-dev" :as is-dev?]
             ["electron-window-state" :as window-state-keeper]
             ["fs" :as fs]
             ["path" :as path]
             [drop.electron.utils :refer [on-ipc handle-ipc]]
             [drop.electron.persistent-atoms :as p-atoms]))
+
+(def is-dev? true)
 
 (js/console.log "Evaluating main electron file...")
 
@@ -62,6 +64,29 @@
         #_(js/console.log file-contents)
         (set! (.-returnValue e) file-contents)))))
 
+(defn init-app-menu [window]
+  (let [template (clj->js [{:label (.-name app)
+                            :submenu [{:role "about"}
+                                      {:type "separator"}
+                                      {:role "services"}
+                                      {:type "separator"}
+                                      {:role "hide"}
+                                      {:role "hideOthers"}
+                                      {:role "unhide"}
+                                      {:type "separator"}
+                                      {:role "quit"}]}
+                           {:label "File",
+                            :submenu [{:label "New"
+                                       :click #(js/console.log "New")}
+                                      {:label "Save"
+                                       :click #(js/console.log "Save")}
+                                      {:label "Save As..."
+                                       :click #(js/console.log "Save As")}
+                                      {:label "Open..."
+                                       :click #(js/console.log "Open")}]}])
+        app-menu (.buildFromTemplate Menu template)]
+    (.setApplicationMenu Menu app-menu)))
+
 (defn init-window []
   (let [window-state (window-state-keeper #js {:defaultWidth 1200
                                                :defaultHeight 900})
@@ -78,6 +103,7 @@
         source-path (if is-dev?
                       "http://localhost:8080"
                       (str "file://" js/__dirname "/../index.html"))]
+
     (when is-dev?
       (.. window -webContents (openDevTools)))
     (reset! main-window window)
@@ -91,6 +117,8 @@
          #(.. window -webContents (send "change-full-screen-status", true)))
     (.on ^js/electron.BrowserWindow window "leave-full-screen"
          #(.. window -webContents (send "change-full-screen-status", false)))
+
+    (init-app-menu window)
 
     (js/console.log "Initialized Electron browser window")))
 
