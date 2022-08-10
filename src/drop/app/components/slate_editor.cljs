@@ -99,8 +99,7 @@
 
   (.on ipcRenderer "change-full-screen-status"
        (fn [_e, message-contents]
-         (reset! *full-screen? message-contents)
-         #_(js/console.log (str "Received, now " @*full-screen?))))
+         (reset! *full-screen? message-contents)))
 
   (.on ipcRenderer "menubar-item-clicked"
        (fn [_e, message-contents]

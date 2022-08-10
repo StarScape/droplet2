@@ -77,12 +77,16 @@
                                       {:role "quit"}]}
                            {:label "File",
                             :submenu [{:label "New"
+                                       :accelerator "CmdOrCtrl+N"
                                        :click #(.. window -webContents (send "menubar-item-clicked", "new"))}
                                       {:label "Save"
+                                       :accelerator "CmdOrCtrl+S"
                                        :click #(.. window -webContents (send "menubar-item-clicked", "save"))}
                                       {:label "Save As..."
+                                       :accelerator "CmdOrCtrl+Shift+S"
                                        :click #(.. window -webContents (send "menubar-item-clicked", "save-as"))}
                                       {:label "Open..."
+                                       :accelerator "CmdOrCtrl+Shift+O"
                                        :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}])
         app-menu (.buildFromTemplate Menu template)]
     (.setApplicationMenu Menu app-menu)))
