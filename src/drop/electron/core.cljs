@@ -77,13 +77,13 @@
                                       {:role "quit"}]}
                            {:label "File",
                             :submenu [{:label "New"
-                                       :click #(js/console.log "New")}
+                                       :click #(.. window -webContents (send "menubar-item-clicked", "new"))}
                                       {:label "Save"
-                                       :click #(js/console.log "Save")}
+                                       :click #(.. window -webContents (send "menubar-item-clicked", "save"))}
                                       {:label "Save As..."
-                                       :click #(js/console.log "Save As")}
+                                       :click #(.. window -webContents (send "menubar-item-clicked", "save-as"))}
                                       {:label "Open..."
-                                       :click #(js/console.log "Open")}]}])
+                                       :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}])
         app-menu (.buildFromTemplate Menu template)]
     (.setApplicationMenu Menu app-menu)))
 

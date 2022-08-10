@@ -60,6 +60,11 @@
   [edn-str]
   (edn/read-string {:readers slate-types-readers} edn-str))
 
+(defn serialize
+  "Parses the EDN of the saved editor file and returns the data structure (atm, the :history map)."
+  [{:keys [history] :as _ui-state}]
+  (prn-str history))
+
 (defn elem-width
   "Returns the width of the UIState's dom element, in pixels."
   [ui-state]

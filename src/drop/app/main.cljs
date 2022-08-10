@@ -1,10 +1,10 @@
 (ns drop.app.main
-  (:require [drop.app.components.core :as components]
+  (:require [clojure.core.async :refer-macros [go]]
+            [drop.app.components.core :as components]
+            [drop.app.components.slate-editor :as slate-editor]
             [drop.utils :as utils]
             [reagent.dom :as rdom]
-            [orchestra.core :refer-macros [defn-spec]]
-            [orchestra-cljs.spec.test :as st]
-            [clojure.spec.alpha :as s]))
+            [orchestra-cljs.spec.test :as st]))
 
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
@@ -51,6 +51,7 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn main []
+  (slate-editor/on-startup)
   (mount-main-component))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
