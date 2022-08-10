@@ -59,11 +59,12 @@
                                        :on-change (fn []
                                                     (swap! *open-file assoc :saved? false))
                                        :on-save (fn [serialized]
-                                                  (if @*open-file
-                                                    (do
-                                                      (.send ipcRenderer "save-file" (:path @*open-file) serialized)
-                                                      (swap! *open-file assoc :saved? true))
-                                                    (on-save-as serialized)))
+                                                  (let [{open-file-path :path} @*open-file]
+                                                    (if open-file-path
+                                                      (do
+                                                        (.send ipcRenderer "save-file" open-file-path serialized)
+                                                        (swap! *open-file assoc :saved? true))
+                                                      (on-save-as serialized))))
                                        :on-save-as on-save-as)]
                ;; Utility for viewing editor history from console
                (when utils/DEV
