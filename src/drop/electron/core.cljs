@@ -110,6 +110,9 @@
                      :minHeight 500
                      :webPreferences #js {:nodeIntegration true
                                           :contextIsolation false
+                                          ;; Enabled to get support for :has() selector in CSS.
+                                          ;; Can be disabled whenever support for that is mainlined in Chrome
+                                          :experimentalFeatures true
                                           #_#_:preload (path/join js/__dirname "preload.js")}})
         source-path (if is-dev?
                       "http://localhost:8080"

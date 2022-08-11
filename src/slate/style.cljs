@@ -46,6 +46,25 @@
    [:.slate-range-selection {:background-color "var(--range-selection-color)"
                              :border-radius "3px"
                              :z-index 1000}]
+;; /* Selectors that have a previous selector sibling (all but first)  */
+;; .sel + .sel {
+;;   border-top-left-radius: 0;
+;;   border-bottom-left-radius: 0;
+;; }
+
+;; /* Selectors that have a next sibling that is also a selection (all but last) */
+;; .sel:has(+ .sel) {
+;;   border-top-right-radius: 0;
+;;   border-bottom-right-radius: 0;
+;; }
+   [(keyword ".slate-range-selection + .slate-range-selection") {:border-top-left-radius 0
+                                                                 :border-bottom-left-radius 0}]
+   [(keyword ".slate-range-selection:has(+ .slate-range-selection)") {:border-top-right-radius 0
+                                                                      :border-bottom-right-radius 0}]
+   [:.slate-range-selection:last-of-type {:border-radius "0 3px 3px 0"
+                                          :background-color "red"}]
+
+
    ;; TODO: this is the wrong approach. Use a CSS variable for this and change it when the program isn't focused
    [:.slate-range-selection-blurred {:background-color "#e0e1e2"}]
    [:ul :ol {:padding 0
