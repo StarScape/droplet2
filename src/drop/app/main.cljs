@@ -9,11 +9,10 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
+;; BUG: odd behavior with the italic space after 'fifth'
+
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
-
-;; TODO: Ensure that app fails gracefully when last opened file no longer exists
-;; TODO: auto-transparent-tify actionbar when in fullscreen, after debounce
 
 ;; TODO: try a different approach with click/drag events that fall outside of the paragraph: make an invisible :after element for
 ;; each one with a width of 100vw, give it a high z-index, and test for it clicking clicked, dragged on rather than doing math to
@@ -24,10 +23,16 @@
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
 
+;; TODO: make adjacent selected elements not have a border radius on the side facing the other selected element.
+;; (Should be able to just style the first and last elements of the appropriate type to have border radii on their
+;; left and right sides, respectively)
+
+;; TODO: auto-transparent-tify actionbar when in fullscreen, after period of inactivity
+
 ;; TODO: fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: find and replace UI
 ;; TODO: wordcount UI
-;; TODO: command pallette
+;; TODO: command palette
 ;; TODO: DOCX import/export
 ;; TODO: Look into React animation libraries
 ;; TODO: Interface design/impl

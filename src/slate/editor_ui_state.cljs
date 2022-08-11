@@ -502,6 +502,5 @@
                               :on-load on-open
                               :on-change on-change})
                (init-event-handlers! *atom)
-               (full-dom-render! *atom)
-
-               *atom))))
+               (full-dom-render! *atom))))
+  *atom)

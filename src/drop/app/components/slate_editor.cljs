@@ -1,11 +1,13 @@
 (ns drop.app.components.slate-editor
-  (:require [drop.app.persistent-atom :refer [persistent-atom]]
+  (:require [clojure.pprint :as pprint]
+            [drop.app.persistent-atom :refer [persistent-atom]]
             [drop.app.components.actionbar :refer [actionbar]]
             [drop.app.utils :as app-utils]
             [drop.utils :as utils]
-            [slate.editor-ui-state :as ui-state]
             [slate.core :as sl]
             [slate.default-interceptors :as ints]
+            [slate.editor-ui-state :as ui-state]
+            [slate.model.history :as history]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
             ["electron" :refer [ipcRenderer]]))
@@ -64,7 +66,11 @@
                                        :on-save-as on-save-as!)]
                ;; Utility for viewing editor history from console
                (when utils/DEV
-                 (set! js/dumpHistory #(js/console.log (slate-utils/pretty-history-stack (:history @*ui-state))))))))}])
+                 (set! js/dumpHistory #(js/console.log (slate-utils/pretty-history-stack (:history @*ui-state))))
+                 (set! js/printCurrentState #(-> (:history @*ui-state)
+                                                 history/current-state
+                                                 pprint/pprint
+                                                 js/console.log))))))}])
 
 (defn main-editor []
   (let [active-formats (r/atom #{})
