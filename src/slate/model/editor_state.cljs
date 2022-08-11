@@ -486,8 +486,13 @@
       (let [doc-children (:children doc)
             start-para-uuid (-> selection :start :paragraph)
             end-para-uuid (-> selection :end :paragraph)
-            changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)]
-        (->EditorUpdate (assoc editor-state :doc (m/toggle-format doc selection format))
+            changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)
+            common-formats (m/formatting doc selection)
+            format-modify-fn (if (contains? common-formats format) disj conj)
+            new-selection (update selection :formats format-modify-fn format)]
+        (->EditorUpdate (assoc editor-state
+                               :doc (m/toggle-format doc selection format)
+                               :selection new-selection)
                         (changelist :changed-uuids (set changed-uuids)))))))
 
 (defn merge-changelists

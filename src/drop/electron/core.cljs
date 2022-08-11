@@ -89,9 +89,14 @@
                                        :click #(.. window -webContents (send "menubar-item-clicked", "save-as"))}
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+Shift+O"
-                                       :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}])
-        app-menu (.buildFromTemplate Menu template)]
-    (.setApplicationMenu Menu app-menu)))
+                                       :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}])]
+    (when is-dev?
+      (.push template (clj->js {:label "Dev"
+                                :submenu [{:role "reload"}
+                                          {:role "forcereload"}
+                                          {:role "toggledevtools"}]})))
+
+    (.setApplicationMenu Menu (.buildFromTemplate Menu template))))
 
 (defn init-window []
   (let [window-state (window-state-keeper #js {:defaultWidth 1200

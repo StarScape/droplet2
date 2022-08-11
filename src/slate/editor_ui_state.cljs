@@ -77,8 +77,7 @@
                          (:type (get (:children doc) (sel/caret-para selection)))
                          (when (apply = (map :type selected))
                            (:type (first selected))))
-        formats (-> (m/formatting state)
-                    (set/union (:formats selection)))]
+        formats (:formats selection)]
     (if (some? paragraph-type)
       (conj formats paragraph-type)
       formats)))

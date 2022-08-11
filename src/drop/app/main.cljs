@@ -27,6 +27,11 @@
 ;; (Should be able to just style the first and last elements of the appropriate type to have border radii on their
 ;; left and right sides, respectively)
 
+;; TODO: the unsaved marker * in the title does not account for the undo and redo. Solution:
+;; get rid of the on-change callback func. Set another listener on the *slate-instance atom
+;; that checks the hash of the current-state with the hash of the last on that was saved.
+;; If they do not match, add *. If they do, just the plain title.
+
 ;; TODO: auto-transparent-tify actionbar when in fullscreen, after period of inactivity
 
 ;; TODO: fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen

@@ -1,13 +1,6 @@
 (ns drop.app.components.actionbar
   (:require [reagent.core :as r :refer [with-let]]))
 
-;; (defn update-formats-elem
-;;   [_key _atom _old-state new-state]
-;;   (let [sel (:selection (history/current-state (:history new-state)))
-;;         formats-str (str "Formats: " (str/join \, (:formats sel)))
-;;         elem (js/document.getElementById "formats")]
-;;     (set! (.-innerHTML elem) formats-str)))
-
 (defn spacer []
   [:div {:class "w-1.5"}])
 
