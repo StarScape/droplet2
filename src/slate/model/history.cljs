@@ -18,7 +18,6 @@
    yet merit being broken into separate levels of undo-ability.' The code in `fire-interceptor!`
    will automatically incoporate the tip into the backstack after a certain period of inactivity"
   (:require [clojure.spec.alpha :as s]
-            [clojure.spec.test.alpha :as stest]
             [slate.model.editor-state :as es :refer [editor-state]])
   (:refer-clojure :exclude [next]))
 

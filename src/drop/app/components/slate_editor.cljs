@@ -7,49 +7,61 @@
             [slate.core :as sl]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
+            [slate.model.editor-state :as es]
+            [slate.model.doc :as doc]
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
             ["electron" :refer [ipcRenderer]]))
 
+(defn- current-doc [ui-state]
+  (some-> ui-state :history (history/current-state) :doc))
+
+(defn- history-current-doc [history]
+  (-> history (history/current-state) :doc))
+
+(declare *slate-instance)
+(def *full-screen? (r/atom false))
+(defonce *open-file (doto (persistent-atom ::open-file
+                                           {:path nil, :last-saved-doc nil}
+                                           :readers ui-state/slate-types-readers)
+                      (add-watch :change-title (fn [_ _ _ new-open-file]
+                                                 (app-utils/set-title! new-open-file (current-doc @*slate-instance))))))
+
 ;; For now, there is a single global slate instance.
 ;; This will change at some point when tabs are implemented.
-(def *slate-instance (atom nil))
-(def *full-screen? (r/atom false))
+(def *slate-instance (doto (atom nil)
+                       (add-watch :change-title (fn [_ _ _ new-ui-state]
+                                                  (app-utils/set-title! @*open-file (current-doc new-ui-state))))))
 
-(defonce *open-file (doto (persistent-atom ::open-file {:path nil
-                                                        :saved? false})
-                      (add-watch :change-title (fn [_ _ _ new-val]
-                                                 (app-utils/set-title! new-val)))))
-
-(defn on-new! []
+(defn on-new! [new-ui-state]
   (reset! *open-file {:path nil
-                      :saved? false}))
+                      :last-saved-doc (current-doc new-ui-state)}))
 
 (defn on-open! [*ui-state]
   (-> (.invoke ipcRenderer "choose-file")
       (.then (fn [[file-path contents]]
+               (sl/load-file! *ui-state contents)
                (reset! *open-file {:path file-path
-                                   :saved? true})
-               (sl/load-file! *ui-state contents)))
+                                   :last-saved-doc (current-doc @*ui-state)})))
       (.catch #(js/console.log %))))
 
-(defn on-change! []
-  (swap! *open-file assoc :saved? false))
-
 (defn on-save-as!
-  [serialized]
-  (-> (.invoke ipcRenderer "save-file-as" serialized)
-      (.then #(reset! *open-file {:path %, :saved? true}))
+  [serialized-history]
+  (-> (.invoke ipcRenderer "save-file-as" serialized-history)
+      (.then #(reset! *open-file {:path %, :last-saved-doc (current-doc @*slate-instance)}))
       (.catch #())))
 
-(defn on-save! [serialized]
+(defn on-save! [serialized-history]
   (let [{open-file-path :path} @*open-file]
     (if open-file-path
       (do
-        (.send ipcRenderer "save-file" open-file-path serialized)
-        (swap! *open-file assoc :saved? true))
-      (on-save-as! serialized))))
+        #p "hello1"
+        (.send ipcRenderer "save-file" open-file-path serialized-history)
+        #p "hello2"
+        (swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance))
+        #p "hello3")
+      (on-save-as! serialized-history))))
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
   [:div
@@ -61,7 +73,6 @@
                                        :dom-elem elem
                                        :on-new on-new!
                                        :on-open on-open!
-                                       :on-change on-change!
                                        :on-save on-save!
                                        :on-save-as on-save-as!)]
                ;; Utility for viewing editor history from console
@@ -79,7 +90,7 @@
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
                                        (if error?
                                          (do
-                                           (on-new!)
+                                           (reset! *open-file {:path nil, :last-saved-doc (doc/document)})
                                            ;; Slate instance will default to an empty history object
                                            ;; when receiving nil, so propagating nil  works fine.
                                            nil)
@@ -106,7 +117,7 @@
 (defn on-startup
   "There is some global state and handlers in this namespace that need to be configured on startup."
   []
-  (app-utils/set-title! @*open-file)
+  (app-utils/set-title! @*open-file (current-doc @*slate-instance))
 
   (.on ipcRenderer "change-full-screen-status"
        (fn [_e, message-contents]
@@ -115,7 +126,7 @@
   (.on ipcRenderer "menubar-item-clicked"
        (fn [_e, message-contents]
          (case message-contents
-           "new" (on-new!)
+           "new" (on-new! @*slate-instance)
            "save" (on-save! (ui-state/serialize @*slate-instance))
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
            "open" (on-open! *slate-instance)))))

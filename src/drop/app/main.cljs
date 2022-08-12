@@ -21,10 +21,6 @@
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
 
-;; TODO: make adjacent selected elements not have a border radius on the side facing the other selected element.
-;; (Should be able to just style the first and last elements of the appropriate type to have border radii on their
-;; left and right sides, respectively)
-
 ;; TODO: the unsaved marker * in the title does not account for the undo and redo. Solution:
 ;; get rid of the on-change callback func. Set another listener on the *slate-instance atom
 ;; that checks the hash of the current-state with the hash of the last on that was saved.

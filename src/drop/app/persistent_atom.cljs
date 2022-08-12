@@ -8,15 +8,17 @@
   "Creates a new atom whose value will be persisted between sessions.
    The `atom-name` parameter exists to give the atom a globally unique name,
    and must be a fully-qualified keyword, such as ::last-file-open. There is
-   no need to add file extensions."
-  [atom-name default-val]
+   no need to add file extensions.
+
+   Takes the optional named parameters :readers to specific additional EDN readers needed."
+  [atom-name default-val & {:keys [readers], :or {readers {}}}]
   {:pre [(qualified-keyword? atom-name)]}
   (let [key (atom-name->local-storage-key atom-name)
         persist! (fn [state]
                    (js/localStorage.setItem key (prn-str state)))
         persisted-val (js/localStorage.getItem key)
         *atom (atom (if persisted-val
-                      (edn/read-string persisted-val)
+                      (edn/read-string {:readers readers} persisted-val)
                       default-val))]
     (when-not persisted-val
       (persist! @*atom))

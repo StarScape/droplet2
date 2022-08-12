@@ -263,7 +263,7 @@
                             :add-tip-to-backstack-timer-id nil
                             :input-history []})
     (full-dom-render! *ui-state)
-    ((:on-new ui-state))))
+    ((:on-new ui-state) @*ui-state)))
 
 (defn fire-normal-interceptor!
   "This the core of Slate's main data loop.
@@ -370,35 +370,30 @@
                completion-interceptor (when (= 1 (.. e -data -length))
                                         (get-completion (.-data e)))
                interceptor (or completion-interceptor (get-interceptor :insert))]
-           (fire-interceptor! *ui-state interceptor e)
-           ((:on-change @*ui-state)))
+           (fire-interceptor! *ui-state interceptor e))
 
          "deleteContentBackward"
          (let [{:keys [input-history]} @*ui-state]
            (if (= :completion (peek input-history))
              (fire-interceptor! *ui-state undo! e)
-             (fire-interceptor! *ui-state (get-interceptor :delete) e))
-           ((:on-change @*ui-state)))
+             (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 
          nil)))
 
     (bind-hidden-input-event! "cut"
      (fn [e]
        (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :cut) e)
-       ((:on-change @*ui-state))))
+       (fire-interceptor! *ui-state (get-interceptor :cut) e)))
 
     (bind-hidden-input-event! "copy"
      (fn [e]
        (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :copy) e)
-       ((:on-change @*ui-state))))
+       (fire-interceptor! *ui-state (get-interceptor :copy) e)))
 
     (bind-hidden-input-event! "paste"
      (fn [e]
        (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :paste) e)
-       ((:on-change @*ui-state))))
+       (fire-interceptor! *ui-state (get-interceptor :paste) e)))
 
     (bind-hidden-input-event! "focusout"
      (fn [e]
@@ -468,8 +463,8 @@
    :history - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom editor-state history dom-elem on-new on-save on-save-as on-open on-change]
-      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-change #()}}]
+  [& {:keys [*atom editor-state history dom-elem on-new on-save on-save-as on-open]
+      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
   (.. js/document -fonts (load "16px Merriweather")
       ;; TODO: use core-async or something to clean this up
@@ -498,8 +493,7 @@
                               :on-new on-new
                               :on-save on-save
                               :on-save-as on-save-as
-                              :on-load on-open
-                              :on-change on-change})
+                              :on-load on-open})
                (init-event-handlers! *atom)
                (full-dom-render! *atom))))
   *atom)
