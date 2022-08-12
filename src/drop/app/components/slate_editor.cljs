@@ -7,7 +7,6 @@
             [slate.core :as sl]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
-            [slate.model.editor-state :as es]
             [slate.model.doc :as doc]
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
@@ -16,9 +15,6 @@
 
 (defn- current-doc [ui-state]
   (some-> ui-state :history (history/current-state) :doc))
-
-(defn- history-current-doc [history]
-  (-> history (history/current-state) :doc))
 
 (declare *slate-instance)
 (def *full-screen? (r/atom false))
@@ -56,11 +52,8 @@
   (let [{open-file-path :path} @*open-file]
     (if open-file-path
       (do
-        #p "hello1"
         (.send ipcRenderer "save-file" open-file-path serialized-history)
-        #p "hello2"
-        (swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance))
-        #p "hello3")
+        (swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance)))
       (on-save-as! serialized-history))))
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
