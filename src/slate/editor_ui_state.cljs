@@ -326,7 +326,9 @@
                            (when (and matching-interceptor
                                       ((:should-fire? matching-interceptor) current-editor-state))
                              matching-interceptor)))
-        {editor-elem :dom-elem, hidden-input :hidden-input} @*ui-state
+        {editor-elem :dom-elem
+         outer-dom-elem :outer-dom-elem
+         hidden-input :hidden-input} @*ui-state
         *editor-surface-clicked? (atom false :validator boolean?)
         bind-hidden-input-event! (fn [event-name handler]
                                   (.addEventListener hidden-input event-name
@@ -340,6 +342,12 @@
                            (.focus hidden-input #js {:preventScroll true})
                            (reset! *editor-surface-clicked? true)
                            (reset! *mousedown-event e)
+                           (fire-interceptor! *ui-state (get-interceptor :click) e)))
+
+      (.addEventListener outer-dom-elem "mousedown"
+                         (fn [e]
+                           (.preventDefault e)
+                           (.focus hidden-input #js {:preventScroll true})
                            (fire-interceptor! *ui-state (get-interceptor :click) e)))
 
       (.addEventListener js/window "mousemove"
@@ -485,8 +493,9 @@
                               :viewmodels (vm/from-doc (:doc (history/current-state history)) available-width measure-fn)
                               :history history
                               :add-tip-to-backstack-timer-id nil
-                              :shadow-root shadow-root
+                              :outer-dom-elem dom-elem
                               :dom-elem editor-elem
+                              :shadow-root shadow-root
                               :hidden-input hidden-input
                               :measure-fn measure-fn
                               :input-history []

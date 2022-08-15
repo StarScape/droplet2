@@ -27,9 +27,10 @@
    (e.g. '.someClass'), or null if one is not found. Will throw a SYNTAX_ERR if the selector
    string is invalid."
   [e selector-string]
-  (letfn [(selector-matches? [elem sstring]
-            (when (.-matches elem) (.matches elem sstring)))]
-    (first (filter #(selector-matches? % selector-string) (.-path e)))))
+  (when e
+    (letfn [(selector-matches? [elem sstring]
+              (when (.-matches elem) (.matches elem sstring)))]
+      (first (filter #(selector-matches? % selector-string) (.-path e))))))
 
 (defn split-elem-on-child!
   "Takes an element (e.g. a <ol>) and one of its children (e.g. an <li>) and clones
@@ -720,7 +721,9 @@
                :else (nth lines (int (/ py line-height))))
         offset (cond
                  (< px 0) (:start-offset line)
-                 (> px (.-width dom-elem-rect)) (:end-offset line)
+                 (> px (.-width dom-elem-rect)) (if (= line (peek lines))
+                                                  (:end-offset line)
+                                                  (dec (:end-offset line)))
                  :else (nearest-line-offset-to-pixel :line line
                                                      :target-px px
                                                      :last-line-in-paragraph? (= line (peek lines))
