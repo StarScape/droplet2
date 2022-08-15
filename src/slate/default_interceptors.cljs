@@ -55,7 +55,8 @@
                                              (:doc editor-state)
                                              (:viewmodels ui-state)
                                              (:dom-elem ui-state)
-                                             (:measure-fn ui-state))]
+                                             (:measure-fn ui-state)
+                                             (:shadow-root ui-state))]
     (es/set-selection editor-state new-sel)))
 
 (definterceptor drag
@@ -65,7 +66,8 @@
                                             (:doc editor-state)
                                             (:viewmodels ui-state)
                                             (:dom-elem ui-state)
-                                            (:measure-fn ui-state))))
+                                            (:measure-fn ui-state)
+                                            (:shadow-root ui-state))))
 
 (definterceptor left
   {:include-in-history? false}

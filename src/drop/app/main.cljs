@@ -14,9 +14,6 @@
 ;; find an overlapping element
 ;; EDIT: holy shit, there is a document.elementFromPoint method that I never knew existed...
 
-;; TODO: when clicking off to the side of the main editor element, the cursor should go to the far left or right of the 
-;; respective paragraph that lines up with it on the y-axis, and the editor-element should not lose its focus.
-
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
 

@@ -731,45 +731,33 @@
                                                      :paragraph-type (:type paragraph)))]
     (nav/autoset-formats paragraph (sel/selection [(:uuid paragraph) offset]))))
 
+
+
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its UUID."
-  [paragraphs-dll editor-elem client-y prev-event]
-  ;; (println "Finding overlap!")
+  [paragraphs-dll editor-elem client-y shadow-root]
   (let [para->bounds (fn [{:keys [uuid]}]
                        (let [bounding-rect (.getBoundingClientRect (get-paragraph-elem editor-elem uuid))]
-                         {:uuid uuid
-                          :top (.-top bounding-rect)
+                         {:top (.-top bounding-rect)
                           :bottom (.-bottom bounding-rect)}))
         first-para-bounds (-> paragraphs-dll first para->bounds)
         last-para-bounds (-> paragraphs-dll peek para->bounds)]
     (cond
+      ;; Above first paragraph
       (< client-y (:top first-para-bounds))
       (-> paragraphs-dll first :uuid)
 
+      ;; Below last paragraph
       (> client-y (:bottom last-para-bounds))
       (-> paragraphs-dll peek :uuid)
 
-      ;; TODO: one way to further optimize this would be to cache the last drag event
-      ;; and use that. I have a feeling that might be more trouble than its worth though,
-      ;; unless we actually start to notice real perf problems with this.
-
       ;; Find paragraph that client-y is overlapping with in the y axis
       :else
-      (let [overlaps? #(<= (:top %) client-y (:bottom %))
-            prev-para (match-elem-in-path prev-event ".paragraph")
-            ;; Start searching at either the paragraph the
-            ;; previous event took place in, or the first one
-            start-uuid (if prev-para (dom-id->paragraph-uuid (.-id prev-para)) (:uuid (first paragraphs-dll)))
-            advance (if (and prev-para (neg? (- client-y (.-y prev-event))))
-                         dll/prev
-                         dll/next)]
-        ;; TODO: okay, definitely some errors here...
-        (loop [p (get paragraphs-dll start-uuid)]
-          (when (nil? p) (throw "I don't think this should ever happen..."))
-
-          (if (overlaps? (para->bounds p))
-            (:uuid p)
-            (recur (advance paragraphs-dll p))))))))
+      (let [editor-bounds (.getBoundingClientRect editor-elem)
+            center-x (+ (.-x editor-bounds) (/ (.-width editor-bounds) 2))
+            elements-at-point (.elementsFromPoint shadow-root center-x client-y)
+            paragraph-elem (first (filter #(.matches % ".paragraph") elements-at-point))]
+        (dom-id->paragraph-uuid (.-id paragraph-elem))))))
 
 (declare ^:dynamic *last-mousedown-event*)
 
@@ -790,11 +778,11 @@
    nearest paragraph is to get its bounding rect and compare. We don't want to have to search through the
    entire list of paragraphs and figure out which one is intersecting the mouse, so instead we can pass in
    a paragraph to start searching at."
-  ([event doc viewmodels editor-elem measure-fn]
+  ([event doc viewmodels editor-elem measure-fn shadow-root]
    (let [paragraph-in-path (match-elem-in-path event ".paragraph")
          paragraph-uuid (if paragraph-in-path
                           (dom-id->paragraph-uuid (.-id paragraph-in-path))
-                          (find-overlapping-paragraph (:children doc) editor-elem (.-y event) *last-mousedown-event*))
+                          (find-overlapping-paragraph (:children doc) editor-elem (.-y event) shadow-root))
          ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
          ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
          ; will still be valid, however, so we can just grab the current element like this.
@@ -814,9 +802,9 @@
       :backward)))
 
 (defn drag
-  [mousemove-event doc viewmodels editor-elem measure-fn]
-  (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels editor-elem measure-fn)
-        currently-at (mouse-event->selection mousemove-event doc viewmodels editor-elem measure-fn)
+  [mousemove-event doc viewmodels editor-elem measure-fn shadow-root]
+  (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels editor-elem measure-fn shadow-root)
+        currently-at (mouse-event->selection mousemove-event doc viewmodels editor-elem measure-fn shadow-root)
         started-uuid (sel/caret-para started-at)
         started-offset (sel/caret started-at)
         current-uuid (sel/caret-para currently-at)
