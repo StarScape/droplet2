@@ -9,13 +9,16 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
-;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
-;; sync-dom is called might be a reasonable solution
-
 ;; TODO: try a different approach with click/drag events that fall outside of the paragraph: make an invisible :after element for
 ;; each one with a width of 100vw, give it a high z-index, and test for it clicking clicked, dragged on rather than doing math to
 ;; find an overlapping element
 ;; EDIT: holy shit, there is a document.elementFromPoint method that I never knew existed...
+
+;; TODO: when clicking off to the side of the main editor element, the cursor should go to the far left or right of the 
+;; respective paragraph that lines up with it on the y-axis, and the editor-element should not lose its focus.
+
+;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
+;; sync-dom is called might be a reasonable solution
 
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always

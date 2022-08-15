@@ -1,5 +1,6 @@
 (ns drop.utils
-  "Universal utilties (not specific to any submodule).")
+  "Universal utilties (not specific to any submodule)."
+  (:import [goog.async Throttle]))
 
 (goog-define DEV false)
 
@@ -10,6 +11,14 @@
     (fn [& xs]
       (js/clearTimeout @timer)
       (reset! timer (js/setTimeout #(apply f xs) ms)))))
+
+(defn disposable->function [disposable listener interval]
+  (let [disposable-instance (disposable. listener interval)]
+    (fn [& args]
+      (.apply (.-fire disposable-instance) disposable-instance (to-array args)))))
+
+(defn throttle [interval listener]
+  (disposable->function Throttle listener interval))
 
 (defn remove-nil-vals-from-map [m]
   (reduce-kv (fn [new-map key val]

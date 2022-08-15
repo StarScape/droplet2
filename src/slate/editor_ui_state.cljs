@@ -3,7 +3,7 @@
   (:require-macros [garden.def :refer [defkeyframes]])
   (:require [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
-            [clojure.set :as set]
+            [drop.utils :as utils]
             [slate.model.common :as m]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
@@ -18,7 +18,7 @@
             [slate.view :as view]
             [slate.viewmodel :as vm]
             [slate.style :as style]
-            [slate.utils :as utils]))
+            [slate.utils :as slate-utils]))
 
 (s/def ::id uuid?)
 (s/def ::history ::history/editor-state-history)
@@ -327,34 +327,35 @@
                                       ((:should-fire? matching-interceptor) current-editor-state))
                              matching-interceptor)))
         {editor-elem :dom-elem, hidden-input :hidden-input} @*ui-state
-        editor-surface-clicked? (atom false :validator boolean?)
+        *editor-surface-clicked? (atom false :validator boolean?)
         bind-hidden-input-event! (fn [event-name handler]
                                   (.addEventListener hidden-input event-name
                                                      (fn [e]
-                                                       (when-not @editor-surface-clicked?
+                                                       (when-not @*editor-surface-clicked?
                                                          (handler e)))))]
-    (let [mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
+    (let [*mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
       (.addEventListener editor-elem "mousedown"
                          (fn [e]
                            (.preventDefault e)
                            (.focus hidden-input #js {:preventScroll true})
-                           (reset! editor-surface-clicked? true)
-                           (reset! mousedown-event e)
+                           (reset! *editor-surface-clicked? true)
+                           (reset! *mousedown-event e)
                            (fire-interceptor! *ui-state (get-interceptor :click) e)))
 
       (.addEventListener js/window "mousemove"
-                         (fn [e]
-                           (when (and @editor-surface-clicked?
+                         (utils/throttle 50
+                          (fn [e]
+                            (when (and @*editor-surface-clicked?
                                       ;; Make sure it's actually still clicked down, if the user moved the mouse
                                       ;; off-window and back the 'mouseup' event will not have set the atom back to false.
-                                      (= 1 (.-which e)))
+                                       (= 1 (.-which e)))
                              ;; *last-mousedown-event* is passed this way for optimization purposes
-                             (binding [view/*last-mousedown-event* @mousedown-event]
-                               (fire-interceptor! *ui-state (get-interceptor :drag) e)))))
+                              (binding [view/*last-mousedown-event* @*mousedown-event]
+                                (fire-interceptor! *ui-state (get-interceptor :drag) e))))))
 
       (.addEventListener js/window "mouseup"
                          (fn [_e]
-                           (reset! editor-surface-clicked? false))))
+                           (reset! *editor-surface-clicked? false))))
 
     (bind-hidden-input-event! "keydown"
      (fn [e]
@@ -409,7 +410,7 @@
 
 (def manual-interceptors
   "Some manual interceptors that are defined here rather than default_interceptors."
-  (if utils/is-mac?
+  (if slate-utils/is-mac?
     {:cmd+z undo!
      :cmd+shift+z redo!
      :cmd+= increase-font-size!
