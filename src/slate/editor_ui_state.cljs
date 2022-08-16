@@ -73,7 +73,8 @@
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
         selected (m/selected-content state)
-        paragraph-type (if (sel/single? selection)
+        paragraph-type (if (or (sel/single? selection)
+                               (sel/single-paragraph? selection))
                          (:type (get (:children doc) (sel/caret-para selection)))
                          (when (apply = (map :type selected))
                            (:type (first selected))))
@@ -373,6 +374,7 @@
 
     (bind-hidden-input-event! "beforeinput"
      (fn [e]
+       (.preventDefault e)
        (case (.-inputType e)
          "insertText"
          (let [;; If the data is a single key and matches a completion, fire that instead of the insert interceptor

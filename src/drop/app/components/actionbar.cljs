@@ -1,26 +1,55 @@
 (ns drop.app.components.actionbar
-  (:require [reagent.core :as r :refer [with-let]]))
+  (:require [drop.utils :refer [debounce]]
+            [reagent.core :as r :refer-macros [with-let]]))
+
+(def actionbar-fade-out-ms 1000)
 
 (defn spacer []
   [:div {:class "w-1.5"}])
 
-(defn button [img-url active? on-click]
+(defn button [img-url active? transparent-mode? on-click]
   [:button {:on-mouse-down #(.preventDefault %) ; prevent losing focus
             :on-click on-click
-            :class [(if active? "bg-light-blue" "bg-white")
-                    "m-0.5" "p-2" "rounded-md"]}
+            :class ["m-0.5" "p-2" "rounded-md"
+                    (if active? "bg-light-blue" "bg-white")
+                    (if (and transparent-mode? (not active?)) "hidden" "")]}
    [:img {:src img-url
           :style {:width "15px"}}]])
 
-(defn actionbar [{:keys [class active-formats on-format-toggle]
-                  :or {class []}}]
-  [:div {:class class}
-   [button "icons/italic.svg" (active-formats :italic) #(on-format-toggle :italic)]
-   [button "icons/bold.svg" (active-formats :bold) #(on-format-toggle :bold)]
-   [button "icons/strikethrough.svg" (active-formats :strikethrough) #(on-format-toggle :strikethrough)]
-   [spacer]
-   [button "icons/h1.svg" (active-formats :h1) #(on-format-toggle :h1)]
-   [button "icons/h2.svg" (active-formats :h2) #(on-format-toggle :h2)]
-   [spacer]
-   [button "icons/numbered.svg" (active-formats :ol) #(on-format-toggle :ol)]
-   [button "icons/bulleted.svg" (active-formats :ul) #(on-format-toggle :ul)]])
+(defn- invisible-button []
+  [:div.invisible [button "icons/italic.svg" false false #()]])
+
+(defn actionbar [{:keys [active-formats on-format-toggle *full-screen?]}]
+  (r/with-let [*transparent-mode? (r/atom false)
+               set-transparent-debounced! (debounce actionbar-fade-out-ms #(when @*full-screen?
+                                                                             (reset! *transparent-mode? true)))
+               move-handler (fn [_]
+                              (reset! *transparent-mode? false)
+                              (set-transparent-debounced!))
+               _ (add-watch *full-screen? :fs-event-handler
+                            (fn [_ _ _ fs?]
+                              (if fs?
+                                (do
+                                  (set-transparent-debounced!)
+                                  (.addEventListener js/window "mousemove" move-handler))
+                                (do
+                                  (reset! *transparent-mode? false)
+                                  (.removeEventListener js/window "mousemove" move-handler)))))]
+    (let [transparent? @*transparent-mode?
+          base-classes "fixed bottom-0 w-screen px-1 py-1 flex "]
+      [:div {:class (str base-classes (if transparent?
+                                        "bg-transparent"
+                                        "bg-white border-t border-gray-200"))}
+       [button "icons/italic.svg" (active-formats :italic) transparent? #(on-format-toggle :italic)]
+       [button "icons/bold.svg" (active-formats :bold) transparent? #(on-format-toggle :bold)]
+       [button "icons/strikethrough.svg" (active-formats :strikethrough) transparent? #(on-format-toggle :strikethrough)]
+       [spacer]
+       [button "icons/h1.svg" (active-formats :h1) transparent? #(on-format-toggle :h1)]
+       [button "icons/h2.svg" (active-formats :h2) transparent? #(on-format-toggle :h2)]
+       [spacer]
+       [button "icons/numbered.svg" (active-formats :ol) transparent? #(on-format-toggle :ol)]
+       [button "icons/bulleted.svg" (active-formats :ul) transparent? #(on-format-toggle :ul)]
+
+       ;; Invisible button so that element maintains its height
+       ;; Even when all the others are hidden in fullscreen mode
+       [invisible-button]])))

@@ -9,11 +9,6 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
-;; TODO: try a different approach with click/drag events that fall outside of the paragraph: make an invisible :after element for
-;; each one with a width of 100vw, give it a high z-index, and test for it clicking clicked, dragged on rather than doing math to
-;; find an overlapping element
-;; EDIT: holy shit, there is a document.elementFromPoint method that I never knew existed...
-
 ;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
 ;; sync-dom is called might be a reasonable solution
 
@@ -27,9 +22,7 @@
 ;; TODO: find and replace UI
 ;; TODO: wordcount UI
 ;; TODO: command palette
-;; TODO: DOCX import/export
 ;; TODO: Look into React animation libraries
-;; TODO: Interface design/impl
 ;; TODO: DOCX export/import w/ pandoc
 
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)

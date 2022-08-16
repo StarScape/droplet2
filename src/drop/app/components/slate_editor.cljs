@@ -95,8 +95,8 @@
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
-       [actionbar {:class "fixed bottom-0 w-screen bg-white px-1 py-1 flex border-t border-gray-200"
-                   :active-formats @active-formats
+       [actionbar {:active-formats @active-formats
+                   :*full-screen? *full-screen?
                    :on-format-toggle #(let [interceptor (case %
                                                           :italic ints/italic
                                                           :strikethrough ints/strikethrough
