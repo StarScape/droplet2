@@ -62,6 +62,6 @@
         ;; Even when all the others are hidden in fullscreen mode
         [invisible-button]]
        #_[:span {:class "flex items-center text-sm mr-2"} word-count " words"]
-       [:span {:class "flex text-slate-700 items-center text-sm mr-2"}
+       [:span {:class "flex text-slate-800 items-center text-sm mr-2"}
         word-count
-        [:span {:class "text-xs text-slate-500 ml-1"} " words"]]])))
+        [:span {:class "text-xs text-slate-500 ml-1"} "words"]]])))

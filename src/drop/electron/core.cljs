@@ -89,7 +89,9 @@
                                        :click #(.. window -webContents (send "menubar-item-clicked", "save-as"))}
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+Shift+O"
-                                       :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}])]
+                                       :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}
+                           {:label "View",
+                            :submenu [{:role "togglefullscreen"}]}])]
     (when is-dev?
       (.push template (clj->js {:label "Dev"
                                 :submenu [{:role "reload"}

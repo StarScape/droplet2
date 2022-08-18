@@ -18,7 +18,6 @@
 
 ;; TODO: fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: find and replace UI
-;; TODO: wordcount UI
 ;; TODO: command palette
 ;; TODO: learn about React Spring
 ;; TODO: learn about DataScript
