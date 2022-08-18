@@ -90,6 +90,7 @@
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+Shift+O"
                                        :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}
+                           {:role "editMenu"}
                            {:label "View",
                             :submenu [{:role "togglefullscreen"}]}
                            {:role "windowMenu"}])]
