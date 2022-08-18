@@ -16,13 +16,12 @@
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
 
-;; TODO: auto-transparent-tify actionbar when in fullscreen, after period of inactivity
-
 ;; TODO: fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: find and replace UI
 ;; TODO: wordcount UI
 ;; TODO: command palette
-;; TODO: Look into React animation libraries
+;; TODO: learn about React Spring
+;; TODO: learn about DataScript
 ;; TODO: DOCX export/import w/ pandoc
 
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)

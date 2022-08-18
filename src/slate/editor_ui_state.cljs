@@ -18,6 +18,7 @@
             [slate.view :as view]
             [slate.viewmodel :as vm]
             [slate.style :as style]
+            [slate.word-count :as word-count]
             [slate.utils :as slate-utils]))
 
 (s/def ::id uuid?)
@@ -210,7 +211,7 @@
   {:manual? true}
   [*ui-state _]
   (cancel-add-tip-to-backstack! *ui-state)
-  (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state
+  (let [{:keys [viewmodels history input-history word-count measure-fn] :as ui-state} @*ui-state
         current-update (history/current history)]
     (when (history/has-undo? history)
       (let [new-input-history (interceptors/add-to-input-history input-history :undo)
@@ -219,10 +220,12 @@
             restored-state (:editor-state restored-update)
             changelist (es/reverse-changelist (:changelist current-update))
             new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (elem-width ui-state) measure-fn changelist)
+            new-word-count (word-count/update-count word-count (-> current-update :editor-state :doc) (:doc restored-state) changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
-                                :viewmodels new-vms)]
+                                :viewmodels new-vms
+                                :word-count new-word-count)]
         (sync-dom! (:dom-elem new-ui-state)
                    (:editor-state restored-update)
                    (history/current-state history)
@@ -234,7 +237,7 @@
   {:manual? true}
   [*ui-state _]
   (cancel-add-tip-to-backstack! *ui-state)
-  (let [{:keys [viewmodels history input-history measure-fn] :as ui-state} @*ui-state]
+  (let [{:keys [viewmodels history input-history word-count measure-fn] :as ui-state} @*ui-state]
     (when (history/has-redo? history)
       (let [new-input-history (interceptors/add-to-input-history input-history :redo)
             new-history (history/redo history)
@@ -242,10 +245,12 @@
             restored-state (:editor-state restored-update)
             changelist (:changelist restored-update)
             new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (elem-width ui-state) measure-fn changelist)
+            new-word-count (word-count/update-count word-count (:doc (history/current-state history)) (:doc restored-state) changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
-                                :viewmodels new-vms)]
+                                :viewmodels new-vms
+                                :word-count new-word-count)]
         (sync-dom! (:dom-elem new-ui-state)
                    (:editor-state restored-update)
                    (history/current-state history)
@@ -280,9 +285,12 @@
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
+        old-doc (:doc editor-state)
+        new-doc (-> editor-update :editor-state :doc)
         new-ui-state (-> ui-state
                          (update :history update-history editor-update interceptor)
                          (update :input-history interceptors/add-to-input-history interceptor event)
+                         (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
                          (update-viewmodels-to-history-tip))]
     (sync-dom! (:dom-elem new-ui-state)
                (:editor-state editor-update)
@@ -488,20 +496,22 @@
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
                                         (interceptors/reg-interceptors manual-interceptors))
-                   hidden-input (view/create-hidden-input! shadow-root)]
+                   hidden-input (view/create-hidden-input! shadow-root)
+                   current-doc (:doc (history/current-state history))]
                 ;; Focus hidden input without scrolling to it (it will be at the bottom)
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
-                              :viewmodels (vm/from-doc (:doc (history/current-state history)) available-width measure-fn)
+                              :viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :history history
+                              :word-count (word-count/full-count current-doc)
+                              :input-history []
+                              :interceptors interceptors-map
+                              :hidden-input hidden-input
                               :add-tip-to-backstack-timer-id nil
                               :outer-dom-elem dom-elem
                               :dom-elem editor-elem
                               :shadow-root shadow-root
-                              :hidden-input hidden-input
                               :measure-fn measure-fn
-                              :input-history []
-                              :interceptors interceptors-map
                               :on-new on-new
                               :on-save on-save
                               :on-save-as on-save-as
