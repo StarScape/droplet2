@@ -26,7 +26,7 @@
 (defn- invisible-button []
   [:div.invisible [button "icons/italic.svg" false false #()]])
 
-(defn actionbar [{:keys [active-formats on-format-toggle *full-screen?]}]
+(defn actionbar [{:keys [active-formats word-count on-format-toggle *full-screen?]}]
   (r/with-let [*transparent-mode? (r/atom false)
                set-transparent-debounced! (debounce actionbar-fade-out-ms #(when @*full-screen?
                                                                              (reset! *transparent-mode? true)))
@@ -43,20 +43,25 @@
                                   (reset! *transparent-mode? false)
                                   (.removeEventListener js/window "mousemove" move-handler)))))]
     (let [transparent? @*transparent-mode?
-          base-classes "fixed bottom-0 w-screen px-1 py-1 flex transition-all duration-150 "]
+          base-classes "fixed bottom-0 w-screen px-1 py-1 flex place-content-between transition-all duration-150 "]
       [:div {:class (str base-classes (if transparent?
                                         "bg-transparent"
                                         "bg-white border-t border-gray-200"))}
-       [button "icons/italic.svg" (active-formats :italic) transparent? #(on-format-toggle :italic)]
-       [button "icons/bold.svg" (active-formats :bold) transparent? #(on-format-toggle :bold)]
-       [button "icons/strikethrough.svg" (active-formats :strikethrough) transparent? #(on-format-toggle :strikethrough)]
-       [spacer]
-       [button "icons/h1.svg" (active-formats :h1) transparent? #(on-format-toggle :h1)]
-       [button "icons/h2.svg" (active-formats :h2) transparent? #(on-format-toggle :h2)]
-       [spacer]
-       [button "icons/numbered.svg" (active-formats :ol) transparent? #(on-format-toggle :ol)]
-       [button "icons/bulleted.svg" (active-formats :ul) transparent? #(on-format-toggle :ul)]
+       [:div.flex
+        [button "icons/italic.svg" (active-formats :italic) transparent? #(on-format-toggle :italic)]
+        [button "icons/bold.svg" (active-formats :bold) transparent? #(on-format-toggle :bold)]
+        [button "icons/strikethrough.svg" (active-formats :strikethrough) transparent? #(on-format-toggle :strikethrough)]
+        [spacer]
+        [button "icons/h1.svg" (active-formats :h1) transparent? #(on-format-toggle :h1)]
+        [button "icons/h2.svg" (active-formats :h2) transparent? #(on-format-toggle :h2)]
+        [spacer]
+        [button "icons/numbered.svg" (active-formats :ol) transparent? #(on-format-toggle :ol)]
+        [button "icons/bulleted.svg" (active-formats :ul) transparent? #(on-format-toggle :ul)]
 
-       ;; Invisible button so that element maintains its height
-       ;; Even when all the others are hidden in fullscreen mode
-       [invisible-button]])))
+        ;; Invisible button so that element maintains its height
+        ;; Even when all the others are hidden in fullscreen mode
+        [invisible-button]]
+       #_[:span {:class "flex items-center text-sm mr-2"} word-count " words"]
+       [:span {:class "flex text-slate-700 items-center text-sm mr-2"}
+        word-count
+        [:span {:class "text-xs text-slate-500 ml-1"} " words"]]])))

@@ -77,7 +77,8 @@
                                                  js/console.log))))))}])
 
 (defn main-editor []
-  (let [active-formats (r/atom #{})
+  (let [*active-formats (r/atom #{})
+        *word-count (r/atom 0)
         current-file (:path @*open-file)
         deserialized-file-contents (when current-file
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
@@ -88,14 +89,16 @@
                                            ;; when receiving nil, so propagating nil  works fine.
                                            nil)
                                          (ui-state/deserialize file-contents))))]
-    (add-watch *slate-instance :watcher (fn [_key _atom _old-state _new-state]
-                                          (reset! active-formats (ui-state/active-formats @*slate-instance))))
+    (add-watch *slate-instance :watcher (fn [_key _atom _old-state new-ui-state]
+                                          (reset! *active-formats (ui-state/active-formats new-ui-state))
+                                          (reset! *word-count (:word-count new-ui-state))))
     (fn []
       [:<>
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
-       [actionbar {:active-formats @active-formats
+       [actionbar {:active-formats @*active-formats
+                   :word-count @*word-count
                    :*full-screen? *full-screen?
                    :on-format-toggle #(let [interceptor (case %
                                                           :italic ints/italic
