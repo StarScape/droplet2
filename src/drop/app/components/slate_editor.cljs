@@ -2,6 +2,7 @@
   (:require [clojure.pprint :as pprint]
             [drop.app.persistent-atom :refer [persistent-atom]]
             [drop.app.components.actionbar :refer [actionbar]]
+            [drop.app.components.find-and-replace :refer [find-and-replace-popup]]
             [drop.app.utils :as app-utils]
             [drop.utils :as utils]
             [slate.core :as sl]
@@ -59,6 +60,7 @@
 (defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
   [:div
    {:class "react-slate-elem flex-1 overflow-y-auto"
+    :tabIndex "-1"
     :ref (fn [elem]
            (when elem
              (let [*ui-state (sl/init! :*atom ui-state-atom
@@ -79,6 +81,7 @@
 (defn main-editor []
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
+        *find-and-replace-active? (r/atom true)
         current-file (:path @*open-file)
         deserialized-file-contents (when current-file
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
@@ -97,6 +100,10 @@
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
+       [find-and-replace-popup {:activated? @*find-and-replace-active?
+                                :on-click-exit #(reset! @*find-and-replace-active? false)
+                                :on-click-next #(js/console.log "clicked NEXT")
+                                :on-click-prev #(js/console.log "clicked PREV")}]
        [actionbar {:active-formats @*active-formats
                    :word-count @*word-count
                    :*full-screen? *full-screen?

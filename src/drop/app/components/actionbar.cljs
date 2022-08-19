@@ -1,12 +1,10 @@
 (ns drop.app.components.actionbar
-  (:require [drop.utils :refer [debounce]]
+  (:require [drop.app.components.layout :refer [h-spacer-sm]]
+            [drop.utils :refer [debounce]]
             [reagent.core :as r :refer-macros [with-let]]
             ["@headlessui/react" :refer [Transition]]))
 
 (def actionbar-fade-out-ms 2500)
-
-(defn spacer []
-  [:div {:class "w-1.5"}])
 
 (defn button [img-url active? transparent-mode? on-click]
   [:> Transition {:show (boolean (or active? (not transparent-mode?)))
@@ -51,10 +49,10 @@
         [button "icons/italic.svg" (active-formats :italic) transparent? #(on-format-toggle :italic)]
         [button "icons/bold.svg" (active-formats :bold) transparent? #(on-format-toggle :bold)]
         [button "icons/strikethrough.svg" (active-formats :strikethrough) transparent? #(on-format-toggle :strikethrough)]
-        [spacer]
+        [h-spacer-sm]
         [button "icons/h1.svg" (active-formats :h1) transparent? #(on-format-toggle :h1)]
         [button "icons/h2.svg" (active-formats :h2) transparent? #(on-format-toggle :h2)]
-        [spacer]
+        [h-spacer-sm]
         [button "icons/numbered.svg" (active-formats :ol) transparent? #(on-format-toggle :ol)]
         [button "icons/bulleted.svg" (active-formats :ul) transparent? #(on-format-toggle :ul)]
 
