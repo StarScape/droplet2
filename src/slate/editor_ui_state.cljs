@@ -93,14 +93,6 @@
         new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (elem-width ui-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
-#_(defn update-all-viewmodels-to-current-state
-  [ui-state]
-  (let [{:keys [dom-elem history measure-fn] :as ui-state} ui-state
-        editor-state (history/current-state history)
-        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        new-viewmodels (vm/from-doc (:doc editor-state) dom-elem-width measure-fn)]
-    (assoc ui-state :viewmodels new-viewmodels)))
-
 (defn update-history
   [history editor-update interceptor]
   ;; if completion:
@@ -136,13 +128,14 @@
    (such as on application startup), as normally the interceptor system will handle rendering changed/inserted/deleted
    paragraphs selectively."
   [*ui-state]
-  (let [{:keys [dom-elem history measure-fn] :as ui-state} @*ui-state
+  (let [{:keys [dom-elem history measure-fn shadow-root hidden-input] :as ui-state} @*ui-state
         {:keys [doc] :as editor-state} (history/current-state history)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         viewmodels (vm/from-doc doc dom-elem-width measure-fn)
         new-ui-state (assoc ui-state :viewmodels viewmodels)
         viewmodels (map #(get viewmodels (:uuid %)) (:children doc))]
     (view/insert-all! dom-elem viewmodels editor-state)
+    (view/relocate-hidden-input! shadow-root hidden-input)
     (reset! *ui-state new-ui-state)))
 
 (defn load-file!
@@ -155,7 +148,7 @@
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
-  [dom-elem editor-state prev-state viewmodels changelist]
+  [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist]
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
@@ -166,7 +159,9 @@
       (view/remove-para! dom-elem uuid editor-state prev-state))
     (doseq [uuid changed-uuids]
       #_(js/console.log (str "Updating " uuid))
-      (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))))
+      (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))
+
+    (view/relocate-hidden-input! shadow-root hidden-input)))
 
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."
@@ -226,7 +221,9 @@
                                 :history new-history
                                 :viewmodels new-vms
                                 :word-count new-word-count)]
-        (sync-dom! (:dom-elem new-ui-state)
+        (sync-dom! (:shadow-root ui-state)
+                   (:dom-elem new-ui-state)
+                   (:hidden-input ui-state)
                    (:editor-state restored-update)
                    (history/current-state history)
                    (:viewmodels new-ui-state)
@@ -251,7 +248,9 @@
                                 :history new-history
                                 :viewmodels new-vms
                                 :word-count new-word-count)]
-        (sync-dom! (:dom-elem new-ui-state)
+        (sync-dom! (:shadow-root new-ui-state)
+                   (:dom-elem new-ui-state)
+                   (:hidden-input new-ui-state)
                    (:editor-state restored-update)
                    (history/current-state history)
                    (:viewmodels new-ui-state)
@@ -292,7 +291,9 @@
                          (update :input-history interceptors/add-to-input-history interceptor event)
                          (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
                          (update-viewmodels-to-history-tip))]
-    (sync-dom! (:dom-elem new-ui-state)
+    (sync-dom! (:shadow-root new-ui-state)
+               (:dom-elem new-ui-state)
+               (:hidden-input new-ui-state)
                (:editor-state editor-update)
                editor-state
                (:viewmodels new-ui-state)

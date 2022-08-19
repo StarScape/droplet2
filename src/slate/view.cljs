@@ -830,3 +830,10 @@
     (.setAttribute hidden-input "type" "text")
     (.appendChild shadow-root hidden-input)
     hidden-input))
+
+(defn relocate-hidden-input!
+  "Relocates the hidden input to be inside the cursor element."
+  [shadow-root hidden-input]
+  (let [cursor-elem (.querySelector shadow-root ".slate-text-caret")]
+    (.append cursor-elem hidden-input)
+    (.focus hidden-input #js {:preventScroll true})))
