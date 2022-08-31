@@ -9,9 +9,6 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
-;; TODO: put the hidden input _at_ the cursor, like VS code does. Just moving it to the current slate-caret element every time
-;; sync-dom is called might be a reasonable solution
-
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously

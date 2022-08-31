@@ -1,10 +1,14 @@
 (ns slate.model.find-and-replace
-  (:require [slate.model.common :as sl]
+  (:require [slate.model.common :as m]
+            [slate.model.history :as history]
             [slate.model.selection :as sel :refer [selection]]
-            [slate.model.run :as r :refer [run]]
-            [slate.model.paragraph :as p :refer [paragraph]]
-            [slate.model.doc :as doc :refer [document]]
-            [slate.model.editor-state :as es :refer [editor-state >>= return]])
+            [slate.model.run :as r]
+            [slate.model.paragraph :as p]
+            [slate.model.doc :as doc]
+            [slate.model.editor-state :as es :refer [>>=]]
+            [slate.editor-ui-state :as ui-state :refer [sync-dom!]]
+            [slate.view :as view]
+            [slate.viewmodel :as vm])
   (:refer-clojure :exclude [find replace]))
 
 (defn- find-all-occurences
@@ -27,7 +31,7 @@
 
 (defn paragraph-find [paragraph text]
   (let [uuid (:uuid paragraph)
-        paragraph-text (sl/text paragraph)
+        paragraph-text (m/text paragraph)
         offsets (find-all-occurences paragraph-text text)]
     (map #(selection [uuid %] [uuid (+ % (.-length text))]) offsets)))
 
@@ -63,13 +67,13 @@
          [location & ls] locations]
     (if location
       (let [sel (adjust-selection location offset-change)
-            prior-formatting (sl/formatting paragraph sel)
+            prior-formatting (m/formatting paragraph sel)
             selected-length (- (-> sel :end :offset) (-> sel :start :offset))
           ; shift future offsets by difference between oldtext and newtext
             new-offset-change (- selected-length (.-length text))
             new-para (-> para
-                         (sl/delete sel)
-                         (sl/insert (sel/collapse-start sel) (r/run text prior-formatting)))]
+                         (m/delete sel)
+                         (m/insert (sel/collapse-start sel) (r/run text prior-formatting)))]
         (recur new-para new-offset-change ls))
       para)))
 
@@ -97,3 +101,41 @@
     #_(reduce (fn [editor-update, location]
               (>>= editor-update replace location))
             (return editor-state) locations-to-replace)))
+
+(defn highlight!
+  [*ui-state locations]
+  (let [{:keys [shadow-root
+                dom-elem
+                measure-fn
+                hidden-input
+                viewmodels
+                history]
+         :as ui-state} @*ui-state
+        editor-state (history/current-state history)
+        changed-uuids (->> locations (map sel/caret-para) (set))
+        new-children (reduce (fn [new-children location]
+                               (update new-children (sel/caret-para location) m/apply-format location :highlight))
+                             (-> editor-state :doc :children) locations)
+        new-state (assoc-in editor-state [:doc :children] new-children)
+        changelist (es/changelist :changed-uuids changed-uuids)
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
+    (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))
+
+(defn unhighlight!
+  [*ui-state locations]
+  (let [{:keys [shadow-root
+                dom-elem
+                measure-fn
+                hidden-input
+                viewmodels
+                history]
+         :as ui-state} @*ui-state
+        editor-state (history/current-state history)
+        changed-uuids (->> locations (map sel/caret-para) (set))
+        new-children (reduce (fn [new-children location]
+                               (update new-children (sel/caret-para location) m/remove-format location :highlight))
+                             (-> editor-state :doc :children) locations)
+        new-state (assoc-in editor-state [:doc :children] new-children)
+        changelist (es/changelist :changed-uuids changed-uuids)
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
+    (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))

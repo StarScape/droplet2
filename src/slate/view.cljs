@@ -64,6 +64,11 @@
           (recur next-sibling))))
     (.insertBefore (.-parentNode elem-to-split) left-elem elem-to-split)))
 
+(defn elem-width
+  "Returns the width of the UIState's dom element, in pixels."
+  [ui-state]
+  (.-width (.getBoundingClientRect (:dom-elem ui-state))))
+
 (defn font-size
   "Returns the element's font size, in pixels, _as a number_, not a string."
   [dom-elem]
@@ -833,7 +838,9 @@
 
 (defn relocate-hidden-input!
   "Relocates the hidden input to be inside the cursor element."
-  [shadow-root hidden-input]
-  (let [cursor-elem (.querySelector shadow-root ".slate-text-caret")]
-    (.append cursor-elem hidden-input)
-    (.focus hidden-input #js {:preventScroll true})))
+  ([shadow-root hidden-input focus?]
+   (let [cursor-elem (.querySelector shadow-root ".slate-text-caret")]
+     (.append cursor-elem hidden-input)
+     (when focus?
+       (.focus hidden-input #js {:preventScroll true}))))
+  ([shadow-root hidden-input] (relocate-hidden-input! shadow-root hidden-input true)))

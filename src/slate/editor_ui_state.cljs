@@ -66,11 +66,6 @@
   [edn-str]
   (edn/read-string {:readers slate-types-readers} edn-str))
 
-(defn elem-width
-  "Returns the width of the UIState's dom element, in pixels."
-  [ui-state]
-  (.-width (.getBoundingClientRect (:dom-elem ui-state))))
-
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
         selected (m/selected-content state)
@@ -90,7 +85,7 @@
   [ui-state]
   (let [{:keys [viewmodels history measure-fn]} ui-state
         {:keys [editor-state changelist]} (:tip history)
-        new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (elem-width ui-state) measure-fn changelist)]
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (view/elem-width ui-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
 (defn update-history
@@ -138,17 +133,11 @@
     (view/relocate-hidden-input! shadow-root hidden-input)
     (reset! *ui-state new-ui-state)))
 
-(defn load-file!
-  [*ui-state file-contents-str]
-  (let [deserialized-history (deserialize file-contents-str)]
-    (cancel-add-tip-to-backstack! *ui-state)
-    (swap! *ui-state assoc :history deserialized-history)
-    (full-dom-render! *ui-state)))
-
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
-  [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist]
+  [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist
+   & {:keys [focus?] :or {focus? true}}]
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
@@ -161,7 +150,14 @@
       #_(js/console.log (str "Updating " uuid))
       (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))
 
-    (view/relocate-hidden-input! shadow-root hidden-input)))
+    (view/relocate-hidden-input! shadow-root hidden-input focus?)))
+
+(defn load-file!
+  [*ui-state file-contents-str]
+  (let [deserialized-history (deserialize file-contents-str)]
+    (cancel-add-tip-to-backstack! *ui-state)
+    (swap! *ui-state assoc :history deserialized-history)
+    (full-dom-render! *ui-state)))
 
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."
@@ -214,7 +210,7 @@
             restored-update (history/current new-history)
             restored-state (:editor-state restored-update)
             changelist (es/reverse-changelist (:changelist current-update))
-            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (elem-width ui-state) measure-fn changelist)
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn changelist)
             new-word-count (word-count/update-count word-count (-> current-update :editor-state :doc) (:doc restored-state) changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
@@ -241,7 +237,7 @@
             restored-update (history/current new-history)
             restored-state (:editor-state restored-update)
             changelist (:changelist restored-update)
-            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (elem-width ui-state) measure-fn changelist)
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn changelist)
             new-word-count (word-count/update-count word-count (:doc (history/current-state history)) (:doc restored-state) changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history

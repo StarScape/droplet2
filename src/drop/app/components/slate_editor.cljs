@@ -9,6 +9,7 @@
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
             [slate.model.doc :as doc]
+            [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
@@ -82,6 +83,7 @@
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
         *find-and-replace-active? (r/atom true)
+        *found-locations (r/atom [])
         current-file (:path @*open-file)
         deserialized-file-contents (when current-file
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
@@ -101,6 +103,12 @@
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
        [find-and-replace-popup {:activated? @*find-and-replace-active?
+                                :on-find #(let [editor-state (history/current-state (:history @*slate-instance))
+                                                locations (f+r/find editor-state %)]
+                                            (reset! *found-locations locations)
+                                            (f+r/highlight! *slate-instance locations))
+                                :on-replace (fn [replacement-text])
+                                :on-replace-all (fn [replacement-text])
                                 :on-click-exit #(reset! @*find-and-replace-active? false)
                                 :on-click-next #(js/console.log "clicked NEXT")
                                 :on-click-prev #(js/console.log "clicked PREV")}]
