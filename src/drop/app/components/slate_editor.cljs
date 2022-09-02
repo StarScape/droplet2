@@ -1,5 +1,6 @@
 (ns drop.app.components.slate-editor
-  (:require [clojure.pprint :as pprint]
+  (:require [clojure.string :as str]
+            [clojure.pprint :as pprint]
             [drop.app.persistent-atom :refer [persistent-atom]]
             [drop.app.components.actionbar :refer [actionbar]]
             [drop.app.components.find-and-replace :refer [find-and-replace-popup]]
@@ -103,10 +104,15 @@
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
        [find-and-replace-popup {:activated? @*find-and-replace-active?
-                                :on-find #(let [editor-state (history/current-state (:history @*slate-instance))
-                                                locations (f+r/find editor-state %)]
-                                            (reset! *found-locations locations)
-                                            (f+r/highlight! *slate-instance locations))
+                                :on-find (fn [text]
+                                           (if (str/blank? text)
+                                             (do
+                                               (f+r/unhighlight! *slate-instance @*found-locations)
+                                               (reset! *found-locations []))
+                                             (let [editor-state (history/current-state (:history @*slate-instance))
+                                                   locations (f+r/find editor-state text)]
+                                               (reset! *found-locations locations)
+                                               (f+r/highlight! *slate-instance locations))))
                                 :on-replace (fn [replacement-text])
                                 :on-replace-all (fn [replacement-text])
                                 :on-click-exit #(reset! @*find-and-replace-active? false)
