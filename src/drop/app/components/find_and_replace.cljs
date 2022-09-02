@@ -43,7 +43,8 @@
   (when activated?
     [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b drop-shadow-sm rounded-b-sm
-                   flex flex-col"}
+                   flex flex-col"
+           :on-key-down #(when (= "Escape" (.-code %)) (on-click-exit))}
      [input-row {:placeholder "Find"
                  :tab-index "1"
                  :buttons [:<>

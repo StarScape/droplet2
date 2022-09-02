@@ -6,6 +6,8 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
+;; BUG: find and replace, typing a single a causes the reflow to mess up
+
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
