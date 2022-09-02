@@ -115,7 +115,7 @@
                                                (f+r/highlight! *slate-instance locations))))
                                 :on-replace (fn [replacement-text])
                                 :on-replace-all (fn [replacement-text])
-                                :on-click-exit #(reset! @*find-and-replace-active? false)
+                                :on-click-exit #(reset! *find-and-replace-active? false)
                                 :on-click-next #(js/console.log "clicked NEXT")
                                 :on-click-prev #(js/console.log "clicked PREV")}]
        [actionbar {:active-formats @*active-formats
