@@ -2,9 +2,11 @@
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require-macros [garden.def :refer [defkeyframes]])
   (:require [clojure.edn :as edn]
+            [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [drop.utils :as utils]
             [slate.model.common :as m]
+            [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
             [slate.model.doc :refer [map->Document]]
@@ -31,6 +33,10 @@
 (s/def ::input-history (s/coll-of any?))
 (s/def ::viewmodels (s/coll-of any?))
 (s/def ::interceptors ::interceptors/interceptor-map)
+(s/def ::find-and-replace (s/keys :req-un [::active?
+                                           ::location-before
+                                           ::found-locations
+                                           ::current-location]))
 
 (s/def ::editor-ui-state (s/keys :req-un [::id
                                           ::history
@@ -39,7 +45,8 @@
                                           ::measure-fn
                                           ::input-history
                                           ::viewmodels
-                                          ::interceptors]))
+                                          ::interceptors
+                                          ::find-and-replace]))
 
 (def ^:const history-timeout-ms 1000)
 
@@ -197,6 +204,118 @@
   (let [new-font-size (- (view/font-size (:dom-elem @*ui-state)) font-size-delta)]
     (when (>= new-font-size font-size-min)
       (set-font-size! *ui-state new-font-size))))
+
+(defn highlight!
+  [*ui-state locations]
+  (let [{:keys [shadow-root
+                dom-elem
+                measure-fn
+                hidden-input
+                viewmodels
+                history]
+         :as ui-state} @*ui-state
+        editor-state (history/current-state history)
+        changed-uuids (->> locations (map sel/caret-para) (set))
+        new-children (reduce (fn [new-children location]
+                               (update new-children (sel/caret-para location) m/apply-format location :highlight))
+                             (-> editor-state :doc :children) locations)
+        new-state (assoc-in editor-state [:doc :children] new-children)
+        changelist (es/changelist :changed-uuids changed-uuids)
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
+    (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))
+
+(defn unhighlight!
+  [*ui-state locations]
+  (let [{:keys [shadow-root
+                dom-elem
+                measure-fn
+                hidden-input
+                viewmodels
+                history]
+         :as ui-state} @*ui-state
+        editor-state (history/current-state history)
+        changed-uuids (->> locations (map sel/caret-para) (set))
+        new-children (reduce (fn [new-children location]
+                               (update new-children (sel/caret-para location) m/remove-format location :highlight))
+                             (-> editor-state :doc :children) locations)
+        new-state (assoc-in editor-state [:doc :children] new-children)
+        changelist (es/changelist :changed-uuids changed-uuids)
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
+    (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))
+
+(defn goto-location!
+  "Sets the selection to the location provided and centers it in the viewport.
+   location should be a Selection."
+  [*ui-state location])
+
+(defn goto-current-found!
+  "Equivalent to calling goto-location! with the current found location."
+  [*ui-state]
+  (let [{{:keys [current-location found-locations]} :find-and-replace} @*ui-state]
+    (goto-location! *ui-state (get found-locations current-location))))
+
+(defn cancel-find! [*ui-state]
+  (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
+    (when active?
+      ;; (unhighlight! *ui-state found-locations)
+      (goto-location! *ui-state location-before)
+      (swap! *ui-state update :found-locations merge {:active? false
+                                                      :found-locations []
+                                                      :current-location 0}))))
+
+(defn find!
+  [*ui-state text]
+  (if (str/blank? text)
+    (cancel-find! *ui-state)
+    (let [{history :history
+           {:keys [location-before]} :find-and-replace} @*ui-state
+          editor-state #p (history/current-state history)
+          occurences (f+r/find editor-state text)
+          ;; No previous find, set current selection as place to return to when find deactivated
+          new-location-before (if (empty? occurences)
+                                (:selection editor-state)
+                                location-before)
+          new-fields {:active? true
+                      :current-location 0
+                      :found-locations occurences
+                      :location-before new-location-before}]
+      (swap! *ui-state update :find-and-replace merge new-fields)
+      (goto-current-found! *ui-state)
+      #_(f+r/highlight! *ui-state locations))))
+
+(defn inc-current-location
+  [{:keys [found-locations current-location] :as find-and-replace-state}]
+  (if (< current-location (dec (count found-locations)))
+    (update find-and-replace-state :current-location inc)
+    (assoc find-and-replace-state :current-location 0)))
+
+(defn dec-current-location
+  [{:keys [found-locations current-location] :as find-and-replace-state}]
+  (if (zero? current-location)
+    (assoc find-and-replace-state :current-location (dec (count found-locations)))
+    (update find-and-replace-state :current-location dec)))
+
+(comment
+  (inc-current-location {:found-locations [1 2 3] :current-location 0})
+  (inc-current-location {:found-locations [1 2 3] :current-location 1})
+  (inc-current-location {:found-locations [1 2 3] :current-location 2})
+
+  (dec-current-location {:found-locations [1 2 3] :current-location 0})
+  (dec-current-location {:found-locations [1 2 3] :current-location 1})
+  (dec-current-location {:found-locations [1 2 3] :current-location 2})
+  )
+
+(defn next-occurence! [*ui-state]
+  (swap! *ui-state update :find-and-replace inc-current-location)
+  (goto-current-found! *ui-state))
+
+(defn prev-occurence! [*ui-state]
+  (swap! *ui-state update :find-and-replace dec-current-location)
+  (goto-current-found! *ui-state))
+
+(defn replace-current! [*ui-state replacement-text])
+
+(defn replace-all! [*ui-state replacement-text])
 
 (definterceptor undo!
   {:manual? true}
@@ -502,6 +621,10 @@
                               :history history
                               :word-count (word-count/full-count current-doc)
                               :input-history []
+                              :find-and-replace {:active? false
+                                                 :location-before nil
+                                                 :found-locations []
+                                                 :current-location 0}
                               :interceptors interceptors-map
                               :hidden-input hidden-input
                               :add-tip-to-backstack-timer-id nil

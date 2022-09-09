@@ -11,6 +11,9 @@
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
 
+;; TODO: implement find + replace without highlighting / view stuff
+;; TODO: implement highlight part of find and replace
+
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously

@@ -1,14 +1,10 @@
 (ns slate.model.find-and-replace
   (:require [slate.model.common :as m]
-            [slate.model.history :as history]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.run :as r]
             [slate.model.paragraph :as p]
             [slate.model.doc :as doc]
-            [slate.model.editor-state :as es :refer [>>=]]
-            [slate.editor-ui-state :as ui-state :refer [sync-dom!]]
-            [slate.view :as view]
-            [slate.viewmodel :as vm])
+            [slate.model.editor-state :as es :refer [>>=]])
   (:refer-clojure :exclude [find replace]))
 
 (defn- find-all-occurences
@@ -101,41 +97,3 @@
     #_(reduce (fn [editor-update, location]
               (>>= editor-update replace location))
             (return editor-state) locations-to-replace)))
-
-(defn highlight!
-  [*ui-state locations]
-  (let [{:keys [shadow-root
-                dom-elem
-                measure-fn
-                hidden-input
-                viewmodels
-                history]
-         :as ui-state} @*ui-state
-        editor-state (history/current-state history)
-        changed-uuids (->> locations (map sel/caret-para) (set))
-        new-children (reduce (fn [new-children location]
-                               (update new-children (sel/caret-para location) m/apply-format location :highlight))
-                             (-> editor-state :doc :children) locations)
-        new-state (assoc-in editor-state [:doc :children] new-children)
-        changelist (es/changelist :changed-uuids changed-uuids)
-        new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
-    (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))
-
-(defn unhighlight!
-  [*ui-state locations]
-  (let [{:keys [shadow-root
-                dom-elem
-                measure-fn
-                hidden-input
-                viewmodels
-                history]
-         :as ui-state} @*ui-state
-        editor-state (history/current-state history)
-        changed-uuids (->> locations (map sel/caret-para) (set))
-        new-children (reduce (fn [new-children location]
-                               (update new-children (sel/caret-para location) m/remove-format location :highlight))
-                             (-> editor-state :doc :children) locations)
-        new-state (assoc-in editor-state [:doc :children] new-children)
-        changelist (es/changelist :changed-uuids changed-uuids)
-        new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
-    (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))

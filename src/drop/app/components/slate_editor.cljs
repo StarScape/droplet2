@@ -84,7 +84,6 @@
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
         *find-and-replace-active? (r/atom true)
-        *found-locations (r/atom [])
         current-file (:path @*open-file)
         deserialized-file-contents (when current-file
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
@@ -104,20 +103,14 @@
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
        [find-and-replace-popup {:activated? @*find-and-replace-active?
-                                :on-find (fn [text]
-                                           (if (str/blank? text)
-                                             (do
-                                               (f+r/unhighlight! *slate-instance @*found-locations)
-                                               (reset! *found-locations []))
-                                             (let [editor-state (history/current-state (:history @*slate-instance))
-                                                   locations (f+r/find editor-state text)]
-                                               (reset! *found-locations locations)
-                                               (f+r/highlight! *slate-instance locations))))
-                                :on-replace (fn [replacement-text])
-                                :on-replace-all (fn [replacement-text])
-                                :on-click-exit #(reset! *find-and-replace-active? false)
-                                :on-click-next #(js/console.log "clicked NEXT")
-                                :on-click-prev #(js/console.log "clicked PREV")}]
+                                :on-find (fn [text] (ui-state/find! *slate-instance text))
+                                :on-replace #(ui-state/replace-current! *slate-instance %)
+                                :on-replace-all #(ui-state/replace-all! *slate-instance %)
+                                :on-click-exit (fn []
+                                                 (reset! *find-and-replace-active? false)
+                                                 (ui-state/cancel-find! *slate-instance))
+                                :on-click-next #(ui-state/next-occurence! *slate-instance)
+                                :on-click-prev #(ui-state/prev-occurence! *slate-instance)}]
        [actionbar {:active-formats @*active-formats
                    :word-count @*word-count
                    :*full-screen? *full-screen?
