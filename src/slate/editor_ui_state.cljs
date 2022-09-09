@@ -243,80 +243,6 @@
         new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
     (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))
 
-(defn goto-location!
-  "Sets the selection to the location provided and centers it in the viewport.
-   location should be a Selection."
-  [*ui-state location])
-
-(defn goto-current-found!
-  "Equivalent to calling goto-location! with the current found location."
-  [*ui-state]
-  (let [{{:keys [current-location found-locations]} :find-and-replace} @*ui-state]
-    (goto-location! *ui-state (get found-locations current-location))))
-
-(defn cancel-find! [*ui-state]
-  (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
-    (when active?
-      ;; (unhighlight! *ui-state found-locations)
-      (goto-location! *ui-state location-before)
-      (swap! *ui-state update :found-locations merge {:active? false
-                                                      :found-locations []
-                                                      :current-location 0}))))
-
-(defn find!
-  [*ui-state text]
-  (if (str/blank? text)
-    (cancel-find! *ui-state)
-    (let [{history :history
-           {:keys [location-before]} :find-and-replace} @*ui-state
-          editor-state #p (history/current-state history)
-          occurences (f+r/find editor-state text)
-          ;; No previous find, set current selection as place to return to when find deactivated
-          new-location-before (if (empty? occurences)
-                                (:selection editor-state)
-                                location-before)
-          new-fields {:active? true
-                      :current-location 0
-                      :found-locations occurences
-                      :location-before new-location-before}]
-      (swap! *ui-state update :find-and-replace merge new-fields)
-      (goto-current-found! *ui-state)
-      #_(f+r/highlight! *ui-state locations))))
-
-(defn inc-current-location
-  [{:keys [found-locations current-location] :as find-and-replace-state}]
-  (if (< current-location (dec (count found-locations)))
-    (update find-and-replace-state :current-location inc)
-    (assoc find-and-replace-state :current-location 0)))
-
-(defn dec-current-location
-  [{:keys [found-locations current-location] :as find-and-replace-state}]
-  (if (zero? current-location)
-    (assoc find-and-replace-state :current-location (dec (count found-locations)))
-    (update find-and-replace-state :current-location dec)))
-
-(comment
-  (inc-current-location {:found-locations [1 2 3] :current-location 0})
-  (inc-current-location {:found-locations [1 2 3] :current-location 1})
-  (inc-current-location {:found-locations [1 2 3] :current-location 2})
-
-  (dec-current-location {:found-locations [1 2 3] :current-location 0})
-  (dec-current-location {:found-locations [1 2 3] :current-location 1})
-  (dec-current-location {:found-locations [1 2 3] :current-location 2})
-  )
-
-(defn next-occurence! [*ui-state]
-  (swap! *ui-state update :find-and-replace inc-current-location)
-  (goto-current-found! *ui-state))
-
-(defn prev-occurence! [*ui-state]
-  (swap! *ui-state update :find-and-replace dec-current-location)
-  (goto-current-found! *ui-state))
-
-(defn replace-current! [*ui-state replacement-text])
-
-(defn replace-all! [*ui-state replacement-text])
-
 (definterceptor undo!
   {:manual? true}
   [*ui-state _]
@@ -442,6 +368,81 @@
     ;; Manual interceptors circumvent Slate's default data-loop and just fire as regular functions
     (interceptor *ui-state event)
     (fire-normal-interceptor! *ui-state interceptor event)))
+
+(defn goto-location!
+  "Sets the selection to the location provided and centers it in the viewport.
+   location should be a Selection."
+  [*ui-state location]
+  (let [update (es/set-selection (history/current-state (:history @*ui-state)) location)]
+    (fire-update! *ui-state update {:include-in-history? false})))
+
+(defn goto-current-found!
+  "Equivalent to calling goto-location! with the current found location."
+  [*ui-state]
+  (let [{{:keys [current-location found-locations]} :find-and-replace} @*ui-state]
+    (goto-location! *ui-state (nth found-locations current-location))))
+
+(defn cancel-find! [*ui-state]
+  (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
+    (when active?
+      ;; (unhighlight! *ui-state found-locations)
+      (goto-location! *ui-state location-before)
+      (swap! *ui-state update :found-locations merge {:active? false
+                                                      :found-locations []
+                                                      :current-location 0}))))
+
+(defn find!
+  [*ui-state text]
+  (if (str/blank? text)
+    (cancel-find! *ui-state)
+    (let [{history :history
+           {:keys [location-before]} :find-and-replace} @*ui-state
+          editor-state (history/current-state history)
+          occurences (f+r/find editor-state text)
+          ;; No previous find, set current selection as place to return to when find deactivated
+          new-location-before (if (empty? occurences)
+                                (:selection editor-state)
+                                location-before)
+          new-fields {:active? true
+                      :current-location 0
+                      :found-locations occurences
+                      :location-before new-location-before}]
+      (swap! *ui-state update :find-and-replace merge new-fields)
+      (goto-current-found! *ui-state)
+      #_(f+r/highlight! *ui-state locations))))
+
+(defn inc-current-location
+  [{:keys [found-locations current-location] :as find-and-replace-state}]
+  (if (< current-location (dec (count found-locations)))
+    (update find-and-replace-state :current-location inc)
+    (assoc find-and-replace-state :current-location 0)))
+
+(defn dec-current-location
+  [{:keys [found-locations current-location] :as find-and-replace-state}]
+  (if (zero? current-location)
+    (assoc find-and-replace-state :current-location (dec (count found-locations)))
+    (update find-and-replace-state :current-location dec)))
+
+(comment
+  (inc-current-location {:found-locations [1 2 3] :current-location 0})
+  (inc-current-location {:found-locations [1 2 3] :current-location 1})
+  (inc-current-location {:found-locations [1 2 3] :current-location 2})
+
+  (dec-current-location {:found-locations [1 2 3] :current-location 0})
+  (dec-current-location {:found-locations [1 2 3] :current-location 1})
+  (dec-current-location {:found-locations [1 2 3] :current-location 2}))
+
+(defn next-occurence! [*ui-state]
+  (swap! *ui-state update :find-and-replace inc-current-location)
+  (goto-current-found! *ui-state))
+
+(defn prev-occurence! [*ui-state]
+  (swap! *ui-state update :find-and-replace dec-current-location)
+  (goto-current-found! *ui-state))
+
+(defn replace-current! [*ui-state replacement-text])
+
+(defn replace-all! [*ui-state replacement-text])
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
