@@ -385,6 +385,40 @@
     (full-dom-render! *ui-state)
     ((:on-new ui-state) @*ui-state)))
 
+(defn fire-update!
+  "Update the UI state and UI in response to an EditorUpdate.
+   If no event is supplied, nothing will be added to the input-history.
+   Arg opts: {:include-in-history? :add-to-history-immediately?}."
+  ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately?] :as opts}]
+   (let [ui-state @*ui-state ; only deref once a cycle
+         editor-state (history/current-state (:history ui-state))
+         old-doc (:doc editor-state)
+         new-doc (-> editor-update :editor-state :doc)
+         new-ui-state (-> ui-state
+                          (update :history update-history editor-update opts)
+                          (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
+                          (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
+                          (update-viewmodels-to-history-tip))]
+     (sync-dom! (:shadow-root new-ui-state)
+                (:dom-elem new-ui-state)
+                (:hidden-input new-ui-state)
+                (:editor-state editor-update)
+                editor-state
+                (:viewmodels new-ui-state)
+                (:changelist editor-update))
+     (reset! *ui-state new-ui-state)
+
+     (cond
+      ;; Adding to history has already be handled, cancel the debounced func if one is waiting to fire
+       (and add-to-history-immediately? include-in-history?)
+       (cancel-add-tip-to-backstack! *ui-state)
+
+      ;; Integrate the history tip into the backstack after a period of inactivity
+       include-in-history?
+       (add-tip-to-backstack-after-wait! *ui-state))))
+  ([*ui-state editor-update opts]
+   (fire-update! *ui-state editor-update nil opts)))
+
 (defn fire-normal-interceptor!
   "This the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
@@ -399,31 +433,8 @@
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
-        old-doc (:doc editor-state)
-        new-doc (-> editor-update :editor-state :doc)
-        new-ui-state (-> ui-state
-                         (update :history update-history editor-update interceptor)
-                         (update :input-history interceptors/add-to-input-history interceptor event)
-                         (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
-                         (update-viewmodels-to-history-tip))]
-    (sync-dom! (:shadow-root new-ui-state)
-               (:dom-elem new-ui-state)
-               (:hidden-input new-ui-state)
-               (:editor-state editor-update)
-               editor-state
-               (:viewmodels new-ui-state)
-               (:changelist editor-update))
-    (reset! *ui-state new-ui-state)
-
-    (cond
-      ;; Adding to history has already be handled, cancel the debounced func if one is waiting to fire
-      (and (:add-to-history-immediately? interceptor)
-           (:include-in-history? interceptor))
-      (cancel-add-tip-to-backstack! *ui-state)
-
-      ;; Integrate the history tip into the backstack after a period of inactivity
-      (:include-in-history? interceptor)
-      (add-tip-to-backstack-after-wait! *ui-state))))
+        opts (select-keys interceptor [:add-to-history-immediately? :include-in-history?])]
+    (fire-update! *ui-state editor-update event opts)))
 
 (defn fire-interceptor!
   [*ui-state interceptor event]
