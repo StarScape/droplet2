@@ -369,18 +369,45 @@
     (interceptor *ui-state event)
     (fire-normal-interceptor! *ui-state interceptor event)))
 
+(defn inc-current-location
+  [{:keys [found-locations current-location] :as find-and-replace-state}]
+  (if (< current-location (dec (count found-locations)))
+    (update find-and-replace-state :current-location inc)
+    (assoc find-and-replace-state :current-location 0)))
+
+(defn dec-current-location
+  [{:keys [found-locations current-location] :as find-and-replace-state}]
+  (if (zero? current-location)
+    (assoc find-and-replace-state :current-location (dec (count found-locations)))
+    (update find-and-replace-state :current-location dec)))
+
+(comment
+  (inc-current-location {:found-locations [1 2 3] :current-location 0})
+  (inc-current-location {:found-locations [1 2 3] :current-location 1})
+  (inc-current-location {:found-locations [1 2 3] :current-location 2})
+
+  (dec-current-location {:found-locations [1 2 3] :current-location 0})
+  (dec-current-location {:found-locations [1 2 3] :current-location 1})
+  (dec-current-location {:found-locations [1 2 3] :current-location 2}))
+
+(defn get-current-location
+  "If find is active, returns current found location, as a selection."
+  [{:keys [active? current-location found-locations] :as _find-and-replace-info}]
+  (when active?
+    (nth found-locations current-location)))
+
 (defn goto-location!
   "Sets the selection to the location provided and centers it in the viewport.
    location should be a Selection."
   [*ui-state location]
-  (let [update (es/set-selection (history/current-state (:history @*ui-state)) location)]
-    (fire-update! *ui-state update {:include-in-history? false})))
+  (let [editor-update (es/set-selection (history/current-state (:history @*ui-state)) location)]
+    (fire-update! *ui-state editor-update {:include-in-history? false})))
 
 (defn goto-current-found!
   "Equivalent to calling goto-location! with the current found location."
   [*ui-state]
-  (let [{{:keys [current-location found-locations]} :find-and-replace} @*ui-state]
-    (goto-location! *ui-state (nth found-locations current-location))))
+  (let [{:keys [find-and-replace]} @*ui-state]
+    (goto-location! *ui-state (get-current-location find-and-replace))))
 
 (defn cancel-find! [*ui-state]
   (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
@@ -411,27 +438,6 @@
       (goto-current-found! *ui-state)
       #_(f+r/highlight! *ui-state locations))))
 
-(defn inc-current-location
-  [{:keys [found-locations current-location] :as find-and-replace-state}]
-  (if (< current-location (dec (count found-locations)))
-    (update find-and-replace-state :current-location inc)
-    (assoc find-and-replace-state :current-location 0)))
-
-(defn dec-current-location
-  [{:keys [found-locations current-location] :as find-and-replace-state}]
-  (if (zero? current-location)
-    (assoc find-and-replace-state :current-location (dec (count found-locations)))
-    (update find-and-replace-state :current-location dec)))
-
-(comment
-  (inc-current-location {:found-locations [1 2 3] :current-location 0})
-  (inc-current-location {:found-locations [1 2 3] :current-location 1})
-  (inc-current-location {:found-locations [1 2 3] :current-location 2})
-
-  (dec-current-location {:found-locations [1 2 3] :current-location 0})
-  (dec-current-location {:found-locations [1 2 3] :current-location 1})
-  (dec-current-location {:found-locations [1 2 3] :current-location 2}))
-
 (defn next-occurence! [*ui-state]
   (swap! *ui-state update :find-and-replace inc-current-location)
   (goto-current-found! *ui-state))
@@ -440,7 +446,11 @@
   (swap! *ui-state update :find-and-replace dec-current-location)
   (goto-current-found! *ui-state))
 
-(defn replace-current! [*ui-state replacement-text])
+(defn replace-current! [*ui-state replacement-text]
+  (let [{:keys [find-and-replace history]} @*ui-state
+        current-location (get-current-location find-and-replace)
+        editor-update (f+r/replace (history/current-state history) current-location replacement-text)]
+    (fire-update! *ui-state editor-update {:add-to-history-immediately? true})))
 
 (defn replace-all! [*ui-state replacement-text])
 

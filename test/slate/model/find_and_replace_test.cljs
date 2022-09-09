@@ -1,12 +1,11 @@
 (ns slate.model.find-and-replace-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.model.common :as sl]
             [slate.model.run :as r :refer [run]]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.editor-state :as es :refer [editor-state ->EditorUpdate changelist]]
-            [slate.model.find-and-replace :refer [find replace]]))
+            [slate.model.find-and-replace :refer [find replace-all]]))
 
 #_(def p (p/paragraph "p1" [(r/run "foo") (r/run "bar" #{:italic})
                           (r/run "goo") (r/run "bar" #{:bold})
@@ -33,7 +32,7 @@
 
 (deftest replace-test
   (testing "single location"
-    (is (= (replace (editor-state doc)
+    (is (= (replace-all (editor-state doc)
                     [(selection ["p1" 0] ["p1" 3])]
                     "123")
            (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "123") (run "bar" #{:italic})
@@ -42,7 +41,7 @@
                                                     (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
                            (changelist :changed-uuids #{"p1"})))))
   (testing "multiple locations"
-    (is (= (replace (editor-state doc)
+    (is (= (replace-all (editor-state doc)
                     [(selection ["p1" 0] ["p1" 3])
                      (selection ["p1" 6] ["p1" 9])]
                     "123")
@@ -52,7 +51,7 @@
                                                     (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
                            (changelist :changed-uuids #{"p1"})))))
   (testing "multiple locations across 2 paragraphs"
-    (is (= (replace (editor-state doc)
+    (is (= (replace-all (editor-state doc)
                     [(selection ["p1" 0] ["p1" 3])
                      (selection ["p1" 6] ["p1" 9])
                      (selection ["p2" 1] ["p2" 3])]
@@ -63,7 +62,7 @@
                                                     (paragraph "p2" [(run "o123 a one, and a foo, and a bar!")])]))
                            (changelist :changed-uuids #{"p1" "p2"})))))
   (testing "shifts selection appropriately when needed"
-    (is (= (replace (editor-state doc (selection ["p1" 17]))
+    (is (= (replace-all (editor-state doc (selection ["p1" 17]))
                     [(selection ["p1" 12] ["p1" 18])]
                     "bizz")
            (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "foo") (run "bar" #{:italic})
