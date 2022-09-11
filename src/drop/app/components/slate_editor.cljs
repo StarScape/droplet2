@@ -83,7 +83,6 @@
 (defn main-editor []
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
-        *find-and-replace-active? (r/atom true)
         current-file (:path @*open-file)
         deserialized-file-contents (when current-file
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
@@ -103,12 +102,10 @@
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
        [find-and-replace-popup {:activated? (-> @*slate-instance :find-and-replace :active?)
-                                :on-find (fn [text] (ui-state/find! *slate-instance text))
+                                :on-find #(ui-state/find! *slate-instance %)
                                 :on-replace #(ui-state/replace-current! *slate-instance %)
                                 :on-replace-all #(ui-state/replace-all! *slate-instance %)
-                                :on-click-exit (fn []
-                                                 (reset! *find-and-replace-active? false)
-                                                 (ui-state/cancel-find! *slate-instance))
+                                :on-click-exit #(ui-state/cancel-find! *slate-instance)
                                 :on-click-next #(ui-state/next-occurence! *slate-instance)
                                 :on-click-prev #(ui-state/prev-occurence! *slate-instance)}]
        [actionbar {:active-formats @*active-formats

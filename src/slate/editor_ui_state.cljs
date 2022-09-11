@@ -407,7 +407,8 @@
   "Equivalent to calling goto-location! with the current found location."
   [*ui-state]
   (let [{:keys [find-and-replace]} @*ui-state]
-    (goto-location! *ui-state (get-current-location find-and-replace))))
+    (when-not (empty? (:found-locations find-and-replace))
+      (goto-location! *ui-state (get-current-location find-and-replace)))))
 
 (defn cancel-find! [*ui-state]
   (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]

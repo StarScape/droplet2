@@ -78,7 +78,8 @@
                    :*value-atom *replace-text
                    :buttons [:<>
                              [text-button {:text "Replace"
-                                           :tab-index "3"
+                                           :tab-index "4"
                                            :on-click #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))}]
                              [text-button {:text "Replace All"
+                                           :tab-index "5"
                                            :on-click #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))}]]}]])))
