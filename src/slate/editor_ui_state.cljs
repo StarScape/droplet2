@@ -111,7 +111,7 @@
 
 (defn add-tip-to-backstack!
   [*ui-state]
-  {:pre [(instance? Atom *ui-state)]}
+  {:pre [(satisfies? IAtom *ui-state)]}
   ;; "Add tip to backstack."
   (swap! *ui-state update :history history/add-tip-to-backstack))
 
@@ -419,15 +419,16 @@
                                                       :current-location 0}))))
 
 (defn find!
+  "Starts find operation, if text search term is not blank."
   [*ui-state text]
   (if (str/blank? text)
     (cancel-find! *ui-state)
     (let [{history :history
-           {:keys [location-before]} :find-and-replace} @*ui-state
+           {:keys [location-before] :as f+r-state} :find-and-replace} @*ui-state
           editor-state (history/current-state history)
           occurences (f+r/find editor-state text)
           ;; No previous find, set current selection as place to return to when find deactivated
-          new-location-before (if (empty? occurences)
+          new-location-before (if (empty? (:found-locations f+r-state))
                                 (:selection editor-state)
                                 location-before)
           new-fields {:active? true

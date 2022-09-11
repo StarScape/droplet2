@@ -55,6 +55,9 @@
                                   (when (= "Enter" (.-code e))
                                     (on-find value)))
                    :buttons [:<>
+                             [text-button {:text "Search"
+                                           :tab-index "3"
+                                           :on-click #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))}]
                              [img-button {:src "icons/down_arrow.svg"
                                           :shortcut-text "Enter"
                                           :on-click on-click-next}]
