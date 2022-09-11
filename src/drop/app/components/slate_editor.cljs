@@ -101,13 +101,16 @@
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
-       [find-and-replace-popup {:activated? (-> @*slate-instance :find-and-replace :active?)
-                                :on-find #(ui-state/find! *slate-instance %)
-                                :on-replace #(ui-state/replace-current! *slate-instance %)
-                                :on-replace-all #(ui-state/replace-all! *slate-instance %)
-                                :on-click-exit #(ui-state/cancel-find! *slate-instance)
-                                :on-click-next #(ui-state/next-occurence! *slate-instance)
-                                :on-click-prev #(ui-state/prev-occurence! *slate-instance)}]
+       (let [find-and-replace (-> @*slate-instance :find-and-replace)]
+         [find-and-replace-popup {:activated? (:active? find-and-replace)
+                                  :current-occurence (:current-location find-and-replace)
+                                  :total-occurences (count (:found-locations find-and-replace))
+                                  :on-find #(ui-state/find! *slate-instance %)
+                                  :on-replace #(ui-state/replace-current! *slate-instance %)
+                                  :on-replace-all #(ui-state/replace-all! *slate-instance %)
+                                  :on-click-exit #(ui-state/cancel-find! *slate-instance)
+                                  :on-click-next #(ui-state/next-occurence! *slate-instance)
+                                  :on-click-prev #(ui-state/prev-occurence! *slate-instance)}])
        [actionbar {:active-formats @*active-formats
                    :word-count @*word-count
                    :*full-screen? *full-screen?

@@ -43,7 +43,15 @@
    text])
 
 (defn find-and-replace-popup
-  [{:keys [activated? on-find on-replace on-replace-all on-click-next on-click-prev on-click-exit]}]
+  [{:keys [activated?
+           current-occurence
+           total-occurences
+           on-find
+           on-replace
+           on-replace-all
+           on-click-next
+           on-click-prev
+           on-click-exit]}]
   (r/with-let [*replace-text (r/atom "")
                *find-text (r/atom "")]
     (when activated?
@@ -82,4 +90,9 @@
                                            :on-click #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))}]
                              [text-button {:text "Replace All"
                                            :tab-index "5"
-                                           :on-click #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))}]]}]])))
+                                           :on-click #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))}]]}]
+       [:div (str (if (pos? total-occurences)
+                    (inc current-occurence)
+                    current-occurence)
+                  "/"
+                  total-occurences)]])))
