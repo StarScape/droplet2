@@ -315,7 +315,8 @@
   "Update the UI state and UI in response to an EditorUpdate.
    If no event is supplied, nothing will be added to the input-history.
    Arg opts: {:include-in-history? :add-to-history-immediately?}."
-  ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately?] :as opts}]
+  ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately? focus?]
+                                   :or {focus? true}, :as opts}]
    (let [ui-state @*ui-state ; only deref once a cycle
          editor-state (history/current-state (:history ui-state))
          old-doc (:doc editor-state)
@@ -331,7 +332,8 @@
                 (:editor-state editor-update)
                 editor-state
                 (:viewmodels new-ui-state)
-                (:changelist editor-update))
+                (:changelist editor-update)
+                :focus? focus?)
      (reset! *ui-state new-ui-state)
 
      (cond
@@ -399,16 +401,17 @@
 (defn goto-location!
   "Sets the selection to the location provided and centers it in the viewport.
    location should be a Selection."
-  [*ui-state location]
+  [*ui-state location & {:keys [focus?] :or {focus? true}}]
   (let [editor-update (es/set-selection (history/current-state (:history @*ui-state)) location)]
-    (fire-update! *ui-state editor-update {:include-in-history? false})))
+    (fire-update! *ui-state editor-update {:include-in-history? false
+                                           :focus? focus?})))
 
 (defn goto-current-found!
   "Equivalent to calling goto-location! with the current found location."
   [*ui-state]
   (let [{:keys [find-and-replace]} @*ui-state]
     (when-not (empty? (:found-locations find-and-replace))
-      (goto-location! *ui-state (get-current-location find-and-replace)))))
+      (goto-location! *ui-state (get-current-location find-and-replace) :focus? false))))
 
 (defn cancel-find! [*ui-state]
   (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
@@ -461,7 +464,8 @@
   (let [{:keys [find-and-replace history]} @*ui-state
         current-location (get-current-location find-and-replace)
         editor-update (f+r/replace (history/current-state history) current-location replacement-text)]
-    (fire-update! *ui-state editor-update {:add-to-history-immediately? true})))
+    (fire-update! *ui-state editor-update {:add-to-history-immediately? true
+                                           :focus? false})))
 
 (defn replace-all! [*ui-state replacement-text])
 
