@@ -29,7 +29,7 @@
 
 ;; For now, there is a single global slate instance.
 ;; This will change at some point when tabs are implemented.
-(def *slate-instance (doto (atom nil)
+(def *slate-instance (doto (r/atom nil)
                        (add-watch :change-title (fn [_ _ _ new-ui-state]
                                                   (app-utils/set-title! @*open-file (current-doc new-ui-state))))))
 

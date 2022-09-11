@@ -43,7 +43,8 @@
 
 (defn find-and-replace-popup
   [{:keys [activated? on-find on-replace on-replace-all on-click-next on-click-prev on-click-exit]}]
-  (r/with-let [*replace-text (r/atom "")]
+  (r/with-let [*replace-text (r/atom "")
+               *find-text (r/atom "")]
     (when activated?
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b drop-shadow-sm rounded-b-sm
@@ -51,13 +52,14 @@
              :on-key-down #(when (= "Escape" (.-code %)) (on-click-exit))}
        [input-row {:placeholder "Find"
                    :tab-index "1"
+                   :*value-atom *find-text
                    :on-key-down (fn [e value]
                                   (when (= "Enter" (.-code e))
                                     (on-find value)))
                    :buttons [:<>
                              [text-button {:text "Search"
                                            :tab-index "3"
-                                           :on-click #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))}]
+                                           :on-click #(on-find @*find-text)}]
                              [img-button {:src "icons/down_arrow.svg"
                                           :shortcut-text "Enter"
                                           :on-click on-click-next}]
