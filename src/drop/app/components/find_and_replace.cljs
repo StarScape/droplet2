@@ -5,9 +5,11 @@
             [reagent.core :as r :refer-macros [with-let]]))
 
 (defn- input-row
-  [{:keys [placeholder tab-index buttons on-change *value-atom] :or {on-change #() *value-atom (r/atom "")}}]
+  [{:keys [placeholder tab-index buttons on-key-down on-change *value-atom]
+    :or {on-key-down #() on-change #() *value-atom (r/atom "")}}]
   (with-let [*value *value-atom]
-    [:div {:class "flex flex-row"}
+    [:div {:class "flex flex-row"
+           :on-key-down #(on-key-down % @*value)}
      [:input {:class "p-1 mr-1 border bg-slate-50 border-gray-100
                     outline-none focus:border focus:border-dark-blue"
               :type "text"
@@ -49,6 +51,9 @@
              :on-key-down #(when (= "Escape" (.-code %)) (on-click-exit))}
        [input-row {:placeholder "Find"
                    :tab-index "1"
+                   :on-key-down (fn [e value]
+                                  (when (= "Enter" (.-code e))
+                                    (on-find value)))
                    :buttons [:<>
                              [img-button {:src "icons/down_arrow.svg"
                                           :shortcut-text "Enter"
