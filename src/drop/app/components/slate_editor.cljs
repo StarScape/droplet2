@@ -102,7 +102,7 @@
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance}]]
-       [find-and-replace-popup {:activated? @*find-and-replace-active?
+       [find-and-replace-popup {:activated? (-> @*slate-instance :find-and-replace :active?)
                                 :on-find (fn [text] (ui-state/find! *slate-instance text))
                                 :on-replace #(ui-state/replace-current! *slate-instance %)
                                 :on-replace-all #(ui-state/replace-all! *slate-instance %)

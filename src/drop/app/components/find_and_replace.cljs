@@ -5,7 +5,7 @@
             [reagent.core :as r :refer-macros [with-let]]))
 
 (defn- input-row
-  [{:keys [placeholder tab-index buttons on-key-down on-change *value-atom]
+  [{:keys [placeholder tab-index buttons on-key-down on-change *value-atom autofocus?]
     :or {on-key-down #() on-change #() *value-atom (r/atom "")}}]
   (with-let [*value *value-atom]
     [:div {:class "flex flex-row"
@@ -18,6 +18,7 @@
               :size "25"
               :placeholder placeholder
               :autoComplete "off"
+              :autoFocus autofocus?
               :value @*value
               :on-change (fn [e]
                            (reset! *value (.. e -target -value))
@@ -51,6 +52,7 @@
                    flex flex-col"
              :on-key-down #(when (= "Escape" (.-code %)) (on-click-exit))}
        [input-row {:placeholder "Find"
+                   :autofocus? true
                    :tab-index "1"
                    :*value-atom *find-text
                    :on-key-down (fn [e value]

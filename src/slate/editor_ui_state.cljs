@@ -414,9 +414,18 @@
     (when active?
       ;; (unhighlight! *ui-state found-locations)
       (goto-location! *ui-state location-before)
-      (swap! *ui-state update :found-locations merge {:active? false
-                                                      :found-locations []
-                                                      :current-location 0}))))
+      (swap! *ui-state update :find-and-replace merge {:active? false
+                                                       :found-locations []
+                                                       :current-location 0}))))
+
+(definterceptor activate-find!
+  {:manual? true}
+  [*ui-state _]
+  (let [{:keys [history find-and-replace]} @*ui-state
+        current-selection (:selection (history/current-state history))]
+    (when-not (:active? find-and-replace)
+      (swap! *ui-state update :find-and-replace merge {:active? true
+                                                       :location-before current-selection}))))
 
 (defn find!
   "Starts find operation, if text search term is not blank."
@@ -572,12 +581,14 @@
      :cmd+shift+z redo!
      :cmd+= increase-font-size!
      :cmd+- decrease-font-size!
-     :cmd+n new-file!}
+     :cmd+n new-file!
+     :cmd+f activate-find!}
     {:ctrl+z undo!
      :ctrl+shift+z redo!
      :ctrl+= increase-font-size!
      :ctrl+- decrease-font-size!
-     :ctrl+n new-file!}))
+     :ctrl+n new-file!
+     :ctrl+f activate-find!}))
 
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
