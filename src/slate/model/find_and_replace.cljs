@@ -82,13 +82,17 @@
                         (selection ["p1" 15] ["p1" 18])] "FAR")
   )
 
-(defn replace [editor-state location text]
+(defn replace
+  "Returns an EditorUpdate replacing the Selection `location` with `text`."
+  [editor-state location text]
   (let [para-uuid (sel/caret-para location)
         para (get (-> editor-state :doc :children) para-uuid)
         new-para (paragraph-replace para [location] text)]
     (es/replace-paragraph editor-state para-uuid new-para)))
 
-(defn replace-all [editor-state locations text]
+(defn replace-all
+  "Returns an EditorUpdate replacing each Selection in `locations` with `text`."
+  [editor-state locations text]
   (let [locations-by-paragraph (group-by sel/caret-para locations)]
     (reduce (fn [editor-update, [para-uuid, para-locations]]
               (let [doc (-> editor-update :editor-state :doc)

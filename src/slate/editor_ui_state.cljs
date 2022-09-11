@@ -467,7 +467,13 @@
     (fire-update! *ui-state editor-update {:add-to-history-immediately? true
                                            :focus? false})))
 
-(defn replace-all! [*ui-state replacement-text])
+(defn replace-all! [*ui-state replacement-text]
+  (let [{:keys [find-and-replace history]} @*ui-state
+        editor-update (f+r/replace-all (history/current-state history)
+                                       (:found-locations find-and-replace)
+                                       replacement-text)]
+    (fire-update! *ui-state editor-update {:add-to-history-immediately? true
+                                           :focus? false})))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
