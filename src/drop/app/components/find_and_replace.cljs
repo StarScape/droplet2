@@ -16,7 +16,7 @@
                :type "text"
                :tabIndex tab-index
                :spellCheck "false"
-               :size "25"
+               :size "20"
                :placeholder placeholder
                :autoComplete "off"
                :autoFocus autofocus?
@@ -24,7 +24,8 @@
                :on-change (fn [e]
                             (reset! *value (.. e -target -value))
                             (on-change (.. e -target -value)))}]
-      input-tray]
+      [:div {:class "w-16 flex flex-row justify-end items-center"}
+       input-tray]]
      ;; TODO: add tray
      buttons]))
 
@@ -82,7 +83,7 @@
                              [img-button {:src "icons/x.svg"
                                           :shortcut-text "⎋"
                                           :on-click on-click-exit}]]
-                   :input-tray [:div {:class "text-xs text-slate-500 flex flex-col justify-center"}
+                   :input-tray [:div {:class "text-xs text-slate-500"}
                                 (str (if (pos? total-occurences)
                                        (inc current-occurence)
                                        current-occurence)
