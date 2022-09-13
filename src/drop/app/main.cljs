@@ -6,7 +6,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO, F+R: when dialog already displayed, cmd+f should focus it.
 ;; TODO, F+R: dialog should have some visual indication it is focused (e.g. a blue border)
 ;; BUG: find and replace, typing a single a causes the reflow to mess up
 

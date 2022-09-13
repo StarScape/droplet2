@@ -435,8 +435,7 @@
 (defn find!
   "Starts find operation, if text search term is not blank."
   [*ui-state text]
-  (if (str/blank? text)
-    (cancel-find! *ui-state)
+  (when-not (str/blank? text)
     (let [{history :history
            {:keys [location-before] :as f+r-state} :find-and-replace} @*ui-state
           editor-state (history/current-state history)
