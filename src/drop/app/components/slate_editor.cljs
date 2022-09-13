@@ -59,7 +59,7 @@
         (swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance)))
       (on-save-as! serialized-history))))
 
-(defn slate-editor [{:keys [file-deserialized ui-state-atom]}]
+(defn slate-editor [{:keys [file-deserialized ui-state-atom on-focus-find]}]
   [:div
    {:class "react-slate-elem flex-1 overflow-y-auto"
     :tabIndex "-1"
@@ -71,7 +71,8 @@
                                        :on-new on-new!
                                        :on-open on-open!
                                        :on-save on-save!
-                                       :on-save-as on-save-as!)]
+                                       :on-save-as on-save-as!
+                                       :on-focus-find on-focus-find)]
                ;; Utility for viewing editor history from console
                (when utils/DEV
                  (set! js/dumpHistory #(js/console.log (slate-utils/pretty-history-stack (:history @*ui-state))))
@@ -83,6 +84,12 @@
 (defn main-editor []
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
+        *find-and-replace-ref (r/atom nil)
+        focus-find-popup (fn []
+                           #p "hello?"
+                           (js/console.log #p @*find-and-replace-ref)
+                           (when-let [elem @*find-and-replace-ref]
+                             (.focus elem)))
         current-file (:path @*open-file)
         deserialized-file-contents (when current-file
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
@@ -100,7 +107,8 @@
       [:<>
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
-                       :ui-state-atom *slate-instance}]]
+                       :ui-state-atom *slate-instance
+                       :on-focus-find focus-find-popup}]]
        (let [find-and-replace (-> @*slate-instance :find-and-replace)]
          [find-and-replace-popup {:activated? (:active? find-and-replace)
                                   :current-occurence (:current-location find-and-replace)
@@ -110,7 +118,8 @@
                                   :on-replace-all #(ui-state/replace-all! *slate-instance %)
                                   :on-click-exit #(ui-state/cancel-find! *slate-instance)
                                   :on-click-next #(ui-state/next-occurence! *slate-instance)
-                                  :on-click-prev #(ui-state/prev-occurence! *slate-instance)}])
+                                  :on-click-prev #(ui-state/prev-occurence! *slate-instance)
+                                  :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}])
        [actionbar {:active-formats @*active-formats
                    :word-count @*word-count
                    :*full-screen? *full-screen?

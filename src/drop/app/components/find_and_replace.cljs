@@ -5,8 +5,8 @@
             [reagent.core :as r :refer-macros [with-let]]))
 
 (defn- input-row
-  [{:keys [placeholder tab-index buttons input-tray on-key-down on-change *value-atom autofocus?]
-    :or {on-key-down #() on-change #() *value-atom (r/atom "")}}]
+  [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref *value-atom autofocus?]
+    :or {on-key-down #() on-change #() ref #() *value-atom (r/atom "")}}]
   (with-let [*value *value-atom]
     [:div {:class "flex flex-row"
            :on-key-down #(on-key-down % @*value)}
@@ -14,6 +14,7 @@
                     focus-within:border focus-within:border-dark-blue"}
       [:input {:class "outline-none bg-transparent"
                :type "text"
+               :ref #(when ref (ref %))
                :tabIndex tab-index
                :spellCheck "false"
                :size "20"
@@ -55,18 +56,21 @@
            on-replace-all
            on-click-next
            on-click-prev
-           on-click-exit]}]
+           on-click-exit
+           search-input-ref]}]
   (r/with-let [*replace-text (r/atom "")
                *find-text (r/atom "")]
     (when activated?
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
-                   border-l border-r border-b drop-shadow-sm rounded-b-sm
+                   border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
+             #_#_:style {"filter" "drop-shadow(0, 1px, 1px, rgb(0, 140, 255))"}
              :on-key-down #(when (= "Escape" (.-code %)) (on-click-exit))}
        [input-row {:placeholder "Find"
                    :autofocus? true
                    :tab-index "1"
                    :*value-atom *find-text
+                   :ref search-input-ref
                    :on-key-down (fn [e value]
                                   (when (= "Enter" (.-code e))
                                     (on-find value)))

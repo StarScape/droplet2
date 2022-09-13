@@ -425,8 +425,9 @@
 (definterceptor activate-find!
   {:manual? true}
   [*ui-state _]
-  (let [{:keys [history find-and-replace]} @*ui-state
+  (let [{:keys [history find-and-replace on-focus-find]} @*ui-state
         current-selection (:selection (history/current-state history))]
+    (on-focus-find)
     (when-not (:active? find-and-replace)
       (swap! *ui-state update :find-and-replace merge {:active? true
                                                        :location-before current-selection}))))
@@ -643,8 +644,8 @@
    :history - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom editor-state history dom-elem on-new on-save on-save-as on-open]
-      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #()}}]
+  [& {:keys [*atom editor-state history dom-elem on-new on-save on-save-as on-open on-focus-find]
+      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-focus-find #()}}]
   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
   (.. js/document -fonts (load "16px Merriweather")
       ;; TODO: use core-async or something to clean this up
@@ -680,7 +681,8 @@
                               :on-new on-new
                               :on-save on-save
                               :on-save-as on-save-as
-                              :on-load on-open})
+                              :on-load on-open
+                              :on-focus-find on-focus-find})
                (init-event-handlers! *atom)
                (full-dom-render! *atom))))
   *atom)
