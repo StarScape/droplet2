@@ -413,6 +413,11 @@
     (when-not (empty? (:found-locations find-and-replace))
       (goto-location! *ui-state (get-current-location find-and-replace) :focus? false))))
 
+(defn goto-location-before!
+  [*ui-state]
+  (let [{:keys [find-and-replace]} @*ui-state]
+    (goto-location! *ui-state (:location-before find-and-replace))))
+
 (defn next-occurence! [*ui-state]
   (swap! *ui-state update :find-and-replace inc-current-location)
   (goto-current-found! *ui-state))
@@ -459,7 +464,8 @@
 (defn find!
   "Starts find operation, if text search term is not blank."
   [*ui-state text]
-  (when-not (str/blank? text)
+  (if (str/blank? text)
+    (goto-location-before! *ui-state)
     (let [{history :history
            {:keys [location-before] :as f+r-state} :find-and-replace} @*ui-state
           editor-state (history/current-state history)]
