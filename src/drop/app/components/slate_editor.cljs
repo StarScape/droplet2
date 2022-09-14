@@ -86,8 +86,7 @@
         *word-count (r/atom 0)
         *find-and-replace-ref (r/atom nil)
         focus-find-popup (fn []
-                           #p "hello?"
-                           (js/console.log #p @*find-and-replace-ref)
+                           (js/console.log @*find-and-replace-ref)
                            (when-let [elem @*find-and-replace-ref]
                              (.focus elem)))
         current-file (:path @*open-file)

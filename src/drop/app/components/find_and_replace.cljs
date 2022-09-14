@@ -44,7 +44,7 @@
   [:button {:on-mouse-down #(.preventDefault %)
             :on-click on-click
             :tabIndex tab-index
-            :class "m-0.5 p-2 rounded-sm text-xs hover:bg-slate-300 active:bg-slate-400 outline-dark-blue"}
+            :class "m-0.5 p-2 rounded-sm text-xs hover:bg-slate-300 active:bg-slate-400 outline-light-blue"}
    text])
 
 (defn find-and-replace-popup

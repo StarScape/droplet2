@@ -413,45 +413,6 @@
     (when-not (empty? (:found-locations find-and-replace))
       (goto-location! *ui-state (get-current-location find-and-replace) :focus? false))))
 
-(defn cancel-find! [*ui-state]
-  (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
-    (when active?
-      ;; (unhighlight! *ui-state found-locations)
-      (goto-location! *ui-state location-before)
-      (swap! *ui-state update :find-and-replace merge {:active? false
-                                                       :found-locations []
-                                                       :current-location 0}))))
-
-(definterceptor activate-find!
-  {:manual? true}
-  [*ui-state _]
-  (let [{:keys [history find-and-replace on-focus-find]} @*ui-state
-        current-selection (:selection (history/current-state history))]
-    (on-focus-find)
-    (when-not (:active? find-and-replace)
-      (swap! *ui-state update :find-and-replace merge {:active? true
-                                                       :location-before current-selection}))))
-
-(defn find!
-  "Starts find operation, if text search term is not blank."
-  [*ui-state text]
-  (when-not (str/blank? text)
-    (let [{history :history
-           {:keys [location-before] :as f+r-state} :find-and-replace} @*ui-state
-          editor-state (history/current-state history)
-          occurences (f+r/find editor-state text)
-          ;; No previous find, set current selection as place to return to when find deactivated
-          new-location-before (if (empty? (:found-locations f+r-state))
-                                (:selection editor-state)
-                                location-before)
-          new-fields {:active? true
-                      :current-location 0
-                      :found-locations occurences
-                      :location-before new-location-before}]
-      (swap! *ui-state update :find-and-replace merge new-fields)
-      (goto-current-found! *ui-state)
-      #_(f+r/highlight! *ui-state locations))))
-
 (defn next-occurence! [*ui-state]
   (swap! *ui-state update :find-and-replace inc-current-location)
   (goto-current-found! *ui-state))
@@ -474,6 +435,49 @@
                                        replacement-text)]
     (fire-update! *ui-state editor-update {:add-to-history-immediately? true
                                            :focus? false})))
+
+(defn cancel-find! [*ui-state]
+  (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
+    (when active?
+      ;; (unhighlight! *ui-state found-locations)
+      (goto-location! *ui-state location-before)
+      (swap! *ui-state update :find-and-replace merge {:active? false
+                                                       :text ""
+                                                       :found-locations []
+                                                       :current-location 0}))))
+
+(definterceptor activate-find!
+  {:manual? true}
+  [*ui-state _]
+  (let [{:keys [history find-and-replace on-focus-find]} @*ui-state
+        current-selection (:selection (history/current-state history))]
+    (on-focus-find)
+    (when-not (:active? find-and-replace)
+      (swap! *ui-state update :find-and-replace merge {:active? true
+                                                       :location-before current-selection}))))
+
+(defn find!
+  "Starts find operation, if text search term is not blank."
+  [*ui-state text]
+  (when-not (str/blank? text)
+    (let [{history :history
+           {:keys [location-before] :as f+r-state} :find-and-replace} @*ui-state
+          editor-state (history/current-state history)]
+      (if (= text (:text f+r-state))
+        (next-occurence! *ui-state)
+        (let [occurences (f+r/find editor-state text)
+              ;; No previous find, set current selection as place to return to when find deactivated
+              new-location-before (if (empty? (:found-locations f+r-state))
+                                    (:selection editor-state)
+                                    location-before)
+              new-fields {:active? true
+                          :text text
+                          :current-location 0
+                          :found-locations occurences
+                          :location-before new-location-before}]
+          (swap! *ui-state update :find-and-replace merge new-fields)
+          (goto-current-found! *ui-state)
+          #_(f+r/highlight! *ui-state locations))))))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
@@ -667,6 +671,7 @@
                               :word-count (word-count/full-count current-doc)
                               :input-history []
                               :find-and-replace {:active? false
+                                                 :text nil
                                                  :location-before nil
                                                  :found-locations []
                                                  :current-location 0}
