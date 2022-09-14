@@ -1,4 +1,4 @@
-(ns drop.app.components.find-and-replace
+(ns drop.app.components.find-and-replace-popup
   (:require [clojure.string :as str]
             [drop.app.components.layout :refer [v-spacer-m]]
             [drop.utils :refer [debounce]]

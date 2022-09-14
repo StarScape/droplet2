@@ -3,7 +3,7 @@
             [clojure.pprint :as pprint]
             [drop.app.persistent-atom :refer [persistent-atom]]
             [drop.app.components.actionbar :refer [actionbar]]
-            [drop.app.components.find-and-replace :refer [find-and-replace-popup]]
+            [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
             [drop.app.utils :as app-utils]
             [drop.utils :as utils]
             [slate.core :as sl]

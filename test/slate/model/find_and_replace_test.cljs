@@ -16,25 +16,40 @@
                                      (run "hoo") (run "bar" #{:underline})])
                     (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
 
+(def doc2 (document [(paragraph "p1" [(run "foo") (run "bar" #{:italic})
+                                      (run "goo") (run "Bar" #{:bold})
+                                      (run "hoo") (run "BAR" #{:underline})])
+                     (paragraph "p2" [(run "one a one, and a foo, and a bAr!")])]))
+
 
 (deftest find-test
-  (is (= (find (editor-state doc) "foo")
-         [(selection ["p1" 0] ["p1" 3])
-          (selection ["p2" 17] ["p2" 20])]))
-  (is (= (find (editor-state doc) "bar")
-         [(selection ["p1" 3] ["p1" 6])
-          (selection ["p1" 9] ["p1" 12])
-          (selection ["p1" 15] ["p1" 18])
-          (selection ["p2" 28] ["p2" 31])]))
-  (is (= (find (editor-state doc) "goo")
-         [(selection ["p1" 6] ["p1" 9])]))
-  (is (= [] (find (editor-state doc) "byzantium"))))
+  (testing "basic functions"
+    (is (= (find (editor-state doc) "foo")
+           [(selection ["p1" 0] ["p1" 3])
+            (selection ["p2" 17] ["p2" 20])]))
+    (is (= (find (editor-state doc) "bar")
+           [(selection ["p1" 3] ["p1" 6])
+            (selection ["p1" 9] ["p1" 12])
+            (selection ["p1" 15] ["p1" 18])
+            (selection ["p2" 28] ["p2" 31])]))
+    (is (= (find (editor-state doc) "goo")
+           [(selection ["p1" 6] ["p1" 9])]))
+    (is (= [] (find (editor-state doc) "byzantium"))))
+
+  (testing "case sensitivity"
+    (is (= (find (editor-state doc2) "bar" true)
+           [(selection ["p1" 3] ["p1" 6])
+            (selection ["p1" 9] ["p1" 12])
+            (selection ["p1" 15] ["p1" 18])
+            (selection ["p2" 28] ["p2" 31])]))
+    (is (= (find (editor-state doc2) "bar" false)
+           [(selection ["p1" 3] ["p1" 6])]))))
 
 (deftest replace-test
   (testing "single location"
     (is (= (replace-all (editor-state doc)
-                    [(selection ["p1" 0] ["p1" 3])]
-                    "123")
+                        [(selection ["p1" 0] ["p1" 3])]
+                        "123")
            (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "123") (run "bar" #{:italic})
                                                                      (run "goo") (run "bar" #{:bold})
                                                                      (run "hoo") (run "bar" #{:underline})])
@@ -42,9 +57,9 @@
                            (changelist :changed-uuids #{"p1"})))))
   (testing "multiple locations"
     (is (= (replace-all (editor-state doc)
-                    [(selection ["p1" 0] ["p1" 3])
-                     (selection ["p1" 6] ["p1" 9])]
-                    "123")
+                        [(selection ["p1" 0] ["p1" 3])
+                         (selection ["p1" 6] ["p1" 9])]
+                        "123")
            (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "123") (run "bar" #{:italic})
                                                                      (run "123") (run "bar" #{:bold})
                                                                      (run "hoo") (run "bar" #{:underline})])
@@ -52,10 +67,10 @@
                            (changelist :changed-uuids #{"p1"})))))
   (testing "multiple locations across 2 paragraphs"
     (is (= (replace-all (editor-state doc)
-                    [(selection ["p1" 0] ["p1" 3])
-                     (selection ["p1" 6] ["p1" 9])
-                     (selection ["p2" 1] ["p2" 3])]
-                    "123")
+                        [(selection ["p1" 0] ["p1" 3])
+                         (selection ["p1" 6] ["p1" 9])
+                         (selection ["p2" 1] ["p2" 3])]
+                        "123")
            (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "123") (run "bar" #{:italic})
                                                                      (run "123") (run "bar" #{:bold})
                                                                      (run "hoo") (run "bar" #{:underline})])
@@ -63,8 +78,8 @@
                            (changelist :changed-uuids #{"p1" "p2"})))))
   (testing "shifts selection appropriately when needed"
     (is (= (replace-all (editor-state doc (selection ["p1" 17]))
-                    [(selection ["p1" 12] ["p1" 18])]
-                    "bizz")
+                        [(selection ["p1" 12] ["p1" 18])]
+                        "bizz")
            (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "foo") (run "bar" #{:italic})
                                                                      (run "goo") (run "bar" #{:bold})
                                                                      (run "bizz")])

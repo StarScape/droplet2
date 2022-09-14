@@ -9,15 +9,21 @@
 
 (defn- find-all-occurences
   "Returns the starting indices of all occurrences of `substr` within `str`."
-  [str substr]
+  [str substr ignore-case?]
+  (let [str (if ignore-case? (.toLowerCase str) str)]
   ;; TODO: make return lazy seq
-  (loop [start-idx 0
-         results []]
-    (let [idx (.indexOf str substr start-idx)]
-      (if (not= idx -1)
-        (recur (+ idx (.-length substr))
-               (conj results idx))
-        results))))
+    (loop [start-idx 0
+           results []]
+      (let [idx (.indexOf str substr start-idx)]
+        (if (not= idx -1)
+          (recur (+ idx (.-length substr))
+                 (conj results idx))
+          results)))))
+
+(defn- adjust-selection [sel n]
+  (-> sel
+      (update-in [:start :offset] + n)
+      (update-in [:end :offset] + n)))
 
 (comment
   ;; [3 9 15]
@@ -25,10 +31,10 @@
   (find-all-occurences "foobarfoobarfoobar" "bizz")
   )
 
-(defn paragraph-find [paragraph text]
+(defn paragraph-find [paragraph text ignore-case?]
   (let [uuid (:uuid paragraph)
         paragraph-text (m/text paragraph)
-        offsets (find-all-occurences paragraph-text text)]
+        offsets (find-all-occurences paragraph-text text ignore-case?)]
     (map #(selection [uuid %] [uuid (+ % (.-length text))]) offsets)))
 
 (comment
@@ -38,10 +44,13 @@
   (paragraph-find p "bar")
   )
 
-(defn find [editor-state text]
-  (->> (-> editor-state :doc :children)
-       (map #(paragraph-find % text))
-       (flatten)))
+(defn find
+  "Returns a list of locations where the text occurences in the document."
+  ([editor-state text ignore-case?]
+   (->> (-> editor-state :doc :children)
+        (map #(paragraph-find % text ignore-case?))
+        (flatten)))
+  ([editor-state text] (find editor-state text false)))
 
 (comment
   (def doc (document [(paragraph "p1" [(run "foo") (run "bar" #{:italic})
@@ -51,11 +60,6 @@
   (find (editor-state doc) "foo")
   (find (editor-state doc) "bar")
   )
-
-(defn- adjust-selection [sel n]
-  (-> sel
-      (update-in [:start :offset] + n)
-      (update-in [:end :offset] + n)))
 
 (defn paragraph-replace [paragraph locations text]
   (loop [para paragraph
@@ -101,9 +105,3 @@
                 (>>= editor-update es/replace-paragraph para-uuid new-para)))
             (es/identity-update editor-state) locations-by-paragraph)))
 
-#_(defn find-and-replace-all [editor-state text]
-  (let [locations-to-replace (find editor-state text)]
-    (apply replace editor-state text locations-to-replace)
-    #_(reduce (fn [editor-update, location]
-              (>>= editor-update replace location))
-            (return editor-state) locations-to-replace)))

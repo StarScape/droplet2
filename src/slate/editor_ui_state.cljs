@@ -484,8 +484,7 @@
                           :found-locations occurences
                           :location-before new-location-before}]
           (swap! *ui-state update :find-and-replace merge new-fields)
-          (goto-current-found! *ui-state)
-          #_(f+r/highlight! *ui-state locations))))))
+          (goto-current-found! *ui-state))))))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."

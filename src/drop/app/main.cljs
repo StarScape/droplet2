@@ -6,13 +6,12 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; BUG: find and replace, typing a single a causes the reflow to mess up
+;; TODO, F+R: case sensitivity UI
+;; TODO, F+R: Shortcuts for buttons
+;; TODO: implement highlight part of find and replace
 
 ;; BUG: persistent atom causes issues with live-reloading.
 ;; It's nothing with persistent-atom specifically; something is happen when file loading
-
-;; TODO: implement find + replace without highlighting / view stuff
-;; TODO: implement highlight part of find and replace
 
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
