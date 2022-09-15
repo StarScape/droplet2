@@ -31,11 +31,12 @@
      buttons]))
 
 (defn img-button
-  [{:keys [src on-click shortcut-text]}]
+  [{:keys [src on-click hover-text toggled?] :or {toggled? false}}]
   [:button {:on-mouse-down #(.preventDefault %)
-            :title shortcut-text
+            :title hover-text
             :on-click on-click
-            :class "m-0.5 px-1 rounded-sm hover:bg-slate-300 active:bg-slate-400 color-red"}
+            :class ["m-0.5" "px-1" "rounded-sm" "hover:bg-slate-300" "active:bg-slate-400"
+                    (when toggled? "bg-slate-300")]}
    [:img {:src src
           :style {:width "15px"}}]])
 
@@ -57,9 +58,14 @@
            on-click-next
            on-click-prev
            on-click-exit
+           on-toggle-ignore-case
            search-input-ref]}]
   (r/with-let [*replace-text (r/atom "")
-               *find-text (r/atom "")]
+               *find-text (r/atom "")
+               *ignore-case-toggled? (r/atom false)
+               toggle-ignore-case! (fn []
+                                     (swap! *ignore-case-toggled? not)
+                                     (on-toggle-ignore-case @*ignore-case-toggled?))]
     (when activated?
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b rounded-b-sm shadow-sm
@@ -79,13 +85,17 @@
                                            :tab-index "3"
                                            :on-click #(on-find @*find-text)}]
                              [img-button {:src "icons/down_arrow.svg"
-                                          :shortcut-text "Enter"
+                                          :hover-text "Enter"
                                           :on-click on-click-next}]
                              [img-button {:src "icons/up_arrow.svg"
-                                          :shortcut-text "⇧Enter"
+                                          :hover-text "⇧Enter"
                                           :on-click on-click-prev}]
+                             [img-button {:src "icons/case_sensitivity.svg"
+                                          :hover-text "Toggle case-sensitivity"
+                                          :toggled? @*ignore-case-toggled?
+                                          :on-click toggle-ignore-case!}]
                              [img-button {:src "icons/x.svg"
-                                          :shortcut-text "⎋"
+                                          :hover-text "⎋"
                                           :on-click on-click-exit}]]
                    :input-tray [:div {:class "text-xs text-slate-500"}
                                 (str (if (pos? total-occurences)

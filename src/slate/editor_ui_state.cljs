@@ -486,6 +486,9 @@
           (swap! *ui-state update :find-and-replace merge new-fields)
           (goto-current-found! *ui-state))))))
 
+(defn set-ignore-case!
+  [*ui-state ignore-case?])
+
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
   [*ui-state]

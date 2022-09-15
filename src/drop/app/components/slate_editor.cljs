@@ -117,6 +117,7 @@
                                   :on-click-exit #(ui-state/cancel-find! *slate-instance)
                                   :on-click-next #(ui-state/next-occurence! *slate-instance)
                                   :on-click-prev #(ui-state/prev-occurence! *slate-instance)
+                                  :on-toggle-ignore-case #(ui-state/set-ignore-case! *slate-instance %)
                                   :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}])
        [actionbar {:active-formats @*active-formats
                    :word-count @*word-count
