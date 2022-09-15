@@ -463,31 +463,37 @@
 
 (defn find!
   "Starts find operation, if text search term is not blank."
-  [*ui-state text]
-  (if (str/blank? text)
-    (goto-location-before! *ui-state)
-    (let [{history :history
-           {:keys [location-before] :as f+r-state} :find-and-replace} @*ui-state
-          editor-state (history/current-state history)]
-      (if (= text (:text f+r-state))
-        (if (= (:selection editor-state) (get-current-location f+r-state))
-          (next-occurence! *ui-state)
-          (goto-current-found! *ui-state))
-        (let [occurences (f+r/find editor-state text)
+  ([*ui-state text force-restart?]
+   (if (str/blank? text)
+     (goto-location-before! *ui-state)
+     (let [{history :history
+            {:keys [location-before ignore-case?] :as f+r-state} :find-and-replace} @*ui-state
+           editor-state (history/current-state history)]
+       (if (and (= text (:text f+r-state))
+                (not force-restart?))
+         (if (= (:selection editor-state) (get-current-location f+r-state))
+           (next-occurence! *ui-state)
+           (goto-current-found! *ui-state))
+         (let [occurences (f+r/find editor-state text ignore-case?)
               ;; No previous find, set current selection as place to return to when find deactivated
-              new-location-before (if (empty? (:found-locations f+r-state))
-                                    (:selection editor-state)
-                                    location-before)
-              new-fields {:active? true
-                          :text text
-                          :current-location 0
-                          :found-locations occurences
-                          :location-before new-location-before}]
-          (swap! *ui-state update :find-and-replace merge new-fields)
-          (goto-current-found! *ui-state))))))
+               new-location-before (if (empty? (:found-locations f+r-state))
+                                     (:selection editor-state)
+                                     location-before)
+               new-fields {:active? true
+                           :text text
+                           :current-location 0
+                           :found-locations occurences
+                           :location-before new-location-before}]
+           (swap! *ui-state update :find-and-replace merge new-fields)
+           (goto-current-found! *ui-state))))))
+  ([*ui-state text] (find! *ui-state text false)))
 
-(defn set-ignore-case!
-  [*ui-state ignore-case?])
+(defn toggle-ignore-case!
+  [*ui-state]
+  (swap! *ui-state update-in [:find-and-replace :ignore-case?] not)
+  (let [{{:keys [text active?]} :find-and-replace} @*ui-state]
+    (when active?
+      (find! *ui-state text true))))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
@@ -681,6 +687,7 @@
                               :word-count (word-count/full-count current-doc)
                               :input-history []
                               :find-and-replace {:active? false
+                                                 :ignore-case? true
                                                  :text nil
                                                  :location-before nil
                                                  :found-locations []

@@ -50,6 +50,7 @@
 
 (defn find-and-replace-popup
   [{:keys [activated?
+           ignore-case-toggled?
            current-occurence
            total-occurences
            on-find
@@ -61,16 +62,11 @@
            on-toggle-ignore-case
            search-input-ref]}]
   (r/with-let [*replace-text (r/atom "")
-               *find-text (r/atom "")
-               *ignore-case-toggled? (r/atom false)
-               toggle-ignore-case! (fn []
-                                     (swap! *ignore-case-toggled? not)
-                                     (on-toggle-ignore-case @*ignore-case-toggled?))]
+               *find-text (r/atom "")]
     (when activated?
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
-             #_#_:style {"filter" "drop-shadow(0, 1px, 1px, rgb(0, 140, 255))"}
              :on-key-down #(when (= "Escape" (.-code %)) (on-click-exit))}
        [input-row {:placeholder "Find"
                    :autofocus? true
@@ -92,10 +88,10 @@
                                           :on-click on-click-prev}]
                              [img-button {:src "icons/case_sensitivity.svg"
                                           :hover-text "Toggle case-sensitivity"
-                                          :toggled? @*ignore-case-toggled?
-                                          :on-click toggle-ignore-case!}]
+                                          :toggled? ignore-case-toggled?
+                                          :on-click on-toggle-ignore-case}]
                              [img-button {:src "icons/x.svg"
-                                          :hover-text "⎋"
+                                          :hover-text "Esc"
                                           :on-click on-click-exit}]]
                    :input-tray [:div {:class "text-xs text-slate-500"}
                                 (str (if (pos? total-occurences)

@@ -109,6 +109,7 @@
                        :on-focus-find focus-find-popup}]]
        (let [find-and-replace (-> @*slate-instance :find-and-replace)]
          [find-and-replace-popup {:activated? (:active? find-and-replace)
+                                  :ignore-case-toggled? (not (:ignore-case? find-and-replace))
                                   :current-occurence (:current-location find-and-replace)
                                   :total-occurences (count (:found-locations find-and-replace))
                                   :on-find #(ui-state/find! *slate-instance %)
@@ -117,7 +118,7 @@
                                   :on-click-exit #(ui-state/cancel-find! *slate-instance)
                                   :on-click-next #(ui-state/next-occurence! *slate-instance)
                                   :on-click-prev #(ui-state/prev-occurence! *slate-instance)
-                                  :on-toggle-ignore-case #(ui-state/set-ignore-case! *slate-instance %)
+                                  :on-toggle-ignore-case #(ui-state/toggle-ignore-case! *slate-instance)
                                   :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}])
        [actionbar {:active-formats @*active-formats
                    :word-count @*word-count

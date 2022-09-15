@@ -6,7 +6,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO, F+R: case sensitivity UI
 ;; TODO, F+R: Shortcuts for buttons
 ;; TODO: implement highlight part of find and replace
 
