@@ -67,7 +67,9 @@
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
-             :on-key-down #(when (= "Escape" (.-code %)) (on-click-exit))}
+             :on-key-down #(cond
+                             (= "Escape" (.-code %))
+                             (on-click-exit))}
        [input-row {:placeholder "Find"
                    :autofocus? true
                    :tab-index "1"
@@ -75,7 +77,9 @@
                    :ref search-input-ref
                    :on-key-down (fn [e value]
                                   (when (= "Enter" (.-code e))
-                                    (on-find value)))
+                                    (if (.-shiftKey e)
+                                      (on-click-prev)
+                                      (on-find value))))
                    :buttons [:<>
                              [text-button {:text "Search"
                                            :tab-index "3"

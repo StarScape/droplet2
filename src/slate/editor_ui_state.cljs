@@ -416,15 +416,19 @@
 (defn goto-location-before!
   [*ui-state]
   (let [{:keys [find-and-replace]} @*ui-state]
-    (goto-location! *ui-state (:location-before find-and-replace))))
+    (goto-location! *ui-state (:location-before find-and-replace) :focus? false)))
 
 (defn next-occurence! [*ui-state]
-  (swap! *ui-state update :find-and-replace inc-current-location)
-  (goto-current-found! *ui-state))
+  (let [{{:keys [found-locations]} :find-and-replace} @*ui-state]
+    (when (seq found-locations)
+      (swap! *ui-state update :find-and-replace inc-current-location)
+      (goto-current-found! *ui-state))))
 
 (defn prev-occurence! [*ui-state]
-  (swap! *ui-state update :find-and-replace dec-current-location)
-  (goto-current-found! *ui-state))
+  (let [{{:keys [found-locations]} :find-and-replace} @*ui-state]
+    (when (seq found-locations)
+      (swap! *ui-state update :find-and-replace dec-current-location)
+      (goto-current-found! *ui-state))))
 
 (defn replace-current! [*ui-state replacement-text]
   (let [{:keys [find-and-replace history]} @*ui-state

@@ -12,7 +12,7 @@
   [str substr ignore-case?]
   (let [str (if ignore-case? (.toLowerCase str) str)
         substr (if ignore-case? (.toLowerCase substr) substr)]
-  ;; TODO: make return lazy seq
+    ;; TODO: make return lazy seq
     (loop [start-idx 0
            results []]
       (let [idx (.indexOf str substr start-idx)]
