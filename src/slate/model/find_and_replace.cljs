@@ -10,7 +10,8 @@
 (defn- find-all-occurences
   "Returns the starting indices of all occurrences of `substr` within `str`."
   [str substr ignore-case?]
-  (let [str (if ignore-case? (.toLowerCase str) str)]
+  (let [str (if ignore-case? (.toLowerCase str) str)
+        substr (if ignore-case? (.toLowerCase substr) substr)]
   ;; TODO: make return lazy seq
     (loop [start-idx 0
            results []]
