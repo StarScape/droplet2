@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [drop.app.components.layout :refer [v-spacer-m]]
             [drop.utils :refer [debounce]]
-            [reagent.core :as r :refer-macros [with-let]]))
+            [reagent.core :as r :refer-macros [with-let]]
+            [slate.utils :as slate-utils]))
 
 (defn- input-row
   [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref *value-atom autofocus?]
@@ -68,8 +69,15 @@
                    border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
              :on-key-down #(cond
-                             (= "Escape" (.-code %))
-                             (on-click-exit))}
+                             (= "Escape" #p (.-code %))
+                             (on-click-exit)
+
+                             (and (= "KeyC" (.-code %))
+                                  (.-altKey %)
+                                  (if (slate-utils/is-mac?)
+                                    (.-metaKey %)
+                                    (.-ctrlKey %)))
+                             (on-toggle-ignore-case))}
        [input-row {:placeholder "Find"
                    :autofocus? true
                    :tab-index "1"
