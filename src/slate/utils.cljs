@@ -6,6 +6,14 @@
 
 (defn is-mac? [] true) ;; just return true for now in development
 
+(defn cmd-or-ctrl-key
+  "Takes a KeyboardEvent, returns true if the CMD key is pressed
+   (on macOS), or if the ctrlKey is pressed (on Windows and Linux)."
+  [keyboard-event]
+  (if (is-mac?)
+    (.-metaKey keyboard-event)
+    (.-ctrlKey keyboard-event)))
+
 (defn common-elements [& colls]
   (let [freqs (map frequencies colls)]
     (mapcat (fn [e] (repeat (apply min (map #(% e) freqs)) e))

@@ -6,7 +6,7 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO, F+R: Shortcuts for buttons
+;; TODO, F+R: Render hover text different depending on platform
 ;; TODO: implement highlight part of find and replace
 
 ;; BUG: persistent atom causes issues with live-reloading.

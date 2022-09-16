@@ -42,8 +42,9 @@
           :style {:width "15px"}}]])
 
 (defn text-button
-  [{:keys [text tab-index on-click]}]
+  [{:keys [text tab-index hover-text on-click]}]
   [:button {:on-mouse-down #(.preventDefault %)
+            :title hover-text
             :on-click on-click
             :tabIndex tab-index
             :class "m-0.5 p-2 rounded-sm text-xs hover:bg-slate-300 active:bg-slate-400 outline-light-blue"}
@@ -63,21 +64,39 @@
            on-toggle-ignore-case
            search-input-ref]}]
   (r/with-let [*replace-text (r/atom "")
-               *find-text (r/atom "")]
+               *find-text (r/atom "")
+               replace! #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))
+               replace-all! #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))]
     (when activated?
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
              :on-key-down #(cond
-                             (= "Escape" #p (.-code %))
+                             (= "Escape" (.-code %))
                              (on-click-exit)
 
+                             ;; cmd/ctrl+alt+c = toggle case sensitivity
                              (and (= "KeyC" (.-code %))
                                   (.-altKey %)
-                                  (if (slate-utils/is-mac?)
-                                    (.-metaKey %)
-                                    (.-ctrlKey %)))
-                             (on-toggle-ignore-case))}
+                                  (slate-utils/cmd-or-ctrl-key %))
+                             (do
+                               (.preventDefault %)
+                               (on-toggle-ignore-case))
+
+                             ;; cmd/ctrl+shift+r = replace all
+                             (and (= "KeyR" (.-code %))
+                                  (.-shiftKey %)
+                                  (slate-utils/cmd-or-ctrl-key %))
+                             (do
+                               (.preventDefault %)
+                               (replace-all!))
+
+                             ;; cmd/ctrl+r = replace
+                             (and (= "KeyR" (.-code %))
+                                  (slate-utils/cmd-or-ctrl-key %))
+                             (do
+                               (.preventDefault %)
+                               (replace!)))}
        [input-row {:placeholder "Find"
                    :autofocus? true
                    :tab-index "1"
@@ -99,7 +118,7 @@
                                           :hover-text "⇧Enter"
                                           :on-click on-click-prev}]
                              [img-button {:src "icons/case_sensitivity.svg"
-                                          :hover-text "Toggle case-sensitivity"
+                                          :hover-text "Toggle case-sensitivity (⌘⎇C)"
                                           :toggled? ignore-case-toggled?
                                           :on-click on-toggle-ignore-case}]
                              [img-button {:src "icons/x.svg"
@@ -119,7 +138,9 @@
                    :buttons [:<>
                              [text-button {:text "Replace"
                                            :tab-index "4"
-                                           :on-click #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))}]
+                                           :hover-text "⌘R"
+                                           :on-click replace!}]
                              [text-button {:text "Replace All"
                                            :tab-index "5"
-                                           :on-click #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))}]]}]])))
+                                           :hover-text "⌘⇧R"
+                                           :on-click replace-all!}]]}]])))
