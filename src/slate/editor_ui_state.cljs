@@ -6,7 +6,7 @@
             [clojure.spec.alpha :as s]
             [drop.utils :as utils]
             [slate.model.common :as m]
-            [slate.model.find-and-replace :as f+r]
+            [slate.find-and-replace :as f+r]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
             [slate.model.doc :refer [map->Document]]
@@ -205,7 +205,7 @@
     (when (>= new-font-size font-size-min)
       (set-font-size! *ui-state new-font-size))))
 
-(defn highlight!
+#_(defn highlight!
   [*ui-state locations]
   (let [{:keys [shadow-root
                 dom-elem
@@ -224,7 +224,7 @@
         new-viewmodels (vm/update-viewmodels viewmodels (:doc new-state) (view/elem-width ui-state) measure-fn changelist)]
     (sync-dom! shadow-root dom-elem hidden-input new-state editor-state new-viewmodels changelist :focus? false)))
 
-(defn unhighlight!
+#_(defn unhighlight!
   [*ui-state locations]
   (let [{:keys [shadow-root
                 dom-elem

@@ -6,8 +6,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO, F+R: Render hover text different depending on platform
-;; TODO: switch tabs at start of paragraph to use CSS text-indent property
 ;; TODO: implement html import/export
 ;; TODO: implement highlight part of find and replace
 
@@ -25,6 +23,7 @@
 ;; TODO: DOCX export/import w/ pandoc
 
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
+;; TODO: Come up with a better criteria for history getting added to the backstack
 ;; TODO: Probably worth breaking out all of the history fns into a protocol and also implementing it for UIState
 ;; TODO: Copy (and maybe paste) rich text
 
