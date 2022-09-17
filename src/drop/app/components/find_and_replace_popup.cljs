@@ -3,7 +3,7 @@
             [drop.app.components.layout :refer [v-spacer-m]]
             [drop.utils :refer [debounce]]
             [reagent.core :as r :refer-macros [with-let]]
-            [slate.utils :as slate-utils]))
+            [slate.utils :as slate-utils :refer [is-mac?]]))
 
 (defn- input-row
   [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref *value-atom autofocus?]
@@ -110,15 +110,16 @@
                    :buttons [:<>
                              [text-button {:text "Search"
                                            :tab-index "3"
+                                           :hover-text "Enter"
                                            :on-click #(on-find @*find-text)}]
                              [img-button {:src "icons/down_arrow.svg"
                                           :hover-text "Enter"
                                           :on-click on-click-next}]
                              [img-button {:src "icons/up_arrow.svg"
-                                          :hover-text "⇧Enter"
+                                          :hover-text (if (is-mac?) "⇧Enter" "Shift+Enter")
                                           :on-click on-click-prev}]
                              [img-button {:src "icons/case_sensitivity.svg"
-                                          :hover-text "Toggle case-sensitivity (⌘⎇C)"
+                                          :hover-text (str "Toggle case-sensitivity " (if (is-mac?) "(⌘⎇C)" "(Ctrl+Alt+C)"))
                                           :toggled? ignore-case-toggled?
                                           :on-click on-toggle-ignore-case}]
                              [img-button {:src "icons/x.svg"
@@ -138,9 +139,9 @@
                    :buttons [:<>
                              [text-button {:text "Replace"
                                            :tab-index "4"
-                                           :hover-text "⌘R"
+                                           :hover-text (if (is-mac?) "⌘R" "Ctrl+R")
                                            :on-click replace!}]
                              [text-button {:text "Replace All"
                                            :tab-index "5"
-                                           :hover-text "⌘⇧R"
+                                           :hover-text (if (is-mac?) "⌘⇧R" "Ctrl+Shift+R")
                                            :on-click replace-all!}]]}]])))

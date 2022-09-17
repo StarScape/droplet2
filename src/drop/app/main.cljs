@@ -7,6 +7,8 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO, F+R: Render hover text different depending on platform
+;; TODO: switch tabs at start of paragraph to use CSS text-indent property
+;; TODO: implement html import/export
 ;; TODO: implement highlight part of find and replace
 
 ;; BUG: persistent atom causes issues with live-reloading.
@@ -17,7 +19,6 @@
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
 
 ;; TODO: fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen
-;; TODO: find and replace UI
 ;; TODO: command palette
 ;; TODO: learn about React Spring
 ;; TODO: learn about DataScript
