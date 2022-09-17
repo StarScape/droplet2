@@ -297,6 +297,13 @@
       (>>= m/delete)
       (>>= m/insert "—")))
 
+(definterceptor insert-ordered-list-at-paragraph-start
+  {:add-to-history-immediately? true
+   :should-fire? (fn [{:keys [selection]}]
+                   (and (sel/single? selection) (zero? (sel/caret selection))))}
+  [editor-state _ui-state _e]
+  (es/toggle-paragraph-type editor-state :ol))
+
 ;; Formatting
 (definterceptor italic
   [editor-state _ _]
@@ -380,7 +387,8 @@
    "\"" auto-surround-double-quote
    "'" auto-surround-single-quote
    "(" auto-surround-paren
-   "-- " transform-double-dash-to-em-dash})
+   "-- " transform-double-dash-to-em-dash
+   "1. " insert-ordered-list-at-paragraph-start})
 
 (def win-linux-interceptors
   {:ctrl+left ctrl+left

@@ -1,4 +1,4 @@
-(ns slate.find-and-replace
+(ns slate.model.find-and-replace
   (:require [slate.model.common :as m]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.run :as r]

@@ -6,7 +6,7 @@
             [clojure.spec.alpha :as s]
             [drop.utils :as utils]
             [slate.model.common :as m]
-            [slate.find-and-replace :as f+r]
+            [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
             [slate.model.doc :refer [map->Document]]
@@ -361,7 +361,7 @@
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
-        opts (select-keys interceptor [:add-to-history-immediately? :include-in-history?])]
+        opts (select-keys interceptor [:add-to-history-immediately? :include-in-history? :input-name])]
     (fire-update! *ui-state editor-update event opts)))
 
 (defn fire-interceptor!
