@@ -300,9 +300,11 @@
 (definterceptor insert-ordered-list-at-paragraph-start
   {:add-to-history-immediately? true
    :should-fire? (fn [{:keys [selection]}]
-                   (and (sel/single? selection) (zero? (sel/caret selection))))}
+                   (and (sel/single? selection) (= 2 (sel/caret selection))))}
   [editor-state _ui-state _e]
-  (es/toggle-paragraph-type editor-state :ol))
+  (-> (m/delete editor-state)
+      (>>= m/delete)
+      (>>= es/toggle-paragraph-type :ol)))
 
 ;; Formatting
 (definterceptor italic
@@ -388,7 +390,15 @@
    "'" auto-surround-single-quote
    "(" auto-surround-paren
    "-- " transform-double-dash-to-em-dash
-   "1. " insert-ordered-list-at-paragraph-start})
+   "1. " insert-ordered-list-at-paragraph-start
+   "2. " insert-ordered-list-at-paragraph-start
+   "3. " insert-ordered-list-at-paragraph-start
+   "4. " insert-ordered-list-at-paragraph-start
+   "5. " insert-ordered-list-at-paragraph-start
+   "6. " insert-ordered-list-at-paragraph-start
+   "7. " insert-ordered-list-at-paragraph-start
+   "8. " insert-ordered-list-at-paragraph-start
+   "9. " insert-ordered-list-at-paragraph-start})
 
 (def win-linux-interceptors
   {:ctrl+left ctrl+left
