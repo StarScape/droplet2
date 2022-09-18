@@ -1,6 +1,5 @@
 (ns drop.app.main
-  (:require [clojure.core.async :refer-macros [go]]
-            [drop.app.components.core :as components]
+  (:require [drop.app.components.core :as components]
             [drop.app.components.slate-editor :as slate-editor]
             [drop.utils :as utils]
             [reagent.dom :as rdom]
