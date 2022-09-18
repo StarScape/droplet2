@@ -209,9 +209,10 @@
   [viewmodel selection]
   (let [lines (:lines viewmodel)
         pid (-> viewmodel :paragraph :uuid)
-        para (:paragraph viewmodel)]
+        para (:paragraph viewmodel)
+        classes ["paragraph" (paragraph-type->css-class (:type para))]]
     (binding [*selection-ongoing?* (contains? (:between selection) pid)]
-      (str "<div class='paragraph " (paragraph-type->css-class (:type para)) "' id='p-" pid "'>"
+      (str "<div class='" (str/join " " classes) "' id='p-" pid "'>"
            (apply str (map #(vm-line->dom % selection pid (sl/len para)) lines))
            "</div>"))))
 

@@ -240,6 +240,14 @@
     (->EditorUpdate (editor-state new-doc new-selection)
                     (changelist :changed-uuids #{uuid}))))
 
+(defn update-paragraph
+  "Passes the paragraph with UUID `uuid` to function f and replaces the paragraph with the value returned.
+   Returns an EditorUpdate."
+  [{:keys [doc] :as editor-state} uuid f & args]
+  (let [paragraph (get (:children doc) uuid)
+        new-paragraph (apply f paragraph args)]
+    (replace-paragraph editor-state uuid new-paragraph)))
+
 ;; TODO: Auto-set :formats on selection
 (defn set-selection
   "Returns a new EditorUpdate with the selection set to `new-selection`."
