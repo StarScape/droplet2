@@ -7,6 +7,25 @@
 
 (def test-file (slurp-file "test_files/html/the_quiet_universe.html"))
 
+(def ^:private *iframe (atom nil))
+
+(defn- get-or-create-iframe!
+  []
+  (if @*iframe
+    @*iframe
+    (let [iframe (js/document.createElement "iframe")]
+      (js/document.body.appendChild iframe)
+      (reset! *iframe iframe))))
+
+(defn- add-to-iframe!
+  [html-document-str]
+  (let [iframe (get-or-create-iframe!)]
+    (set! (.-src iframe) "about:blank")
+    (doto (.-contentDocument iframe)
+      (.open)
+      (.write html-document-str)
+      (.close))))
+
 (defn- str->document
   [html-str]
   (.parseFromString (js/DOMParser.) html-str "text/html"))
@@ -29,14 +48,24 @@
       (conj! styles :italic))
     (persistent! styles)))
 
+(defn- is-text?
+  [iframe-node]
+  (let [iframe @*iframe]
+    (instance? (.. iframe -contentWindow -Text) iframe-node)))
+
+(defn- is-element?
+  [iframe-node]
+  (let [iframe @*iframe]
+    (instance? (.. iframe -contentWindow -Element) iframe-node)))
+
 (defn- html-node->run-or-runs
   ([node styles]
    {:pre [(set? styles)]}
    (cond
-     (instance? js/Text node)
+     (is-text? node)
      (run (.-wholeText node) styles)
 
-     (instance? js/Element node)
+     (is-element? node)
      (let [styles (set/union styles (html-element->styles node))]
        (->> (child-nodes node)
             (map #(html-node->run-or-runs % styles))
@@ -54,16 +83,16 @@
 (defn html->doc
   "Converts an HTML string to a Droplet document."
   [html-str]
-  (let [dom (str->document html-str)
+  (let [dom (add-to-iframe! html-str) #_(str->document html-str)
         body-contents (js/Array.from (.. dom -body -children))
         paragraphs (map html-elem->para body-contents)]
     paragraphs))
 
 (comment
-  (.-body (str->document test-file))
+  (.-styleSheets (str->document test-file))
   (js/Array.from (.-children (.-body (str->document test-file))))
   (js/Array.from (.. (str->document test-file) -body -children))
   (js/console.log (.-style (nth one 1)))
+  (add-to-iframe! test-file)
+  (html->doc test-file)
   )
-(html->doc test-file)
-
