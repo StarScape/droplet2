@@ -669,10 +669,13 @@
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
   [& {:keys [*atom editor-state history dom-elem on-new on-save on-save-as on-open on-focus-find]
       :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-focus-find #()}}]
-  ;; Slate operates inside a shadow DOM to prevent global styles from interfering
+  ;; Load global styles if not already loaded
+  (style/install-global-styles!)
+  ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
   (.. js/document -fonts (load "16px Merriweather")
-      ;; TODO: use core-async or something to clean this up
+      ;; TODO: use core-async or something to clean this up?
       (then #(let [uuid (random-uuid)
+                   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
                    [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
                    available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)

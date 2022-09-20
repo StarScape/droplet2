@@ -14,6 +14,7 @@
   (if @*iframe
     @*iframe
     (let [iframe (js/document.createElement "iframe")]
+      (set! (.-className iframe) "slate-iframe")
       (js/document.body.appendChild iframe)
       (reset! *iframe iframe))))
 
@@ -89,5 +90,6 @@
   (js/Array.from (.. (str->document test-file) -body -children))
   (js/console.log (.-style (nth one 1)))
   (add-to-iframe! test-file)
+
   (html->doc test-file)
   )

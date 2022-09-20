@@ -2,6 +2,30 @@
   (:require-macros [garden.def :refer [defkeyframes]])
   (:require [garden.core :refer [css]]))
 
+(def global-style
+  ;; Slate uses a global, hidden iframe for parsing and examining foreign HTML
+  ;; This is because parts of the native HTML+CSS parsing capabilities of the
+  ;; browser only work if the elements are actually in a document.
+  [[:.slate-iframe {:position "absolute"
+                    :left 0
+                    :top 0
+                    :width 0
+                    :height 0
+                    :pointer-events "none"
+                    :z-index -1000
+                    :opacity 0}]])
+
+(def global-<style>
+  (let [elem (js/document.createElement "style")]
+    (set! (.-textContent elem) (apply css global-style))
+    elem))
+
+(defn install-global-styles!
+  "Adds the Slate global stylesheet to the global document, if it has not already been added."
+  []
+  (when-not (.-isConnected global-<style>)
+    (js/document.head.append global-<style>)))
+
 (defkeyframes blink-anim
   [:50%
    {:opacity 0}])
