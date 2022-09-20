@@ -18,6 +18,7 @@
       (reset! *iframe iframe))))
 
 (defn- add-to-iframe!
+  "Adds HTML document to iframe and returns the Document object."
   [html-document-str]
   (let [iframe (get-or-create-iframe!)]
     (set! (.-src iframe) "about:blank")
@@ -26,27 +27,9 @@
       (.write html-document-str)
       (.close))))
 
-(defn- str->document
-  [html-str]
-  (.parseFromString (js/DOMParser.) html-str "text/html"))
-
 (defn- child-nodes
   [html-node]
   (js/Array.from (.-childNodes html-node)))
-
-(defn- html-element->styles
-  [html-element]
-  (let [computed-style (js/getComputedStyle html-element)
-        styles (transient #{})]
-    (js/console.log html-element)
-    (js/console.log computed-style)
-    (when (>= (-> computed-style (.-fontWeight) js/parseInt) 700)
-      (conj! styles :bold))
-    (when (= "italic" #p (.-fontStyle computed-style))
-      (conj! styles :italic))
-    (when (= "line-through" (.-textDecoration computed-style))
-      (conj! styles :italic))
-    (persistent! styles)))
 
 (defn- is-text?
   [iframe-node]
@@ -57,6 +40,18 @@
   [iframe-node]
   (let [iframe @*iframe]
     (instance? (.. iframe -contentWindow -Element) iframe-node)))
+
+(defn- html-element->styles
+  [html-element]
+  (let [computed-style (js/getComputedStyle html-element)
+        styles (transient #{})]
+    (when (>= (-> computed-style (.-fontWeight) js/parseInt) 700)
+      (conj! styles :bold))
+    (when (= "italic" (.-fontStyle computed-style))
+      (conj! styles :italic))
+    (when (= "line-through" (.-textDecoration computed-style))
+      (conj! styles :italic))
+    (persistent! styles)))
 
 (defn- html-node->run-or-runs
   ([node styles]
@@ -83,7 +78,7 @@
 (defn html->doc
   "Converts an HTML string to a Droplet document."
   [html-str]
-  (let [dom (add-to-iframe! html-str) #_(str->document html-str)
+  (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
         paragraphs (map html-elem->para body-contents)]
     paragraphs))
