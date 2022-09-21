@@ -28,6 +28,19 @@
       (.write html-document-str)
       (.close))))
 
+(defn- root-font-size
+  "Returns root font size for document, in pixels."
+  [document]
+  (js/parseFloat (.-fontSize (js/getComputedStyle (.-documentElement document)))))
+
+(defn- rem->px
+  [document rem]
+  (* rem (root-font-size document)))
+
+(defn- em->px
+  [elem em]
+  (* em (js/parseFloat (.-fontSize (js/getComputedStyle (.-parentElement elem))))))
+
 (defn- child-nodes
   [html-node]
   (js/Array.from (.-childNodes html-node)))
@@ -72,9 +85,17 @@
 
 (defn- html-elem->para
   [html-elem]
-  (paragraph (->> (child-nodes html-elem)
-                  (map html-node->run-or-runs)
-                  (flatten))))
+  (let [computed-style (js/getComputedStyle html-elem)
+        font-size-px (js/parseFloat (.-fontSize computed-style))
+        ptype (cond
+                (or (= "H1" (.-tagName html-elem))
+                    (>= font-size-px (em->px html-elem 2.0))) :h1
+                (or (= "H2" (.-tagName html-elem))
+                    (>= font-size-px (em->px html-elem 1.5))) :h2
+                :else :body)]
+    (paragraph (random-uuid) ptype (->> (child-nodes html-elem)
+                                        (map html-node->run-or-runs)
+                                        (flatten)))))
 
 (defn html->doc
   "Converts an HTML string to a Droplet document."
@@ -82,6 +103,7 @@
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
         paragraphs (map html-elem->para body-contents)]
+    ;; TODO: preserve paragraph types
     (document paragraphs)))
 
 (comment

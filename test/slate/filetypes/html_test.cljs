@@ -9,7 +9,7 @@
 (def test-file (slurp-file "test_files/html/the_quiet_universe.html"))
 
 (def test-file-expected
-  (document [(paragraph :h2 [(run "The Quiet Universe - 2.235674301")])
+  (document [(paragraph (random-uuid) :h2 [(run "The Quiet Universe - 2.235674301")])
              (paragraph [(run "Written by Dispatcher 8765, otherwise known as Lamoss, after his exile. This document was a significant factor in the decision to end the Dispatcher program, circa 125112." #{:italic})])
              (paragraph [(run "\u2003My garden is a small world. A few parsecs out from the edge of a hook-shaped cluster of stars too dense for this part of the galaxy, some simple calculations show that its star has spent the last several billion years slowly drifting the opposite direction, towards the outer rim. No doubt that closely-packed cluster was its birthplace. The star would have separated about 1.3 billion years ago, taking with it a fresh planetary nebula, and the first ingredients for life.")])
              (paragraph [(run "\u2003It’s young ground I stand on now, though compared to my own brief flash in the darkness these stones hold an eternity I shudder at. At nighttime, when the orbits line up correctly, the entire dome of the sky will face away from the galaxy, out towards intergalactic space. The Great In Between. Normally I can only look for a few minutes before the dimensions overwhelm me and the vertigo is too great to stand. No species ever encountered by Librarians has dared to bridge")
