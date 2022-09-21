@@ -5,7 +5,7 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.editor-state :as es :refer [editor-state ->EditorUpdate changelist]]
-            [slate.find-and-replace :refer [find replace-all]]))
+            [slate.model.find-and-replace :refer [find replace-all]]))
 
 #_(def p (p/paragraph "p1" [(r/run "foo") (r/run "bar" #{:italic})
                           (r/run "goo") (r/run "bar" #{:bold})
