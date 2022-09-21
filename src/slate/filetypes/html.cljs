@@ -82,7 +82,7 @@
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
         paragraphs (map html-elem->para body-contents)]
-    paragraphs))
+    (document paragraphs)))
 
 (comment
   (.-styleSheets (str->document test-file))
