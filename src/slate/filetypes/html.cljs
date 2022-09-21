@@ -55,6 +55,11 @@
   (let [iframe @*iframe]
     (instance? (.. iframe -contentWindow -Element) iframe-node)))
 
+(defn- clean-whitespace
+  "Removes non-standard whitespace characters and makes them regular spaces"
+  [str]
+  (.replace str (js/RegExp "\\s") " "))
+
 (defn- html-element->styles
   [html-element]
   (let [computed-style (js/getComputedStyle html-element)
@@ -72,7 +77,7 @@
    {:pre [(set? styles)]}
    (cond
      (is-text? node)
-     (run (.-wholeText node) styles)
+     (run (clean-whitespace (.-wholeText node)) styles)
 
      (is-element? node)
      (let [styles (set/union styles (html-element->styles node))]
@@ -110,7 +115,6 @@
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
         paragraphs (map html-elem->para body-contents)]
-    ;; TODO: preserve paragraph types
     (document paragraphs)))
 
 (comment
