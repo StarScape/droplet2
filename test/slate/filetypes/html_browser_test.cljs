@@ -1,4 +1,4 @@
-(ns slate.filetypes.html-test
+(ns slate.filetypes.html-browser-test
   (:require-macros [slate.macros :refer [slurp-file]])
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
             [slate.filetypes.html :as html]
