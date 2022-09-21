@@ -86,16 +86,23 @@
 (defn- html-elem->para
   [html-elem]
   (let [computed-style (js/getComputedStyle html-elem)
+        indented? (pos? (js/parseFloat (.-textIndent computed-style)))
         font-size-px (js/parseFloat (.-fontSize computed-style))
         ptype (cond
                 (or (= "H1" (.-tagName html-elem))
                     (>= font-size-px (em->px html-elem 2.0))) :h1
                 (or (= "H2" (.-tagName html-elem))
                     (>= font-size-px (em->px html-elem 1.5))) :h2
-                :else :body)]
-    (paragraph (random-uuid) ptype (->> (child-nodes html-elem)
-                                        (map html-node->run-or-runs)
-                                        (flatten)))))
+                :else :body)
+        children (->> (child-nodes html-elem)
+                      (map html-node->run-or-runs)
+                      (flatten))
+        children (if indented?
+                   (-> children
+                       (vec)
+                       (update-in [0 :text] #(str "\u2003" %)))
+                   children)]
+    (paragraph (random-uuid) ptype children)))
 
 (defn html->doc
   "Converts an HTML string to a Droplet document."
