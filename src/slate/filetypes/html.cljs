@@ -5,8 +5,6 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.run :as r :refer [run]]))
 
-(def test-file (slurp-file "test_files/html/the_quiet_universe.html"))
-
 (def ^:private *iframe (atom nil))
 
 (defn- get-or-create-iframe!
@@ -28,7 +26,7 @@
       (.write html-document-str)
       (.close))))
 
-(defn- root-font-size
+#_#_(defn- root-font-size
   "Returns root font size for document, in pixels."
   [document]
   (js/parseFloat (.-fontSize (js/getComputedStyle (.-documentElement document)))))
@@ -124,5 +122,5 @@
   (js/console.log (.-style (nth one 1)))
   (add-to-iframe! test-file)
 
-  (html->doc test-file)
+  (html->doc (slurp-file "test_files/html/the_quiet_universe.html"))
   )
