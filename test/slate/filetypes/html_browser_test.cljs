@@ -6,9 +6,10 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.run :as r :refer [run]]))
 
-(def test-file (slurp-file "test_files/html/the_quiet_universe.html"))
+(def test-file1 (slurp-file "test_files/html/the_quiet_universe.html"))
+(def test-file2 (slurp-file "test_files/html/conversion_test.html"))
 
-(def test-file-expected
+(def test-file1-expected
   (document [(paragraph (random-uuid) :h2 [(run "The Quiet Universe - 2.235674301")])
              (paragraph [(run "Written by Dispatcher 8765, otherwise known as Lamoss, after his exile. This document was a significant factor in the decision to end the Dispatcher program, circa 125112." #{:italic})])
              (paragraph [(run "")])
@@ -53,6 +54,27 @@
                          (run "been seen?" #{:italic})])
              (paragraph [(run "\u2003But my revelation is sealed. I cannot unsee it. In the face of the massive flow of information loss, our tiny damn at Nevernues cannot pretend to stop the current. Staring once again at the thousand galaxies in the night sky, I reflect that here we see a parallel with the search for meaning: it is perception, not logic, that matters in the end.")])]))
 
+(def test-file2-expected
+  (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])
+             (paragraph (random-uuid) :h2 [(run "This is an H2")])
+             (paragraph [(run "")])
+             (paragraph [(run "Normal paragraph with a sentence, some ")
+                         (run "italics" #{:italic})
+                         (run ", ")
+                         (run "bold" #{:bold})
+                         (run ", and ")
+                         (run "strikethrough" #{:strikethrough})])
+             (paragraph [(run "")])
+             (paragraph (random-uuid) :ol [(run "OL 1")])
+             (paragraph (random-uuid) :ol [(run "OL 2")])
+             (paragraph (random-uuid) :ol [(run "OL 3")])
+             (paragraph [(run "")])
+             (paragraph (random-uuid) :ul [(run "UL 1")])
+             (paragraph (random-uuid) :ul [(run "UL 2")])
+             (paragraph (random-uuid) :ul [(run "UL 3")])
+             (paragraph [(run "")])
+             (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
+
 (defn doc=
   "Tests if two docs are equal, disregarding paragraph UUIDs."
   [doc1 doc2]
@@ -68,4 +90,5 @@
 
 (deftest html->droplet
   (testing "can import from google docs"
-    (is (doc= (html/html->doc test-file) test-file-expected))))
+    (is (doc= (html/html->doc test-file1) test-file1-expected))
+    (is (doc= (html/html->doc test-file2) test-file2-expected))))
