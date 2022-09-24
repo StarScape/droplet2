@@ -96,6 +96,12 @@
                     (>= font-size-px (em->px html-elem 2.0))) :h1
                 (or (= "H2" (.-tagName html-elem))
                     (>= font-size-px (em->px html-elem 1.5))) :h2
+                (or (= "decimal" (.-listStyleType computed-style))
+                    (and (= "LI" (.-tagName html-elem))
+                         (= "OL" (.-tagName (.-parentElement html-elem))))) :ol
+                (or (= "disc" (.-listStyleType computed-style))
+                    (and (= "LI" (.-tagName html-elem))
+                         (= "UL" (.-tagName (.-parentElement html-elem))))) :ul
                 :else :body)
         children (->> (child-nodes html-elem)
                       (map html-node->run-or-runs)
