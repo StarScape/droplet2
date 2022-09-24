@@ -66,8 +66,8 @@
       (conj! styles :bold))
     (when (= "italic" (.-fontStyle computed-style))
       (conj! styles :italic))
-    (when (= "line-through" (.-textDecoration computed-style))
-      (conj! styles :italic))
+    (when (= "line-through" (.-textDecorationLine computed-style))
+      (conj! styles :strikethrough))
     (persistent! styles)))
 
 (defn- html-node->run-or-runs
@@ -86,39 +86,40 @@
      :else (throw "Unrecognized Node type!")))
   ([node] (html-node->run-or-runs node #{})))
 
-(defn- html-elem->para
+(defn- html-elem->para-or-paras
   [html-elem]
-  (let [computed-style (js/getComputedStyle html-elem)
-        indented? (pos? (js/parseFloat (.-textIndent computed-style)))
-        font-size-px (js/parseFloat (.-fontSize computed-style))
-        ptype (cond
-                (or (= "H1" (.-tagName html-elem))
-                    (>= font-size-px (em->px html-elem 2.0))) :h1
-                (or (= "H2" (.-tagName html-elem))
-                    (>= font-size-px (em->px html-elem 1.5))) :h2
-                (or (= "decimal" (.-listStyleType computed-style))
+  (let [computed-style (js/getComputedStyle html-elem)]
+    (if (or (= "OL" (.-tagName html-elem))
+            (= "UL" (.-tagName html-elem)))
+      (map html-elem->para-or-paras (js/Array.from (.-children html-elem)))
+      (let [indented? (pos? (js/parseFloat (.-textIndent computed-style)))
+            font-size-px (js/parseFloat (.-fontSize computed-style))
+            ptype (cond
+                    (or (= "H1" (.-tagName html-elem))
+                        (>= font-size-px (em->px html-elem 2.0))) :h1
+                    (or (= "H2" (.-tagName html-elem))
+                        (>= font-size-px (em->px html-elem 1.5))) :h2
                     (and (= "LI" (.-tagName html-elem))
-                         (= "OL" (.-tagName (.-parentElement html-elem))))) :ol
-                (or (= "disc" (.-listStyleType computed-style))
+                         (= "OL" (.-tagName (.-parentElement html-elem)))) :ol
                     (and (= "LI" (.-tagName html-elem))
-                         (= "UL" (.-tagName (.-parentElement html-elem))))) :ul
-                :else :body)
-        children (->> (child-nodes html-elem)
-                      (map html-node->run-or-runs)
-                      (flatten))
-        children (if indented?
-                   (-> children
-                       (vec)
-                       (update-in [0 :text] #(str "\u2003" %)))
-                   children)]
-    (paragraph (random-uuid) ptype children)))
+                         (= "UL" (.-tagName (.-parentElement html-elem)))) :ul
+                    :else :body)
+            children (->> (child-nodes html-elem)
+                          (map html-node->run-or-runs)
+                          (flatten))
+            children (if indented?
+                       (-> children
+                           (vec)
+                           (update-in [0 :text] #(str "\u2003" %)))
+                       children)]
+        (paragraph (random-uuid) ptype children)))))
 
 (defn html->doc
   "Converts an HTML string to a Droplet document."
   [html-str]
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
-        paragraphs (map html-elem->para body-contents)]
+        paragraphs (flatten (map html-elem->para-or-paras body-contents))]
     (document paragraphs)))
 
 (comment
@@ -128,5 +129,11 @@
   (js/console.log (.-style (nth one 1)))
   (add-to-iframe! test-file)
 
+  (let [children (js/Array.from (.. (add-to-iframe! (slurp-file "test_files/html/conversion_test.html")) -body -children))
+        ol (nth children 5)
+        ol-li (aget (.-children ol) 0)]
+    (js/console.log ol-li))
+
+  (html->doc (slurp-file "test_files/html/conversion_test.html"))
   (html->doc (slurp-file "test_files/html/the_quiet_universe.html"))
   )

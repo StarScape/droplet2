@@ -91,7 +91,7 @@
    [:.italic-format {:font-style "italic !important"}]
    [:.strikethrough-format {:text-decoration "line-through"}]
    [:.bold-format {:font-weight "bold !important"}]
-   [:.underline-format {:text-decoration "line-through !important"}]
+   #_[:.underline-format {:text-decoration "line-through !important"}]
    [:.highlight-format {:background-color "#d1d5db"}]])
 
 (comment
