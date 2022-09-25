@@ -5,7 +5,7 @@ Slate is the rich text editor engine that sits at the core of Droplet. It is des
 1. Code inside of the `slate` namespace should *never* be dependent on anything in the other parts of Droplet.
 2. Even if not done currently, _in principle_ it should be possible to pick up Slate and drop it into a totally separate application.
 
-Most of the code you might need to consume from the main Droplet code is inside of the `slate.core` namespace.
+Most of the code you might need to consume from the main Droplet code is inside of the `slate.editor-ui-state` namespace.
 
 > Yes, I accidentally named it Slate without realizing there's already another web-based rich text editor called [SlateJS](https://github.com/ianstormtaylor/slate). Whoops.
 

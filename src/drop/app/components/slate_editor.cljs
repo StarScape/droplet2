@@ -6,7 +6,6 @@
             [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
             [drop.app.utils :as app-utils]
             [drop.utils :as utils]
-            [slate.core :as sl]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
             [slate.filetypes.core :as filetypes]
@@ -40,12 +39,12 @@
 
 (defn open-doc!
   [*ui-state doc]
-  (sl/load-document! *ui-state doc)
+  (ui-state/load-document! *ui-state doc)
   (swap! *open-file assoc :path nil))
 
 (defn open-file!
   [*ui-state file-path contents]
-  (sl/load-file! *ui-state contents)
+  (ui-state/load-file! *ui-state contents)
   (reset! *open-file {:path file-path
                       :last-saved-doc (current-doc @*ui-state)}))
 
@@ -75,7 +74,7 @@
     :tabIndex "-1"
     :ref (fn [elem]
            (when elem
-             (let [*ui-state (sl/init! :*atom ui-state-atom
+             (let [*ui-state (ui-state/init! :*atom ui-state-atom
                                        :history file-deserialized
                                        :dom-elem elem
                                        :on-new on-new!

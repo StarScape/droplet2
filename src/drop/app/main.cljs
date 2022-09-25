@@ -5,8 +5,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: get rid of slate.core namespace
-
 ;; TODO: Implement HTML export
 ;; TODO: Rich text copy into HTML
 ;; TODO: Rich text paste from Google Docs and Word
