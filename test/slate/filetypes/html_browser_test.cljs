@@ -1,7 +1,7 @@
 (ns slate.filetypes.html-browser-test
   (:require-macros [slate.macros :refer [slurp-file]])
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.filetypes.html :as html]
+            [slate.filetypes.import.html :as html]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.run :as r :refer [run]]))

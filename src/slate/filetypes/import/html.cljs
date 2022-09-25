@@ -1,4 +1,4 @@
-(ns slate.filetypes.html
+(ns slate.filetypes.import.html
   (:require-macros [slate.macros :refer [slurp-file]])
   (:require [clojure.set :as set]
             [slate.model.doc :as doc :refer [document]]

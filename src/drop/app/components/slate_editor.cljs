@@ -9,7 +9,7 @@
             [slate.core :as sl]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
-            [slate.filetypes.html :refer [html->doc]]
+            [slate.filetypes.core :as filetypes]
             [slate.model.doc :as doc]
             [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
@@ -162,6 +162,4 @@
 
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]
-         (let [converted (case file-type
-                           "html" (html->doc file-contents))]
-           (open-doc! *slate-instance converted)))))
+         (open-doc! *slate-instance (filetypes/import file-type file-contents)))))
