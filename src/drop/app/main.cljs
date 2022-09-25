@@ -5,6 +5,8 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
+;; TODO: get rid of slate.core namespace
+
 ;; TODO: Implement HTML export
 ;; TODO: Rich text copy into HTML
 ;; TODO: Rich text paste from Google Docs and Word
@@ -12,9 +14,10 @@
 ;; TODO: Space out paragraphs somewhat
 ;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Dark mode
-;; TODO: Come up with a better criteria for history getting added to the backstack
 ;; TODO: Fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Bug - pressing fn+f to go to fullscreen still enters an 'f' inside the document
+;; TODO: Come up with a better criteria for history getting added to the backstack
+;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Break out all history fns into a protocol and implement for UIState
 ;; TODO: Rework/get rid of most of the slate.model.common protocols
 ;; TODO: Website
