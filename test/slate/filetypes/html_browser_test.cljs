@@ -1,10 +1,12 @@
-(ns slate.filetypes.import.html-browser-test
+(ns slate.filetypes.html-browser-test
   (:require-macros [slate.macros :refer [slurp-file]])
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.filetypes.import.html :as html]
+            [slate.filetypes.import.html :as html-import]
+            [slate.filetypes.export.html :as html-export]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.paragraph :as p :refer [paragraph]]
-            [slate.model.run :as r :refer [run]]))
+            [slate.model.run :as r :refer [run]]
+            [reagent.dom.server :refer [render-to-static-markup]]))
 
 (def test-file1 (slurp-file "test_files/html/the_quiet_universe.html"))
 (def test-file2 (slurp-file "test_files/html/conversion_test.html"))
@@ -91,5 +93,38 @@
 
 (deftest html->droplet
   (testing "can import from google docs"
-    (is (doc= (html/html->doc test-file1) test-file1-expected))
-    (is (doc= (html/html->doc test-file2) test-file2-expected))))
+    (is (doc= (html-import/html->doc test-file1) test-file1-expected))
+    (is (doc= (html-import/html->doc test-file2) test-file2-expected))))
+
+(def export1-expected
+  (render-to-static-markup
+   [:html
+    [:head]
+    [:body
+     [:h1 [:span "This is an H1"]]
+     [:h2 [:span "This is an H2"]]
+     [:p [:span ""]]
+     [:paragraph
+      [:span "Normal paragraph with a sentence, some "]
+      [:span {:style {:font-style "italic"}} "italics"]
+      [:span ", "]
+      [:span {:style {:font-weight "bold"}} "bold"]
+      [:span ", and "]
+      [:span {:style {:text-decoration "line-through"}} "strikethrough"]
+      [:span "."]]
+     [:p [:span ""]]
+     [:ol
+      [:li [:span "OL 1"]]
+      [:li [:span "OL 2"]]
+      [:li [:span "OL 3"]]]
+     [:p [:span ""]]
+     [:ul
+      [:li [:span "UL 1"]]
+      [:li [:span "UL 2"]]
+      [:li [:span "UL 3"]]]
+     [:p [:span ""]]
+     [:p [:span {:style {:text-indent "30px"}} "And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after."]]]]))
+
+(deftest droplet->html
+  (testing "can export"
+    (is (= (html-export/doc->html test-file2-expected) export1-expected))))

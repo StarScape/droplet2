@@ -42,6 +42,14 @@
   (run-css (run "foobar" #{:strikethrough}))
   )
 
+(defn paragraphs->hiccup
+  [paragraphs]
+  (for [p paragraphs]
+    [:p
+     (for [r (:runs p)]
+       [:span {:style (run-css r)}
+        (:text r)])]))
+
 (defn doc->html
   "Converts a droplet document to an HTML string."
   [droplet-doc]
@@ -49,12 +57,7 @@
    [:html
     [:head]
     [:body
-    ;; TODO: parse document and export HTML
-     (for [p (:children droplet-doc)]
-       [:p
-        (for [r (:runs p)]
-          [:span {:style (run-css r)}
-           (:text r)])])]]))
+     (paragraphs->hiccup (:children droplet-doc))]]))
 
 (comment
   (doc->html test-doc)
