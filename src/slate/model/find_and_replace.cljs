@@ -106,3 +106,11 @@
                 (>>= editor-update es/replace-paragraph para-uuid new-para)))
             (es/identity-update editor-state) locations-by-paragraph)))
 
+
+(defn init []
+  {:active? false
+   :ignore-case? true
+   :text nil
+   :location-before nil
+   :found-locations []
+   :current-location 0})

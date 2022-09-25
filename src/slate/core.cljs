@@ -20,3 +20,4 @@
 (def init! ui-state/init!)
 
 (def load-file! ui-state/load-file!)
+(def load-document! ui-state/load-document!)

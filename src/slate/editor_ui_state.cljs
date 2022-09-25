@@ -159,12 +159,26 @@
 
     (view/relocate-hidden-input! shadow-root hidden-input focus?)))
 
+(defn load-history!
+  "Loads a serialized .drop file into the editor, discarding current document and history."
+  [*ui-state history]
+  (let [word-count (word-count/full-count (:doc (history/current-state history)))]
+    (cancel-add-tip-to-backstack! *ui-state)
+    (swap! *ui-state merge {:history history
+                            :word-count word-count
+                            :input-history []})
+    (full-dom-render! *ui-state)))
+
 (defn load-file!
+  "Loads a serialized .drop file into the editor, discarding current document and history."
   [*ui-state file-contents-str]
   (let [deserialized-history (deserialize file-contents-str)]
-    (cancel-add-tip-to-backstack! *ui-state)
-    (swap! *ui-state assoc :history deserialized-history)
-    (full-dom-render! *ui-state)))
+    (load-history! *ui-state deserialized-history)))
+
+(defn load-document!
+  "Loads a Document object into the editor with a fresh history, discarding current document and history."
+  [*ui-state document]
+  (load-history! *ui-state (history/init (es/editor-state document))))
 
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."
@@ -693,12 +707,7 @@
                               :history history
                               :word-count (word-count/full-count current-doc)
                               :input-history []
-                              :find-and-replace {:active? false
-                                                 :ignore-case? true
-                                                 :text nil
-                                                 :location-before nil
-                                                 :found-locations []
-                                                 :current-location 0}
+                              :find-and-replace (f+r/init)
                               :interceptors interceptors-map
                               :hidden-input hidden-input
                               :add-tip-to-backstack-timer-id nil

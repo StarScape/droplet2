@@ -9,6 +9,7 @@
             [slate.core :as sl]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
+            [slate.filetypes.html :refer [html->doc]]
             [slate.model.doc :as doc]
             [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
@@ -36,6 +37,11 @@
 (defn on-new! [new-ui-state]
   (reset! *open-file {:path nil
                       :last-saved-doc (current-doc new-ui-state)}))
+
+(defn open-doc!
+  [*ui-state doc]
+  (sl/load-document! *ui-state doc)
+  (swap! *open-file assoc :path nil))
 
 (defn open-file!
   [*ui-state file-path contents]
@@ -156,10 +162,6 @@
 
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]
-         (js/console.log file-type)
-         (js/console.log file-contents)
-         #_(case file-type
-           "new" (on-new! @*slate-instance)
-           "save" (on-save! (ui-state/serialize @*slate-instance))
-           "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
-           "open" (on-open! *slate-instance)))))
+         (let [converted (case file-type
+                           "html" (html->doc file-contents))]
+           (open-doc! *slate-instance converted)))))
