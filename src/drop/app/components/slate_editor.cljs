@@ -37,12 +37,16 @@
   (reset! *open-file {:path nil
                       :last-saved-doc (current-doc new-ui-state)}))
 
+(defn open-file!
+  [*ui-state file-path contents]
+  (sl/load-file! *ui-state contents)
+  (reset! *open-file {:path file-path
+                      :last-saved-doc (current-doc @*ui-state)}))
+
 (defn on-open! [*ui-state]
   (-> (.invoke ipcRenderer "choose-file")
       (.then (fn [[file-path contents]]
-               (sl/load-file! *ui-state contents)
-               (reset! *open-file {:path file-path
-                                   :last-saved-doc (current-doc @*ui-state)})))
+               (open-file! *ui-state file-path contents)))
       (.catch #(js/console.log %))))
 
 (defn on-save-as!
@@ -145,6 +149,16 @@
   (.on ipcRenderer "menubar-item-clicked"
        (fn [_e, message-contents]
          (case message-contents
+           "new" (on-new! @*slate-instance)
+           "save" (on-save! (ui-state/serialize @*slate-instance))
+           "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
+           "open" (on-open! *slate-instance))))
+
+  (.on ipcRenderer "import-file"
+       (fn [_e, file-type, file-contents]
+         (js/console.log file-type)
+         (js/console.log file-contents)
+         #_(case file-type
            "new" (on-new! @*slate-instance)
            "save" (on-save! (ui-state/serialize @*slate-instance))
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))

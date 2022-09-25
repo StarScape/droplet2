@@ -3,7 +3,10 @@
             ["electron-is-dev" :as is-dev?]
             ["electron-window-state" :as window-state-keeper]
             ["fs" :as fs]
+            ["node:fs/promises" :refer [readFile]]
             ["path" :as path]
+            [cljs.core.async :refer [go]]
+            [cljs.core.async.interop :refer-macros [<p!]]
             [drop.electron.utils :refer [on-ipc handle-ipc]]
             [drop.electron.persistent-atoms :as p-atoms]))
 
@@ -11,7 +14,20 @@
 
 (js/console.log "Evaluating main electron file...")
 
-(def main-window (atom nil))
+(def *main-window (atom nil))
+
+(defn launch-import-dialog! []
+  (go
+    (let [main-window @*main-window
+          result (<p! (.showOpenDialog dialog main-window
+                                       (clj->js {:title "Open .html"
+                                                 :filters [{:name "HTML"
+                                                            :extensions [".html"]}]
+                                                 :properties ["openFile"]})))]
+      (when-not ^js (.-canceled result)
+        (let [file-path (nth ^js (.-filePaths result) 0)
+              file-contents (<p! (readFile file-path "utf8"))]
+          (.. main-window -webContents (send "import-file" "html" file-contents)))))))
 
 (defn reg-ipc-handlers! []
   (p-atoms/reg-handler!)
@@ -27,7 +43,7 @@
       ;; #p "save-file-as"
       (js/Promise.
        (fn [resolve, reject]
-         (-> (.showSaveDialog dialog @main-window
+         (-> (.showSaveDialog dialog @*main-window
                               (clj->js {:title "Save As..."
                                         :filters [{:name "Droplet File"
                                                    :extensions [".drop"]}]}))
@@ -44,7 +60,7 @@
       ;; #p "choose-file"
       (js/Promise.
        (fn [resolve, reject]
-         (-> (.showOpenDialog dialog @main-window
+         (-> (.showOpenDialog dialog @*main-window
                               (clj->js {:title "Open .drop"
                                         :filters [{:name "Droplet File"
                                                    :extensions [".drop"]}]
@@ -80,16 +96,19 @@
                            {:label "File",
                             :submenu [{:label "New"
                                        :accelerator "CmdOrCtrl+N"
-                                       :click #(.. window -webContents (send "menubar-item-clicked", "new"))}
+                                       :click #(.. window -webContents (send "menubar-item-clicked" "new"))}
                                       {:label "Save"
                                        :accelerator "CmdOrCtrl+S"
-                                       :click #(.. window -webContents (send "menubar-item-clicked", "save"))}
+                                       :click #(.. window -webContents (send "menubar-item-clicked" "save"))}
                                       {:label "Save As..."
                                        :accelerator "CmdOrCtrl+Shift+S"
-                                       :click #(.. window -webContents (send "menubar-item-clicked", "save-as"))}
+                                       :click #(.. window -webContents (send "menubar-item-clicked" "save-as"))}
+                                      {:label "Import"
+                                       :submenu [{:label "HTML"
+                                                  :click #(launch-import-dialog!)}]}
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+Shift+O"
-                                       :click #(.. window -webContents (send "menubar-item-clicked", "open"))}]}
+                                       :click #(.. window -webContents (send "menubar-item-clicked" "open"))}]}
                            {:role "editMenu"}
                            {:label "View",
                             :submenu [{:role "togglefullscreen"}]}
@@ -124,12 +143,12 @@
 
     (when is-dev?
       (.. window -webContents (openDevTools)))
-    (reset! main-window window)
+    (reset! *main-window window)
     (.manage window-state window)
     (.loadURL ^js/electron.BrowserWindow window source-path)
 
     (.on ^js/electron.BrowserWindow window "closed"
-         #(reset! main-window nil))
+         #(reset! *main-window nil))
 
     (.on ^js/electron.BrowserWindow window "enter-full-screen"
          #(.. window -webContents (send "change-full-screen-status", true)))
