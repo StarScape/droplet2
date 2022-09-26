@@ -47,6 +47,11 @@
       (assoc! styles :text-decoration "line-through"))
     (persistent! styles)))
 
+(defn paragraph-css [para]
+  (if (p/indented? para)
+    {:text-indent "30px"}
+    {}))
+
 (comment
   (run-css (run "foobar" #{:italic :bold}))
   (run-css (run "foobar" #{:strikethrough}))
@@ -63,8 +68,12 @@
               :h1 :h1
               :h2 :h2
               :ol :li
-              :ul :li)]
-    [tag (render-runs (:runs p))]))
+              :ul :li)
+        runs (if (p/indented? p)
+               (update-in (:runs p) [0 :text] #(.substr % 1))
+               (:runs p))]
+    [tag {:style (paragraph-css p)}
+     (render-runs runs)]))
 
 (defn render-paragraphs
   [paragraphs]
@@ -93,4 +102,6 @@
   (->> (:children test-doc)
        (partition-by #(:type %))
        (flatten-when #(not (list-paragraph? (first %)))))
+
+  (p/indented? (last (:children test-doc)))
   )

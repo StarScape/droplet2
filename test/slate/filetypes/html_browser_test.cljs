@@ -123,7 +123,8 @@
       [:li [:span "UL 2"]]
       [:li [:span "UL 3"]]]
      [:p [:span ""]]
-     [:p [:span {:style {:text-indent "30px"}} "And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after."]]]]))
+     [:p {:style {:text-indent "30px"}}
+      [:span "And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after."]]]]))
 
 (deftest droplet->html
   (testing "can export"

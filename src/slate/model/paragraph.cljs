@@ -259,6 +259,11 @@
   (and (= (:start sel) {:offset 0, :paragraph (:uuid paragraph)})
        (= (:end sel) {:offset (len paragraph), :paragraph (:uuid paragraph)})))
 
+(defn indented?
+  "Returns true if there is a tab at the start of the paragraph."
+  [paragraph]
+  (= "\u2003" (some-> paragraph :runs (get 0) :text (aget 0))))
+
 (extend-type Paragraph
   Selectable
   (char-at [para sel]
