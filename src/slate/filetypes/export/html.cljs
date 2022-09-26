@@ -27,6 +27,16 @@
              (paragraph [(run "")])
              (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
 
+(defn list-paragraph? [paragraph]
+  (or (= (:type paragraph) :ul) (= (:type paragraph) :ol)))
+
+(defn flatten-when [pred coll]
+  (reduce (fn [result next]
+            (if (pred next)
+              (apply conj result next)
+              (conj result next)))
+          [] coll))
+
 (defn run-css [{:keys [formats] :as _run}]
   (let [styles (transient {})]
     (when (contains? formats :bold)
@@ -42,13 +52,32 @@
   (run-css (run "foobar" #{:strikethrough}))
   )
 
-(defn paragraphs->hiccup
+(defn render-runs [runs]
+  (for [r runs]
+    [:span {:style (run-css r)}
+     (:text r)]))
+
+(defn render-paragraph [p]
+  (let [tag (case (:type p)
+              :body :p
+              :h1 :h1
+              :h2 :h2
+              :ol :li
+              :ul :li)]
+    [tag (render-runs (:runs p))]))
+
+(defn render-paragraphs
   [paragraphs]
-  (for [p paragraphs]
-    [:p
-     (for [r (:runs p)]
-       [:span {:style (run-css r)}
-        (:text r)])]))
+  (for [document-chunk (->> paragraphs
+                   (partition-by #(:type %))
+                   (flatten-when #(not (list-paragraph? (first %)))))]
+    (if (sequential? document-chunk)
+      (case (-> document-chunk first :type)
+        :ol [:ol (for [p document-chunk]
+                   (render-paragraph p))]
+        :ul [:ul (for [p document-chunk]
+                   (render-paragraph p))])
+      (render-paragraph document-chunk))))
 
 (defn doc->html
   "Converts a droplet document to an HTML string."
@@ -57,8 +86,11 @@
    [:html
     [:head]
     [:body
-     (paragraphs->hiccup (:children droplet-doc))]]))
+     (render-paragraphs (:children droplet-doc))]]))
 
 (comment
   (doc->html test-doc)
+  (->> (:children test-doc)
+       (partition-by #(:type %))
+       (flatten-when #(not (list-paragraph? (first %)))))
   )

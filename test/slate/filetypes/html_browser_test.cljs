@@ -104,7 +104,7 @@
      [:h1 [:span "This is an H1"]]
      [:h2 [:span "This is an H2"]]
      [:p [:span ""]]
-     [:paragraph
+     [:p
       [:span "Normal paragraph with a sentence, some "]
       [:span {:style {:font-style "italic"}} "italics"]
       [:span ", "]
