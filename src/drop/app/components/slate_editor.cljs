@@ -89,7 +89,11 @@
                                        :on-focus-find on-focus-find)]
                ;; Utility for viewing editor history from console
                (when utils/DEV
-                 (set! js/dumpHistory #(js/console.log (slate-utils/pretty-history-stack (:history @*ui-state))))
+                 (set! js/dumpHistory (fn
+                                        ([n]
+                                         (slate-utils/pretty-history-stack (:history @*ui-state) n))
+                                        ([]
+                                         (slate-utils/pretty-history-stack (:history @*ui-state) 10))))
                  (set! js/printCurrentState #(-> (:history @*ui-state)
                                                  history/current-state
                                                  pprint/pprint

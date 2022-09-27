@@ -43,23 +43,25 @@
          "----------------------------------------\n")))
 
 (defn pretty-history-stack
-  [history]
-  (let [current-state-index (:current-state-index history)
-        backstack-strs (map-indexed (fn [idx, editor-update]
-                                      (let [original-idx (dec (- (count (:backstack history)) idx))]
-                                        (str (if (= original-idx current-state-index)
-                                               (str "> ## Backstack " original-idx ":\n")
-                                               (str "## Backstack " original-idx ":\n"))
-                                             (pretty-editor-update editor-update) "\n")))
-                                    (reverse (:backstack history)))
-        pretty-backstack (str/join "\n" backstack-strs)]
-    (str (if (= #p current-state-index #p (count (:backstack history)))
-           "> # Tip:\n"
-           "# Tip:\n")
-         (if-let [tip (:tip history)]
-           (pretty-editor-update tip)
-           "No tip\n")
-         "\n"
+  ([history n]
+   (let [current-state-index (:current-state-index history)
+         backstack-strs (map-indexed (fn [idx, editor-update]
+                                       (let [original-idx (dec (- (count (:backstack history)) idx))]
+                                         (str (if (= original-idx current-state-index)
+                                                (str "%c>>%c ## Backstack " original-idx ":\n")
+                                                (str "## Backstack " original-idx ":\n"))
+                                              (pretty-editor-update editor-update) "\n")))
+                                     (take n (reverse (:backstack history))))
+         pretty-backstack (str/join "\n" backstack-strs)
+         fmt-str (str (if (= #p current-state-index #p (count (:backstack history)))
+                      "%c>>%c # Tip:\n"
+                      "# Tip:\n")
+                    (if-let [tip (:tip history)]
+                      (pretty-editor-update tip)
+                      "No tip\n")
+                    "\n"
 
-         "# Backstack:\n"
-         pretty-backstack)))
+                    "# Backstack:\n"
+                    pretty-backstack)]
+     (js/console.log fmt-str "color: red;", "color: black;")))
+  ([history] (pretty-history-stack history (count (:backstack history)))))
