@@ -1,6 +1,5 @@
 (ns drop.app.components.slate-editor
-  (:require [clojure.string :as str]
-            [clojure.pprint :as pprint]
+  (:require [clojure.pprint :as pprint]
             [drop.app.persistent-atom :refer [persistent-atom]]
             [drop.app.components.actionbar :refer [actionbar]]
             [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
@@ -67,6 +66,12 @@
         (.send ipcRenderer "save-file" open-file-path serialized-history)
         (swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance)))
       (on-save-as! serialized-history))))
+
+(defn on-export! [*ui-state export-type]
+  (let [{:keys [history]} @*ui-state
+        doc (:doc (history/current-state history))
+        exported (filetypes/export export-type doc)]
+    (.invoke ipcRenderer "export-file-as" exported)))
 
 (defn slate-editor [{:keys [file-deserialized ui-state-atom on-focus-find]}]
   [:div
@@ -152,12 +157,13 @@
          (reset! *full-screen? message-contents)))
 
   (.on ipcRenderer "menubar-item-clicked"
-       (fn [_e, message-contents]
-         (case message-contents
+       (fn [_e, item & args]
+         (case item
            "new" (on-new! @*slate-instance)
            "save" (on-save! (ui-state/serialize @*slate-instance))
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
-           "open" (on-open! *slate-instance))))
+           "open" (on-open! *slate-instance)
+           "export-file" (apply on-export! *slate-instance args))))
 
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]

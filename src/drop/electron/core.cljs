@@ -3,7 +3,7 @@
             ["electron-is-dev" :as is-dev?]
             ["electron-window-state" :as window-state-keeper]
             ["fs" :as fs]
-            ["node:fs/promises" :refer [readFile]]
+            ["node:fs/promises" :refer [readFile writeFile]]
             ["path" :as path]
             [cljs.core.async :refer [go]]
             [cljs.core.async.interop :refer-macros [<p!]]
@@ -29,6 +29,19 @@
               file-contents (<p! (readFile file-path "utf8"))]
           (.. main-window -webContents (send "import-file" "html" file-contents)))))))
 
+(defn launch-export-dialog! [data filter-name filter-extension]
+  (go
+    (try
+      (let [result (<p! (.showSaveDialog dialog @*main-window
+                                         (clj->js {:title "Export As..."
+                                                   :filters [{:name filter-name
+                                                              :extensions [filter-extension]}]})))]
+        (when-not ^js (.-canceled result)
+          (<p! (writeFile (.-filePath result) data "utf8"))
+          #_(.. main-window -webContents (send "export-file-successful" "html"))))
+      (catch js/Error e
+        (js/console.log e)))))
+
 (defn reg-ipc-handlers! []
   (p-atoms/reg-handler!)
 
@@ -53,7 +66,11 @@
                         (do
                           (fs/writeFileSync ^js (.-filePath result) file-contents)
                           (resolve ^js (.-filePath result))))))
-             (.catch #())))))) 
+             (.catch #()))))))
+
+  (handle-ipc "export-file-as"
+              (fn [_ exported-file]
+                (launch-export-dialog! exported-file "HTML File" ".html")))
 
   (handle-ipc "choose-file"
     (fn [_]
@@ -106,6 +123,9 @@
                                       {:label "Import"
                                        :submenu [{:label "HTML"
                                                   :click #(launch-import-dialog!)}]}
+                                      {:label "Export"
+                                       :submenu [{:label "HTML"
+                                                  :click #(.. window -webContents (send "menubar-item-clicked" "export-file" "html"))}]}
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+Shift+O"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "open"))}]}

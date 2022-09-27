@@ -59,7 +59,8 @@
 
 (defn render-runs [runs]
   (for [r runs]
-    [:span {:style (run-css r)}
+    [:span {:style (run-css r)
+            :key (random-uuid)}
      (:text r)]))
 
 (defn render-paragraph [p]
@@ -72,7 +73,8 @@
         runs (if (p/indented? p)
                (update-in (:runs p) [0 :text] #(.substr % 1))
                (:runs p))]
-    [tag {:style (paragraph-css p)}
+    [tag {:style (paragraph-css p)
+          :key (random-uuid)}
      (render-runs runs)]))
 
 (defn render-paragraphs
@@ -82,10 +84,12 @@
                    (flatten-when #(not (list-paragraph? (first %)))))]
     (if (sequential? document-chunk)
       (case (-> document-chunk first :type)
-        :ol [:ol (for [p document-chunk]
-                   (render-paragraph p))]
-        :ul [:ul (for [p document-chunk]
-                   (render-paragraph p))])
+        :ol [:ol {:key (random-uuid)}
+             (for [p document-chunk]
+               (render-paragraph p))]
+        :ul [:ul {:key (random-uuid)}
+             (for [p document-chunk]
+               (render-paragraph p))])
       (render-paragraph document-chunk))))
 
 (defn doc->html
