@@ -2,30 +2,7 @@
   (:require [slate.model.doc :as doc :refer [document]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.run :as r :refer [run]]
-            [reagent.core :as reagent]
             [reagent.dom.server :refer [render-to-static-markup]]))
-
-(def test-doc
-  (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])
-             (paragraph (random-uuid) :h2 [(run "This is an H2")])
-             (paragraph [(run "")])
-             (paragraph [(run "Normal paragraph with a sentence, some ")
-                         (run "italics" #{:italic})
-                         (run ", ")
-                         (run "bold" #{:bold})
-                         (run ", and ")
-                         (run "strikethrough" #{:strikethrough})
-                         (run ".")])
-             (paragraph [(run "")])
-             (paragraph (random-uuid) :ol [(run "OL 1")])
-             (paragraph (random-uuid) :ol [(run "OL 2")])
-             (paragraph (random-uuid) :ol [(run "OL 3")])
-             (paragraph [(run "")])
-             (paragraph (random-uuid) :ul [(run "UL 1")])
-             (paragraph (random-uuid) :ul [(run "UL 2")])
-             (paragraph (random-uuid) :ul [(run "UL 3")])
-             (paragraph [(run "")])
-             (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
 
 (defn list-paragraph? [paragraph]
   (or (= (:type paragraph) :ul) (= (:type paragraph) :ol)))
@@ -102,6 +79,27 @@
      (render-paragraphs (:children droplet-doc))]]))
 
 (comment
+  (def test-doc
+    (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])
+               (paragraph (random-uuid) :h2 [(run "This is an H2")])
+               (paragraph [(run "")])
+               (paragraph [(run "Normal paragraph with a sentence, some ")
+                           (run "italics" #{:italic})
+                           (run ", ")
+                           (run "bold" #{:bold})
+                           (run ", and ")
+                           (run "strikethrough" #{:strikethrough})
+                           (run ".")])
+               (paragraph [(run "")])
+               (paragraph (random-uuid) :ol [(run "OL 1")])
+               (paragraph (random-uuid) :ol [(run "OL 2")])
+               (paragraph (random-uuid) :ol [(run "OL 3")])
+               (paragraph [(run "")])
+               (paragraph (random-uuid) :ul [(run "UL 1")])
+               (paragraph (random-uuid) :ul [(run "UL 2")])
+               (paragraph (random-uuid) :ul [(run "UL 3")])
+               (paragraph [(run "")])
+               (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
   (doc->html test-doc)
   (->> (:children test-doc)
        (partition-by #(:type %))

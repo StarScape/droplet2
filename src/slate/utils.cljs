@@ -46,18 +46,20 @@
   [history]
   (let [current-state-index (:current-state-index history)
         backstack-strs (map-indexed (fn [idx, editor-update]
-                                      (str (if (= idx current-state-index)
-                                             (str "> ## Backstack " idx ":\n")
-                                             (str "## Backstack " idx ":\n"))
-                                           (pretty-editor-update editor-update) "\n"))
-                                    (:backstack history))
+                                      (let [original-idx (dec (- (count (:backstack history)) idx))]
+                                        (str (if (= original-idx current-state-index)
+                                               (str "> ## Backstack " original-idx ":\n")
+                                               (str "## Backstack " original-idx ":\n"))
+                                             (pretty-editor-update editor-update) "\n")))
+                                    (reverse (:backstack history)))
         pretty-backstack (str/join "\n" backstack-strs)]
-    (str "# Backstack:\n"
-         pretty-backstack "\n"
-
-         (if (= current-state-index (count (:backstack history)))
+    (str (if (= #p current-state-index #p (count (:backstack history)))
            "> # Tip:\n"
            "# Tip:\n")
          (if-let [tip (:tip history)]
            (pretty-editor-update tip)
-           "nil"))))
+           "No tip\n")
+         "\n"
+
+         "# Backstack:\n"
+         pretty-backstack)))

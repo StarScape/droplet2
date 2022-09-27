@@ -1,6 +1,5 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]])
-  (:require-macros [garden.def :refer [defkeyframes]])
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
@@ -8,7 +7,7 @@
             [slate.model.common :as m]
             [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
-            [slate.model.editor-state :as es :refer [EditorState map->EditorState map->EditorUpdate]]
+            [slate.model.editor-state :as es :refer [map->EditorState map->EditorUpdate]]
             [slate.model.doc :refer [map->Document]]
             [slate.model.paragraph :refer [map->Paragraph]]
             [slate.model.run :refer [map->Run]]
