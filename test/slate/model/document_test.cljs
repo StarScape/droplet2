@@ -229,29 +229,29 @@
            (document [p1, (p/empty-paragraph "e1"), (p/empty-paragraph "p2")])))))
 
 (deftest selected-content-test
-  (testing "returns list of runs when passed selection within one paragraph"
-    (is (= [(run "bar" #{:bold :italic})
-            (run "bizz" #{:italic})
-            (run "buzz" #{:bold})]
+  (testing "returns paragraph fragment when passed selection within one paragraph"
+    (is (= (p/fragment [(run "bar" #{:bold :italic})
+                        (run "bizz" #{:italic})
+                        (run "buzz" #{:bold})])
            (sl/selected-content doc (selection ["p1" 3] ["p1" 14])))))
 
-  (testing "returns list of paragraphs when passed selection across multiple paragraphs"
-    (is (= [(paragraph "p1" [(run "bar" #{:bold :italic})
-                             (run "bizz" #{:italic})
-                             (run "buzz" #{:bold})])
-            (paragraph "p2" [(run "aaa")])]
+  (testing "returns document fragment when passed selection across multiple paragraphs"
+    (is (= (doc/fragment [(paragraph "p1" [(run "bar" #{:bold :italic})
+                                           (run "bizz" #{:italic})
+                                           (run "buzz" #{:bold})])
+                          (paragraph "p2" [(run "aaa")])])
            (sl/selected-content doc (selection ["p1" 3] ["p2" 3])))))
 
-  (testing "returns list of paragraphs when passed selection across multiple (> 3) paragraphs"
-    (is (= [(paragraph "d1" [(run "foo1" #{:italic})])
-            (paragraph "d2" [(run "foo2" #{:bold})])
-            (paragraph "d3" [(run "foo3" #{:underline})])
-            (paragraph "d4" [(run "foo" #{:strike})])]
+  (testing "returns document fragment when passed selection across multiple (> 3) paragraphs"
+    (is (= (doc/fragment [(paragraph "d1" [(run "foo1" #{:italic})])
+                          (paragraph "d2" [(run "foo2" #{:bold})])
+                          (paragraph "d3" [(run "foo3" #{:underline})])
+                          (paragraph "d4" [(run "foo" #{:strike})])])
            (sl/selected-content long-doc (selection ["d1" 0] ["d4" 3])))))
 
   ;; TODO: I **think** this is the correct implementation here...could be wrong though...
   (testing "returns one paragraph and empty next paragraph when going from start of paragraph 1 to start of paragraph 2"
-    (is (= [(paragraph "d1" [(run "foo1" #{:italic})]) (paragraph "d2" [])]
+    (is (= (doc/fragment [(paragraph "d1" [(run "foo1" #{:italic})]) (paragraph "d2" [])])
            (sl/selected-content long-doc (selection ["d1" 0] ["d2" 0]))))))
 
 (deftest formatting-test

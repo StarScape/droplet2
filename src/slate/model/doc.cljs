@@ -3,6 +3,7 @@
             [slate.dll :as dll :refer [dll]]
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
+                                               Fragment
                                                Formattable
                                                insert
                                                delete
@@ -31,6 +32,11 @@
   (len [doc] (reduce #(+ %1 (len %2)) 0 (:children doc)))
   (blank? [doc] (zero? (len doc))))
 
+(defrecord DocumentFragment [paragraphs]
+  Fragment
+  (items [document-fragment] (:paragraphs document-fragment))
+  (fragment-type [_] :document))
+
 (defn document
   "Creates a new document."
   ([children]
@@ -46,6 +52,13 @@
      (throw "Error: non-sequence type supplied as `children` to `document` constructor.")))
   ([]
    (->Document (dll))))
+
+(defn fragment
+  "Creates a new DocumentFragment."
+  [paragraph-or-paragraphs]
+  (if (sequential? paragraph-or-paragraphs)
+    (->DocumentFragment paragraph-or-paragraphs)
+    (->DocumentFragment [paragraph-or-paragraphs])))
 
 ;; Document helper functions
 (defn- split-paragraph
@@ -270,16 +283,20 @@
         end-para-uuid (-> sel :end :paragraph)
         end-para ((:children doc) end-para-uuid)]
     (if (sel/single-paragraph? sel)
-      (selected-content ((:children doc) start-para-uuid) sel)
-      (-> (dll/between (:children doc) start-para-uuid end-para-uuid)
-          (dll/prepend (p/delete-before start-para (-> sel :start :offset)))
-          (conj (p/delete-after end-para (-> sel :end :offset)))))))
+      (if (p/whole-paragraph-selected? start-para sel)
+        (fragment start-para)
+        (selected-content start-para sel))
+      (fragment
+       (-> (dll/between (:children doc) start-para-uuid end-para-uuid)
+           (dll/prepend (p/delete-before start-para (-> sel :start :offset)))
+           (conj (p/delete-after end-para (-> sel :end :offset))))))))
 
 (defn doc-formatting [doc sel]
   (let [caret-para (get (:children doc) (sel/caret-para sel))]
     (if (sel/single-paragraph? sel)
       (formatting caret-para sel)
       (->> (selected-content doc sel)
+           (sl/items)
            (map (comp set formatting))
            (apply set/intersection)))))
 

@@ -67,6 +67,10 @@
                (render-paragraph p))])
       (render-paragraph document-chunk))))
 
+(defn fragment->html
+  [fragment]
+  "")
+
 (defn doc->html
   "Converts a droplet document to an HTML string."
   [droplet-doc]

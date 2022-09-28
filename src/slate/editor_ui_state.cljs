@@ -75,11 +75,12 @@
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
         selected (m/selected-content state)
+        selected-items (m/items selected)
         paragraph-type (if (or (sel/single? selection)
                                (sel/single-paragraph? selection))
                          (:type (get (:children doc) (sel/caret-para selection)))
-                         (when (apply = (map :type selected))
-                           (:type (first selected))))
+                         (when (apply = (map :type selected-items))
+                           (:type (first selected-items))))
         formats (:formats selection)]
     (if (some? paragraph-type)
       (conj formats paragraph-type)

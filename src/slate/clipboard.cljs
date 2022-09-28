@@ -1,5 +1,6 @@
 (ns slate.clipboard
   (:require [clojure.string :as str]
+            [slate.filetypes.export.html :refer [fragment->html]]
             [slate.model.common :as model :refer [TextContainer
                                                   selected-content
                                                   text]]
@@ -42,7 +43,7 @@
   (let [copy-id (str (random-uuid))]
     (set-clipboard-data event "slate-copy-id" copy-id)
     (set-clipboard-data event mime-plaintext (content-text content))
-    (set-clipboard-data event mime-html "<b>Hello!</b>")
+    (set-clipboard-data event mime-html (fragment->html content))
     (reset! *clipboard {:content content
                         :copy-id copy-id})))
 
@@ -58,9 +59,16 @@
 (defn copy
   "Copies the currently selected content to the clipboard and returns an (empty) EditorUpdate."
   [editor-state event]
+  ;; TODO: make selected-content always return a seq of TextContainers (whether Paragraphs or Runs)
   (let [content (selected-content editor-state)]
     (copy-to-clipboard! content event)
     (es/identity-update editor-state)))
+
+(comment
+  #_(defprotocol Fragment
+    "Fragment of a Document or Paragraph"
+    (items [] "Returns a seqable list of the items in the paragraph")
+    (type [] "Returns either :paragraphs or :runs")))
 
 (defn paste
   "Pastes the currently selected content into the editor and returns an EditorUpdate."

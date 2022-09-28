@@ -58,6 +58,11 @@
     inside the selection. Will return an empty set if there are no formats shared.
     If not passed a selection, will return shared formats for the whole container."))
 
+(defprotocol Fragment
+  "Fragment of a Document or Paragraph"
+  (items [fragment] "Returns a seqable list of the items in the fragment")
+  (fragment-type [fragment] "Returns either :document (fragment is a series of paragraphs) or :paragraph (fragment is a series of runs)"))
+
 (defn type-dispatch [& args] (mapv type args))
 
 (defn content-type [c]

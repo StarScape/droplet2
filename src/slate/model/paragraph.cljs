@@ -5,6 +5,7 @@
             [slate.model.common :refer [TextContainer
                                         Selectable
                                         Formattable
+                                        Fragment
                                         insert
                                         delete
                                         insert-start
@@ -26,6 +27,17 @@
   (text [p] (reduce str (map text (:runs p))))
   (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p)))
   (blank? [p] (zero? (len p))))
+
+(defrecord ParagraphFragment [runs]
+  Fragment
+  (items [fragment] (:runs fragment))
+  (fragment-type [_] :paragraph))
+
+(defn fragment
+  [run-or-runs]
+  (if (sequential? run-or-runs)
+    (->ParagraphFragment run-or-runs)
+    (->ParagraphFragment [run-or-runs])))
 
 (defn paragraph
   "Creates a new paragraph. If no UUID is supplied a random one is created.
@@ -280,9 +292,7 @@
 
   ;; TODO: should this return a paragraph instead of a list of runs?
   (selected-content [para sel]
-    (if (whole-paragraph-selected? para sel)
-      para
-      (second (separate-selected (:runs para) sel))))
+    (fragment (second (separate-selected (:runs para) sel))))
 
   (formatting
    ([para] (formatting para (selection [(:uuid para) 0]
