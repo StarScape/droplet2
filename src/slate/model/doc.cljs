@@ -35,7 +35,12 @@
 (defrecord DocumentFragment [paragraphs]
   Fragment
   (items [document-fragment] (:paragraphs document-fragment))
-  (fragment-type [_] :document))
+  (fragment-type [_] :document)
+
+  TextContainer
+  (text [f] (reduce str (map text (sl/items f))))
+  (len [f] (reduce #(+ %1 (len %2)) 0 (sl/items f)))
+  (blank? [f] (zero? (len f))))
 
 (defn document
   "Creates a new document."

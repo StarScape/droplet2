@@ -16,7 +16,8 @@
                                         apply-format
                                         remove-format
                                         formatting
-                                        char-at]]
+                                        char-at
+                                        items]]
             [slate.model.run :as r]
             [slate.model.selection :as sel :refer [Selection selection]]))
 
@@ -31,7 +32,12 @@
 (defrecord ParagraphFragment [runs]
   Fragment
   (items [fragment] (:runs fragment))
-  (fragment-type [_] :paragraph))
+  (fragment-type [_] :paragraph)
+
+  TextContainer
+  (text [f] (reduce str (map text (items f))))
+  (len [f] (reduce #(+ %1 (len %2)) 0 (items f)))
+  (blank? [f] (zero? (len f))))
 
 (defn fragment
   [run-or-runs]

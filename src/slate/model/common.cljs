@@ -10,6 +10,8 @@
   TextContainer
   (text [s] s)
   (len [s] (count s))
+
+  ;; TODO: this one can have a default implementation
   (blank? [s] (zero? (count s))))
 
 (defprotocol Formattable

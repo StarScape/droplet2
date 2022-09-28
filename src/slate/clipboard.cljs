@@ -23,27 +23,13 @@
   [event format data]
   (.. event -clipboardData (setData format data)))
 
-(defn- content-text [content]
-  (let [first-child (first content)]
-    (cond
-      (satisfies? TextContainer content)
-      (text content)
-
-      (satisfies? TextContainer first-child)
-      (cond
-        (= Run (type first-child))
-        (reduce str (map text content))
-
-        (= Paragraph (type first-child))
-        (str/join "\n" (map text content))))))
-
 (defn copy-to-clipboard!
   "Copies the content to the clipboard atom with a unique id matching that added to the system clipboard."
   [content event]
   (let [copy-id (str (random-uuid))]
     (set-clipboard-data event "slate-copy-id" copy-id)
-    (set-clipboard-data event mime-plaintext (content-text content))
-    (set-clipboard-data event mime-html (fragment->html content))
+    (set-clipboard-data event mime-plaintext #p (text #p content))
+    #_(set-clipboard-data event mime-html (fragment->html content))
     (reset! *clipboard {:content content
                         :copy-id copy-id})))
 
@@ -60,8 +46,8 @@
   "Copies the currently selected content to the clipboard and returns an (empty) EditorUpdate."
   [editor-state event]
   ;; TODO: make selected-content always return a seq of TextContainers (whether Paragraphs or Runs)
-  (let [content (selected-content editor-state)]
-    (copy-to-clipboard! content event)
+  (let [fragment (selected-content editor-state)]
+    (copy-to-clipboard! fragment event)
     (es/identity-update editor-state)))
 
 (comment
