@@ -1,5 +1,7 @@
 (ns slate.filetypes.export.html
-  (:require [slate.model.paragraph :as p]
+  (:require [slate.model.common :refer [items fragment-type]]
+            [slate.model.paragraph :as p :refer [ParagraphFragment]]
+            [slate.model.doc :refer [DocumentFragment]]
             [reagent.dom.server :refer [render-to-static-markup]]))
 
 (defn list-paragraph? [paragraph]
@@ -69,7 +71,10 @@
 
 (defn fragment->html
   [fragment]
-  "")
+  (let [rendered-hiccup (case (fragment-type fragment)
+                          :document (render-paragraphs (items fragment))
+                          :paragraph (render-runs (items fragment)))]
+    (render-to-static-markup rendered-hiccup)))
 
 (defn doc->html
   "Converts a droplet document to an HTML string."

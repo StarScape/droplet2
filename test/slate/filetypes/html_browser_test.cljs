@@ -127,5 +127,21 @@
       [:span "And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after."]]]]))
 
 (deftest droplet->html
-  (testing "can export"
-    (is (= (html-export/doc->html test-file2-expected) export1-expected))))
+  (testing "can export whole document"
+    (is (= (html-export/doc->html test-file2-expected) export1-expected)))
+  (testing "can export fragment"
+    (let [fragment1 (p/fragment [(run "foo") (run "bar" #{:italic})])
+          fragment1-expected (render-to-static-markup
+                              [:<>
+                               [:span "foo"]
+                               [:span {:style {:font-style "italic"}} "bar"]])
+          fragment2 (doc/fragment [(paragraph (random-uuid) :h1 [(run "title")])
+                                   (paragraph [(run "foo")])
+                                   (paragraph [(run "bar" #{:italic})])])
+          fragment2-expected (render-to-static-markup
+                              [:<>
+                               [:h1 [:span "title"]]
+                               [:p [:span "foo"]]
+                               [:p [:span {:style {:font-style "italic"}} "bar"]]])]
+      (is (= (html-export/fragment->html fragment1) fragment1-expected))
+      (is (= (html-export/fragment->html fragment2) fragment2-expected)))))
