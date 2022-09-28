@@ -1,7 +1,5 @@
 (ns slate.filetypes.export.html
-  (:require [slate.model.doc :as doc :refer [document]]
-            [slate.model.paragraph :as p :refer [paragraph]]
-            [slate.model.run :as r :refer [run]]
+  (:require [slate.model.paragraph :as p]
             [reagent.dom.server :refer [render-to-static-markup]]))
 
 (defn list-paragraph? [paragraph]

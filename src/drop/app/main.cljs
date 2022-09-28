@@ -5,6 +5,7 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
+;; Prioritized:
 ;; TODO: Rich text copy into HTML
 ;; TODO: Rich text paste from Google Docs and Word
 ;; TODO: Test with large documents
@@ -21,9 +22,12 @@
 ;; TODO: RTF import/export
 ;; TODO: Implement highlight part of find and replace
 
+
+;; Usability/Polish:
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
+;; TODO: shorten interval between cmd++'s and cmd+-'s. Current difference in font size is too large.
 
 ;; TODO: command palette
 ;; TODO: learn about React Spring

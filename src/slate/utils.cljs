@@ -53,7 +53,7 @@
                                               (pretty-editor-update editor-update) "\n")))
                                      (take n (reverse (:backstack history))))
          pretty-backstack (str/join "\n" backstack-strs)
-         fmt-str (str (if (= #p current-state-index #p (count (:backstack history)))
+         fmt-str (str (if (= current-state-index (count (:backstack history)))
                       "%c>>%c # Tip:\n"
                       "# Tip:\n")
                     (if-let [tip (:tip history)]

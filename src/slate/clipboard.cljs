@@ -5,7 +5,7 @@
                                                   text]]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph]]
-            [slate.model.editor-state :as es :refer [>>=]]
+            [slate.model.editor-state :as es]
             [slate.model.selection :as sel]))
 
 (def ^:const mime-plaintext "text/plain")
@@ -17,6 +17,10 @@
 ;; sees that the data in the clipboard is from itself, it will just pull the stashed
 ;; content from this atom instead.
 (def *clipboard (atom nil))
+
+(defn- set-clipboard-data
+  [event format data]
+  (.. event -clipboardData (setData format data)))
 
 (defn- content-text [content]
   (let [first-child (first content)]
@@ -36,8 +40,9 @@
   "Copies the content to the clipboard atom with a unique id matching that added to the system clipboard."
   [content event]
   (let [copy-id (str (random-uuid))]
-    (.. event -clipboardData (setData "slate-copy-id" copy-id))
-    (.. event -clipboardData (setData mime-plaintext (content-text content)))
+    (set-clipboard-data event "slate-copy-id" copy-id)
+    (set-clipboard-data event mime-plaintext (content-text content))
+    (set-clipboard-data event mime-html "<b>Hello!</b>")
     (reset! *clipboard {:content content
                         :copy-id copy-id})))
 
