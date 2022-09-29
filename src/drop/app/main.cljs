@@ -6,7 +6,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; Prioritized:
-;; TODO: Rich text copy into HTML
 ;; TODO: Rich text paste from Google Docs and Word
 ;; TODO: Test with large documents
 ;; TODO: Space out paragraphs somewhat
@@ -21,7 +20,6 @@
 ;; TODO: Website
 ;; TODO: RTF import/export
 ;; TODO: Implement highlight part of find and replace
-
 
 ;; Usability/Polish:
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.

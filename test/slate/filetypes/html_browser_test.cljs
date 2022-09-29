@@ -8,8 +8,25 @@
             [slate.model.run :as r :refer [run]]
             [reagent.dom.server :refer [render-to-static-markup]]))
 
+(defn doc=
+  "Tests if two docs are equal, disregarding paragraph UUIDs."
+  [doc1 doc2]
+  (letfn [(strip-uuids [doc]
+            (update doc :children
+                    (fn [children] (map #(dissoc % :uuid) children))))]
+    (= (strip-uuids doc1) (strip-uuids doc2))))
+
 (def test-file1 (slurp-file "test_files/html/the_quiet_universe.html"))
+
 (def test-file2 (slurp-file "test_files/html/conversion_test.html"))
+
+(def paste-tests (let [get-name-and-html (fn [s]
+                                           (let [idx (.indexOf s "\n")]
+                                             [(keyword (.substr s 0 idx))
+                                              (.substr s (inc idx))]))
+                       sections (-> (slurp-file "test_files/html/paste_tests.html")
+                                    (.split "\n---\n"))]
+                   (into {} (map get-name-and-html sections))))
 
 (def test-file1-expected
   (document [(paragraph (random-uuid) :h2 [(run "The Quiet Universe - 2.235674301")])
@@ -78,14 +95,6 @@
              (paragraph [(run "")])
              (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
 
-(defn doc=
-  "Tests if two docs are equal, disregarding paragraph UUIDs."
-  [doc1 doc2]
-  (letfn [(strip-uuids [doc]
-            (update doc :children
-                    (fn [children] (map #(dissoc % :uuid) children))))]
-    (= (strip-uuids doc1) (strip-uuids doc2))))
-
 (comment
   (doc= (document [(paragraph [(run "Hello!")])])
         (document [(paragraph [(run "Hello!")])]))
@@ -94,7 +103,12 @@
 (deftest html->droplet
   (testing "can import from google docs"
     (is (doc= (html-import/html->doc test-file1) test-file1-expected))
-    (is (doc= (html-import/html->doc test-file2) test-file2-expected))))
+    (is (doc= (html-import/html->doc test-file2) test-file2-expected)))
+
+  #_(testing "can handle pastes from google docs"
+    (is (=
+         (html-import/html->doc (:gdocs-basic-single-style-paste paste-tests))
+         (run "Hello")))))
 
 (def export1-expected
   (render-to-static-markup

@@ -45,16 +45,9 @@
 (defn copy
   "Copies the currently selected content to the clipboard and returns an (empty) EditorUpdate."
   [editor-state event]
-  ;; TODO: make selected-content always return a seq of TextContainers (whether Paragraphs or Runs)
   (let [fragment (selected-content editor-state)]
     (copy-to-clipboard! fragment event)
     (es/identity-update editor-state)))
-
-(comment
-  #_(defprotocol Fragment
-    "Fragment of a Document or Paragraph"
-    (items [] "Returns a seqable list of the items in the paragraph")
-    (type [] "Returns either :paragraphs or :runs")))
 
 (defn paste
   "Pastes the currently selected content into the editor and returns an EditorUpdate."
