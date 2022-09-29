@@ -29,7 +29,7 @@
   (let [copy-id (str (random-uuid))]
     (set-clipboard-data event "slate-copy-id" copy-id)
     (set-clipboard-data event mime-plaintext (text content))
-    #_(set-clipboard-data event mime-html (fragment->html content))
+    (set-clipboard-data event mime-html (fragment->html content))
     (reset! *clipboard {:content content
                         :copy-id copy-id})))
 

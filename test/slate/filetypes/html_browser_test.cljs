@@ -101,10 +101,12 @@
    [:html
     [:head]
     [:body
-     [:h1 [:span "This is an H1"]]
-     [:h2 [:span "This is an H2"]]
-     [:p [:span ""]]
-     [:p
+     [:h1 {:style html-export/default-p-styles}
+      [:span "This is an H1"]]
+     [:h2 {:style html-export/default-p-styles}
+      [:span "This is an H2"]]
+     [:br]
+     [:p {:style html-export/default-p-styles}
       [:span "Normal paragraph with a sentence, some "]
       [:span {:style {:font-style "italic"}} "italics"]
       [:span ", "]
@@ -112,23 +114,24 @@
       [:span ", and "]
       [:span {:style {:text-decoration "line-through"}} "strikethrough"]
       [:span "."]]
-     [:p [:span ""]]
+     [:br]
      [:ol
-      [:li [:span "OL 1"]]
-      [:li [:span "OL 2"]]
-      [:li [:span "OL 3"]]]
-     [:p [:span ""]]
+      [:li {:style html-export/default-p-styles} [:span "OL 1"]]
+      [:li {:style html-export/default-p-styles} [:span "OL 2"]]
+      [:li {:style html-export/default-p-styles} [:span "OL 3"]]]
+     [:br]
      [:ul
-      [:li [:span "UL 1"]]
-      [:li [:span "UL 2"]]
-      [:li [:span "UL 3"]]]
-     [:p [:span ""]]
-     [:p {:style {:text-indent "30px"}}
+      [:li {:style html-export/default-p-styles} [:span "UL 1"]]
+      [:li {:style html-export/default-p-styles} [:span "UL 2"]]
+      [:li {:style html-export/default-p-styles} [:span "UL 3"]]]
+     [:br]
+     [:p {:style (merge html-export/default-p-styles {:text-indent "30px"})}
       [:span "And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after."]]]]))
 
 (deftest droplet->html
   (testing "can export whole document"
     (is (= (html-export/doc->html test-file2-expected) export1-expected)))
+
   (testing "can export fragment"
     (let [fragment1 (p/fragment [(run "foo") (run "bar" #{:italic})])
           fragment1-expected (render-to-static-markup
@@ -140,8 +143,11 @@
                                    (paragraph [(run "bar" #{:italic})])])
           fragment2-expected (render-to-static-markup
                               [:<>
-                               [:h1 [:span "title"]]
-                               [:p [:span "foo"]]
-                               [:p [:span {:style {:font-style "italic"}} "bar"]]])]
+                               [:h1 {:style html-export/default-p-styles}
+                                [:span "title"]]
+                               [:p {:style html-export/default-p-styles}
+                                [:span "foo"]]
+                               [:p {:style html-export/default-p-styles}
+                                [:span {:style {:font-style "italic"}} "bar"]]])]
       (is (= (html-export/fragment->html fragment1) fragment1-expected))
       (is (= (html-export/fragment->html fragment2) fragment2-expected)))))

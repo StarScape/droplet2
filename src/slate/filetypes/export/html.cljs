@@ -1,13 +1,13 @@
 (ns slate.filetypes.export.html
-  (:require [slate.model.common :refer [items fragment-type]]
+  (:require [slate.model.common :refer [items fragment-type blank?]]
             [slate.model.paragraph :as p :refer [ParagraphFragment]]
             [slate.model.doc :refer [DocumentFragment]]
             [reagent.dom.server :refer [render-to-static-markup]]))
 
-(defn list-paragraph? [paragraph]
+(defn- list-paragraph? [paragraph]
   (or (= (:type paragraph) :ul) (= (:type paragraph) :ol)))
 
-(defn flatten-when [pred coll]
+(defn- flatten-when [pred coll]
   (reduce (fn [result next]
             (if (pred next)
               (apply conj result next)
@@ -40,6 +40,8 @@
             :key (random-uuid)}
      (:text r)]))
 
+(def default-p-styles {:margin-top "0px" :margin-bottom "0px"})
+
 (defn render-paragraph [p]
   (let [tag (case (:type p)
               :body :p
@@ -50,9 +52,11 @@
         runs (if (p/indented? p)
                (update-in (:runs p) [0 :text] #(.substr % 1))
                (:runs p))]
-    [tag {:style (paragraph-css p)
-          :key (random-uuid)}
-     (render-runs runs)]))
+    (if (blank? p)
+      [:br]
+      [tag {:style (merge default-p-styles (paragraph-css p))
+            :key (random-uuid)}
+       (render-runs runs)])))
 
 (defn render-paragraphs
   [paragraphs]
