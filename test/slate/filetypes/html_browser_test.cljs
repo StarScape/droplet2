@@ -102,13 +102,38 @@
 
 (deftest html->droplet
   (testing "can import from google docs"
-    (is (doc= (html-import/html->doc test-file1) test-file1-expected))
-    (is (doc= (html-import/html->doc test-file2) test-file2-expected)))
+    (is (doc= (html-import/html->droplet test-file1) test-file1-expected))
+    (is (doc= (html-import/html->droplet test-file2) test-file2-expected)))
 
-  #_(testing "can handle pastes from google docs"
+  (testing "can handle pastes from google docs"
     (is (=
-         (html-import/html->doc (:gdocs-basic-single-style-paste paste-tests))
-         (run "Hello")))))
+         (html-import/html->droplet (:gdocs-basic-single-style paste-tests))
+         (p/fragment [(run "Hello")])))
+    (is (=
+         (html-import/html->droplet (:gdocs-basic-two-style paste-tests))
+         (p/fragment [(run "Hello") (run "there")])))
+    (is (=
+         (html-import/html->droplet (:gdocs-complex paste-tests))
+         (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1")])
+                        (paragraph (random-uuid) :h2 [(run "This is an H2")])
+                        (paragraph [(run "")])
+                        (paragraph [(run "Normal paragraph with a sentence, some ")
+                                    (run "italics" #{:italic})
+                                    (run ", ")
+                                    (run "bold" #{:bold})
+                                    (run ", and ")
+                                    (run "strikethrough" #{:strikethrough})
+                                    (run ".")])
+                        (paragraph [(run "")])
+                        (paragraph (random-uuid) :ol [(run "OL 1")])
+                        (paragraph (random-uuid) :ol [(run "OL 2")])
+                        (paragraph (random-uuid) :ol [(run "OL 3")])
+                        (paragraph [(run "")])
+                        (paragraph (random-uuid) :ul [(run "UL 1")])
+                        (paragraph (random-uuid) :ul [(run "UL 2")])
+                        (paragraph (random-uuid) :ul [(run "UL 3")])
+                        (paragraph [(run "")])
+                        (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])])))))
 
 (def export1-expected
   (render-to-static-markup

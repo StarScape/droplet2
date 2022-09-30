@@ -114,8 +114,8 @@
                        children)]
         (paragraph (random-uuid) ptype children)))))
 
-(defn html->doc
-  "Converts an HTML string to a Droplet Document."
+(defn html->droplet
+  "Converts an HTML string to a Droplet native format (either a Document, DocumentFragment, or ParagraphFragment)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
