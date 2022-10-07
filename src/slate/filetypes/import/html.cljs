@@ -26,15 +26,6 @@
       (.write html-document-str)
       (.close))))
 
-#_#_(defn- root-font-size
-  "Returns root font size for document, in pixels."
-  [document]
-  (js/parseFloat (.-fontSize (js/getComputedStyle (.-documentElement document)))))
-
-(defn- rem->px
-  [document rem]
-  (* rem (root-font-size document)))
-
 (defn- em->px
   [elem em]
   (* em (js/parseFloat (.-fontSize (js/getComputedStyle (.-parentElement elem))))))
@@ -48,7 +39,7 @@
   (let [iframe @*iframe]
     (instance? (.. iframe -contentWindow -Text) iframe-node)))
 
-(defn- is-element?
+(defn- is-elem?
   [iframe-node]
   (let [iframe @*iframe]
     (instance? (.. iframe -contentWindow -Element) iframe-node)))
@@ -70,93 +61,93 @@
       (conj! styles :strikethrough))
     (persistent! styles)))
 
-(defn- html-node->run-or-runs
-  ([node styles]
-   {:pre [(set? styles)]}
-   (cond
-     (is-text-node? node)
-     (run (clean-whitespace (.-wholeText node)) styles)
+(defn font-size-px [elem]
+  (let [computed-style (js/getComputedStyle elem)]
+    (js/parseFloat (.-fontSize computed-style))))
 
-     (is-element? node)
-     (let [styles (set/union styles (html-element->styles node))]
-       (->> (child-nodes node)
-            (map #(html-node->run-or-runs % styles))
-            (flatten)))
+(defn is-ul? [node]
+  (and (is-elem? node) (= "UL" (.-tagName node))))
 
-     :else (throw "Unrecognized Node type!")))
-  ([node] (html-node->run-or-runs node #{})))
+(defn is-ol? [node]
+  (and (is-elem? node) (= "OL" (.-tagName node))))
 
-(defn- html-elem->para-or-paras	
-  [html-elem]
-  (let [computed-style (js/getComputedStyle html-elem)]
-    (if (or (= "OL" (.-tagName html-elem))
-            (= "UL" (.-tagName html-elem)))
-      (map html-elem->para-or-paras (js/Array.from (.-children html-elem)))
-      (let [indented? (pos? (js/parseFloat (.-textIndent computed-style)))
-            font-size-px (js/parseFloat (.-fontSize computed-style))
-            ptype (cond
-                    (or (= "H1" (.-tagName html-elem))
-                        (>= font-size-px (em->px html-elem 2.0))) :h1
-                    (or (= "H2" (.-tagName html-elem))
-                        (>= font-size-px (em->px html-elem 1.5))) :h2
-                    (and (= "LI" (.-tagName html-elem))
-                         (= "OL" (.-tagName (.-parentElement html-elem)))) :ol
-                    (and (= "LI" (.-tagName html-elem))
-                         (= "UL" (.-tagName (.-parentElement html-elem)))) :ul
-                    :else :body)
-            children (->> (child-nodes html-elem)
-                          (map html-node->run-or-runs)
-                          (flatten))
-            children (if indented?
-                       (-> children
-                           (vec)
-                           (update-in [0 :text] #(str "\u2003" %)))
-                       children)]
-        (paragraph (random-uuid) ptype children)))))
+(defn is-li? [node]
+  (and (is-elem? node) (= "LI" (.-tagName node))))
+
+(defn is-p? [node]
+  (and (is-elem? node) (= "P" (.-tagName node))))
+
+(defn is-br? [node]
+  (and (is-elem? node) (= "BR" (.-tagName node))))
+
+(defn is-h1? [node]
+  (and (is-elem? node)
+       (or (= "H1" (.-tagName node))
+           (>= font-size-px (em->px node 2.0)))))
+
+(defn is-h2? [node]
+  (and (is-elem? node)
+       (or (= "H2" (.-tagName node))
+           (>= font-size-px (em->px node 1.5)))))
+
+(defn is-block-elem? [node]
+  (and (is-elem? node)
+       (let [computed-style (js/getComputedStyle node)]
+         (= "block" (.-display computed-style)))))
+
+(defn is-inline-elem? [node]
+  (and (is-elem? node)
+       (let [computed-style (js/getComputedStyle node)]
+         (= "inline" (.-display computed-style)))))
 
 (defn block-elem->para-type
-  [elem])
-
-(defn is-ul? [node])
-
-(defn is-ol? [node])
-
-(defn is-block-elem? [node])
-
-(defn is-inline-elem? [node])
+  [elem]
+  (cond
+    (is-li? elem) nil
+    (is-p? elem) :body
+    (is-h1? elem) :h1
+    (is-h2? elem) :h2))
 
 (defn convert-text-node
   [text-node]
-  (run (clean-whitespace (.-wholeText text-node)) (html-element->styles (.-parentElement text-node))))
+  (js/console.log "text-node")
+  (let [text #p (clean-whitespace #p (.-wholeText text-node))
+        formats #p (html-element->styles #p (.-parentElement text-node))]
+    (js/console.log "body")
+    #p (run text formats)))
 
 (defn convert-node
   ([node applied-para-type]
    (let [map-children #(map %1 (js/Array.from (.-childNodes %2)))]
      (cond
-       (is-ul? node)
+       #p (is-ul? node)
        (map-children #(convert-node % :ul) node)
 
-       (is-ol? node)
+       #p (is-ol? node)
        (map-children #(convert-node % :ol) node)
 
-       (is-block-elem? node)
+       #p (is-br? node)
+       (p/empty-paragraph)
+
+       #p (is-block-elem? node)
        (let [ptype (or (block-elem->para-type node) applied-para-type)]
          (paragraph (random-uuid) ptype (map-children #(convert-node % ptype) node)))
 
-       (is-inline-elem? node)
+       #p (is-inline-elem? node)
        (flatten (map-children convert-node node))
 
-       (is-text-node? node)
-       (convert-text-node node))))
+       #p (is-text-node? node)
+       #p (convert-text-node node)
+
+       :else (js/console.log "ELSE!!!"))))
   ([node] (convert-node node :body)))
 
 (defn html->droplet
   "Converts an HTML string to a Droplet native format (either a Document, DocumentFragment, or ParagraphFragment)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
-        body-contents (js/Array.from (.. dom -body -children))
-        paragraphs (flatten (map html-elem->para-or-paras body-contents))]
-    (document paragraphs)))
+        body-contents (js/Array.from (.. dom -body -children))]
+    (flatten (map convert-node body-contents))))
 
 ;; TODO: rethink html import approach by recursing document tree and keeping track of style state
 ;;       pull in some test string from g docs and see how they import
