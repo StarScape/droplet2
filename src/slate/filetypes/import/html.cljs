@@ -43,7 +43,7 @@
   [html-node]
   (js/Array.from (.-childNodes html-node)))
 
-(defn- is-text?
+(defn- is-text-node?
   [iframe-node]
   (let [iframe @*iframe]
     (instance? (.. iframe -contentWindow -Text) iframe-node)))
@@ -74,7 +74,7 @@
   ([node styles]
    {:pre [(set? styles)]}
    (cond
-     (is-text? node)
+     (is-text-node? node)
      (run (clean-whitespace (.-wholeText node)) styles)
 
      (is-element? node)
@@ -86,7 +86,7 @@
      :else (throw "Unrecognized Node type!")))
   ([node] (html-node->run-or-runs node #{})))
 
-(defn- html-elem->para-or-paras
+(defn- html-elem->para-or-paras	
   [html-elem]
   (let [computed-style (js/getComputedStyle html-elem)]
     (if (or (= "OL" (.-tagName html-elem))
@@ -113,6 +113,42 @@
                            (update-in [0 :text] #(str "\u2003" %)))
                        children)]
         (paragraph (random-uuid) ptype children)))))
+
+(defn block-elem->para-type
+  [elem])
+
+(defn is-ul? [node])
+
+(defn is-ol? [node])
+
+(defn is-block-elem? [node])
+
+(defn is-inline-elem? [node])
+
+(defn convert-text-node
+  [text-node]
+  (run (clean-whitespace (.-wholeText text-node)) (html-element->styles (.-parentElement text-node))))
+
+(defn convert-node
+  ([node applied-para-type]
+   (let [map-children #(map %1 (js/Array.from (.-childNodes %2)))]
+     (cond
+       (is-ul? node)
+       (map-children #(convert-node % :ul) node)
+
+       (is-ol? node)
+       (map-children #(convert-node % :ol) node)
+
+       (is-block-elem? node)
+       (let [ptype (or (block-elem->para-type node) applied-para-type)]
+         (paragraph (random-uuid) ptype (map-children #(convert-node % ptype) node)))
+
+       (is-inline-elem? node)
+       (flatten (map-children convert-node node))
+
+       (is-text-node? node)
+       (convert-text-node node))))
+  ([node] (convert-node node :body)))
 
 (defn html->droplet
   "Converts an HTML string to a Droplet native format (either a Document, DocumentFragment, or ParagraphFragment)."
