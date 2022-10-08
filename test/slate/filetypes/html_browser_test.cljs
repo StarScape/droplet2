@@ -16,6 +16,11 @@
                     (fn [children] (map #(dissoc % :uuid) children))))]
     (= (strip-uuids doc1) (strip-uuids doc2))))
 
+(defn doc-frag=
+  [frag1 frag2]
+  (= (map #(dissoc % :uuid) (:paragraphs frag1))
+     (map #(dissoc % :uuid) (:paragraphs frag2))))
+
 (def test-file1 (slurp-file "test_files/html/the_quiet_universe.html"))
 
 (def test-file2 (slurp-file "test_files/html/conversion_test.html"))
@@ -112,7 +117,7 @@
     (is (=
          (html-import/html->droplet (:gdocs-basic-two-style paste-tests))
          (p/fragment [(run "Hello ") (run "there" #{:bold})])))
-    (is (=
+    (is (doc-frag=
          (html-import/html->droplet (:gdocs-complex paste-tests))
          (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1")])
                         (paragraph (random-uuid) :h2 [(run "This is an H2")])
@@ -133,7 +138,8 @@
                         (paragraph (random-uuid) :ul [(run "UL 2")])
                         (paragraph (random-uuid) :ul [(run "UL 3")])
                         (paragraph [(run "")])
-                        (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])])))))
+                        (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
+                        (paragraph [(run "")])])))))
 
 (def export1-expected
   (render-to-static-markup

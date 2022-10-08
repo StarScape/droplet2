@@ -85,12 +85,12 @@
 (defn is-h1? [node]
   (and (is-elem? node)
        (or (= "H1" (.-tagName node))
-           (>= font-size-px (em->px node 2.0)))))
+           (>= (font-size-px node) (em->px node 2.0)))))
 
 (defn is-h2? [node]
   (and (is-elem? node)
        (or (= "H2" (.-tagName node))
-           (>= font-size-px (em->px node 1.5)))))
+           (>= (font-size-px node) (em->px node 1.5)))))
 
 (defn is-block-elem? [node]
   (and (is-elem? node)
@@ -110,43 +110,57 @@
     (is-h1? elem) :h1
     (is-h2? elem) :h2))
 
+(declare ^:dynamic *paragraph-type*)
+
 (defn convert-text-node
   [text-node]
   (let [text (clean-whitespace (.-wholeText text-node))
-        formats (html-element->styles (.-parentElement text-node))]
+        parent-elem (.-parentElement text-node)
+        formats (html-element->styles parent-elem)]
+    (cond
+      (is-h1? parent-elem)
+      (set! *paragraph-type* :h1)
+
+      (is-h2? parent-elem)
+      (set! *paragraph-type* :h2))
+
     (run text formats)))
 
 (defn convert-node
-  ([node applied-para-type]
+  ([node]
    (let [map-children #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
-     (cond
-       (is-ul? node)
-       (map-children #(convert-node % :ul) node)
+       (cond
+         (is-ul? node)
+         (binding [*paragraph-type* :ul]
+           (map-children convert-node node))
 
-       (is-ol? node)
-       (map-children #(convert-node % :ol) node)
+         (is-ol? node)
+         (binding [*paragraph-type* :ol]
+           (map-children convert-node node))
 
-       (is-br? node)
-       (p/empty-paragraph)
+         (is-br? node)
+         (p/empty-paragraph)
 
-       (is-block-elem? node)
-       (let [ptype (or (block-elem->para-type node) applied-para-type)]
-         (paragraph (random-uuid) ptype (map-children #(convert-node % ptype) node)))
+         (is-block-elem? node)
+         (binding [*paragraph-type* (if *paragraph-type*
+                                      *paragraph-type*
+                                      (block-elem->para-type node))]
+           (let [children (map-children convert-node node)]
+             (paragraph (random-uuid) *paragraph-type* children)))
 
-       (is-inline-elem? node)
-       (map-children convert-node node)
+         (is-inline-elem? node)
+         (map-children convert-node node)
 
-       (is-li? node)
-       (map-children convert-node node)
+         (is-li? node)
+         (map-children convert-node node)
 
-       (is-text-node? node)
-       (convert-text-node node)
+         (is-text-node? node)
+         (convert-text-node node)
 
-       :else (do
-               (js/console.log node)
-               (js-debugger)
-               (throw "Unhandled condition in convert-node.")))))
-  ([node] (convert-node node :body)))
+         :else (do
+                 (js/console.log node)
+                 (js-debugger)
+                 (throw "Unhandled condition in convert-node."))))))
 
 (defn html->droplet
   "Converts an HTML string to a Droplet native format (either a Document, DocumentFragment, or ParagraphFragment)."
