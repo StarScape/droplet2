@@ -282,6 +282,15 @@
   [paragraph]
   (= "\u2003" (some-> paragraph :runs (get 0) :text (aget 0))))
 
+(defn indent
+  "Adds a tab to the start of the paragraph, if there is not already one present."
+  [paragraph]
+  (if (indented? paragraph)
+    paragraph
+    (assoc paragraph :runs (-> (:runs paragraph)
+                               (vec)
+                               (update-in [0 :text] #(str "\u2003" %))))))
+
 (extend-type Paragraph
   Selectable
   (char-at [para sel]

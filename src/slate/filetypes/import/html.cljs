@@ -102,6 +102,9 @@
        (let [computed-style (js/getComputedStyle node)]
          (= "inline" (.-display computed-style)))))
 
+(defn indented? [elem]
+  (pos? (js/parseFloat (.-textIndent (js/getComputedStyle elem)))))
+
 (defn block-elem->para-type
   [elem]
   (cond
@@ -111,6 +114,7 @@
     (is-h2? elem) :h2))
 
 (declare ^:dynamic *paragraph-type*)
+(declare ^:dynamic *paragraph-indented?*)
 
 (defn convert-text-node
   [text-node]
@@ -144,9 +148,15 @@
          (is-block-elem? node)
          (binding [*paragraph-type* (if *paragraph-type*
                                       *paragraph-type*
-                                      (block-elem->para-type node))]
-           (let [children (map-children convert-node node)]
-             (paragraph (random-uuid) *paragraph-type* children)))
+                                      (block-elem->para-type node))
+                   *paragraph-indented?* (if (indented? node)
+                                           true
+                                           *paragraph-indented?*)]
+           (let [children (map-children convert-node node)
+                 paragraph (paragraph (random-uuid) *paragraph-type* children)]
+             (if *paragraph-indented?*
+               (p/indent paragraph)
+               paragraph)))
 
          (is-inline-elem? node)
          (map-children convert-node node)
