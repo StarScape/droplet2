@@ -72,7 +72,9 @@
   (and (is-elem? node) (= "OL" (.-tagName node))))
 
 (defn is-li? [node]
-  (and (is-elem? node) (= "LI" (.-tagName node))))
+  (and (is-elem? node)
+       (or (= "LI" (.-tagName node))
+           (= "list-item" (.-display (js/getComputedStyle node))))))
 
 (defn is-p? [node]
   (and (is-elem? node) (= "P" (.-tagName node))))
@@ -110,44 +112,56 @@
 
 (defn convert-text-node
   [text-node]
-  (js/console.log "text-node")
-  (let [text #p (clean-whitespace #p (.-wholeText text-node))
-        formats #p (html-element->styles #p (.-parentElement text-node))]
-    (js/console.log "body")
-    #p (run text formats)))
+  (let [text (clean-whitespace (.-wholeText text-node))
+        formats (html-element->styles (.-parentElement text-node))]
+    (run text formats)))
 
 (defn convert-node
   ([node applied-para-type]
-   (let [map-children #(map %1 (js/Array.from (.-childNodes %2)))]
+   (let [map-children #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
      (cond
-       #p (is-ul? node)
+       (is-ul? node)
        (map-children #(convert-node % :ul) node)
 
-       #p (is-ol? node)
+       (is-ol? node)
        (map-children #(convert-node % :ol) node)
 
-       #p (is-br? node)
+       (is-br? node)
        (p/empty-paragraph)
 
-       #p (is-block-elem? node)
+       (is-block-elem? node)
        (let [ptype (or (block-elem->para-type node) applied-para-type)]
          (paragraph (random-uuid) ptype (map-children #(convert-node % ptype) node)))
 
-       #p (is-inline-elem? node)
-       (flatten (map-children convert-node node))
+       (is-inline-elem? node)
+       (map-children convert-node node)
 
-       #p (is-text-node? node)
-       #p (convert-text-node node)
+       (is-li? node)
+       (map-children convert-node node)
 
-       :else (js/console.log "ELSE!!!"))))
+       (is-text-node? node)
+       (convert-text-node node)
+
+       :else (do
+               (js/console.log node)
+               (js-debugger)
+               (throw "Unhandled condition in convert-node.")))))
   ([node] (convert-node node :body)))
 
 (defn html->droplet
   "Converts an HTML string to a Droplet native format (either a Document, DocumentFragment, or ParagraphFragment)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
-        body-contents (js/Array.from (.. dom -body -children))]
-    (flatten (map convert-node body-contents))))
+        body-contents (js/Array.from (.. dom -body -children))
+        results (flatten (map convert-node body-contents))]
+    (cond
+      (= (-> results first type) r/Run)
+      (p/fragment results)
+
+      (= (-> results first type) p/Paragraph)
+      (doc/fragment results)
+
+      :else (throw (js/Error. "Unrecognized type of `results` when converting HTML.")))))
 
 ;; TODO: rethink html import approach by recursing document tree and keeping track of style state
 ;;       pull in some test string from g docs and see how they import

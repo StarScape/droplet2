@@ -111,7 +111,7 @@
          (p/fragment [(run "Hello")])))
     (is (=
          (html-import/html->droplet (:gdocs-basic-two-style paste-tests))
-         (p/fragment [(run "Hello") (run "there")])))
+         (p/fragment [(run "Hello ") (run "there" #{:bold})])))
     (is (=
          (html-import/html->droplet (:gdocs-complex paste-tests))
          (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1")])
