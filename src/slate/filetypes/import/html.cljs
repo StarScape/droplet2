@@ -99,7 +99,7 @@
 (defn is-h2? [node]
   (and (is-elem? node)
        (or (= "H2" (.-tagName node))
-           (>= (font-size-px node) (em->px node 1.5)))))
+           (>= (font-size-px node) (rem->px node 1.3)))))
 
 (defn is-block-elem? [node]
   (and (is-elem? node)
@@ -109,7 +109,8 @@
 (defn is-inline-elem? [node]
   (and (is-elem? node)
        (let [computed-style (js/getComputedStyle node)]
-         (= "inline" (.-display computed-style)))))
+         (or (= "inline" (.-display computed-style))
+             (= "inline-block" (.-display computed-style))))))
 
 (defn indented? [elem]
   (pos? (js/parseFloat (.-textIndent (js/getComputedStyle elem)))))
@@ -131,7 +132,6 @@
   (let [text (clean-whitespace (.-wholeText text-node))
         parent-elem (.-parentElement text-node)
         formats (html-element->styles parent-elem)]
-    text
     (cond
       (is-h1? parent-elem)
       (set! *paragraph-type* :h1)
@@ -143,6 +143,7 @@
 
 (defn convert-node
   ([node]
+   (js/console.log node)
    (let [map-children #(flatten (map %1 (js/Array.from (.-children %2))))
          map-child-nodes #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
        (cond
@@ -158,23 +159,21 @@
            (map-children convert-node node))
 
          ;; Dear mother of christ above this is UGLY
-         (is-li? node)
-         (do
-           (set! *paragraph-opened?* true)
-           (let [para (paragraph (random-uuid) *paragraph-type* (map-children convert-node node))]
-             (set! *paragraph-opened?* false)
-             para))
+        ;;  (is-li? node)
+        ;;  (do
+        ;;    (set! *paragraph-opened?* true)
+        ;;    (let [para (paragraph (random-uuid) *paragraph-type* (map-children convert-node node))]
+        ;;      (set! *paragraph-opened?* false)
+        ;;      para))
 
          ;; The pain continues...
-         (is-block-elem? node)
+         (or (is-li? node)
+             (is-block-elem? node))
          (if *paragraph-opened?*
            (map-children convert-node node)
-           (binding [*paragraph-type* (if *paragraph-type*
-                                        *paragraph-type*
-                                        (block-elem->para-type node))
-                     *paragraph-indented?* (if (indented? node)
-                                             true
-                                             *paragraph-indented?*)]
+           (binding [*paragraph-opened?* true
+                     *paragraph-type* (or *paragraph-type* (block-elem->para-type node))
+                     *paragraph-indented?* (if (indented? node) true *paragraph-indented?*)]
              (let [children (map-children convert-node node)
                    paragraph (paragraph (random-uuid) *paragraph-type* children)]
                (if *paragraph-indented?*
@@ -185,16 +184,21 @@
          (map-child-nodes convert-node node)
 
          (is-text-node? node)
-         (convert-text-node node)
+         (do #_(js-debugger) (convert-text-node node))
 
-         :else (throw "Unhandled condition in (convert-node)!")))))
+         :else (do
+                 (js-debugger)
+                 (throw "Unhandled condition in (convert-node)!"))))))
 
 (defn html->fragment
   "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
-        results (flatten (map convert-node body-contents))]
+        results (binding [*paragraph-opened?* false
+                          *paragraph-indented?* false
+                          *paragraph-type* :body]
+                  (flatten (map convert-node body-contents)))]
     (cond
       (= (-> results first type) r/Run)
       (p/fragment results)

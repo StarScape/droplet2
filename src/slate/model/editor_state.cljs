@@ -112,6 +112,7 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
+;; TODO: replace [EditorState [Run]] with this
 (defmethod insert [EditorState ParagraphFragment]
   [editor-state fragment]
   (insert editor-state (m/items fragment)))
@@ -134,6 +135,7 @@
                       (changelist :changed-uuids #{(sel/start-para selection)}
                                   :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))
 
+;; TODO: replace [EditorState [Paragraph]] with this
 (defmethod insert [EditorState DocumentFragment]
   [editor-state fragment]
   (insert editor-state (m/items fragment)))
