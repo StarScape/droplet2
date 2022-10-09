@@ -53,7 +53,7 @@
                (update-in (:runs p) [0 :text] #(.substr % 1))
                (:runs p))]
     (if (blank? p)
-      [:br]
+      [:br {:key (random-uuid)}]
       [tag {:style (merge default-p-styles (paragraph-css p))
             :key (random-uuid)}
        (render-runs runs)])))

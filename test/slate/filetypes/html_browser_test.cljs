@@ -101,6 +101,7 @@
 (comment
   (html-import/html->droplet test-file2)
   (html-import/html->droplet (:gdocs-complex paste-tests))
+  (html-import/html->fragment (:word-online-simple paste-tests))
   )
 
 (deftest whole-document-import
@@ -138,7 +139,10 @@
                         (paragraph (random-uuid) :ul [(run "UL 3")])
                         (paragraph [(run "")])
                         (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
-                        (paragraph [(run "")])])))))
+                        (paragraph [(run "")])]))))
+  (testing "can handle pastes from MS Word online"
+    (is (= (html-import/html->fragment (:gdocs-basic-two-style paste-tests))
+           (p/fragment [(run "Hello ") (run "there" #{:bold})])))))
 
 (def export1-expected
   (render-to-static-markup
