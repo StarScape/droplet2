@@ -146,7 +146,8 @@
            (p/fragment [(run "Hello ") (run "there" #{:bold})])))
     #_(is (= (html-import/html->fragment (:word-online-complex paste-tests))
            ;; NOTE: for some reason, MS word online leaves a trailing non-breaking space (nbsp) at the end of each paragraph.
-           ;; It may be worth trimming off the trailing whitespace of any paragraph at some point.
+           ;; It may be worth trimming off the trailing whitespace of any paragraph at some point. For now, this is fine and
+           ;; requires fewer special cases.
            (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1 ")])
                           (paragraph (random-uuid) :body [(run "This is an H2 ")])
                           (paragraph [(run " ")])

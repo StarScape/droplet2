@@ -127,11 +127,27 @@
 (declare ^:dynamic *paragraph-type*)
 (declare ^:dynamic *paragraph-indented?*)
 
+;; Some styles (like text-decoration and text-decoration-line) are propogated to children,
+;; but NOT inherited. This makes them a gigantic pain in th ass to detect with getComputedStyle,
+;; so our only options are (a) recurse all the way up on finding a text node to check if any of
+;; its ancestors have a propogated style property, which is wildly inefficient or (b) keep track
+;; of any elements with a propogated style like text-decoration in a dynamic var. This is the
+;; latter option.
+(def ^:dynamic *propogated-styles* #{})
+(defn- update-propogated-styles [node]
+  (if-not (is-elem? node)
+    *propogated-styles*
+    (let [computed-style (js/getComputedStyle node)
+          styles (transient #{})]
+      (when (= "line-through" (.-textDecorationLine computed-style))
+        (conj! styles :strikethrough))
+      (set/union *propogated-styles* (persistent! styles)))))
+
 (defn convert-text-node
   [text-node]
   (let [text (clean-whitespace (.-wholeText text-node))
         parent-elem (.-parentElement text-node)
-        formats (html-element->styles parent-elem)]
+        formats (set/union *propogated-styles* (html-element->styles parent-elem))]
     (cond
       (is-h1? parent-elem)
       (set! *paragraph-type* :h1)
@@ -143,9 +159,10 @@
 
 (defn convert-node
   ([node]
-   (js/console.log node)
+   #_(js/console.log node)
    (let [map-children #(flatten (map %1 (js/Array.from (.-children %2))))
          map-child-nodes #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
+     (binding [*propogated-styles* (update-propogated-styles node)]
        (cond
          (is-br? node)
          (p/empty-paragraph)
@@ -157,14 +174,6 @@
          (is-ol? node)
          (binding [*paragraph-type* :ol]
            (map-children convert-node node))
-
-         ;; Dear mother of christ above this is UGLY
-        ;;  (is-li? node)
-        ;;  (do
-        ;;    (set! *paragraph-opened?* true)
-        ;;    (let [para (paragraph (random-uuid) *paragraph-type* (map-children convert-node node))]
-        ;;      (set! *paragraph-opened?* false)
-        ;;      para))
 
          ;; The pain continues...
          (or (is-li? node)
@@ -184,11 +193,11 @@
          (map-child-nodes convert-node node)
 
          (is-text-node? node)
-         (do #_(js-debugger) (convert-text-node node))
+         (convert-text-node node)
 
          :else (do
                  (js-debugger)
-                 (throw "Unhandled condition in (convert-node)!"))))))
+                 (throw "Unhandled condition in (convert-node)!")))))))
 
 (defn html->fragment
   "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
