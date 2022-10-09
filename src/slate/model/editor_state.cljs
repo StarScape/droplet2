@@ -10,8 +10,8 @@
                                         len
                                         blank?] :as m]
             [slate.model.run :as r :refer [Run]]
-            [slate.model.paragraph :as p :refer [Paragraph]]
-            [slate.model.doc :as d]
+            [slate.model.paragraph :as p :refer [Paragraph ParagraphFragment]]
+            [slate.model.doc :as d :refer [DocumentFragment]]
             [slate.model.selection :as sel]
             [slate.model.navigation :as nav :refer [Navigable]]))
 
@@ -112,6 +112,10 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
+(defmethod insert [EditorState ParagraphFragment]
+  [editor-state fragment]
+  (insert editor-state (m/items fragment)))
+
 (defmethod insert [EditorState [Paragraph]]
   [{:keys [doc selection] :as editor-state}, paragraphs]
   (if (sel/range? selection)
@@ -129,6 +133,10 @@
                              :selection new-selection)
                       (changelist :changed-uuids #{(sel/start-para selection)}
                                   :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))
+
+(defmethod insert [EditorState DocumentFragment]
+  [editor-state fragment]
+  (insert editor-state (m/items fragment)))
 
 (defmethod insert [EditorState Paragraph]
   [editor-state paragraph]

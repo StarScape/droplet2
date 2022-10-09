@@ -189,7 +189,7 @@
 
          :else (throw "Unhandled condition in (convert-node)!")))))
 
-(defn html->droplet
+(defn html->fragment
   "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
@@ -207,7 +207,7 @@
 (defn html->doc
   [html-doc-str]
   ;; Just convert the DocumentFragment to a Document.
-  (let [paragraphs (:paragraphs (html->droplet html-doc-str))]
+  (let [paragraphs (:paragraphs (html->fragment html-doc-str))]
     (document paragraphs)))
 
 ;; TODO: rethink html import approach by recursing document tree and keeping track of style state

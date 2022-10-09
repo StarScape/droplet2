@@ -1,6 +1,7 @@
 (ns slate.clipboard
   (:require [clojure.string :as str]
             [slate.filetypes.export.html :refer [fragment->html]]
+            [slate.filetypes.import.html :refer [html->fragment]]
             [slate.model.common :as model :refer [TextContainer
                                                   selected-content
                                                   text]]
@@ -55,13 +56,18 @@
   (let [clipboard-data @*clipboard
         slate-copy-id (.. event -clipboardData (getData "slate-copy-id"))
         paste-from-slate? (= slate-copy-id (:copy-id clipboard-data))
+        html? (.. event -clipboardData -types (includes mime-html))
         plain-text? (.. event -clipboardData -types (includes mime-plaintext))]
     (cond
       paste-from-slate?
       (model/insert editor-state (:content clipboard-data))
 
+      html?
+      (let [fragment (html->fragment (.. event -clipboardData (getData mime-html)))]
+        (model/insert editor-state fragment))
+
       plain-text?
-      (model/insert editor-state (.. event -clipboardData (getData "Text")))
+      (model/insert editor-state (.. event -clipboardData (getData mime-plaintext)))
 
       :else
       (es/identity-update editor-state))))

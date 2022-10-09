@@ -111,13 +111,13 @@
 (deftest paste-import
   (testing "can handle pastes from google docs"
     (is (=
-         (html-import/html->droplet (:gdocs-basic-single-style paste-tests))
+         (html-import/html->fragment (:gdocs-basic-single-style paste-tests))
          (p/fragment [(run "Hello")])))
     (is (=
-         (html-import/html->droplet (:gdocs-basic-two-style paste-tests))
+         (html-import/html->fragment (:gdocs-basic-two-style paste-tests))
          (p/fragment [(run "Hello ") (run "there" #{:bold})])))
     (is (doc-frag=
-         (html-import/html->droplet (:gdocs-complex paste-tests))
+         (html-import/html->fragment (:gdocs-complex paste-tests))
          (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1")])
                         (paragraph (random-uuid) :h2 [(run "This is an H2")])
                         (paragraph [(run "")])
