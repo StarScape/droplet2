@@ -26,6 +26,15 @@
       (.write html-document-str)
       (.close))))
 
+(defn- root-font-size
+  "Returns root font size for document, in pixels."
+  [document]
+  (js/parseFloat (.-fontSize (js/getComputedStyle (.-documentElement document)))))
+
+(defn- rem->px
+  [node rem]
+  (* rem (root-font-size (.-ownerDocument node))))
+
 (defn- em->px
   [elem em]
   (* em (js/parseFloat (.-fontSize (js/getComputedStyle (.-parentElement elem))))))
@@ -85,7 +94,7 @@
 (defn is-h1? [node]
   (and (is-elem? node)
        (or (= "H1" (.-tagName node))
-           (>= (font-size-px node) (em->px node 2.0)))))
+           (>= (font-size-px node) (rem->px node 2.0)))))
 
 (defn is-h2? [node]
   (and (is-elem? node)
@@ -113,6 +122,7 @@
     (is-h1? elem) :h1
     (is-h2? elem) :h2))
 
+(declare ^:dynamic *paragraph-opened?*)
 (declare ^:dynamic *paragraph-type*)
 (declare ^:dynamic *paragraph-indented?*)
 
@@ -121,6 +131,7 @@
   (let [text (clean-whitespace (.-wholeText text-node))
         parent-elem (.-parentElement text-node)
         formats (html-element->styles parent-elem)]
+    text
     (cond
       (is-h1? parent-elem)
       (set! *paragraph-type* :h1)
@@ -132,8 +143,12 @@
 
 (defn convert-node
   ([node]
-   (let [map-children #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
+   (let [map-children #(flatten (map %1 (js/Array.from (.-children %2))))
+         map-child-nodes #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
        (cond
+         (is-br? node)
+         (p/empty-paragraph)
+
          (is-ul? node)
          (binding [*paragraph-type* :ul]
            (map-children convert-node node))
@@ -142,38 +157,40 @@
          (binding [*paragraph-type* :ol]
            (map-children convert-node node))
 
-         (is-br? node)
-         (p/empty-paragraph)
+         ;; Dear mother of christ above this is UGLY
+         (is-li? node)
+         (do
+           (set! *paragraph-opened?* true)
+           (let [para (paragraph (random-uuid) *paragraph-type* (map-children convert-node node))]
+             (set! *paragraph-opened?* false)
+             para))
 
+         ;; The pain continues...
          (is-block-elem? node)
-         (binding [*paragraph-type* (if *paragraph-type*
-                                      *paragraph-type*
-                                      (block-elem->para-type node))
-                   *paragraph-indented?* (if (indented? node)
-                                           true
-                                           *paragraph-indented?*)]
-           (let [children (map-children convert-node node)
-                 paragraph (paragraph (random-uuid) *paragraph-type* children)]
-             (if *paragraph-indented?*
-               (p/indent paragraph)
-               paragraph)))
+         (if *paragraph-opened?*
+           (map-children convert-node node)
+           (binding [*paragraph-type* (if *paragraph-type*
+                                        *paragraph-type*
+                                        (block-elem->para-type node))
+                     *paragraph-indented?* (if (indented? node)
+                                             true
+                                             *paragraph-indented?*)]
+             (let [children (map-children convert-node node)
+                   paragraph (paragraph (random-uuid) *paragraph-type* children)]
+               (if *paragraph-indented?*
+                 (p/indent paragraph)
+                 paragraph))))
 
          (is-inline-elem? node)
-         (map-children convert-node node)
-
-         (is-li? node)
-         (map-children convert-node node)
+         (map-child-nodes convert-node node)
 
          (is-text-node? node)
          (convert-text-node node)
 
-         :else (do
-                 (js/console.log node)
-                 (js-debugger)
-                 (throw "Unhandled condition in convert-node."))))))
+         :else (throw "Unhandled condition in (convert-node)!")))))
 
 (defn html->droplet
-  "Converts an HTML string to a Droplet native format (either a Document, DocumentFragment, or ParagraphFragment)."
+  "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
@@ -186,6 +203,12 @@
       (doc/fragment results)
 
       :else (throw (js/Error. "Unrecognized type of `results` when converting HTML.")))))
+
+(defn html->doc
+  [html-doc-str]
+  ;; Just convert the DocumentFragment to a Document.
+  (let [paragraphs (:paragraphs (html->droplet html-doc-str))]
+    (document paragraphs)))
 
 ;; TODO: rethink html import approach by recursing document tree and keeping track of style state
 ;;       pull in some test string from g docs and see how they import

@@ -22,9 +22,7 @@
      (map #(dissoc % :uuid) (:paragraphs frag2))))
 
 (def test-file1 (slurp-file "test_files/html/the_quiet_universe.html"))
-
 (def test-file2 (slurp-file "test_files/html/conversion_test.html"))
-
 (def paste-tests (let [get-name-and-html (fn [s]
                                            (let [idx (.indexOf s "\n")]
                                              [(keyword (.substr s 0 idx))
@@ -101,15 +99,16 @@
              (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
 
 (comment
-  (doc= (document [(paragraph [(run "Hello!")])])
-        (document [(paragraph [(run "Hello!")])]))
+  (html-import/html->droplet test-file2)
+  (html-import/html->droplet (:gdocs-complex paste-tests))
   )
 
-(deftest html->droplet
+(deftest whole-document-import
   (testing "can import from google docs"
-    (is (doc= (html-import/html->droplet test-file1) test-file1-expected))
-    (is (doc= (html-import/html->droplet test-file2) test-file2-expected)))
+    (is (doc= (html-import/html->doc test-file1) test-file1-expected))
+    (is (doc= (html-import/html->doc test-file2) test-file2-expected))))
 
+(deftest paste-import
   (testing "can handle pastes from google docs"
     (is (=
          (html-import/html->droplet (:gdocs-basic-single-style paste-tests))
