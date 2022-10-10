@@ -144,31 +144,31 @@
   (testing "can handle pastes from MS Word online"
     (is (= (html-import/html->fragment (:word-online-simple paste-tests))
            (p/fragment [(run "Hello ") (run "there" #{:bold})])))
-    #_(is (= (html-import/html->fragment (:word-online-complex paste-tests))
-           ;; NOTE: for some reason, MS word online leaves a trailing non-breaking space (nbsp) at the end of each paragraph.
-           ;; It may be worth trimming off the trailing whitespace of any paragraph at some point. For now, this is fine and
-           ;; requires fewer special cases.
-           (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1 ")])
-                          (paragraph (random-uuid) :body [(run "This is an H2 ")])
-                          (paragraph [(run " ")])
-                          (paragraph [(run "Normal paragraph with a sentence, some ")
-                                      (run "italics" #{:italic})
-                                      (run ", ")
-                                      (run "bold" #{:bold})
-                                      (run ", and ")
-                                      (run "strikethrough" #{:strikethrough})
-                                      (run ". ")])
-                          (paragraph [(run " ")])
-                          (paragraph (random-uuid) :ol [(run "OL 1 ")])
-                          (paragraph (random-uuid) :ol [(run "OL 2 ")])
-                          (paragraph (random-uuid) :ol [(run "OL 3 ")])
-                          (paragraph [(run " ")])
-                          (paragraph (random-uuid) :ul [(run "UL 1 ")])
-                          (paragraph (random-uuid) :ul [(run "UL 2 ")])
-                          (paragraph (random-uuid) :ul [(run "UL 3 ")])
-                          (paragraph [(run " ")])
-                          (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. ")])
-                          (paragraph [(run " ")])])))))
+    #_(is (doc-frag= (html-import/html->fragment (:word-online-complex paste-tests))
+                   ;; NOTE: for some reason, MS word online leaves a trailing non-breaking space (nbsp) at the end of each paragraph.
+                   ;; It may be worth trimming off the trailing whitespace of any paragraph at some point. For now, this is fine and
+                   ;; requires fewer special cases.
+                   (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1 ")])
+                                  (paragraph (random-uuid) :body [(run "This is an H2 ")])
+                                  (paragraph [(run " ")])
+                                  (paragraph [(run "Normal paragraph with a sentence, some ")
+                                              (run "italics" #{:italic})
+                                              (run ", ")
+                                              (run "bold" #{:bold})
+                                              (run ", and ")
+                                              (run "strikethrough" #{:strikethrough})
+                                              (run ". ")])
+                                  (paragraph [(run " ")])
+                                  (paragraph (random-uuid) :ol [(run "OL 1 ")])
+                                  (paragraph (random-uuid) :ol [(run "OL 2 ")])
+                                  (paragraph (random-uuid) :ol [(run "OL 3 ")])
+                                  (paragraph [(run " ")])
+                                  (paragraph (random-uuid) :ul [(run "UL 1 ")])
+                                  (paragraph (random-uuid) :ul [(run "UL 2 ")])
+                                  (paragraph (random-uuid) :ul [(run "UL 3 ")])
+                                  (paragraph [(run " ")])
+                                  (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. ")])
+                                  (paragraph [(run " ")])])))))
 
 (def export1-expected
   (render-to-static-markup
