@@ -50,7 +50,9 @@
 
 (defn- text-node?
   [iframe-node]
-  (= js/Node.TEXT_NODE (.-nodeType iframe-node)))
+  (if (nil? iframe-node)
+    false
+    (= js/Node.TEXT_NODE (.-nodeType iframe-node))))
 
 (defn- elem?
   [iframe-node]
@@ -77,9 +79,11 @@
 (defn- parent-of-first-text-node
   "Returns the parent element of the first text node contains inside the element."
   [node]
-  (if (text-node? node)
-    (.-parentElement node)
-    (recur (aget (.-childNodes node) 0))))
+  {:pre [(some? node)]}
+  (cond
+    (zero? (.-childElementCount node)) node
+    (text-node? node) (.-parentElement node)
+    :else (recur (aget (.-childNodes node) 0))))
 
 (defn- h1-font-size? [elem]
   (>= (font-size-px elem) (rem->px elem 2.0)))
@@ -97,7 +101,7 @@
   (and (elem? node)
        (or (= "H2" (.-tagName node))
            (h2-font-size? node)
-           (h2-font-size? (parent-of-first-text-node node)))))
+           #_(h2-font-size? (parent-of-first-text-node node)))))
 
 (defn- block-elem? [node]
   (and (elem? node)

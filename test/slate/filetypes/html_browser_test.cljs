@@ -144,7 +144,7 @@
   (testing "can handle pastes from MS Word online"
     (is (= (html-import/html->fragment (:word-online-simple paste-tests))
            (p/fragment [(run "Hello ") (run "there" #{:bold})])))
-    #_(is (doc-frag= (html-import/html->fragment (:word-online-complex paste-tests))
+    (is (doc-frag= (html-import/html->fragment (:word-online-complex paste-tests))
                    ;; NOTE: for some reason, MS word online leaves a trailing non-breaking space (nbsp) at the end of each paragraph.
                    ;; It may be worth trimming off the trailing whitespace of any paragraph at some point. For now, this is fine and
                    ;; requires fewer special cases.
