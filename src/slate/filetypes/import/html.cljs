@@ -26,6 +26,11 @@
       (.write html-document-str)
       (.close))))
 
+(defn- clean-whitespace
+  "Removes non-standard whitespace characters and makes them regular spaces"
+  [str]
+  (.replace str (js/RegExp "\\s") " "))
+
 (defn- root-font-size
   "Returns root font size for document, in pixels."
   [document]
@@ -39,24 +44,81 @@
   [elem em]
   (* em (js/parseFloat (.-fontSize (js/getComputedStyle (.-parentElement elem))))))
 
-(defn- child-nodes
-  [html-node]
-  (js/Array.from (.-childNodes html-node)))
+(defn- font-size-px [elem]
+  (let [computed-style (js/getComputedStyle elem)]
+    (js/parseFloat (.-fontSize computed-style))))
 
-(defn- is-text-node?
+(defn- text-node?
   [iframe-node]
-  (let [iframe @*iframe]
-    (instance? (.. iframe -contentWindow -Text) iframe-node)))
+  (= js/Node.TEXT_NODE (.-nodeType iframe-node)))
 
-(defn- is-elem?
+(defn- elem?
   [iframe-node]
   (let [iframe @*iframe]
     (instance? (.. iframe -contentWindow -Element) iframe-node)))
 
-(defn- clean-whitespace
-  "Removes non-standard whitespace characters and makes them regular spaces"
-  [str]
-  (.replace str (js/RegExp "\\s") " "))
+(defn- ul? [node]
+  (and (elem? node) (= "UL" (.-tagName node))))
+
+(defn- ol? [node]
+  (and (elem? node) (= "OL" (.-tagName node))))
+
+(defn- li? [node]
+  (and (elem? node)
+       (or (= "LI" (.-tagName node))
+           (= "list-item" (.-display (js/getComputedStyle node))))))
+
+(defn- p? [node]
+  (and (elem? node) (= "P" (.-tagName node))))
+
+(defn- br? [node]
+  (and (elem? node) (= "BR" (.-tagName node))))
+
+(defn- parent-of-first-text-node
+  "Returns the parent element of the first text node contains inside the element."
+  [node]
+  (if (text-node? node)
+    (.-parentElement node)
+    (recur (aget (.-childNodes node) 0))))
+
+(defn- h1-font-size? [elem]
+  (>= (font-size-px elem) (rem->px elem 2.0)))
+
+(defn- h1? [node]
+  (and (elem? node)
+       (or (= "H1" (.-tagName node))
+           (h1-font-size? node)
+           (h1-font-size? (parent-of-first-text-node node)))))
+
+(defn- h2-font-size? [elem]
+  (>= (font-size-px elem) (rem->px elem 1.3)))
+
+(defn- h2? [node]
+  (and (elem? node)
+       (or (= "H2" (.-tagName node))
+           (h2-font-size? node)
+           (h2-font-size? (parent-of-first-text-node node)))))
+
+(defn- block-elem? [node]
+  (and (elem? node)
+       (let [computed-style (js/getComputedStyle node)]
+         (or (= "block" (.-display computed-style))
+             (= "list-item" (.-display computed-style))))))
+
+(defn- inline-elem? [node]
+  (and (elem? node)
+       (let [computed-style (js/getComputedStyle node)]
+         (or (= "inline" (.-display computed-style))
+             (= "inline-block" (.-display computed-style))))))
+
+(defn- no-block-level-children? [node]
+  (and (elem? node)
+       (let [children (js/Array.from (.-children node))]
+         (and (pos? (.-length children))
+              (every? (complement block-elem?) children)))))
+
+(defn- indented? [elem]
+  (pos? (js/parseFloat (.-textIndent (js/getComputedStyle elem)))))
 
 (defn- html-element->styles
   [html-element]
@@ -70,64 +132,6 @@
       (conj! styles :strikethrough))
     (persistent! styles)))
 
-(defn font-size-px [elem]
-  (let [computed-style (js/getComputedStyle elem)]
-    (js/parseFloat (.-fontSize computed-style))))
-
-(defn is-ul? [node]
-  (and (is-elem? node) (= "UL" (.-tagName node))))
-
-(defn is-ol? [node]
-  (and (is-elem? node) (= "OL" (.-tagName node))))
-
-(defn is-li? [node]
-  (and (is-elem? node)
-       (or (= "LI" (.-tagName node))
-           (= "list-item" (.-display (js/getComputedStyle node))))))
-
-(defn is-p? [node]
-  (and (is-elem? node) (= "P" (.-tagName node))))
-
-(defn is-br? [node]
-  (and (is-elem? node) (= "BR" (.-tagName node))))
-
-(defn is-h1? [node]
-  (and (is-elem? node)
-       (or (= "H1" (.-tagName node))
-           (>= (font-size-px node) (rem->px node 2.0)))))
-
-(defn is-h2? [node]
-  (and (is-elem? node)
-       (or (= "H2" (.-tagName node))
-           (>= (font-size-px node) (rem->px node 1.3)))))
-
-(defn is-block-elem? [node]
-  (and (is-elem? node)
-       (let [computed-style (js/getComputedStyle node)]
-         (= "block" (.-display computed-style)))))
-
-(defn is-inline-elem? [node]
-  (and (is-elem? node)
-       (let [computed-style (js/getComputedStyle node)]
-         (or (= "inline" (.-display computed-style))
-             (= "inline-block" (.-display computed-style))))))
-
-(defn indented? [elem]
-  (pos? (js/parseFloat (.-textIndent (js/getComputedStyle elem)))))
-
-(defn block-elem->para-type
-  [elem]
-  (cond
-    (is-li? elem) nil
-    (is-p? elem) :body
-    (is-h1? elem) :h1
-    (is-h2? elem) :h2))
-
-(declare ^:dynamic *paragraph-opened?*)
-(declare ^:dynamic *paragraph-type*)
-(declare ^:dynamic *paragraph-indented?*)
-(def ^:dynamic *level* 0)
-
 ;; Some styles (like text-decoration and text-decoration-line) are propogated to children,
 ;; but NOT inherited. This makes them a gigantic pain in th ass to detect with getComputedStyle,
 ;; so our only options are (a) recurse all the way up on finding a text node to check if any of
@@ -136,7 +140,7 @@
 ;; latter option.
 (def ^:dynamic *propogated-styles* #{})
 (defn- update-propogated-styles [node]
-  (if-not (is-elem? node)
+  (if-not (elem? node)
     *propogated-styles*
     (let [computed-style (js/getComputedStyle node)
           styles (transient #{})]
@@ -144,16 +148,35 @@
         (conj! styles :strikethrough))
       (set/union *propogated-styles* (persistent! styles)))))
 
+(declare ^:dynamic *paragraph-indented?*)
+(def ^:dynamic *level* 0)
+
+(declare ^:dynamic *paragraph-type*)
+(defn- update-paragraph-type [node]
+  (if (block-elem? node)
+    (cond
+      ;; If *paragraph-type* has been set to a list type somewhere up the call stack, keep it.
+      (or (= *paragraph-type* :ul)
+          (= *paragraph-type* :ol))
+      *paragraph-type*
+
+      (ul? node) :ul
+      (ol? node) :ol
+      (h1? node) :h1
+      (h2? node) :h2
+      :else :body)
+    *paragraph-type*))
+
 (defn convert-text-node
   [text-node]
   (let [text (clean-whitespace (.-wholeText text-node))
         parent-elem (.-parentElement text-node)
         formats (set/union *propogated-styles* (html-element->styles parent-elem))]
-    (cond
-      (is-h1? parent-elem)
+    #_(cond
+      (h1? parent-elem)
       (set! *paragraph-type* :h1)
 
-      (is-h2? parent-elem)
+      (h2? parent-elem)
       (set! *paragraph-type* :h2))
 
     (run text formats)))
@@ -164,41 +187,32 @@
      ;; (js/console.log (str "Level " *level* ", Node: " node " *paragraph-type* " *paragraph-type*))
      (let [map-children #(flatten (map %1 (js/Array.from (.-children %2))))
            map-child-nodes #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
-       (binding [*propogated-styles* (update-propogated-styles node)]
+       (binding [*propogated-styles* (update-propogated-styles node)
+                 *paragraph-type* (update-paragraph-type node)]
          (cond
-           (is-br? node)
+           (br? node)
            (p/empty-paragraph)
 
-           (is-ul? node)
-           (do
-             (set! *paragraph-type* :ul)
-             (map-children convert-node node))
+           (and (or (block-elem? node) (li? node))
+                (no-block-level-children? node))
+           (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-children convert-node node))]
+             (if (indented? node)
+               (p/indent paragraph)
+               paragraph))
 
-           (is-ol? node)
-           (do
-             (set! *paragraph-type* :ol)
-             (map-children convert-node node))
+           (ul? node)
+           (map-children convert-node node)
 
-         ;; The pain continues...
-           (or (is-li? node)
-               (is-block-elem? node))
-           (if *paragraph-opened?*
-             (map-children convert-node node)
-             (binding [*paragraph-opened?* true
-                       *paragraph-type* (or *paragraph-type* (block-elem->para-type node))
-                       *paragraph-indented?* (if (indented? node) true *paragraph-indented?*)]
-               (let [prev-ptype *paragraph-type*
-                     children (map-children convert-node node)
-                     paragraph (paragraph (random-uuid) *paragraph-type* children)]
-                 (set! *paragraph-type* prev-ptype)
-                 (if *paragraph-indented?*
-                   (p/indent paragraph)
-                   paragraph))))
+           (ol? node)
+           (map-children convert-node node)
 
-           (is-inline-elem? node)
+           (or (li? node) (block-elem? node))
+           (map-children convert-node node)
+
+           (inline-elem? node)
            (map-child-nodes convert-node node)
 
-           (is-text-node? node)
+           (text-node? node)
            (convert-text-node node)
 
            :else (do
@@ -210,8 +224,7 @@
   [html-str]
   (let [dom (add-to-iframe! html-str)
         body-contents (js/Array.from (.. dom -body -children))
-        results (binding [*paragraph-opened?* false
-                          *paragraph-indented?* false
+        results (binding [*paragraph-indented?* false
                           *paragraph-type* :body]
                   (flatten (map convert-node body-contents)))]
     (cond
