@@ -54,6 +54,18 @@
     false
     (= js/Node.TEXT_NODE (.-nodeType iframe-node))))
 
+(defn- elem-node?
+  [iframe-node]
+  (if (nil? iframe-node)
+    false
+    (= js/Node.ELEMENT_NODE (.-nodeType iframe-node))))
+
+(defn- comment-node?
+  [iframe-node]
+  (if (nil? iframe-node)
+    false
+    (= js/Node.COMMENT_NODE (.-nodeType iframe-node))))
+
 (defn- elem?
   [iframe-node]
   (let [iframe @*iframe]
@@ -76,8 +88,17 @@
 (defn- br? [node]
   (and (elem? node) (= "BR" (.-tagName node))))
 
+(defn- remove-comment-nodes!
+  "Removes all comments nodes from HTML document."
+  [root-node]
+  (let [child-nodes (js/Array.from (.-childNodes root-node))]
+    (doseq [child child-nodes]
+      (if (comment-node? child)
+        (.removeChild root-node child)
+        (remove-comment-nodes! child)))))
+
 (defn- parent-of-first-text-node
-  "Returns the parent element of the first text node contains inside the element."
+  "Returns the parent element of the first text node contained inside the element."
   [node]
   {:pre [(some? node)]}
   (cond
@@ -101,7 +122,7 @@
   (and (elem? node)
        (or (= "H2" (.-tagName node))
            (h2-font-size? node)
-           #_(h2-font-size? (parent-of-first-text-node node)))))
+           (h2-font-size? (parent-of-first-text-node node)))))
 
 (defn- block-elem? [node]
   (and (elem? node)
@@ -199,7 +220,7 @@
 
            (and (or (block-elem? node) (li? node))
                 (no-block-level-children? node))
-           (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-children convert-node node))]
+           (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))]
              (if (indented? node)
                (p/indent paragraph)
                paragraph))
@@ -227,6 +248,7 @@
   "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
+        _ (remove-comment-nodes! (.-body dom))
         body-contents (js/Array.from (.. dom -body -children))
         results (binding [*paragraph-indented?* false
                           *paragraph-type* :body]
