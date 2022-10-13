@@ -114,15 +114,19 @@
            (h2-font-size? (parent-of-first-text-node node)))))
 
 (defn- ul? [node]
-  (and (elem? node) (= "UL" (.-tagName node))))
+  (and (elem? node)
+       (or (= "UL" (.-tagName node))
+           ;; Element is considered :ul if it starts with "· " (· is a middle-dot).
+           ;; This is a bit of a sloppy heuristic, but necessary since some word
+           ;; processors (looking at you, Word), spit out non-standard HTML lists.
+           (.test #"^·\s" (.-innerText node)))))
 
 (defn- ol? [node]
   (and (elem? node)
        (or (= "OL" (.-tagName node))
-           ;; Element is considered :ol if it starts with "1. ", "2. ", etc.
-           ;; This is a bit of a sloppy heuristic, but necessary given that some
-           ;; word processors (looking at you, Word), spit out non-standard HTML
-           ;; lists.
+           ;; Element is considered :ol if it starts with "1. ", "2. ", "3. " etc.
+           ;; This is a bit of a sloppy heuristic, but necessary since some word
+           ;; processors (looking at you, Word), spit out non-standard HTML lists.
            (.test #"^[0-9]+\.\s" (.-innerText node)))))
 
 (defn- li? [node]
@@ -214,10 +218,15 @@
 
          (and (or (block-elem? node) (li? node))
               (no-block-level-children? node))
-         (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))]
-           (if (indented? node)
-             (p/indent paragraph)
-             paragraph))
+         (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))
+               paragraph (if (indented? node)
+                           (p/indent paragraph)
+                           paragraph)
+               paragraph (if (or (= :ol (:type paragraph))
+                                 (= :ul (:type paragraph)))
+                           (p/trim-start paragraph)
+                           paragraph)]
+           paragraph)
 
          (ul? node)
          (map-children convert-node node)
