@@ -175,9 +175,27 @@
   (testing "can handle pastes from MS Word (desktop version)"
     (is (= (html-import/html->fragment (:word-desktop-simple paste-tests))
            (p/fragment [(run "Hello ") (run "world" #{:italic})])))
-    (comment
-      (html-import/html->fragment (:word-desktop-complex paste-tests))
-      )))
+    (is (doc-frag= (html-import/html->fragment (:word-desktop-complex paste-tests))
+                   (doc/fragment [(paragraph (random-uuid) :h1 [(run "This is an H1")])
+                                  (paragraph (random-uuid) :h2 [(run "This is an H2")])
+                                  (paragraph [(run " ")])
+                                  (paragraph [(run "Normal paragraph with a sentence, some ")
+                                              (run "italics" #{:italic})
+                                              (run ", ")
+                                              (run "bold" #{:bold})
+                                              (run ", and ")
+                                              (run "strikethrough" #{:strikethrough})
+                                              (run ".")])
+                                  (paragraph [(run " ")])
+                                  (paragraph (random-uuid) :ol [(run "OL 1")])
+                                  (paragraph (random-uuid) :ol [(run "OL 2")])
+                                  (paragraph (random-uuid) :ol [(run "OL 3")])
+                                  (paragraph [(run " ")])
+                                  (paragraph (random-uuid) :ul [(run "UL 1")])
+                                  (paragraph (random-uuid) :ul [(run "UL 2")])
+                                  (paragraph (random-uuid) :ul [(run "UL 3")])
+                                  (paragraph [(run " ")])
+                                  (paragraph [(run "\u2003And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after.")])])))))
 
 (def export1-expected
   (render-to-static-markup

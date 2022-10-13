@@ -29,7 +29,7 @@
 (defn- clean-whitespace
   "Removes non-standard whitespace characters and makes them regular spaces"
   [str]
-  (.replace str (js/RegExp "\\s") " "))
+  (.replaceAll str (js/RegExp. "\\s" "g") " "))
 
 (defn- root-font-size
   "Returns root font size for document, in pixels."
