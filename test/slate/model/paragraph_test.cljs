@@ -271,3 +271,9 @@
     (is (= "o" (sl/char-before mypara (selection ["123" 3]))))
     (is (= "" (sl/char-before mypara (selection ["123" 4]))))
     #_(is (thrown? js/Error (sl/char-before mypara (selection ["123" 4]))))))
+
+(deftest trim-test
+  (let [uuid (random-uuid)
+        p (paragraph uuid [(r/run " \u00a0\n\tHello ") (r/run "world! \u00a0\n\t" #{:italic})])]
+    (is (= (p/trim-start p) (paragraph uuid [(r/run "Hello ") (r/run "world! \u00a0\n\t" #{:italic})])))
+    (is (= (p/trim-end p) (paragraph uuid [(r/run " \u00a0\n\tHello ") (r/run "world!" #{:italic})])))))

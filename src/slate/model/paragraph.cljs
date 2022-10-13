@@ -291,6 +291,16 @@
                                (vec)
                                (update-in [0 :text] #(str "\u2003" %))))))
 
+(defn trim-start
+  "Removes any leading whitespace from the paragraph (including tabs)."
+  [paragraph]
+  (update-in paragraph [:runs 0 :text] #(.trimStart %)))
+
+(defn trim-end
+  "Removes any leading whitespace from the paragraph (including tabs)."
+  [paragraph]
+  (update-in paragraph [:runs (dec (count (:runs paragraph))) :text] #(.trimEnd %)))
+
 (extend-type Paragraph
   Selectable
   (char-at [para sel]
