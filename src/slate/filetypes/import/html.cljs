@@ -69,18 +69,7 @@
 (defn- elem?
   [iframe-node]
   (let [iframe @*iframe]
-    (instance? (.. iframe -contentWindow -Element) iframe-node)))
-
-(defn- ul? [node]
-  (and (elem? node) (= "UL" (.-tagName node))))
-
-(defn- ol? [node]
-  (and (elem? node) (= "OL" (.-tagName node))))
-
-(defn- li? [node]
-  (and (elem? node)
-       (or (= "LI" (.-tagName node))
-           (= "list-item" (.-display (js/getComputedStyle node))))))
+    (instance? (.. iframe -contentWindow -HTMLElement) iframe-node)))
 
 (defn- p? [node]
   (and (elem? node) (= "P" (.-tagName node))))
@@ -123,6 +112,23 @@
        (or (= "H2" (.-tagName node))
            (h2-font-size? node)
            (h2-font-size? (parent-of-first-text-node node)))))
+
+(defn- ul? [node]
+  (and (elem? node) (= "UL" (.-tagName node))))
+
+(defn- ol? [node]
+  (and (elem? node)
+       (or (= "OL" (.-tagName node))
+           ;; Element is considered :ol if it starts with "1. ", "2. ", etc.
+           ;; This is a bit of a sloppy heuristic, but necessary given that some
+           ;; word processors (looking at you, Word), spit out non-standard HTML
+           ;; lists.
+           (.test #"^[0-9]+\.\s" (.-innerText node)))))
+
+(defn- li? [node]
+  (and (elem? node)
+       (or (= "LI" (.-tagName node))
+           (= "list-item" (.-display (js/getComputedStyle node))))))
 
 (defn- block-elem? [node]
   (and (elem? node)
@@ -173,10 +179,7 @@
         (conj! styles :strikethrough))
       (set/union *propogated-styles* (persistent! styles)))))
 
-(declare ^:dynamic *paragraph-indented?*)
-(def ^:dynamic *level* 0)
-
-(declare ^:dynamic *paragraph-type*)
+(def ^:dynamic *paragraph-type* :body)
 (defn- update-paragraph-type [node]
   (if (block-elem? node)
     (cond
@@ -197,52 +200,43 @@
   (let [text (clean-whitespace (.-wholeText text-node))
         parent-elem (.-parentElement text-node)
         formats (set/union *propogated-styles* (html-element->styles parent-elem))]
-    #_(cond
-      (h1? parent-elem)
-      (set! *paragraph-type* :h1)
-
-      (h2? parent-elem)
-      (set! *paragraph-type* :h2))
-
     (run text formats)))
 
 (defn convert-node
   ([node]
-   (binding [*level* (inc *level*)]
-     ;; (js/console.log (str "Level " *level* ", Node: " node " *paragraph-type* " *paragraph-type*))
-     (let [map-children #(flatten (map %1 (js/Array.from (.-children %2))))
-           map-child-nodes #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
-       (binding [*propogated-styles* (update-propogated-styles node)
-                 *paragraph-type* (update-paragraph-type node)]
-         (cond
-           (br? node)
-           (p/empty-paragraph)
+   (let [map-children #(flatten (map %1 (js/Array.from (.-children %2))))
+         map-child-nodes #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
+     (binding [*propogated-styles* (update-propogated-styles node)
+               *paragraph-type* (update-paragraph-type node)]
+       (cond
+         (br? node)
+         (p/empty-paragraph)
 
-           (and (or (block-elem? node) (li? node))
-                (no-block-level-children? node))
-           (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))]
-             (if (indented? node)
-               (p/indent paragraph)
-               paragraph))
+         (and (or (block-elem? node) (li? node))
+              (no-block-level-children? node))
+         (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))]
+           (if (indented? node)
+             (p/indent paragraph)
+             paragraph))
 
-           (ul? node)
-           (map-children convert-node node)
+         (ul? node)
+         (map-children convert-node node)
 
-           (ol? node)
-           (map-children convert-node node)
+         (ol? node)
+         (map-children convert-node node)
 
-           (or (li? node) (block-elem? node))
-           (map-children convert-node node)
+         (or (li? node) (block-elem? node))
+         (map-children convert-node node)
 
-           (inline-elem? node)
-           (map-child-nodes convert-node node)
+         (inline-elem? node)
+         (map-child-nodes convert-node node)
 
-           (text-node? node)
-           (convert-text-node node)
+         (text-node? node)
+         (convert-text-node node)
 
-           :else (do
-                   (js-debugger)
-                   (throw "Unhandled condition in (convert-node)!"))))))))
+         :else (do
+                 #_(js-debugger)
+                 (throw "Unhandled condition in (convert-node)!")))))))
 
 (defn html->fragment
   "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
@@ -250,8 +244,7 @@
   (let [dom (add-to-iframe! html-str)
         _ (remove-comment-nodes! (.-body dom))
         body-contents (js/Array.from (.. dom -body -children))
-        results (binding [*paragraph-indented?* false
-                          *paragraph-type* :body]
+        results (binding [*paragraph-type* :body]
                   (flatten (map convert-node body-contents)))]
     (cond
       (= (-> results first type) r/Run)
