@@ -226,7 +226,7 @@
                                  (= :ul (:type paragraph)))
                            (p/trim-start paragraph)
                            paragraph)]
-           paragraph)
+           (p/trim-end paragraph))
 
          (ul? node)
          (map-children convert-node node)
