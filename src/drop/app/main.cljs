@@ -6,7 +6,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; Prioritized:
-;; TODO: Rich text paste from desktop Word
 ;; TODO: Test with large documents
 ;; TODO: Space out paragraphs somewhat
 ;; TODO: Change tab rendering from em space to <span> so that width can be styled

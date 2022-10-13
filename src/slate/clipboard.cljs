@@ -57,14 +57,17 @@
         slate-copy-id (.. event -clipboardData (getData "slate-copy-id"))
         paste-from-slate? (= slate-copy-id (:copy-id clipboard-data))
         html? (.. event -clipboardData -types (includes mime-html))
+        html-converted (when html?
+                         (try
+                           (html->fragment (.. event -clipboardData (getData mime-html)))
+                           (catch js/Error _e nil)))
         plain-text? (.. event -clipboardData -types (includes mime-plaintext))]
     (cond
       paste-from-slate?
       (model/insert editor-state (:content clipboard-data))
 
-      html?
-      (let [fragment (html->fragment (.. event -clipboardData (getData mime-html)))]
-        (model/insert editor-state fragment))
+      (and html? html-converted)
+      (model/insert editor-state html-converted)
 
       plain-text?
       (model/insert editor-state (.. event -clipboardData (getData mime-plaintext)))
