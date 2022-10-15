@@ -372,11 +372,15 @@
    - `interceptor` Interceptor to fire
    - `event`: Raw JS event object"
   [*ui-state interceptor event]
+  (when (= interceptor slate.default-interceptors/select-all)
+    (js/console.profile "select all"))
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
         opts (select-keys interceptor [:add-to-history-immediately? :include-in-history? :input-name])]
-    (fire-update! *ui-state editor-update event opts)))
+    (fire-update! *ui-state editor-update event opts))
+  (when (= interceptor slate.default-interceptors/select-all)
+    (js/console.profileEnd "select all")))
 
 (defn fire-interceptor!
   [*ui-state interceptor event]
@@ -548,7 +552,9 @@
                            (.focus hidden-input #js {:preventScroll true})
                            (reset! *editor-surface-clicked? true)
                            (reset! *mousedown-event e)
-                           (fire-interceptor! *ui-state (get-interceptor :click) e)))
+                           (js/console.profile "click-event")
+                           (fire-interceptor! *ui-state (get-interceptor :click) e)
+                           (js/console.profileEnd "click-event")))
 
       (.addEventListener outer-dom-elem "mousedown"
                          (fn [e]

@@ -6,6 +6,7 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; Prioritized:
+;; TODO: Test converting big HTML document; return nil on unrecognized objects, but send warning to console; throw in dev
 ;; TODO: Test with large documents
 ;; TODO: Space out paragraphs somewhat
 ;; TODO: Change tab rendering from em space to <span> so that width can be styled

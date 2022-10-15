@@ -79,6 +79,12 @@
         [chars-fit, (apply str chars-left)]
         (recur (next chars-left) new-chars-fit)))))
 
+;; TODO: There some to be a performance bottleneck in here. A lot of it has to do with
+;; the usage of lazy seqs in here, it looks like. Take away the lazy-ness and then profile.
+
+;; TODO: Make a perf test--call from-para on a REALLY big paragraph confirm that it takes a long time to run.
+;; Then use this as our metric for performance improvments.
+
 (defn max-words
   "Takes the maximum number of words from string `src` without exceeding `width-left`,
    as measured by function `measure-fn`. Returns two strings: all the text added,
@@ -131,6 +137,7 @@
    an extra line to the end of lines if necessary. Returns updated list of lines, and
    a run with text that did not fit on line (can be empty), as a pair."
   [lines run paragraph-type width measure-fn]
+  {:pre [(vector? lines)]}
   (let [width-left (- width (:width (peek lines)))
         [new-span, remaining] (max-span-from-run run paragraph-type width-left width measure-fn)
         new-lines (cond-> lines
@@ -154,6 +161,7 @@
   ([runs paragraph-type width measure-fn]
    (lineify [(empty-line)] runs paragraph-type width measure-fn))
   ([lines [run & runs] paragraph-type width measure-fn]
+   {:pre [(vector? lines)]}
    (if-not run
      lines
      (let [[new-lines, leftover] (add-max-to-last-line lines run paragraph-type width measure-fn)
@@ -198,6 +206,7 @@
         updated-vms (as-> viewmodels vms
                       (apply dissoc vms deleted-uuids)
                       (reduce (fn [new-vms uuid]
-                                (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn)))
+                                (let [from (from-para (get-para uuid) elem-width measure-fn)]
+                                  (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn))))
                               vms (concat inserted-uuids changed-uuids)))]
     updated-vms))

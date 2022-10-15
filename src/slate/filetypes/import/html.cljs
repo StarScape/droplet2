@@ -155,6 +155,10 @@
 (defn- indented? [elem]
   (pos? (js/parseFloat (.-textIndent (js/getComputedStyle elem)))))
 
+(defn- display-none? [node]
+  (and (elem? node)
+       (= "none" (.-display (js/getComputedStyle node)))))
+
 (defn- html-element->styles
   [html-element]
   (let [computed-style (js/getComputedStyle html-element)
@@ -207,45 +211,52 @@
     (run text formats)))
 
 (defn convert-node
-  ([node]
-   (let [map-children #(flatten (map %1 (js/Array.from (.-children %2))))
-         map-child-nodes #(flatten (map %1 (js/Array.from (.-childNodes %2))))]
-     (binding [*propogated-styles* (update-propogated-styles node)
-               *paragraph-type* (update-paragraph-type node)]
-       (cond
-         (br? node)
-         (p/empty-paragraph)
+  [node]
+  (let [map-children #(filter some? (flatten (map %1 (js/Array.from (.-children %2)))))
+        map-child-nodes #(filter some? (flatten (map %1 (js/Array.from (.-childNodes %2)))))]
+    (binding [*propogated-styles* (update-propogated-styles node)
+              *paragraph-type* (update-paragraph-type node)]
+      (cond
+        (br? node)
+        (p/empty-paragraph)
 
-         (and (or (block-elem? node) (li? node))
-              (no-block-level-children? node))
-         (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))
-               paragraph (if (indented? node)
-                           (p/indent paragraph)
-                           paragraph)
-               paragraph (if (or (= :ol (:type paragraph))
-                                 (= :ul (:type paragraph)))
-                           (p/trim-start paragraph)
-                           paragraph)]
-           (p/trim-end paragraph))
+        (and (or (block-elem? node) (li? node))
+             (no-block-level-children? node))
+        (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))
+              paragraph (if (indented? node)
+                          (p/indent paragraph)
+                          paragraph)
+              paragraph (if (or (= :ol (:type paragraph))
+                                (= :ul (:type paragraph)))
+                          (p/trim-start paragraph)
+                          paragraph)]
+          (p/trim-end paragraph))
 
-         (ul? node)
-         (map-children convert-node node)
+        (ul? node)
+        (map-children convert-node node)
 
-         (ol? node)
-         (map-children convert-node node)
+        (ol? node)
+        (map-children convert-node node)
 
-         (or (li? node) (block-elem? node))
-         (map-children convert-node node)
+        (or (li? node) (block-elem? node))
+        (map-children convert-node node)
 
-         (inline-elem? node)
-         (map-child-nodes convert-node node)
+        (inline-elem? node)
+        (map-child-nodes convert-node node)
 
-         (text-node? node)
-         (convert-text-node node)
+        (text-node? node)
+        (convert-text-node node)
 
-         :else (do
-                 #_(js-debugger)
-                 (throw "Unhandled condition in (convert-node)!")))))))
+        (display-none? node)
+        nil
+
+        :else (do
+                #_(js-debugger)
+                (js/console.error "Node: " node)
+                (throw (js/Error. "Unhandled condition in (convert-node)!")))))))
+
+(defn convert-all-nodes [nodes]
+  (filter some? (flatten (map convert-node nodes))))
 
 (defn html->fragment
   "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
@@ -254,7 +265,7 @@
         _ (remove-comment-nodes! (.-body dom))
         body-contents (js/Array.from (.. dom -body -children))
         results (binding [*paragraph-type* :body]
-                  (flatten (map convert-node body-contents)))]
+                  (convert-all-nodes body-contents))]
     (cond
       (= (-> results first type) r/Run)
       (p/fragment results)
