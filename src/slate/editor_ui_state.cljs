@@ -372,14 +372,14 @@
    - `interceptor` Interceptor to fire
    - `event`: Raw JS event object"
   [*ui-state interceptor event]
-  (when (= interceptor slate.default-interceptors/select-all)
+  #_(when (= interceptor slate.default-interceptors/select-all)
     (js/console.profile "select all"))
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
         opts (select-keys interceptor [:add-to-history-immediately? :include-in-history? :input-name])]
     (fire-update! *ui-state editor-update event opts))
-  (when (= interceptor slate.default-interceptors/select-all)
+  #_(when (= interceptor slate.default-interceptors/select-all)
     (js/console.profileEnd "select all")))
 
 (defn fire-interceptor!

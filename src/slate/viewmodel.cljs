@@ -36,6 +36,7 @@
 (defn empty-span [] (->Span "" #{} 0 0))
 (defn empty-line [] (->Line [(empty-span)] 0 0 0))
 
+;; TODO: get-words is a significant bottleneck as well, see if we can reduce calls
 (defn get-words
   "Splits string `s` into a vector of words."
   [s]
@@ -43,6 +44,7 @@
   (str/split s #"(\s+)")
   #_(str/split s #"( )+"))
 
+;; TODO: clean this up to make it more performant.
 (defn add-span
   "Adds the span to the given line and updates the line's width."
   [line span]
