@@ -21,7 +21,8 @@
    frameworks that also happen to use that term."
   (:require [clojure.string :as str]
             [slate.model.run :as r]
-            [slate.measurement :refer [fake-measure-fn ruler]]))
+            [slate.measurement :refer [fake-measure-fn ruler]]
+            [dev.performance-utils :as perf-utils :refer-macros [inside-time-measurement!]]))
 
 ;; It is worth noting that this is some of my least favorite code in the whole project.
 ;; I don't even like having this layer of indirection _here_, and I would gladly get rid
