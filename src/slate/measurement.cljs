@@ -1,7 +1,8 @@
 (ns slate.measurement
   "Functions for measuring the widths of text as they will appear in the actual DOM."
   (:require [clojure.string :as str]
-            [slate.view :refer [formats->css-classes paragraph-type->css-class]]))
+            [slate.view :refer [formats->css-classes paragraph-type->css-class]]
+            [dev.performance-utils :refer-macros [inside-time-measurement!]]))
 
 (defn- create-elem!
   "Creates measurement element and adds it to the DOM."
@@ -39,14 +40,17 @@
 (defn measure
   "Helper function for `ruler`. Not private and __can__ be used directly, but generally should not be."
   ([elem cache text]
+   (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
    (measure elem cache text #{} :body))
   ([_elem _cache _text _formats]
    (throw "Invalid arity of measurement function!")
    #_(measure elem cache text formats nil))
   ([elem cache text formats paragraph-type]
+   (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
    (let [formats-hash (hash (seq formats))
          type-hash (hash paragraph-type)
          measure-char (fn [char]
+                        (set! js/window.measureCharCalls (inc js/window.measureCharCalls))
                         (let [cache-key (str char "-" formats-hash "-" type-hash)
                               cache-val (aget cache cache-key)]
                           (if cache-val
@@ -55,6 +59,7 @@
                               (apply-css! elem formats paragraph-type)
                               (set! (.-innerHTML elem) char)
                               (aset cache cache-key (.. elem (getBoundingClientRect) -width))))))]
+     ;;(when js/window.logText (js/console.log (str "text: \"" text "\"")))
      (->> text (map measure-char) (reduce +)))))
 
 (defn ruler
@@ -77,8 +82,7 @@
   (let [cache #js {}
         elem (create-elem! shadow-root font-size font-family)]
     (fn [& args]
-      (set! js/window.measureFnCalled (inc js/window.measureFnCalled))
-      (apply measure elem cache args))))
+      (inside-time-measurement! "measure-fn" (apply measure elem cache args)))))
 
 (defn ruler-for-elem
   "Returns a measurement function for the given DOM element.

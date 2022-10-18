@@ -57,16 +57,25 @@
                       (when-not
                        (throw (js/Error. "measure-fn not found, cannot run perf test."))))
          start-time (js/performance.now)]
-     (set! js/window.measureFnCalled 0)
+     (set! js/window.measureFnCalls 0)
+     (set! js/window.measureCharCalls 0)
+     (set! js/window.logText true)
      (perf-utils/start-time-measurement! "get-words")
+     (perf-utils/start-time-measurement! "measure-fn")
      ;; (js/console.profile "paragraph-layout-performance-test")
+
      (vm/from-para para 500 measure-fn)
+
      ;; (js/console.profileEnd "paragraph-layout-performance-test")
+     (set! js/window.logText false)
      (let [end-time (js/performance.now)
-           get-words-time (perf-utils/stop-time-measurement! "get-words")]
-       (str "Time elapsed: " (- end-time start-time) "ms"
-            ", measure-fn called: " js/window.measureFnCalled " times"
-            ", get-words total time: " get-words-time "ms")))))
+           get-words-time (perf-utils/stop-time-measurement! "get-words")
+           measure-fn-time (perf-utils/stop-time-measurement! "measure-fn")]
+       (str "Time: " (- end-time start-time) "ms"
+            ", measure-fn calls: " js/window.measureFnCalls
+            ", measure-char calls: " js/window.measureCharCalls
+            ", measure-fn time: " measure-fn-time "ms"
+            ", get-words time: " get-words-time "ms")))))
 (comment
   ;; 2000 will give a paragraph of roughly the same length as my big test document.
   (get-words-perf-test long-str 1000)
