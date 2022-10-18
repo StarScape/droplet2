@@ -71,6 +71,7 @@
   ;; 2000 will give a paragraph of roughly the same length as my big test document.
   (get-words-perf-test long-str 1000)
   (perf-test (paragraph [(run short-str)]))
+  (perf-test (paragraph [(run long-str)]))
   (perf-test 2000 3 15)
   (perf-test (paragraph))
   (vm/from-para (paragraph [(run (gen-sentences 10 3 15))])
