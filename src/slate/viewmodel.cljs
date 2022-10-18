@@ -42,9 +42,9 @@
   [s]
   ;; TODO: is this the correct way to split words?
   (str/split s #"(\s+)")
+  #_(.split s #"(\s+)")
   #_(str/split s #"( )+"))
 
-;; TODO: clean this up to make it more performant.
 (defn add-span
   "Adds the span to the given line and updates the line's width."
   [line span]
@@ -68,6 +68,7 @@
   (let [prev-line (or (peek lines) (empty-line))]
     (conj lines (->Line [] (:end-offset prev-line) (:end-offset prev-line) 0))))
 
+;; TODO: clean this up to make it more performant.
 (defn max-chars-from-word
   "Takes the maximum number of chars from string `word` without exceeding
    `width`, and returns a tuple of [chars that fit, chars that did not].
@@ -111,6 +112,11 @@
         [words-fit, (apply str words)]))))
 
 (comment
+  (max-words "A long source string that will stretch across the page and hopefully be split into multiple lines"
+             #{}, :body, 500 500 (:measure-fn @js/globalSlateInstance))
+  )
+
+(comment
   (max-words "the second line now. " #{} 300 300 fake-measure-fn)
   (max-words "foobar bizz buzz hello hello a goodbye" #{} 300 300 fake-measure-fn))
 
@@ -119,13 +125,13 @@
    the width of `width-left`, then returns the span and a run with the text that would
    not fit (if any)."
   [run paragraph-type width-left line-width measure-fn]
-  (let [span
-        (->Span "" (:formats run) 0 0)
-
-        [span-text, remaining-text]
-        (max-words (:text run) (:formats run) paragraph-type width-left line-width measure-fn)]
-    [(assoc span :text span-text
-                 :width (measure-fn span-text (:formats run) paragraph-type))
+  (let [[fitted-text, remaining-text] (max-words (:text run)
+                                                 (:formats run)
+                                                 paragraph-type
+                                                 width-left
+                                                 line-width
+                                                 measure-fn)]
+    [(->Span fitted-text (:formats run) 0 (measure-fn fitted-text (:formats run) paragraph-type))
      (r/run remaining-text (:formats run))]))
 
 (comment
@@ -138,19 +144,19 @@
   "Adds the maximum amount of chars from `run` onto the last line in `line`, adding
    an extra line to the end of lines if necessary. Returns updated list of lines, and
    a run with text that did not fit on line (can be empty), as a pair."
-  [lines run paragraph-type width measure-fn]
+  [lines run paragraph-type doc-width measure-fn]
   {:pre [(vector? lines)]}
-  (let [width-left (- width (:width (peek lines)))
-        [new-span, remaining] (max-span-from-run run paragraph-type width-left width measure-fn)
+  (let [width-left (- doc-width (:width (peek lines)))
+        [new-span, run-remaining] (max-span-from-run run paragraph-type width-left doc-width measure-fn)
         new-lines (cond-> lines
                     ;; If any words were able to fit, put them on the line
                     (seq (:text new-span))
                     (update (dec (count lines)) add-span new-span)
 
                     ;; If there is any remaining text that would not fit, add a new line
-                    (seq (:text remaining))
+                    (pos? (.-length (:text run-remaining)))
                     (add-line))]
-    [new-lines, remaining]))
+    [new-lines, run-remaining]))
 
 (comment
   (add-max-to-last-line [(empty-line)] (r/run "foobar bizz buzz hello hello goodbye") 300 fake-measure-fn)

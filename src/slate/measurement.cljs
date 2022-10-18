@@ -76,7 +76,9 @@
   [shadow-root font-size font-family]
   (let [cache #js {}
         elem (create-elem! shadow-root font-size font-family)]
-    (fn [& args] (apply measure elem cache args))))
+    (fn [& args]
+      (set! js/window.measureFnCalled (inc js/window.measureFnCalled))
+      (apply measure elem cache args))))
 
 (defn ruler-for-elem
   "Returns a measurement function for the given DOM element.

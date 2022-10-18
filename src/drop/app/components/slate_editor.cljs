@@ -19,7 +19,9 @@
   (some-> ui-state :history (history/current-state) :doc))
 
 (declare *slate-instance)
-(when utils/DEV (set! js/globalSlateInstance *slate-instance))
+
+(set! js/window.globalSlateInstance *slate-instance)
+
 (def *full-screen? (r/atom false))
 (defonce *open-file (doto (persistent-atom ::open-file
                                            {:path nil, :last-saved-doc nil}
