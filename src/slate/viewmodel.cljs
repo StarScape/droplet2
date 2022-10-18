@@ -97,10 +97,16 @@
   [words formats paragraph-type width-left line-width measure-fn]
   (loop [words-fit "", width-used 0, words-idx 0]
     (let [next-word (aget words words-idx)
-          next-word-width (or (some-> next-word (measure-fn formats paragraph-type)) 0)
-          next-word-width-trimmed (or (some-> next-word (.trimEnd) (measure-fn formats paragraph-type)) 0)
+          next-word-trimmed (some-> next-word (.trimEnd))
+          next-word-trimmed-width (or (some-> next-word-trimmed (measure-fn formats paragraph-type)) 0)
+          next-word-width (if (= next-word next-word-trimmed)
+                            next-word-trimmed-width
+                            (let [trailing-white-space-start (- (.-length next-word) (inc (- (.-length next-word) (.-length next-word-trimmed))))
+                                  trailing-white-space (.substring next-word trailing-white-space-start)
+                                  trailing-white-space-width (measure-fn trailing-white-space formats paragraph-type)]
+                              (+ next-word-trimmed-width trailing-white-space-width)))
           new-width (+ width-used next-word-width)
-          new-width-trimmed (+ width-used next-word-width-trimmed)
+          new-width-trimmed (+ width-used next-word-trimmed-width)
           new-text (str words-fit next-word)
           #_#_new-width (measure-fn (.trimEnd new-text) formats paragraph-type)]
       ;;(js/console.table new-width)
