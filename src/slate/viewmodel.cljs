@@ -119,55 +119,25 @@
         (and next-word (> next-word-width line-width))
         (let [width-left (- initial-width-left width-used)
               [word-fit, not-fit] (max-chars-from-word next-word formats paragraph-type width-left measure-fn)]
-          [word-fit, (str not-fit (.join (.slice words (inc words-idx))))])
+          {:text-fit word-fit
+           :text-fit-width (+ width-used (measure-fn word-fit formats paragraph-type))
+           :text-not-fit (str not-fit (.join (.slice words (inc words-idx))))})
 
         ;; No words added
-        :else [words-fit, (.join (.slice words words-idx) "")]))))
-
-;; OLD
-#_(defn max-words
-  "Takes the maximum number of words from string `src` without exceeding `width-left`,
-   as measured by function `measure-fn`. Returns two strings: all the text added,
-   and all the text that would not fit (which is an empty string if everything fit)."
-  [words formats paragraph-type width-left line-width measure-fn]
-  (loop [words-fit "", words words]
-    (let [next-word (first words)
-          new-text (str words-fit next-word)
-          ;; TODO: measure only the differences, not the whole string each time
-          new-width (measure-fn (.trimEnd new-text) formats paragraph-type)]
-      (cond
-        (and (seq words) (<= (int new-width) width-left))
-        (recur new-text (rest words))
-
-        ;; If there is a word that is greater than the total allowed
-        ;; line width, fit what we can in this span and move on.
-        (and (seq words) (> (measure-fn next-word formats paragraph-type) line-width))
-        (let [left-on-line (- width-left (measure-fn words-fit formats paragraph-type))
-              [word-fit, not-fit] (max-chars-from-word next-word formats paragraph-type left-on-line measure-fn)]
-          [word-fit, (apply str not-fit (next words))])
-
-        :else
-        [words-fit, (apply str words)]))))
-
-(comment
-  (max-words "A long source string that will stretch across the page and hopefully be split into multiple lines"
-             #{}, :body, 500 500 (:measure-fn @js/globalSlateInstance))
-  (max-words "the second line now. " #{} 300 300 fake-measure-fn)
-  (max-words "foobar bizz buzz hello hello a goodbye" #{} 300 300 fake-measure-fn))
+        :else {:text-fit words-fit
+               :text-fit-width width-used
+               :text-not-fit (.join (.slice words words-idx) "")}))))
 
 (defn max-span-from-run
   "Constructs a span of as many of the words from `run` as it can without exceeding
    the width of `width-left`, then returns the span and a run with the text that would
    not fit (if any)."
-  [run paragraph-type width-left line-width measure-fn]
-  (let [[fitted-text, remaining-text] (max-words (get-words (:text run))
-                                                 (:formats run)
-                                                 paragraph-type
-                                                 width-left
-                                                 line-width
-                                                 measure-fn)]
-    [(->Span fitted-text (:formats run) 0 (measure-fn fitted-text (:formats run) paragraph-type))
-     (r/run remaining-text (:formats run))]))
+  [run paragraph-type initial-width-left total-line-width measure-fn]
+  (let [{:keys [text-fit
+                text-fit-width
+                text-not-fit]} (max-words (get-words (:text run)) (:formats run) paragraph-type initial-width-left total-line-width measure-fn)]
+    [(->Span text-fit (:formats run) 0 text-fit-width #_(measure-fn text-fit (:formats run) paragraph-type))
+     (r/run text-not-fit (:formats run))]))
 
 (comment
   (max-span-from-run (r/run "foobar bizz buzz hello hello goodbye") 300 300 fake-measure-fn)
