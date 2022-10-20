@@ -94,7 +94,7 @@
   "Takes the maximum number of words from string `src` without exceeding `width-left`,
    as measured by function `measure-fn`. Returns two strings: all the text added,
    and all the text that would not fit (which is an empty string if everything fit)."
-  [words formats paragraph-type width-left line-width measure-fn]
+  [words formats paragraph-type initial-width-left line-width measure-fn]
   (loop [words-fit "", width-used 0, words-idx 0]
     (let [next-word (aget words words-idx)
           next-word-trimmed (some-> next-word (.trimEnd))
@@ -111,14 +111,14 @@
           #_#_new-width (measure-fn (.trimEnd new-text) formats paragraph-type)]
       ;;(js/console.table new-width)
       (cond
-        (and next-word (<= (int new-width-trimmed) width-left))
+        (and next-word (<= (int new-width-trimmed) initial-width-left))
         (recur new-text new-width (inc words-idx))
 
         ;; If there is a word that is greater than the total allowed
         ;; line width, fit what we can in this span and move on.
-        (and next-word (> (measure-fn next-word formats paragraph-type) line-width))
-        (let [left-on-line (- width-left (measure-fn words-fit formats paragraph-type))
-              [word-fit, not-fit] (max-chars-from-word next-word formats paragraph-type left-on-line measure-fn)]
+        (and next-word (> next-word-width line-width))
+        (let [width-left (- initial-width-left width-used)
+              [word-fit, not-fit] (max-chars-from-word next-word formats paragraph-type width-left measure-fn)]
           [word-fit, (str not-fit (.join (.slice words (inc words-idx))))])
 
         ;; No words added

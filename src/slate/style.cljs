@@ -77,9 +77,6 @@
    [(keyword ".slate-range-selection:has(+ .slate-range-selection)") {:border-top-right-radius 0
                                                                       :border-bottom-right-radius 0}]
 
-   ;; TODO: this is the wrong approach. Use a CSS variable for this and change it when the program isn't focused
-   [:.slate-range-selection-blurred {:background-color "#e0e1e2"}]
-
    [:ul :ol {:padding 0
              :margin 0}]
    [:.ul-format :.ol-format {:display "list-item"

@@ -79,6 +79,7 @@
 (comment
   ;; 2000 will give a paragraph of roughly the same length as my big test document.
   (get-words-perf-test long-str 1000)
+  (.-length short-str)
   (perf-test (paragraph [(run short-str)]))
   (perf-test (paragraph [(run long-str)]))
   (perf-test 2000 3 15)
