@@ -55,10 +55,6 @@
 (declare make-seq)
 (declare assoc-node)
 
-;; TODO: I totally did not realize this, but inside a deftype declaration you can just reference fields
-;; by their names, similar to Java, without any (.-whatever this) business. This stuff can probably be
-;; cleaned up in light of that...
-
 (deftype Node [^obj value ^string prev-uuid ^string next-uuid]
   IEquiv
   (-equiv [^Node node other]

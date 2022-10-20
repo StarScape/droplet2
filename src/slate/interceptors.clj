@@ -48,7 +48,6 @@
                       :should-fire? ~should-fire?
                       :interceptor-fn (fn [~@arglist] ~@fn-body)}))
 
-;; TODO: 
 (defmacro definterceptor
   "Same as `interceptor`, but `def`'s the resulting interceptor using `name`.
    
