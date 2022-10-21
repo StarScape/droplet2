@@ -80,7 +80,8 @@
           new-width (measure-fn new-chars-fit formats paragraph-type)]
       (if (or (> new-width width)
               (empty? chars-left))
-        [chars-fit, (apply str chars-left)]
+        {:chars-fit chars-fit
+         :chars-not-fit (apply str chars-left)}
         (recur (next chars-left) new-chars-fit)))))
 
 ;; TODO: There some to be a performance bottleneck in here. A lot of it has to do with
@@ -107,9 +108,7 @@
                               (+ next-word-trimmed-width trailing-white-space-width)))
           new-width (+ width-used next-word-width)
           new-width-trimmed (+ width-used next-word-trimmed-width)
-          new-text (str words-fit next-word)
-          #_#_new-width (measure-fn (.trimEnd new-text) formats paragraph-type)]
-      ;;(js/console.table new-width)
+          new-text (str words-fit next-word)]
       (cond
         (and next-word (<= (int new-width-trimmed) initial-width-left))
         (recur new-text new-width (inc words-idx))
@@ -118,10 +117,10 @@
         ;; line width, fit what we can in this span and move on.
         (and next-word (> next-word-width line-width))
         (let [width-left (- initial-width-left width-used)
-              [word-fit, not-fit] (max-chars-from-word next-word formats paragraph-type width-left measure-fn)]
-          {:text-fit word-fit
-           :text-fit-width (+ width-used (measure-fn word-fit formats paragraph-type))
-           :text-not-fit (str not-fit (.join (.slice words (inc words-idx))))})
+              {:keys [chars-fit, chars-not-fit]} (max-chars-from-word next-word formats paragraph-type width-left measure-fn)]
+          {:text-fit chars-fit
+           :text-fit-width (+ width-used (measure-fn chars-fit formats paragraph-type))
+           :text-not-fit (str chars-not-fit (.join (.slice words (inc words-idx))))})
 
         ;; No words added
         :else {:text-fit words-fit
@@ -136,7 +135,7 @@
   (let [{:keys [text-fit
                 text-fit-width
                 text-not-fit]} (max-words (get-words (:text run)) (:formats run) paragraph-type initial-width-left total-line-width measure-fn)]
-    [(->Span text-fit (:formats run) 0 text-fit-width #_(measure-fn text-fit (:formats run) paragraph-type))
+    [(->Span text-fit (:formats run) 0 text-fit-width)
      (r/run text-not-fit (:formats run))]))
 
 (comment
