@@ -69,7 +69,6 @@
   (let [prev-line (or (peek lines) (empty-line))]
     (conj lines (->Line [] (:end-offset prev-line) (:end-offset prev-line) 0))))
 
-;; TODO: clean this up to make it more performant.
 (defn max-chars-from-word
   "Takes the maximum number of chars from string `word` without exceeding
    `width`, and returns a tuple of [chars that fit, chars that did not].
@@ -80,17 +79,12 @@
           new-width (measure-fn new-chars-fit formats paragraph-type)]
       (if (or (> new-width width)
               (empty? chars-left))
-        {:chars-fit chars-fit
-         :chars-not-fit (apply str chars-left)}
+        [chars-fit, (apply str chars-left)]
         (recur (next chars-left) new-chars-fit)))))
 
 ;; TODO: There some to be a performance bottleneck in here. A lot of it has to do with
 ;; the usage of lazy seqs in here, it looks like. Take away the lazy-ness and then profile.
 
-;; TODO: Make a perf test--call from-para on a REALLY big paragraph confirm that it takes a long time to run.
-;; Then use this as our metric for performance improvments.
-
-;; TODO: try switching to the previous approach of vec offsets but with the JS str.split() and measure the difference
 (defn max-words
   "Takes the maximum number of words from string `src` without exceeding `width-left`,
    as measured by function `measure-fn`. Returns two strings: all the text added,
@@ -117,7 +111,7 @@
         ;; line width, fit what we can in this span and move on.
         (and next-word (> next-word-width line-width))
         (let [width-left (- initial-width-left width-used)
-              {:keys [chars-fit, chars-not-fit]} (max-chars-from-word next-word formats paragraph-type width-left measure-fn)]
+              [chars-fit, chars-not-fit] (max-chars-from-word next-word formats paragraph-type width-left measure-fn)]
           {:text-fit chars-fit
            :text-fit-width (+ width-used (measure-fn chars-fit formats paragraph-type))
            :text-not-fit (str chars-not-fit (.join (.slice words (inc words-idx))))})

@@ -548,6 +548,8 @@
     (let [*mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
       (.addEventListener editor-elem "mousedown"
                          (fn [e]
+                           ;; TODO: thoroughly profile all of this flow: find out exactly WHERE the bottleneck is that's causing
+                           ;; the lagginess on click inside the large document. Is it still present if I turn rendering off?
                            (.preventDefault e)
                            (.focus hidden-input #js {:preventScroll true})
                            (reset! *editor-surface-clicked? true)

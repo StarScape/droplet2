@@ -38,8 +38,6 @@
   (let [sentences (repeatedly n #(gen-sentence min-sentence-length max-sentence-length))]
     (str/join " " sentences)))
 
-;; (def test-paragraph (paragraph [(run paragraph-text)]))
-
 (defn aget-vs-first-test [n-samples]
   (perf-utils/start-time-measurement! "aget-time")
   (perf-utils/start-time-measurement! "first-time")
@@ -70,9 +68,9 @@
         average (/ (reduce + runs) (count runs))]
     (str "Average time was: " average "ms")))
 
-(defn perf-test
+(defn vm-perf-test
   ([n min-sentence-length max-sentence-length]
-   (perf-test (paragraph [(run (gen-sentences n min-sentence-length max-sentence-length))])))
+   (vm-perf-test (paragraph [(run (gen-sentences n min-sentence-length max-sentence-length))])))
   ([para]
    (let [measure-fn (doto (:measure-fn @js/window.globalSlateInstance)
                       (when-not
@@ -97,14 +95,35 @@
             ", measure-char calls: " js/window.measureCharCalls
             ", measure-fn time: " measure-fn-time "ms"
             ", get-words time: " get-words-time "ms")))))
+
+(defn measure-fn-perf-test [input n-samples profile?]
+  (let [measure-fn (doto (:measure-fn @js/window.globalSlateInstance)
+                     (when-not
+                      (throw (js/Error. "measure-fn not found, cannot run perf test."))))
+        runtimes (repeatedly n-samples
+                             (fn []
+                               (perf-utils/start-time-measurement! "measure-fn-perf-test")
+                               (when profile? (js/console.profile "measure-fn-perf-test"))
+                               (doseq [char input]
+                                 (measure-fn char #{} :body))
+                               (when profile? (js/console.profileEnd "measure-fn-perf-test"))
+                               (perf-utils/stop-time-measurement! "measure-fn-perf-test")))]
+    (/ (reduce + runtimes) n-samples)))
+
 (comment
   ;; 2000 will give a paragraph of roughly the same length as my big test document.
   (get-words-perf-test long-str 1000)
+
+  (measure-fn-perf-test long-str 1 false)
+  (measure-fn-perf-test long-str 10 false)
+  (measure-fn-perf-test long-str 30 false)
+  (measure-fn-perf-test long-str 50 false)
+
   (.-length short-str)
-  (perf-test (paragraph [(run short-str)]))
-  (perf-test (paragraph [(run long-str)]))
-  (perf-test 2000 3 15)
-  (perf-test (paragraph))
+  (vm-perf-test (paragraph [(run short-str)]))
+  (vm-perf-test (paragraph [(run long-str)]))
+  (vm-perf-test 2000 3 15)
+  (vm-perf-test (paragraph))
   (vm/from-para (paragraph [(run (gen-sentences 10 3 15))])
                 500
                 (:measure-fn @js/globalSlateInstance))

@@ -47,7 +47,7 @@
    #_(measure elem cache text formats nil))
   ([elem cache text formats paragraph-type]
    (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
-   (let [formats-hash (hash (seq formats))
+   (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
          measure-char (fn [char]
                         (set! js/window.measureCharCalls (inc js/window.measureCharCalls))
