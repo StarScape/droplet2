@@ -422,7 +422,8 @@
   [*ui-state location & {:keys [focus?] :or {focus? true}}]
   (let [editor-update (es/set-selection (history/current-state (:history @*ui-state)) location)]
     (fire-update! *ui-state editor-update {:include-in-history? false
-                                           :focus? focus?})))
+                                           :focus? focus?})
+    (view/scroll-to-caret! (:shadow-root @*ui-state))))
 
 (defn goto-current-found!
   "Equivalent to calling goto-location! with the current found location."
@@ -554,9 +555,9 @@
                            (.focus hidden-input #js {:preventScroll true})
                            (reset! *editor-surface-clicked? true)
                            (reset! *mousedown-event e)
-                           (js/console.profile "click-event")
+                           #_(js/console.profile "click-event")
                            (fire-interceptor! *ui-state (get-interceptor :click) e)
-                           (js/console.profileEnd "click-event")))
+                           #_(js/console.profileEnd "click-event")))
 
       (.addEventListener outer-dom-elem "mousedown"
                          (fn [e]

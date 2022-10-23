@@ -845,3 +845,9 @@
      (when focus?
        (.focus hidden-input #js {:preventScroll true}))))
   ([shadow-root hidden-input] (relocate-hidden-input! shadow-root hidden-input true)))
+
+(defn scroll-to-caret!
+  "Centers the text caret in the viewport."
+  [shadow-root]
+  (let [cursor-elem (.querySelector shadow-root ".slate-text-caret")]
+    (.scrollIntoView cursor-elem #js {:block "center"})))

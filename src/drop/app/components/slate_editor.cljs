@@ -9,7 +9,6 @@
             [slate.editor-ui-state :as ui-state]
             [slate.filetypes.core :as filetypes]
             [slate.model.doc :as doc]
-            [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
