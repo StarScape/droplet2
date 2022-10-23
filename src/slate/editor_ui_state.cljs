@@ -1,5 +1,6 @@
 (ns slate.editor-ui-state
-  (:require-macros [slate.interceptors :refer [definterceptor]])
+  (:require-macros [slate.interceptors :refer [definterceptor]]
+                   [dev.performance-utils :refer [inside-time-measurement!]])
   (:require [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
@@ -332,15 +333,29 @@
    Arg opts: {:include-in-history? :add-to-history-immediately?}."
   ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately? focus?]
                                    :or {focus? true}, :as opts}]
+   (perf-utils/start-time-measurement! "update-vms")
+   (perf-utils/pause-time-measurement! "update-vms")
    (let [ui-state @*ui-state ; only deref once a cycle
          editor-state (history/current-state (:history ui-state))
          old-doc (:doc editor-state)
          new-doc (-> editor-update :editor-state :doc)
-         new-ui-state (-> ui-state
-                          (update :history update-history editor-update opts)
-                          (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
-                          (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
-                          (update-viewmodels-to-history-tip))]
+         #_#_new-ui-state (-> ui-state
+                              (update :history update-history editor-update opts)
+                              (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
+                              (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
+                              (update-viewmodels-to-history-tip))
+         new-ui-state (inside-time-measurement! "update-history" (update ui-state :history update-history editor-update opts))
+         new-ui-state (inside-time-measurement! "update-word-count" (update new-ui-state :word-count word-count/update-count old-doc new-doc (:changelist editor-update)))
+         new-ui-state (inside-time-measurement! "update-input-history" (update new-ui-state :input-history #(if event (interceptors/add-to-input-history % opts event) %)))
+         new-ui-state (inside-time-measurement! "update-vms" (update-viewmodels-to-history-tip new-ui-state))
+         vms-time (perf-utils/stop-time-measurement! "update-vms")
+         input-history-time (perf-utils/stop-time-measurement! "update-input-history")
+         word-count-time (perf-utils/stop-time-measurement! "update-word-count")
+         history-time (perf-utils/stop-time-measurement! "update-history")]
+     #_(js/console.log (str "update-history time: " history-time "\n"
+                          "update-word-count time: " word-count-time "\n"
+                          "update-input-history time: " input-history-time "\n"
+                          "update-vms time: " vms-time))
      (perf-utils/start-time-measurement! "fire-update!-sync-dom")
      (sync-dom! (:shadow-root new-ui-state)
                 (:dom-elem new-ui-state)
@@ -350,7 +365,7 @@
                 (:viewmodels new-ui-state)
                 (:changelist editor-update)
                 :focus? focus?)
-    ;;  (js/console.log (str "Update time spent in sync-dom: " (perf-utils/stop-time-measurement! "fire-update!-sync-dom")))
+     (js/console.log (str "Update time spent in sync-dom: " (perf-utils/stop-time-measurement! "fire-update!-sync-dom")))
      (reset! *ui-state new-ui-state)
 
      (cond
@@ -381,7 +396,7 @@
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
         opts (select-keys interceptor [:add-to-history-immediately? :include-in-history? :input-name])]
-    (js/console.log (str "firing: " (:input-name interceptor)))
+    (js/console.log (str "\nfiring: " (:input-name interceptor)))
     (fire-update! *ui-state editor-update event opts))
   #_(when (= interceptor slate.default-interceptors/select-all)
     (js/console.profileEnd "select all")))
@@ -560,9 +575,9 @@
                            (reset! *editor-surface-clicked? true)
                            (reset! *mousedown-event e)
                            #_(js/console.profile "click-event")
-                           #_(perf-utils/start-time-measurement! "full-click")
+                           (perf-utils/start-time-measurement! "full-click")
                            (fire-interceptor! *ui-state (get-interceptor :click) e)
-                          ;;  (js/console.log (str "Click time: " (perf-utils/stop-time-measurement! "full-click")))
+                           (js/console.log (str "Click time: " (perf-utils/stop-time-measurement! "full-click")))
                            #_(js/console.profileEnd "click-event")))
 
       (.addEventListener js/window "mousemove"

@@ -6,6 +6,11 @@
   [{:keys [most-recent-start-time total] :as entry}]
   (assoc entry :total (+ total (- (js/performance.now) most-recent-start-time))))
 
+(defn measurement-started?
+  "Returns true if the measurement registered with `name` has been started. May or may not be paused."
+  [name]
+  (some? (get @registry name)))
+
 (defn start-time-measurement!
   [name]
   (swap! registry assoc name {:most-recent-start-time (js/performance.now)
