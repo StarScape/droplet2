@@ -88,12 +88,21 @@
       (conj formats paragraph-type)
       formats)))
 
-(defn update-viewmodels-to-history-tip
+#_(defn update-viewmodels-to-history-tip
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
   [ui-state]
   (let [{:keys [viewmodels history measure-fn]} ui-state
         {:keys [editor-state changelist]} (:tip history)
+        new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (view/elem-width ui-state) measure-fn changelist)]
+    (assoc ui-state :viewmodels new-viewmodels)))
+
+(defn update-viewmodels
+  "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
+   :history object. See the history namespace for more info."
+  [ui-state {:keys [editor-state changelist] :as editor-update}]
+  (let [{:keys [viewmodels measure-fn]} ui-state
+        ;;{:keys [editor-state changelist]} (:tip history)
         new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (view/elem-width ui-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
@@ -347,7 +356,7 @@
          new-ui-state (inside-time-measurement! "update-history" (update ui-state :history update-history editor-update opts))
          new-ui-state (inside-time-measurement! "update-word-count" (update new-ui-state :word-count word-count/update-count old-doc new-doc (:changelist editor-update)))
          new-ui-state (inside-time-measurement! "update-input-history" (update new-ui-state :input-history #(if event (interceptors/add-to-input-history % opts event) %)))
-         new-ui-state (inside-time-measurement! "update-vms" (update-viewmodels-to-history-tip new-ui-state))
+         new-ui-state (inside-time-measurement! "update-vms" (update-viewmodels new-ui-state editor-update))
          vms-time (perf-utils/stop-time-measurement! "update-vms")
          input-history-time (perf-utils/stop-time-measurement! "update-input-history")
          word-count-time (perf-utils/stop-time-measurement! "update-word-count")
