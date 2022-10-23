@@ -20,7 +20,8 @@
             [slate.viewmodel :as vm]
             [slate.style :as style]
             [slate.word-count :as word-count]
-            [slate.utils :as slate-utils]))
+            [slate.utils :as slate-utils]
+            [dev.performance-utils :as perf-utils]))
 
 (s/def ::id uuid?)
 (s/def ::history ::history/editor-state-history)
@@ -340,6 +341,7 @@
                           (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
                           (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
                           (update-viewmodels-to-history-tip))]
+     (perf-utils/start-time-measurement! "fire-update!-sync-dom")
      (sync-dom! (:shadow-root new-ui-state)
                 (:dom-elem new-ui-state)
                 (:hidden-input new-ui-state)
@@ -348,6 +350,7 @@
                 (:viewmodels new-ui-state)
                 (:changelist editor-update)
                 :focus? focus?)
+    ;;  (js/console.log (str "Update time spent in sync-dom: " (perf-utils/stop-time-measurement! "fire-update!-sync-dom")))
      (reset! *ui-state new-ui-state)
 
      (cond
@@ -378,6 +381,7 @@
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
         opts (select-keys interceptor [:add-to-history-immediately? :include-in-history? :input-name])]
+    (js/console.log (str "firing: " (:input-name interceptor)))
     (fire-update! *ui-state editor-update event opts))
   #_(when (= interceptor slate.default-interceptors/select-all)
     (js/console.profileEnd "select all")))
@@ -556,14 +560,10 @@
                            (reset! *editor-surface-clicked? true)
                            (reset! *mousedown-event e)
                            #_(js/console.profile "click-event")
+                           #_(perf-utils/start-time-measurement! "full-click")
                            (fire-interceptor! *ui-state (get-interceptor :click) e)
+                          ;;  (js/console.log (str "Click time: " (perf-utils/stop-time-measurement! "full-click")))
                            #_(js/console.profileEnd "click-event")))
-
-      (.addEventListener outer-dom-elem "mousedown"
-                         (fn [e]
-                           (.preventDefault e)
-                           (.focus hidden-input #js {:preventScroll true})
-                           (fire-interceptor! *ui-state (get-interceptor :click) e)))
 
       (.addEventListener js/window "mousemove"
                          (utils/throttle 50
