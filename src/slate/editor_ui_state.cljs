@@ -158,9 +158,11 @@
   [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist
    & {:keys [focus? scroll-to-caret?] :or {focus? true, scroll-to-caret? false}}]
   (let [{:keys [doc selection]} editor-state
-        rerender-uuids (set/union (sel/all-uuids (:selection prev-state))
-                                  (sel/all-uuids selection))
-        {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
+        {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist
+        rerender-uuids (set/difference (set/union (sel/all-uuids (:selection prev-state))
+                                                  (sel/all-uuids selection))
+                                       deleted-uuids
+                                       inserted-uuids)]
     (doseq [uuid inserted-uuids]
       (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
     (doseq [uuid deleted-uuids]
