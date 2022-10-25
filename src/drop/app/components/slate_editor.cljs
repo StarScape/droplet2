@@ -173,5 +173,4 @@
 
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]
-         (js/console.log "on import-file")
          (open-doc! *slate-instance (filetypes/import file-type file-contents)))))

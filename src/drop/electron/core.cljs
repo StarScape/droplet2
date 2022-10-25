@@ -83,7 +83,6 @@
                                                    :extensions [".drop"]}]
                                         :properties ["openFile"]}))
              (.then (fn [result]
-                      #_(js/console.log result)
                       (if-not ^js (.-canceled result)
                         (let [file-path (nth ^js (.-filePaths result) 0)]
                           (fs/readFile file-path "utf8" #(resolve #js [file-path %2])))
@@ -190,7 +189,6 @@
   (.on app "window-all-closed" #(when-not (= js/process.platform "darwin") (.quit app)))
   (.on app "ready" init-window)
   #_(.. app (whenReady) (then (fn []
-                                (js/console.log "whenReady")
                                 (.on app "activate" #(js/console.log "activate!")))))
   (.on app "activate" (fn []
                         (when (zero? (.. BrowserWindow (getAllWindows) -length))

@@ -288,13 +288,11 @@
   (.-styleSheets (str->document test-file))
   (js/Array.from (.-children (.-body (str->document test-file))))
   (js/Array.from (.. (str->document test-file) -body -children))
-  (js/console.log (.-style (nth one 1)))
   (add-to-iframe! test-file)
 
-  (let [children (js/Array.from (.. (add-to-iframe! (slurp-file "test_files/html/conversion_test.html")) -body -children))
+  #_(let [children (js/Array.from (.. (add-to-iframe! (slurp-file "test_files/html/conversion_test.html")) -body -children))
         ol (nth children 5)
-        ol-li (aget (.-children ol) 0)]
-    (js/console.log ol-li))
+        ol-li (aget (.-children ol) 0)])
 
   (html->doc (slurp-file "test_files/html/conversion_test.html"))
   (html->doc (slurp-file "test_files/html/the_quiet_universe.html"))

@@ -162,13 +162,10 @@
                                   (sel/all-uuids selection))
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
-      #_(js/console.log (str "Inserting " uuid))
       (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
     (doseq [uuid deleted-uuids]
-      #_(js/console.log (str "Removing " uuid))
       (view/remove-para! dom-elem uuid editor-state prev-state))
     (doseq [uuid (set/union changed-uuids rerender-uuids)]
-      #_(js/console.log (str "Updating " uuid))
       (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))
 
     (view/relocate-hidden-input! shadow-root hidden-input focus?)
@@ -346,30 +343,15 @@
    Arg opts: {:include-in-history? :add-to-history-immediately?}."
   ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately? focus? scroll-to-caret?]
                                    :or {focus? true}, :as opts}]
-   (perf-utils/start-time-measurement! "update-vms")
-   (perf-utils/pause-time-measurement! "update-vms")
    (let [ui-state @*ui-state ; only deref once a cycle
          editor-state (history/current-state (:history ui-state))
          old-doc (:doc editor-state)
          new-doc (-> editor-update :editor-state :doc)
-         #_#_new-ui-state (-> ui-state
-                              (update :history update-history editor-update opts)
-                              (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
-                              (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
-                              (update-viewmodels-to-history-tip))
-         new-ui-state (inside-time-measurement! "update-history" (update ui-state :history update-history editor-update opts))
-         new-ui-state (inside-time-measurement! "update-word-count" (update new-ui-state :word-count word-count/update-count old-doc new-doc (:changelist editor-update)))
-         new-ui-state (inside-time-measurement! "update-input-history" (update new-ui-state :input-history #(if event (interceptors/add-to-input-history % opts event) %)))
-         new-ui-state (inside-time-measurement! "update-vms" (update-viewmodels new-ui-state editor-update))
-         vms-time (perf-utils/stop-time-measurement! "update-vms")
-         input-history-time (perf-utils/stop-time-measurement! "update-input-history")
-         word-count-time (perf-utils/stop-time-measurement! "update-word-count")
-         history-time (perf-utils/stop-time-measurement! "update-history")]
-     #_(js/console.log (str "update-history time: " history-time "\n"
-                          "update-word-count time: " word-count-time "\n"
-                          "update-input-history time: " input-history-time "\n"
-                          "update-vms time: " vms-time))
-     (perf-utils/start-time-measurement! "fire-update!-sync-dom")
+         new-ui-state (-> ui-state
+                          (update :history update-history editor-update opts)
+                          (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
+                          (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
+                          (update-viewmodels editor-update))]
      (sync-dom! (:shadow-root new-ui-state)
                 (:dom-elem new-ui-state)
                 (:hidden-input new-ui-state)
@@ -379,7 +361,6 @@
                 (:changelist editor-update)
                 :focus? focus?
                 :scroll-to-caret? scroll-to-caret?)
-     (js/console.log (str "Update time spent in sync-dom: " (perf-utils/stop-time-measurement! "fire-update!-sync-dom")))
      (reset! *ui-state new-ui-state)
 
      (cond
@@ -408,7 +389,6 @@
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
         opts (select-keys interceptor [:scroll-to-caret? :add-to-history-immediately? :include-in-history? :input-name])]
-    (js/console.log (str "\nfiring: " (:input-name interceptor)))
     (fire-update! *ui-state editor-update event opts)))
 
 (defn fire-interceptor!
@@ -567,7 +547,7 @@
                                       ((:should-fire? matching-interceptor) current-editor-state))
                              matching-interceptor)))
         {editor-elem :dom-elem
-         outer-dom-elem :outer-dom-elem
+         ; outer-dom-elem :outer-dom-elem
          hidden-input :hidden-input} @*ui-state
         *editor-surface-clicked? (atom false :validator boolean?)
         bind-hidden-input-event! (fn [event-name handler]
@@ -584,11 +564,7 @@
                            (.focus hidden-input #js {:preventScroll true})
                            (reset! *editor-surface-clicked? true)
                            (reset! *mousedown-event e)
-                           #_(js/console.profile "click-event")
-                           (perf-utils/start-time-measurement! "full-click")
-                           (fire-interceptor! *ui-state (get-interceptor :click) e)
-                           (js/console.log (str "Click time: " (perf-utils/stop-time-measurement! "full-click")))
-                           #_(js/console.profileEnd "click-event")))
+                           (fire-interceptor! *ui-state (get-interceptor :click) e)))
 
       (.addEventListener js/window "mousemove"
                          (utils/throttle 50
