@@ -55,9 +55,16 @@
 (s/def ::editor-update #(instance? EditorUpdate %))
 
 (defn changelist
-  "Constructor for a new changelist object. Takes keyword arguments :change-uuids, :inserted-uuids, and
-  :deleted-uuids, set to an empty set by default. If no arguments supplied, returns an empty changelist."
-  ([& {:keys [changed-uuids inserted-uuids deleted-uuids]}]
+  "Constructor for a new changelist object. Changelists are used for tracking differences between
+   successive EditorStates.
+
+   A changelist is composed of 4 fields: :changed-uuids, :inserted-uuids, and :deleted-uuids,
+   which are sets containing the UUIDs of the paragraphs that have been changed,
+   newly inserted, or removed from the document since the last EditorState, respectively.
+
+   Takes keyword arguments :change-uuids, :inserted-uuids, :deleted-uuids, and
+   (each default to empty set). If no arguments supplied, returns an empty changelist."
+  ([& {:keys [changed-uuids inserted-uuids deleted-uuids rerender-uuids]}]
    {#_#_:resolved? false ;; TODO: probably not needed now that we have monadic updates
     ;; :base-state-hash base-state-hash
     :changed-uuids (or changed-uuids #{})
@@ -261,10 +268,8 @@
 ;; TODO: Auto-set :formats on selection
 (defn set-selection
   "Returns a new EditorUpdate with the selection set to `new-selection`."
-  [{:keys [selection] :as editor-state} new-selection]
-  (->EditorUpdate (assoc editor-state :selection new-selection)
-                  (changelist :changed-uuids (set/union (sel/all-uuids selection)
-                                                        (sel/all-uuids new-selection)))))
+  [editor-state new-selection]
+  (->EditorUpdate (assoc editor-state :selection new-selection) (changelist)))
 
 (defn select-all
   [{:keys [selection doc] :as editor-state}]
@@ -579,4 +584,5 @@
   #_(-> (insert-text-container doc (sel/selection ["p1" 0] ["p1" 5]) (r/run "Goodbye"))
       :children
       (vec))
-  (def sel (sel/selection ["p1" 7])))
+  (def sel (sel/selection ["p1" 7]))
+  )

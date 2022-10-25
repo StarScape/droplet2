@@ -2,6 +2,7 @@
   (:require-macros [slate.interceptors :refer [definterceptor]]
                    [dev.performance-utils :refer [inside-time-measurement!]])
   (:require [clojure.edn :as edn]
+            [clojure.set :as set]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [drop.utils :as utils]
@@ -153,9 +154,12 @@
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
+  ;; TODO: args to this function have grown somewhat ridiculous. Should refactor to named args
   [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist
    & {:keys [focus?] :or {focus? true}}]
   (let [{:keys [doc selection]} editor-state
+        rerender-uuids (set/union (sel/all-uuids (:selection prev-state))
+                                  (sel/all-uuids selection))
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist]
     (doseq [uuid inserted-uuids]
       #_(js/console.log (str "Inserting " uuid))
@@ -163,7 +167,7 @@
     (doseq [uuid deleted-uuids]
       #_(js/console.log (str "Removing " uuid))
       (view/remove-para! dom-elem uuid editor-state prev-state))
-    (doseq [uuid changed-uuids]
+    (doseq [uuid (set/union changed-uuids rerender-uuids)]
       #_(js/console.log (str "Updating " uuid))
       (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))
 
@@ -398,16 +402,12 @@
    - `interceptor` Interceptor to fire
    - `event`: Raw JS event object"
   [*ui-state interceptor event]
-  #_(when (= interceptor slate.default-interceptors/select-all)
-    (js/console.profile "select all"))
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
         opts (select-keys interceptor [:add-to-history-immediately? :include-in-history? :input-name])]
     (js/console.log (str "\nfiring: " (:input-name interceptor)))
-    (fire-update! *ui-state editor-update event opts))
-  #_(when (= interceptor slate.default-interceptors/select-all)
-    (js/console.profileEnd "select all")))
+    (fire-update! *ui-state editor-update event opts)))
 
 (defn fire-interceptor!
   [*ui-state interceptor event]
