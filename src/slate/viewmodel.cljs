@@ -31,8 +31,16 @@
 
 ;; (defrecord DocumentViewModel [paragraphs container-width])
 (defrecord ParagraphViewModel [lines paragraph container-width])
-(defrecord Line [spans start-offset end-offset width])
-(defrecord Span [text formats start-offset width])
+
+(defrecord Line [spans ;; vector of spans contained in line
+                 start-offset ;; starting paragraph offset of the text within Line
+                 end-offset ;; last paragraph offset of the text within line
+                 width]) ;; width of the line, in pixels
+
+(defrecord Span [text ;; text of span
+                 formats ;; set of formats (italic, bold, etc)
+                 start-offset ;; starting paragraph offset of the text within Span
+                 width]) ;; width, in pixels
 
 (defn empty-span [] (->Span "" #{} 0 0))
 (defn empty-line [] (->Line [(empty-span)] 0 0 0))

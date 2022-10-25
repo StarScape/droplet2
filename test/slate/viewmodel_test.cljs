@@ -129,7 +129,38 @@
                       :width 100}]
              :start-offset 60
              :end-offset 70
-             :width 100}]))))
+             :width 100}])))
+
+  (testing "works with a word too large to fit on a line"
+    (is (= (unrecord (vm/lineify [(r/run "hello!") (r/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+                                 :body
+                                 300
+                                 fake-measure-fn))
+           [{:spans [{:text "hello!"
+                      :formats #{}
+                      :start-offset 0
+                      :width 60}
+                     {:text "aaaaaaaaaaaaaaaaaaaaaaaa"
+                      :formats #{}
+                      :start-offset 6
+                      :width 240}]
+             :start-offset 0
+             :end-offset 30
+             :width 300}
+            {:spans [{:text "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                      :formats #{}
+                      :start-offset 30
+                      :width 300}]
+             :start-offset 30
+             :end-offset 60
+             :width 300}
+            {:spans [{:text "aaaaaaaaaaaaaaaa"
+                      :formats #{}
+                      :start-offset 60
+                      :width 160}]
+             :start-offset 60
+             :end-offset 76
+             :width 160}]))))
 
 (deftest from-para-test
   )
