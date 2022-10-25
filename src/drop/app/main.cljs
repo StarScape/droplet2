@@ -7,6 +7,7 @@
 
 ;; Prioritized:
 ;; TODO: Measure performance cost of equality check happening to set/unset *
+;; TODO: Bug - Select more than one paragraph and then press shift+)
 ;; TODO: Make sure that :change-uuids is not being unnecessarily being used in any other function that only updates selection
 ;; TODO: Bug - Layout bug on line with "Thank you creepy psychologist man...". Test on pre-optimization commit first to see if regression.
 ;; TODO: Nav functions such as end-of-doc should scroll to the cursor

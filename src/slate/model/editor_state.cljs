@@ -298,8 +298,6 @@
 (defn auto-surround
   ([{:keys [doc selection] :as editor-state} opening closing]
    (if (sel/single? selection)
-     #_(-> (insert editor-state (str opening closing))
-           (>>= nav/prev-char))
      (->EditorUpdate (assoc editor-state
                             :doc (insert doc selection (str opening closing))
                             :selection (sel/shift-single selection 1))
@@ -318,7 +316,7 @@
                            (sel/shift-end new-selection 1)
                            new-selection)]
        (->EditorUpdate (assoc editor-state :doc new-doc :selection new-selection)
-                       (changelist :changed-uuids (sel/all-uuids selection))))))
+                       (changelist :changed-uuids #{(sel/start-para selection), (sel/end-para selection)})))))
   ([editor-state surround] (auto-surround editor-state surround surround)))
 
 (defn after-anchor?
@@ -376,8 +374,7 @@
                             s)))
         new-selection (sel/remove-ends-from-between new-selection)
         new-editor-state (assoc editor-state :selection new-selection)]
-    (->EditorUpdate new-editor-state
-                    (changelist :changed-uuids (sel/all-uuids selection new-caret)))))
+    (->EditorUpdate new-editor-state (changelist))))
 
 (defn expand-caret-left
   [{:keys [selection] :as editor-state} new-caret]
@@ -402,7 +399,8 @@
     (->EditorUpdate new-editor-state (changelist))))
 
 (defn- nav-fallthrough
-  "Little helper method for setting the "
+  "Little helper method for generating an EditorUpdate with a selection made
+   by calling nav-method with the `editor-state`'s `doc` and `selection`."
   [{:keys [doc selection] :as editor-state}, nav-method]
   (let [new-selection (nav-method doc selection)]
     (->EditorUpdate (assoc editor-state :selection new-selection) (changelist))))
