@@ -58,12 +58,12 @@
   "Constructor for a new changelist object. Changelists are used for tracking differences between
    successive EditorStates.
 
-   A changelist is composed of 4 fields: :changed-uuids, :inserted-uuids, and :deleted-uuids,
+   A changelist is composed of 3 fields: :changed-uuids, :inserted-uuids, and :deleted-uuids,
    which are sets containing the UUIDs of the paragraphs that have been changed,
    newly inserted, or removed from the document since the last EditorState, respectively.
 
-   Takes keyword arguments :change-uuids, :inserted-uuids, :deleted-uuids, and
-   (each default to empty set). If no arguments supplied, returns an empty changelist."
+   Takes keyword arguments :change-uuids, :inserted-uuids, and :deleted-uuids (each
+   default to an empty set). If no arguments supplied, returns an empty changelist."
   ([& {:keys [changed-uuids inserted-uuids deleted-uuids rerender-uuids]}]
    {#_#_:resolved? false ;; TODO: probably not needed now that we have monadic updates
     ;; :base-state-hash base-state-hash

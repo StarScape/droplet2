@@ -569,11 +569,9 @@
 (defn down
   "Move the caret down into the next line. Returns an EditorUpdate.
    This is not in the model code because it requires the viewmodel to work."
-  [{:keys [selection] :as editor-state} viewmodels editor-elem measure-fn horizontal-start-pos]
-  (let [new-selection (down-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)
-        changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection)
-                       (es/changelist :changed-uuids changed-uuids))))
+  [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
+  (let [new-selection (down-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
 
 (defn up-selection
   "Move the caret up into the next line. Returns a new Selection."
@@ -612,11 +610,9 @@
 (defn up
   "Move the caret up into the next line. Returns an EditorUpdate.
    This is not in the model code because it requires the viewmodel to work."
-  [{:keys [selection] :as editor-state} viewmodels editor-elem measure-fn horizontal-start-pos]
-  (let [new-selection (up-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)
-        changed-uuids (conj (sel/all-uuids selection) (sel/caret-para new-selection))]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection)
-                       (es/changelist :changed-uuids changed-uuids))))
+  [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
+  (let [new-selection (up-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
 
 (defn shift+down
   "Move the caret down into the next line. Returns an EditorUpdate."
@@ -637,10 +633,8 @@
                         ;; may have moved start down a paragraph and need to remove new start from :between
                         (sel/remove-ends-from-between new-selection)
                         ;; may have moved end down a paragraph and need to add previous end para to :between
-                        (sel/add-to-between new-selection (sel/end-para selection)))
-        changed-uuids #{(sel/caret-para selection), (sel/caret-para new-selection)}]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection)
-                       (es/changelist :changed-uuids changed-uuids))))
+                        (sel/add-to-between new-selection (sel/end-para selection)))]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
 
 (defn shift+up
   "Move the caret up into the next line. Returns an EditorUpdate."
@@ -661,10 +655,8 @@
                         ;; may have moved start up a paragraph and need to add previous start para to :between
                         (sel/add-to-between new-selection (sel/start-para selection))
                         ;; may have moved end up a paragraph and need to remove new end from :between
-                        (sel/remove-ends-from-between new-selection))
-        changed-uuids #{(sel/caret-para selection), (sel/caret-para new-selection)}]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection)
-                       (es/changelist :changed-uuids changed-uuids))))
+                        (sel/remove-ends-from-between new-selection))]
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
 
 (defn start-of-line-selection
   "Returns a Selection that moves the cursor to the beginning of the current line."
@@ -674,9 +666,9 @@
 
 (defn start-of-line
   "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
-  [{:keys [selection] :as editor-state} viewmodels]
+  [editor-state viewmodels]
   (es/->EditorUpdate (assoc editor-state :selection (start-of-line-selection editor-state viewmodels))
-                     (es/changelist :changed-uuids (sel/all-uuids selection))))
+                     (es/changelist)))
 
 (defn end-of-line-selection
   "Returns a Selection that moves the cursor to the beginning of the current line."
@@ -692,9 +684,9 @@
 
 (defn end-of-line
   "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
-  [{:keys [selection] :as editor-state} viewmodels]
+  [editor-state viewmodels]
   (es/->EditorUpdate (assoc editor-state :selection (end-of-line-selection editor-state viewmodels))
-                     (es/changelist :changed-uuids (sel/all-uuids selection))))
+                     (es/changelist)))
 
 (defn calc-line-height
   "Returns the actual *rendered* line height given a paragraph DOM element, in pixels."
