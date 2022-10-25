@@ -209,7 +209,6 @@
         updated-vms (as-> viewmodels vms
                       (apply dissoc vms deleted-uuids)
                       (reduce (fn [new-vms uuid]
-                                (let [from (from-para (get-para uuid) elem-width measure-fn)]
-                                  (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn))))
+                                (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn)))
                               vms (concat inserted-uuids changed-uuids)))]
     updated-vms))

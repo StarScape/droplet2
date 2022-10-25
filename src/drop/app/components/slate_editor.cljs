@@ -19,7 +19,6 @@
 
 (declare *slate-instance)
 
-(set! js/window.globalSlateInstance *slate-instance)
 
 (def *full-screen? (r/atom false))
 (defonce *open-file (doto (persistent-atom ::open-file
@@ -33,6 +32,7 @@
 (def *slate-instance (doto (r/atom nil)
                        (add-watch :change-title (fn [_ _ _ new-ui-state]
                                                   (app-utils/set-title! @*open-file (current-doc new-ui-state))))))
+(set! js/window.globalSlateInstance *slate-instance)
 
 (defn on-new! [new-ui-state]
   (reset! *open-file {:path nil

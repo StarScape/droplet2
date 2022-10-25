@@ -100,9 +100,8 @@
 (defn update-viewmodels
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
-  [ui-state {:keys [editor-state changelist] :as editor-update}]
+  [ui-state {:keys [editor-state changelist]}]
   (let [{:keys [viewmodels measure-fn]} ui-state
-        ;;{:keys [editor-state changelist]} (:tip history)
         new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (view/elem-width ui-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
@@ -111,8 +110,8 @@
   ;; if completion:
   ;;   Take state before interceptor fired, add that to the backstack immediately.
   ;;   Then set the tip to the result of the completion interceptor.
-  ;; if normal:
-  ;;   Just update tip, integrate into backstack after debounced timeout
+  ;; else if normal:
+  ;;   Just update tip, will be integrated into backstack after debounced timeout
   (if (and (:add-to-history-immediately? interceptor)
            (:include-in-history? interceptor))
     (-> history
