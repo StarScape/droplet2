@@ -399,45 +399,24 @@
                             s)))
         new-selection (sel/remove-ends-from-between new-selection)
         new-editor-state (assoc editor-state :selection new-selection)]
-    (->EditorUpdate new-editor-state
-                    (changelist :changed-uuids (sel/all-uuids selection new-caret)))))
+    (->EditorUpdate new-editor-state (changelist))))
 
 (defn- nav-fallthrough
+  "Little helper method for setting the "
   [{:keys [doc selection] :as editor-state}, nav-method]
   (let [new-selection (nav-method doc selection)]
-    (->EditorUpdate (assoc editor-state :selection new-selection)
-                    (changelist :changed-uuids (sel/all-uuids selection new-selection)))))
-
-(defn- selectable-fallthrough-right
-  [{:keys [doc selection] :as editor-state}, selectable-method]
-  (let [new-selection (selectable-method doc selection)
-        changed-uuids (if (:backwards? selection)
-                        #{(sel/start-para selection), (sel/start-para new-selection)}
-                        #{(sel/end-para selection), (sel/end-para new-selection)})]
-    (->EditorUpdate (assoc editor-state :selection new-selection)
-                    (changelist :changed-uuids changed-uuids))))
-
-(defn- selectable-fallthrough-left
-  [{:keys [doc selection] :as editor-state}, selectable-method]
-  (let [new-selection (selectable-method doc selection)
-        changed-uuids (if (or (sel/single? selection) (:backwards? selection))
-                        #{(sel/start-para selection), (sel/start-para new-selection)}
-                        #{(sel/end-para selection), (sel/end-para new-selection)})]
-    (->EditorUpdate (assoc editor-state :selection new-selection)
-                    (changelist :changed-uuids changed-uuids))))
+    (->EditorUpdate (assoc editor-state :selection new-selection) (changelist))))
 
 (extend-type EditorState
   Navigable
-  (start [{:keys [doc selection] :as editor-state}]
+  (start [{:keys [doc] :as editor-state}]
     (let [new-selection (nav/start doc)]
-      (->EditorUpdate (assoc editor-state :selection new-selection)
-                      (changelist :changed-uuids (set/union #{(-> new-selection :start :paragraph)}
-                                                            (sel/all-uuids selection))))))
-  (end [{:keys [doc selection] :as editor-state}]
+      (->EditorUpdate (assoc editor-state :selection new-selection) (changelist))))
+
+  (end [{:keys [doc] :as editor-state}]
     (let [new-selection (nav/end doc)]
-      (->EditorUpdate (assoc editor-state :selection new-selection)
-                      (changelist :changed-uuids (set/union #{(-> new-selection :start :paragraph)}
-                                                            (sel/all-uuids selection))))))
+      (->EditorUpdate (assoc editor-state :selection new-selection) (changelist))))
+
   (next-char [editor-state]
     (nav-fallthrough editor-state nav/next-char))
 
@@ -467,45 +446,43 @@
           paragraph (get (:children doc) caret-uuid)
           prev-paragraph (dll/prev (:children doc) (sel/caret-para selection))]
       (if (pos? (sel/caret selection))
-        (->EditorUpdate (assoc editor-state :selection (nav/start paragraph))
-                        (changelist :changed-uuids #{caret-uuid}))
-        (->EditorUpdate (assoc editor-state :selection (nav/end prev-paragraph))
-                        (changelist :changed-uuids #{caret-uuid, (:uuid prev-paragraph)})))))
+        (->EditorUpdate (assoc editor-state :selection (nav/start paragraph)) (changelist))
+        (->EditorUpdate (assoc editor-state :selection (nav/end prev-paragraph)) (changelist)))))
 
   (next-paragraph [{:keys [doc selection] :as editor-state}]
     (let [caret-uuid (sel/caret-para selection)
           paragraph (get (:children doc) caret-uuid)
           next-paragraph (dll/next (:children doc) (sel/caret-para selection))]
       (if (= (m/len paragraph) (sel/caret selection))
-        (->EditorUpdate (assoc editor-state :selection (nav/start next-paragraph))
-                        (changelist :changed-uuids #{caret-uuid, (:uuid next-paragraph)}))
-        (->EditorUpdate (assoc editor-state :selection (nav/end paragraph))
-                           (changelist :changed-uuids #{caret-uuid})))))
+        (->EditorUpdate (assoc editor-state :selection (nav/start next-paragraph)) (changelist))
+        (->EditorUpdate (assoc editor-state :selection (nav/end paragraph)) (changelist)))))
 
   nav/Selectable
-  (shift+right [editor-state] (selectable-fallthrough-right editor-state nav/shift+right))
-  (shift+left [editor-state] (selectable-fallthrough-left editor-state nav/shift+left))
-  (ctrl+shift+right [editor-state] (selectable-fallthrough-right editor-state nav/ctrl+shift+right))
-  (ctrl+shift+left [editor-state] (selectable-fallthrough-left editor-state nav/ctrl+shift+left))
+  (shift+right [editor-state] (nav-fallthrough editor-state nav/shift+right))
+  (shift+left [editor-state] (nav-fallthrough editor-state nav/shift+left))
+  (ctrl+shift+right [editor-state] (nav-fallthrough editor-state nav/ctrl+shift+right))
+  (ctrl+shift+left [editor-state] (nav-fallthrough editor-state nav/ctrl+shift+left))
 
-  ;; TODO: any point in implementing this for EditorState (keep in mind: YAGNI)
   m/Selectable
   (char-at [{:keys [doc selection]}]
     (m/char-at doc selection))
+
   (char-before [{:keys [doc selection]}]
     (m/char-before doc selection))
+
   (selected-content [{:keys [doc selection]}]
     (m/selected-content doc selection))
+
   (formatting [{:keys [doc selection]}]
     (m/formatting doc selection))
+
   Formattable
   (toggle-format
     [{:keys [doc selection] :as editor-state} format]
     (if (sel/single? selection)
       (->EditorUpdate (update editor-state :selection sel/toggle-format format)
-                     ;; Include changelist in case we want to render
-                     ;; the caret different depending on formatting
-                      (changelist :changed-uuids #{(sel/caret-para selection)}))
+                      ;; No changelist, only the selection is updated
+                      (changelist))
       (let [doc-children (:children doc)
             start-para-uuid (-> selection :start :paragraph)
             end-para-uuid (-> selection :end :paragraph)

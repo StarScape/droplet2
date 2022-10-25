@@ -433,80 +433,60 @@
 (deftest nav-functions-test
   (testing "start and end work"
     (is (= (nav/start (editor-state doc (selection ["p1" 3])))
-           (->EditorUpdate (editor-state doc (selection ["p1" 0] ["p1" 0] :formats #{:italic}))
-                           (changelist :changed-uuids #{"p1"}))))
+           (->EditorUpdate (editor-state doc (selection ["p1" 0] ["p1" 0] :formats #{:italic})) (changelist))))
     (is (= (nav/start (editor-state doc (selection ["p1" 0] ["p2" 3])))
-           (->EditorUpdate (editor-state doc (selection ["p1" 0] ["p1" 0] :formats #{:italic}))
-                           (changelist :changed-uuids #{"p1" "p2"}))))
+           (->EditorUpdate (editor-state doc (selection ["p1" 0] ["p1" 0] :formats #{:italic})) (changelist))))
     (is (= (nav/end (editor-state doc (selection ["p1" 3])))
-           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
-                           (changelist :changed-uuids #{"p1" "p2"}))))
+           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)])) (changelist))))
     (is (= (nav/end (editor-state doc (selection ["p1" 0] ["p2" 3])))
-           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
-                           (changelist :changed-uuids #{"p1" "p2"}))))
+           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)])) (changelist))))
     (is (= (nav/end (editor-state doc (selection ["p2" 3])))
-           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)]))
-                           (changelist :changed-uuids #{"p2"})))))
+           (->EditorUpdate (editor-state doc (selection ["p2" (sl/len p2)])) (changelist)))))
 
   ;; The rest of these currently all use the same fallthrough function,
   ;; so testing one is basically the same as testing all of them.
   (testing "rest work"
     (is (= (nav/next-char (editor-state doc (selection ["p1" 0])))
-           (->EditorUpdate (editor-state doc (selection ["p1" 1] ["p1" 1] :formats #{:italic}))
-                           (changelist :changed-uuids #{"p1"}))))
+           (->EditorUpdate (editor-state doc (selection ["p1" 1] ["p1" 1] :formats #{:italic})) (changelist))))
     (is (= (nav/next-char (editor-state doc (selection ["p1" 14] ["p1" 14] :formats #{:bold})))
-           (->EditorUpdate (editor-state doc (selection ["p2" 0]))
-                           (changelist :changed-uuids #{"p1" "p2"}))))
+           (->EditorUpdate (editor-state doc (selection ["p2" 0])) (changelist))))
     (is (= (nav/next-char (editor-state long-doc (selection ["d1" 0] ["d3" 4] :between #{"d2"})))
-           (->EditorUpdate (editor-state long-doc (selection ["d3" 4] ["d3" 4] :formats #{:underline}))
-                           (changelist :changed-uuids #{"d1" "d2" "d3"}))))))
+           (->EditorUpdate (editor-state long-doc (selection ["d3" 4] ["d3" 4] :formats #{:underline})) (changelist))))))
 
 (deftest selectable-functions-test
   (testing "shift+right works forwards (or single)"
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d1" 1], :formats #{:italic}))
-                           (changelist :changed-uuids #{"d1"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d1" 1], :formats #{:italic})) (changelist))))
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 4])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0]))
-                           (changelist :changed-uuids #{"d1" "d2"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0])) (changelist))))
 
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0] ["d1" 4])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 0]))
-                           (changelist :changed-uuids #{"d1" "d2"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 0])) (changelist))))
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0] ["d3" 4] :between #{"d2"})))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d4" 0] :between #{"d2" "d3"}))
-                           (changelist :changed-uuids #{"d3" "d4"})))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d4" 0] :between #{"d2" "d3"})) (changelist)))))
 
   (testing "shift+right works backwards"
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 4] ["d2" 4] :backwards? true)))
-           (->EditorUpdate (editor-state long-doc (selection ["d2" 0] ["d2" 4] :backwards? true, :formats #{:bold}))
-                           (changelist :changed-uuids #{"d1" "d2"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d2" 0] ["d2" 4] :backwards? true, :formats #{:bold})) (changelist))))
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 4] ["d3" 4] :backwards? true, :between #{"d2"})))
-           (->EditorUpdate (editor-state long-doc (selection ["d2" 0] ["d3" 4] :backwards? true))
-                           (changelist :changed-uuids #{"d1" "d2"})))))
+           (->EditorUpdate (editor-state long-doc (selection ["d2" 0] ["d3" 4] :backwards? true)) (changelist)))))
 
   (testing "shift+left works forwards"
     (is (= (nav/shift+left (editor-state long-doc (selection ["d1" 0] ["d2" 0])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d1" 4], :formats #{:italic}))
-                           (changelist :changed-uuids #{"d1" "d2"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d1" 4], :formats #{:italic})) (changelist))))
     (is (= (nav/shift+left (editor-state long-doc (selection ["d1" 0] ["d3" 0] :between #{"d2"})))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 4]))
-                           (changelist :changed-uuids #{"d3" "d2"})))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 4])) (changelist)))))
 
   (testing "shift+left works backwards (or single)"
     (is (= (nav/shift+left (editor-state long-doc (selection ["d1" 4])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 3] ["d1" 4], :backwards? true, :formats #{:italic}))
-                           (changelist :changed-uuids #{"d1"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 3] ["d1" 4], :backwards? true, :formats #{:italic})) (changelist))))
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0], :backwards? true))
-                           (changelist :changed-uuids #{"d1" "d2"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0], :backwards? true)) (changelist))))
 
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d4" 4], :backwards? true, :between #{"d3"})))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d4" 4], :backwards? true, :between #{"d2" "d3"}))
-                           (changelist :changed-uuids #{"d1" "d2"}))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d4" 4], :backwards? true, :between #{"d2" "d3"})) (changelist))))
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d2" 4], :backwards? true)))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 4], :backwards? true))
-                           (changelist :changed-uuids #{"d1" "d2"}))))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 4], :backwards? true)) (changelist))))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"
