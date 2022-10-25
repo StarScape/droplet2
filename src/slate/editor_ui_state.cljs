@@ -156,7 +156,7 @@
   all paragraphs that have been inserted/changed/removed."
   ;; TODO: args to this function have grown somewhat ridiculous. Should refactor to named args
   [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist
-   & {:keys [focus?] :or {focus? true}}]
+   & {:keys [focus? scroll-to-caret?] :or {focus? true, scroll-to-caret? false}}]
   (let [{:keys [doc selection]} editor-state
         rerender-uuids (set/union (sel/all-uuids (:selection prev-state))
                                   (sel/all-uuids selection))
@@ -171,7 +171,8 @@
       #_(js/console.log (str "Updating " uuid))
       (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))
 
-    (view/relocate-hidden-input! shadow-root hidden-input focus?)))
+    (view/relocate-hidden-input! shadow-root hidden-input focus?)
+    (when scroll-to-caret? (view/scroll-to-caret! shadow-root))))
 
 (defn load-history!
   "Loads a serialized .drop file into the editor, discarding current document and history."
@@ -343,7 +344,7 @@
   "Update the UI state and UI in response to an EditorUpdate.
    If no event is supplied, nothing will be added to the input-history.
    Arg opts: {:include-in-history? :add-to-history-immediately?}."
-  ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately? focus?]
+  ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately? focus? scroll-to-caret?]
                                    :or {focus? true}, :as opts}]
    (perf-utils/start-time-measurement! "update-vms")
    (perf-utils/pause-time-measurement! "update-vms")
@@ -376,7 +377,8 @@
                 editor-state
                 (:viewmodels new-ui-state)
                 (:changelist editor-update)
-                :focus? focus?)
+                :focus? focus?
+                :scroll-to-caret? scroll-to-caret?)
      (js/console.log (str "Update time spent in sync-dom: " (perf-utils/stop-time-measurement! "fire-update!-sync-dom")))
      (reset! *ui-state new-ui-state)
 
@@ -405,7 +407,7 @@
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
         editor-update (interceptor editor-state ui-state event)
-        opts (select-keys interceptor [:add-to-history-immediately? :include-in-history? :input-name])]
+        opts (select-keys interceptor [:scroll-to-caret? :add-to-history-immediately? :include-in-history? :input-name])]
     (js/console.log (str "\nfiring: " (:input-name interceptor)))
     (fire-update! *ui-state editor-update event opts)))
 

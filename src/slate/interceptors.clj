@@ -23,6 +23,9 @@
    `:add-to-history-immediately?`: **Default `false`**. Whether the return value should be added to
    the editor's history immediately, without a timeout for inactivity.
 
+   `:scroll-to-caret?`: **Default `false`**: If `true`, the viewport will automatically center on the caret
+   after the interceptor has fire.
+
    `:manual?`: **Default `false`**. If set to `true`, the typical add-to-history and DOM sync process is forgone and the interceptor
    will just be called as a normal function, **which is passed the EditorUIState atom** (not just it's contents) and the event. This exists because
    it is occasionally useful to hook into the interceptor system to execute operations that have nothing to do with Slate's editor surface
@@ -31,10 +34,11 @@
 
    `:should-fire?`: **Default `(constantly true)`**. A predicate which takes the current editor-state and returns true if the interceptor
    should fire, false otherwise."
-  [{:keys [input-name include-in-history? add-to-history-immediately? manual? should-fire?]
+  [{:keys [input-name include-in-history? add-to-history-immediately? manual? scroll-to-caret? should-fire?]
     :or {include-in-history? true
          add-to-history-immediately? false
          manual? false
+         scroll-to-caret? false
          should-fire? '(constantly true)}}
    arglist, & fn-body]
   (assert input-name "Input name is required for interceptor macro.")
@@ -45,6 +49,7 @@
                       :manual? ~manual?
                       :include-in-history? ~include-in-history?
                       :add-to-history-immediately? ~add-to-history-immediately?
+                      :scroll-to-caret? ~scroll-to-caret?
                       :should-fire? ~should-fire?
                       :interceptor-fn (fn [~@arglist] ~@fn-body)}))
 

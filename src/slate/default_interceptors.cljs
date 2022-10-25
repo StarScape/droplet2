@@ -252,12 +252,14 @@
     (es/expand-caret-left editor-state end-of-line-point)))
 
 (definterceptor start-of-doc
-  {:include-in-history? false}
+  {:include-in-history? false
+   :scroll-to-caret? true}
   [editor-state _ _]
   (nav/start editor-state))
 
 (definterceptor end-of-doc
-  {:include-in-history? false}
+  {:include-in-history? false
+   :scroll-to-caret? true}
   [editor-state _ _]
   (nav/end editor-state))
 
