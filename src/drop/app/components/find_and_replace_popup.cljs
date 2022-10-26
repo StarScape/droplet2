@@ -105,7 +105,9 @@
                    :on-key-down (fn [e value]
                                   (when (= "Enter" (.-code e))
                                     (if (.-shiftKey e)
+                                      ; Shift+Enter = goto previous find
                                       (on-click-prev)
+                                      ; Enter = find/goto next find
                                       (on-find value))))
                    :buttons [:<>
                              [text-button {:text "Search"

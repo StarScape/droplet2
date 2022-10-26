@@ -6,8 +6,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; Prioritized:
-;; TODO: Measure performance cost of equality check happening to set/unset *
-;; TODO: Bug - Select more than one paragraph and then press shift+) (actually, select more than one para and then do *any* input)
 ;; TODO: Bug - Layout bug on line with "Thank you creepy psychologist man...". Test on pre-optimization commit first to see if regression.
 ;; TODO: Bug - CMD+F, search, press esc, CMD+F again, and then search is broken
 
