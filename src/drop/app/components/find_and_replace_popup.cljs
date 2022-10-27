@@ -112,11 +112,6 @@
                                       ; Enter = find/goto next find
                                       (on-click-next value))))
                    :buttons [:<>
-                             ;; TODO: get rid of this, superfluous
-                             [text-button {:text "Search"
-                                           :tab-index "3"
-                                           :hover-text "Enter"
-                                           :on-click #(on-find)}]
                              [img-button {:src "icons/down_arrow.svg"
                                           :hover-text "Enter"
                                           :on-click on-click-next}]
@@ -143,10 +138,10 @@
                    :on-change #(reset! *replace-text %)
                    :buttons [:<>
                              [text-button {:text "Replace"
-                                           :tab-index "4"
+                                           :tab-index "3"
                                            :hover-text (if (is-mac?) "⌘R" "Ctrl+R")
                                            :on-click replace!}]
                              [text-button {:text "Replace All"
-                                           :tab-index "5"
+                                           :tab-index "4"
                                            :hover-text (if (is-mac?) "⌘⇧R" "Ctrl+Shift+R")
                                            :on-click replace-all!}]]}]])))
