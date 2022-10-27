@@ -36,9 +36,11 @@
 (s/def ::viewmodels (s/coll-of any?))
 (s/def ::interceptors ::interceptors/interceptor-map)
 (s/def ::find-and-replace (s/keys :req-un [::active?
+                                           ::ignore-case?
                                            ::location-before
-                                           ::found-locations
-                                           ::current-location]))
+                                           ::find-text
+                                           ::occurrences
+                                           ::current-occurrence-idx]))
 
 (s/def ::editor-ui-state (s/keys :req-un [::id
                                           ::history
@@ -88,15 +90,6 @@
     (if (some? paragraph-type)
       (conj formats paragraph-type)
       formats)))
-
-#_(defn update-viewmodels-to-history-tip
-  "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
-   :history object. See the history namespace for more info."
-  [ui-state]
-  (let [{:keys [viewmodels history measure-fn]} ui-state
-        {:keys [editor-state changelist]} (:tip history)
-        new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (view/elem-width ui-state) measure-fn changelist)]
-    (assoc ui-state :viewmodels new-viewmodels)))
 
 (defn update-viewmodels
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
@@ -362,33 +355,6 @@
     (interceptor *ui-state event)
     (fire-normal-interceptor! *ui-state interceptor event)))
 
-(defn inc-current-location
-  [{:keys [found-locations current-location] :as find-and-replace-state}]
-  (if (< current-location (dec (count found-locations)))
-    (update find-and-replace-state :current-location inc)
-    (assoc find-and-replace-state :current-location 0)))
-
-(defn dec-current-location
-  [{:keys [found-locations current-location] :as find-and-replace-state}]
-  (if (zero? current-location)
-    (assoc find-and-replace-state :current-location (dec (count found-locations)))
-    (update find-and-replace-state :current-location dec)))
-
-(comment
-  (inc-current-location {:found-locations [1 2 3] :current-location 0})
-  (inc-current-location {:found-locations [1 2 3] :current-location 1})
-  (inc-current-location {:found-locations [1 2 3] :current-location 2})
-
-  (dec-current-location {:found-locations [1 2 3] :current-location 0})
-  (dec-current-location {:found-locations [1 2 3] :current-location 1})
-  (dec-current-location {:found-locations [1 2 3] :current-location 2}))
-
-(defn get-current-location
-  "If find is active, returns current found location, as a selection."
-  [{:keys [active? current-location found-locations] :as _find-and-replace-info}]
-  (when active?
-    (nth found-locations current-location)))
-
 (defn goto-location!
   "Sets the selection to the location provided and centers it in the viewport.
    location should be a Selection."
@@ -398,98 +364,79 @@
                                            :focus? focus?})
     (view/scroll-to-caret! (:shadow-root @*ui-state))))
 
-(defn goto-current-found!
+(defn goto-current-occurrence!
   "Equivalent to calling goto-location! with the current found location."
   [*ui-state]
   (let [{:keys [find-and-replace]} @*ui-state]
-    (when-not (empty? (:found-locations find-and-replace))
-      (goto-location! *ui-state (get-current-location find-and-replace) :focus? false))))
+    (when-not (empty? (:occurrences find-and-replace))
+      (goto-location! *ui-state (f+r/current-occurrence find-and-replace) :focus? false))))
 
 (defn goto-location-before!
+  "Scrolls to the location that the cursor was at before the find operation was started."
   [*ui-state]
   (let [{:keys [find-and-replace]} @*ui-state]
     (goto-location! *ui-state (:location-before find-and-replace) :focus? false)))
 
-(defn next-occurence! [*ui-state]
-  (let [{{:keys [found-locations]} :find-and-replace} @*ui-state]
-    (when (seq found-locations)
-      (swap! *ui-state update :find-and-replace inc-current-location)
-      (goto-current-found! *ui-state))))
+(defn next-occurrence!
+  "Handles going to the next-occurrence in the find."
+  [*ui-state]
+  (swap! *ui-state update :find-and-replace f+r/next-occurrence)
+  (goto-current-occurrence! *ui-state))
 
-(defn prev-occurence! [*ui-state]
-  (let [{{:keys [found-locations]} :find-and-replace} @*ui-state]
-    (when (seq found-locations)
-      (swap! *ui-state update :find-and-replace dec-current-location)
-      (goto-current-found! *ui-state))))
+(defn prev-occurrence!
+  "Handles going to the previous occurerence in the find."
+  [*ui-state]
+  (swap! *ui-state update :find-and-replace f+r/prev-occurrence)
+  (goto-current-occurrence! *ui-state))
 
 (defn replace-current! [*ui-state replacement-text]
   (let [{:keys [find-and-replace history]} @*ui-state
-        current-location (get-current-location find-and-replace)
-        editor-update (f+r/replace (history/current-state history) current-location replacement-text)]
+        editor-update (f+r/replace-current-occurrence find-and-replace (history/current-state history) replacement-text)]
     (fire-update! *ui-state editor-update {:add-to-history-immediately? true
                                            :focus? false})))
 
 (defn replace-all! [*ui-state replacement-text]
   (let [{:keys [find-and-replace history]} @*ui-state
-        editor-update (f+r/replace-all (history/current-state history)
-                                       (:found-locations find-and-replace)
-                                       replacement-text)]
+        editor-update (f+r/replace-all-occurrences find-and-replace
+                                                   (history/current-state history)
+                                                   replacement-text)]
     (fire-update! *ui-state editor-update {:add-to-history-immediately? true
                                            :focus? false})))
 
 (defn cancel-find! [*ui-state]
-  (let [{{:keys [active? location-before]} :find-and-replace} @*ui-state]
-    (when active?
-      ;; (unhighlight! *ui-state found-locations)
-      (goto-location! *ui-state location-before)
-      (swap! *ui-state update :find-and-replace merge {:active? false
-                                                       :text ""
-                                                       :found-locations []
-                                                       :current-location 0}))))
+  (swap! *ui-state update :find-and-replace f+r/cancel-find)
+  (when-not (:active? @*ui-state)
+    (goto-location-before! *ui-state)))
 
 (definterceptor activate-find!
   {:manual? true}
   [*ui-state _]
-  (let [{:keys [history find-and-replace on-focus-find]} @*ui-state
-        current-selection (:selection (history/current-state history))]
+  (let [{:keys [history on-focus-find]} @*ui-state]
     (on-focus-find)
-    (when-not (:active? find-and-replace)
-      (swap! *ui-state update :find-and-replace merge {:active? true
-                                                       :location-before current-selection}))))
+    (swap! *ui-state update :find-and-replace f+r/activate-find (history/current-state history))))
+
+(defn set-find-text!
+  "Sets the find text in the find-and-replace state map.
+   This __does not__ actually find the occurrence, go to them, etc.
+   Those operations are expected to be done on a debounce via find!"
+  [*ui-state text]
+  (swap! *ui-state assoc-in [:find-and-replace :find-text] text))
 
 (defn find!
   "Starts find operation, if text search term is not blank."
-  ([*ui-state text force-restart?]
-   (if (str/blank? text)
-     (goto-location-before! *ui-state)
-     (let [{history :history
-            {:keys [location-before ignore-case?] :as f+r-state} :find-and-replace} @*ui-state
-           editor-state (history/current-state history)]
-       (if (and (= text (:text f+r-state))
-                (not force-restart?))
-         (if (= (:selection editor-state) (get-current-location f+r-state))
-           (next-occurence! *ui-state)
-           (goto-current-found! *ui-state))
-         (let [occurences (f+r/find editor-state text ignore-case?)
-              ;; No previous find, set current selection as place to return to when find deactivated
-               new-location-before (if (empty? (:found-locations f+r-state))
-                                     (:selection editor-state)
-                                     location-before)
-               new-fields {:active? true
-                           :text text
-                           :current-location 0
-                           :found-locations occurences
-                           :location-before new-location-before}]
-           (swap! *ui-state update :find-and-replace merge new-fields)
-           (goto-current-found! *ui-state))))))
-  ([*ui-state text] (find! *ui-state text false)))
+  ([*ui-state]
+   (let [{history :history, {:keys [find-text]} :find-and-replace} @*ui-state
+         editor-state (history/current-state history)]
+     (if (str/blank? find-text)
+       (goto-location-before! *ui-state)
+       (do
+         (swap! *ui-state update :find-and-replace f+r/find-occurrences editor-state)
+         (goto-current-occurrence! *ui-state))))))
 
 (defn toggle-ignore-case!
   [*ui-state]
   (swap! *ui-state update-in [:find-and-replace :ignore-case?] not)
-  (let [{{:keys [text active?]} :find-and-replace} @*ui-state]
-    (when active?
-      (find! *ui-state text true))))
+  (find! *ui-state))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
@@ -515,10 +462,10 @@
          hidden-input :hidden-input} @*ui-state
         *editor-surface-clicked? (atom false :validator boolean?)
         bind-hidden-input-event! (fn [event-name handler]
-                                  (.addEventListener hidden-input event-name
-                                                     (fn [e]
-                                                       (when-not @*editor-surface-clicked?
-                                                         (handler e)))))]
+                                   (.addEventListener hidden-input event-name
+                                                      (fn [e]
+                                                        (when-not @*editor-surface-clicked?
+                                                          (handler e)))))]
     (let [*mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
       (.addEventListener editor-elem "mousedown"
                          (fn [e]
@@ -532,68 +479,68 @@
 
       (.addEventListener js/window "mousemove"
                          (utils/throttle 50
-                          (fn [e]
-                            (when (and @*editor-surface-clicked?
+                                         (fn [e]
+                                           (when (and @*editor-surface-clicked?
                                       ;; Make sure it's actually still clicked down, if the user moved the mouse
                                       ;; off-window and back the 'mouseup' event will not have set the atom back to false.
-                                       (= 1 (.-which e)))
+                                                      (= 1 (.-which e)))
                              ;; *last-mousedown-event* is passed this way for optimization purposes
-                              (binding [view/*last-mousedown-event* @*mousedown-event]
-                                (fire-interceptor! *ui-state (get-interceptor :drag) e))))))
+                                             (binding [view/*last-mousedown-event* @*mousedown-event]
+                                               (fire-interceptor! *ui-state (get-interceptor :drag) e))))))
 
       (.addEventListener js/window "mouseup"
                          (fn [_e]
                            (reset! *editor-surface-clicked? false))))
 
     (bind-hidden-input-event! "keydown"
-     (fn [e]
-       (when-let [interceptor-fn (get-interceptor e)]
-         (.preventDefault e)
-         (fire-interceptor! *ui-state interceptor-fn e))))
+      (fn [e]
+        (when-let [interceptor-fn (get-interceptor e)]
+          (.preventDefault e)
+          (fire-interceptor! *ui-state interceptor-fn e))))
 
     (bind-hidden-input-event! "beforeinput"
-     (fn [e]
-       (.preventDefault e)
-       (case (.-inputType e)
-         "insertText"
-         (let [;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
-               completion-interceptor (when (= 1 (.. e -data -length))
-                                        (get-completion (.-data e)))
-               interceptor (or completion-interceptor (get-interceptor :insert))]
-           (fire-interceptor! *ui-state interceptor e))
+      (fn [e]
+        (.preventDefault e)
+        (case (.-inputType e)
+          "insertText"
+          (let [;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
+                completion-interceptor (when (= 1 (.. e -data -length))
+                                          (get-completion (.-data e)))
+                interceptor (or completion-interceptor (get-interceptor :insert))]
+            (fire-interceptor! *ui-state interceptor e))
 
-         "deleteContentBackward"
-         (let [{:keys [input-history]} @*ui-state]
-           (if (= :completion (peek input-history))
-             (fire-interceptor! *ui-state undo! e)
-             (fire-interceptor! *ui-state (get-interceptor :delete) e)))
+          "deleteContentBackward"
+          (let [{:keys [input-history]} @*ui-state]
+            (if (= :completion (peek input-history))
+              (fire-interceptor! *ui-state undo! e)
+              (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 
-         nil)))
+          nil)))
 
     (bind-hidden-input-event! "cut"
-     (fn [e]
-       (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :cut) e)))
+      (fn [e]
+        (.preventDefault e)
+        (fire-interceptor! *ui-state (get-interceptor :cut) e)))
 
     (bind-hidden-input-event! "copy"
-     (fn [e]
-       (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :copy) e)))
+      (fn [e]
+        (.preventDefault e)
+        (fire-interceptor! *ui-state (get-interceptor :copy) e)))
 
     (bind-hidden-input-event! "paste"
-     (fn [e]
-       (.preventDefault e)
-       (fire-interceptor! *ui-state (get-interceptor :paste) e)))
+      (fn [e]
+        (.preventDefault e)
+        (fire-interceptor! *ui-state (get-interceptor :paste) e)))
 
     (bind-hidden-input-event! "focusout"
-     (fn [e]
-       (.preventDefault e)
-       (handle-focus-out! *ui-state)))
+      (fn [e]
+        (.preventDefault e)
+        (handle-focus-out! *ui-state)))
 
     (bind-hidden-input-event! "focusin"
-     (fn [e]
-       (.preventDefault e)
-       (handle-focus-in! *ui-state)))
+      (fn [e]
+        (.preventDefault e)
+        (handle-focus-in! *ui-state)))
 
     (.addEventListener js/window "resize" #(handle-resize! *ui-state))))
 

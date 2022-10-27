@@ -6,30 +6,27 @@
             [slate.utils :as slate-utils :refer [is-mac?]]))
 
 (defn- input-row
-  [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref *value-atom autofocus?]
-    :or {on-key-down #() on-change #() ref #() *value-atom (r/atom "")}}]
-  (with-let [*value *value-atom]
-    [:div {:class "flex flex-row"
-           :on-key-down #(on-key-down % @*value)}
-     [:div {:class "p-1 mr-1 border bg-slate-50 border-gray-100 flex flex-row
+  [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref value autofocus?]
+    :or {on-key-down #() on-change #() ref #() value (r/atom "")}}]
+  [:div {:class "flex flex-row"
+         :on-key-down #(on-key-down % value)}
+   [:div {:class "p-1 mr-1 border bg-slate-50 border-gray-100 flex flex-row
                     focus-within:border focus-within:border-dark-blue"}
-      [:input {:class "outline-none bg-transparent"
-               :type "text"
-               :ref #(when ref (ref %))
-               :tabIndex tab-index
-               :spellCheck "false"
-               :size "20"
-               :placeholder placeholder
-               :autoComplete "off"
-               :autoFocus autofocus?
-               :value @*value
-               :on-change (fn [e]
-                            (reset! *value (.. e -target -value))
-                            (on-change (.. e -target -value)))}]
-      [:div {:class "w-16 flex flex-row justify-end items-center"}
-       input-tray]]
+    [:input {:class "outline-none bg-transparent"
+             :type "text"
+             :ref #(when ref (ref %))
+             :tabIndex tab-index
+             :spellCheck "false"
+             :size "20"
+             :placeholder placeholder
+             :autoComplete "off"
+             :autoFocus autofocus?
+             :value value
+             :on-change (fn [e] (on-change (.. e -target -value)))}]
+    [:div {:class "w-16 flex flex-row justify-end items-center"}
+     input-tray]]
      ;; TODO: add tray
-     buttons]))
+   buttons])
 
 (defn img-button
   [{:keys [src on-click hover-text toggled?] :or {toggled? false}}]
@@ -53,8 +50,10 @@
 (defn find-and-replace-popup
   [{:keys [activated?
            ignore-case-toggled?
-           current-occurence
-           total-occurences
+           current-occurrence
+           total-occurrences
+           find-text
+           on-find-text-changed
            on-find
            on-replace
            on-replace-all
@@ -63,8 +62,8 @@
            on-click-exit
            on-toggle-ignore-case
            search-input-ref]}]
-  (r/with-let [*replace-text (r/atom "")
-               *find-text (r/atom "")
+  (r/with-let [debounced-on-find (debounce 500 on-find)
+               *replace-text (r/atom "")
                replace! #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))
                replace-all! #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))]
     (when activated?
@@ -100,7 +99,10 @@
        [input-row {:placeholder "Find"
                    :autofocus? true
                    :tab-index "1"
-                   :*value-atom *find-text
+                   :value find-text
+                   :on-change (fn [new-text]
+                                (on-find-text-changed new-text)
+                                (debounced-on-find))
                    :ref search-input-ref
                    :on-key-down (fn [e value]
                                   (when (= "Enter" (.-code e))
@@ -108,12 +110,12 @@
                                       ; Shift+Enter = goto previous find
                                       (on-click-prev)
                                       ; Enter = find/goto next find
-                                      (on-find value))))
+                                      (on-click-next value))))
                    :buttons [:<>
                              [text-button {:text "Search"
                                            :tab-index "3"
                                            :hover-text "Enter"
-                                           :on-click #(on-find @*find-text)}]
+                                           :on-click #(on-find)}]
                              [img-button {:src "icons/down_arrow.svg"
                                           :hover-text "Enter"
                                           :on-click on-click-next}]
@@ -128,16 +130,16 @@
                                           :hover-text "Esc"
                                           :on-click on-click-exit}]]
                    :input-tray [:div {:class "text-xs text-slate-500"}
-                                (str (if (pos? total-occurences)
-                                       (inc current-occurence)
-                                       current-occurence)
+                                (str (if (pos? total-occurrences)
+                                       (inc current-occurrence)
+                                       current-occurrence)
                                      "/"
-                                     total-occurences)]
-                   :on-change (debounce 500 on-find)}]
+                                     total-occurrences)]}]
        [v-spacer-m]
        [input-row {:placeholder "Replace"
                    :tab-index "2"
-                   :*value-atom *replace-text
+                   :value @*replace-text
+                   :on-change #(reset! *replace-text %)
                    :buttons [:<>
                              [text-button {:text "Replace"
                                            :tab-index "4"

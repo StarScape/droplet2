@@ -4,10 +4,11 @@
             [slate.model.run :as r]
             [slate.model.paragraph :as p]
             [slate.model.doc :as doc]
-            [slate.model.editor-state :as es :refer [>>=]])
+            [slate.model.editor-state :as es :refer [>>=]]
+            [slate.model.history :as history])
   (:refer-clojure :exclude [find replace]))
 
-(defn- find-all-occurences
+(defn- find-all-occurrences
   "Returns the starting indices of all occurrences of `substr` within `str`."
   [str substr ignore-case?]
   (let [str (if ignore-case? (.toLowerCase str) str)
@@ -28,14 +29,14 @@
 
 (comment
   ;; [3 9 15]
-  (find-all-occurences "foobarfoobarfoobar" "bar")
-  (find-all-occurences "foobarfoobarfoobar" "bizz")
+  (find-all-occurrences "foobarfoobarfoobar" "bar")
+  (find-all-occurrences "foobarfoobarfoobar" "bizz")
   )
 
 (defn paragraph-find [paragraph text ignore-case?]
   (let [uuid (:uuid paragraph)
         paragraph-text (m/text paragraph)
-        offsets (find-all-occurences paragraph-text text ignore-case?)]
+        offsets (find-all-occurrences paragraph-text text ignore-case?)]
     (map #(selection [uuid %] [uuid (+ % (.-length text))]) offsets)))
 
 (comment
@@ -46,7 +47,7 @@
   )
 
 (defn find
-  "Returns a list of locations where the text occurences in the document."
+  "Returns a list of locations where the text occurrences in the document."
   ([editor-state text ignore-case?]
    (->> (-> editor-state :doc :children)
         (map #(paragraph-find % text ignore-case?))
@@ -106,11 +107,63 @@
                 (>>= editor-update es/replace-paragraph para-uuid new-para)))
             (es/identity-update editor-state) locations-by-paragraph)))
 
-
-(defn init []
+(defn init
+  "Initializes find and replace state map."
+  []
   {:active? false
    :ignore-case? true
-   :text nil
    :location-before nil
-   :found-locations []
-   :current-location 0})
+   :find-text ""
+   :occurrences []
+   :current-occurrence-idx 0})
+
+(defn current-occurrence
+  "If find is active, returns current found location, as a Selection."
+  [{:keys [active? current-occurrence-idx occurrences] :as _find-and-replace-info}]
+  (when active?
+    (nth occurrences current-occurrence-idx)))
+
+(defn next-occurrence
+  [{:keys [occurrences current-occurrence-idx] :as find-and-replace-state}]
+  (if (< current-occurrence-idx (dec (count occurrences)))
+    (update find-and-replace-state :current-occurrence-idx inc)
+    (assoc find-and-replace-state :current-occurrence-idx 0)))
+
+(defn prev-occurrence
+  [{:keys [occurrences current-occurrence-idx] :as find-and-replace-state}]
+  (if (zero? current-occurrence-idx)
+    (assoc find-and-replace-state :current-occurrence-idx (dec (count occurrences)))
+    (update find-and-replace-state :current-occurrence-idx dec)))
+
+(defn replace-current-occurrence
+  "Returns an EditorUpdate replacing the current occurrence with `replacement-text`."
+  [find-and-replace-state editor-state replacement-text]
+  (replace editor-state (current-occurrence find-and-replace-state) replacement-text))
+
+(defn replace-all-occurrences
+  "Returns an EditorUpdate replacing all occurrences with `replacement-text`."
+  [{:keys [occurrences] :as _find-and-replace-state} editor-state replacement-text]
+  (replace-all editor-state occurrences replacement-text))
+
+(defn activate-find [{:keys [active?] :as find-and-replace-state} editor-state]
+  (if active?
+    find-and-replace-state
+    (merge find-and-replace-state {:active? true
+                                   :location-before (:selection editor-state)})))
+
+(defn find-occurrences
+  [{:keys [find-text ignore-case? occurrences location-before] :as find-and-replace-state} editor-state]
+  (let [occurences (find editor-state find-text ignore-case?)]
+    (assoc find-and-replace-state
+           :current-occurrence-idx 0
+           :occurrences occurences
+           :location-before (if (empty? occurrences)
+                              (:selection editor-state)
+                              location-before))))
+
+(defn cancel-find [{:keys [active?] :as find-and-replace-state}]
+  (if active?
+    (merge find-and-replace-state {:active? false
+                                   :occurrences []
+                                   :current-occurrence-idx 0})
+    find-and-replace-state))
