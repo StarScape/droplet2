@@ -89,12 +89,16 @@
   )
 
 (defn replace
-  "Returns an EditorUpdate replacing the Selection `location` with `text`."
-  [editor-state location text]
-  (let [para-uuid (sel/caret-para location)
-        para (get (-> editor-state :doc :children) para-uuid)
-        new-para (paragraph-replace para [location] text)]
-    (es/replace-paragraph editor-state para-uuid new-para)))
+  "Returns an EditorUpdate replacing the current selection with `text`."
+  [{:keys [doc selection] :as editor-state} text]
+  {:pre [(sel/single-paragraph? selection)]}
+  (let [para-uuid (sel/caret-para selection)
+        new-para (paragraph-replace (get (:children doc) para-uuid) [selection] text)
+        {{new-selection :selection} :editor-state
+         :as para-replaced-update} (es/replace-paragraph editor-state para-uuid new-para)
+        selection-length-diff (- (.-length text) (- (-> new-selection :end :offset) (-> new-selection :start :offset)))
+        final-selection (sel/shift-end new-selection selection-length-diff)]
+    (assoc-in para-replaced-update [:editor-state :selection] final-selection)))
 
 (defn replace-all
   "Returns an EditorUpdate replacing each Selection in `locations` with `text`."
@@ -135,10 +139,10 @@
     (assoc find-and-replace-state :current-occurrence-idx (dec (count occurrences)))
     (update find-and-replace-state :current-occurrence-idx dec)))
 
-(defn replace-current-occurrence
+(defn replace-current-selection
   "Returns an EditorUpdate replacing the current occurrence with `replacement-text`."
-  [find-and-replace-state editor-state replacement-text]
-  (replace editor-state (current-occurrence find-and-replace-state) replacement-text))
+  [editor-state replacement-text]
+  (replace editor-state replacement-text))
 
 (defn replace-all-occurrences
   "Returns an EditorUpdate replacing all occurrences with `replacement-text`."

@@ -5,7 +5,7 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.editor-state :as es :refer [editor-state ->EditorUpdate changelist]]
-            [slate.model.find-and-replace :refer [find replace-all]]))
+            [slate.model.find-and-replace :refer [find replace replace-all]]))
 
 #_(def p (p/paragraph "p1" [(r/run "foo") (r/run "bar" #{:italic})
                           (r/run "goo") (r/run "bar" #{:bold})
@@ -46,6 +46,16 @@
            [(selection ["p1" 3] ["p1" 6])]))))
 
 (deftest replace-test
+  (testing "shifts selection appropriately when replacement text is of different length than initial selection"
+    (is (= (replace (editor-state doc (selection ["p1" 0] ["p1" 3])) "a longer run of text")
+           (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "a longer run of text") (run "bar" #{:italic})
+                                                                     (run "goo") (run "bar" #{:bold})
+                                                                     (run "hoo") (run "bar" #{:underline})])
+                                                    (paragraph "p2" [(run "one a one, and a foo, and a bar!")])])
+                                         (selection ["p1" 0] ["p1" 20]))
+                           (changelist :changed-uuids #{"p1"}))))))
+
+(deftest replace-all-test
   (testing "single location"
     (is (= (replace-all (editor-state doc)
                         [(selection ["p1" 0] ["p1" 3])]

@@ -391,8 +391,8 @@
   (goto-current-occurrence! *ui-state))
 
 (defn replace-current! [*ui-state replacement-text]
-  (let [{:keys [find-and-replace history]} @*ui-state
-        editor-update (f+r/replace-current-occurrence find-and-replace (history/current-state history) replacement-text)]
+  (let [{:keys [history]} @*ui-state
+        editor-update (f+r/replace-current-selection (history/current-state history) replacement-text)]
     (fire-update! *ui-state editor-update {:add-to-history-immediately? true
                                            :focus? false})))
 
