@@ -373,9 +373,9 @@
 
 (defn goto-location-before!
   "Scrolls to the location that the cursor was at before the find operation was started."
-  [*ui-state]
-  (let [{:keys [find-and-replace]} @*ui-state]
-    (goto-location! *ui-state (:location-before find-and-replace) :focus? false)))
+  ([*ui-state & {:keys [focus?] :or {focus? false}}]
+   (let [{:keys [find-and-replace]} @*ui-state]
+     (goto-location! *ui-state (:location-before find-and-replace) :focus? #p focus?))))
 
 (defn next-occurrence!
   "Handles going to the next-occurrence in the find."
@@ -406,7 +406,7 @@
 (defn cancel-find! [*ui-state]
   (swap! *ui-state update :find-and-replace f+r/cancel-find)
   (when-not (:active? @*ui-state)
-    (goto-location-before! *ui-state)))
+    (goto-location-before! *ui-state :focus? true)))
 
 (definterceptor activate-find!
   {:manual? true}
@@ -428,7 +428,7 @@
    (let [{history :history, {:keys [find-text]} :find-and-replace} @*ui-state
          editor-state (history/current-state history)]
      (if (str/blank? find-text)
-       (goto-location-before! *ui-state)
+       (goto-location-before! *ui-state :focus? false)
        (do
          (swap! *ui-state update :find-and-replace f+r/find-occurrences editor-state)
          (goto-current-occurrence! *ui-state))))))

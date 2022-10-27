@@ -112,6 +112,7 @@
                                       ; Enter = find/goto next find
                                       (on-click-next value))))
                    :buttons [:<>
+                             ;; TODO: get rid of this, superfluous
                              [text-button {:text "Search"
                                            :tab-index "3"
                                            :hover-text "Enter"

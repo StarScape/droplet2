@@ -1,6 +1,5 @@
 (ns slate.measurement
   "Functions for measuring the widths of text as they will appear in the actual DOM."
-  (:require-macros [slate.macros :refer [for-str]])
   (:require [clojure.string :as str]
             [slate.view :refer [formats->css-classes paragraph-type->css-class]]
             [dev.performance-utils :refer-macros [inside-time-measurement!]]))

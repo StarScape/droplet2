@@ -14,16 +14,16 @@
 
 ;; PROG: Test with large documents
 ;; TODO: Test converting big HTML document; return nil on unrecognized objects, but send warning to console; throw in dev
-;; TODO: Space out paragraphs somewhat
-;; TODO: Change tab rendering from em space to <span> so that width can be styled
+;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
+;; TODO: Come up with a better criteria for history getting added to the backstack
+;; TODO: Marketing website
 ;; TODO: Dark mode
 ;; TODO: Fullscreen for windows and linux, plus shortcuts for entering and exiting fullscreen
+;; TODO: Change tab rendering from em space to <span> so that width can be styled
+;; TODO: Space out paragraphs somewhat
 ;; TODO: Bug - pressing fn+f to go to fullscreen still enters an 'f' inside the document
-;; TODO: Come up with a better criteria for history getting added to the backstack
-;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Break out all history fns into a protocol and implement for UIState
 ;; TODO: Rework/get rid of most of the slate.model.common protocols
-;; TODO: Website
 ;; TODO: RTF import/export
 ;; TODO: Implement highlight part of find and replace
 
