@@ -163,7 +163,5 @@
 
 (defn cancel-find [{:keys [active?] :as find-and-replace-state}]
   (if active?
-    (merge find-and-replace-state {:active? false
-                                   :occurrences []
-                                   :current-occurrence-idx 0})
+    (merge find-and-replace-state {:active? false})
     find-and-replace-state))

@@ -365,7 +365,8 @@
     (view/scroll-to-caret! (:shadow-root @*ui-state))))
 
 (defn goto-current-occurrence!
-  "Equivalent to calling goto-location! with the current found location."
+  "Equivalent to calling goto-location! with the current found location.
+   Does nothing if there are no found occurrences of the search text."
   [*ui-state]
   (let [{:keys [find-and-replace]} @*ui-state]
     (when-not (empty? (:occurrences find-and-replace))
@@ -403,18 +404,6 @@
     (fire-update! *ui-state editor-update {:add-to-history-immediately? true
                                            :focus? false})))
 
-(defn cancel-find! [*ui-state]
-  (swap! *ui-state update :find-and-replace f+r/cancel-find)
-  (when-not (:active? @*ui-state)
-    (goto-location-before! *ui-state :focus? true)))
-
-(definterceptor activate-find!
-  {:manual? true}
-  [*ui-state _]
-  (let [{:keys [history on-focus-find]} @*ui-state]
-    (on-focus-find)
-    (swap! *ui-state update :find-and-replace f+r/activate-find (history/current-state history))))
-
 (defn set-find-text!
   "Sets the find text in the find-and-replace state map.
    This __does not__ actually find the occurrence, go to them, etc.
@@ -437,6 +426,20 @@
   [*ui-state]
   (swap! *ui-state update-in [:find-and-replace :ignore-case?] not)
   (find! *ui-state))
+
+(defn cancel-find! [*ui-state]
+  (swap! *ui-state update :find-and-replace f+r/cancel-find)
+  (when-not (:active? @*ui-state)
+    (goto-location-before! *ui-state :focus? true)))
+
+(definterceptor activate-find!
+  {:manual? true}
+  [*ui-state _]
+  (let [{:keys [history on-focus-find]} @*ui-state]
+    (on-focus-find)
+    (swap! *ui-state update :find-and-replace f+r/activate-find (history/current-state history))
+    ;; Goto current occurrence if restarting find dialog with previous search
+    (goto-current-occurrence! *ui-state)))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
