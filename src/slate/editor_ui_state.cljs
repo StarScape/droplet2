@@ -589,6 +589,14 @@
       (.. shadow-dom-wrapper -shadowRoot (appendChild editor-elem))
       [editor-elem, (.-shadowRoot shadow-dom-wrapper)])))
 
+(defn load-fonts!
+  "Returns a Promise that resolves when the necessary fonts for rendering the document are loaded."
+  []
+  (js/Promise.all #js [(js/document.fonts.load "16px Merriweather")
+                       (js/document.fonts.load "italic 16px Merriweather")
+                       (js/document.fonts.load "bold 16px Merriweather")
+                       (js/document.fonts.load "bold italic 16px Merriweather")]))
+
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be updated throughout the lifetime of the editor. Takes a series
@@ -610,7 +618,7 @@
   ;; Load global styles if not already loaded
   (style/install-global-styles!)
   ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
-  (.. js/document -fonts (load "16px Merriweather")
+  (.. (load-fonts!)
       ;; TODO: use core-async or something to clean this up?
       (then #(let [uuid (random-uuid)
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
@@ -624,7 +632,7 @@
                                         (interceptors/reg-interceptors manual-interceptors))
                    hidden-input (view/create-hidden-input! shadow-root)
                    current-doc (:doc (history/current-state history))]
-                ;; Focus hidden input without scrolling to it (it will be at the bottom)
+               ;; Focus hidden input without scrolling to it (it will be at the bottom)
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
                               :viewmodels (vm/from-doc current-doc available-width measure-fn)
