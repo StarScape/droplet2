@@ -6,9 +6,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; Prioritized:
-;; TODO: Bug - Layout bug on line with "Thank you creepy psychologist man...". Test on pre-optimization commit first to see if regression.
-;; TODO: After performing a replace of a single occurrence, it should select the number of characters
-;; that are in the replacement text, not that were in the text previously (e.g. replace 'and' with 'that')
 ;; TODO: Should consider redirecting cmd+z to slate-editor in find and replace, at least under certain circumstances
 
 ;; PROG: Test with large documents

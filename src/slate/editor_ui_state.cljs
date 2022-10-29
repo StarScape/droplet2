@@ -441,18 +441,22 @@
     ;; Goto current occurrence if restarting find dialog with previous search
     (goto-current-occurrence! *ui-state)))
 
+ (defn find-interceptor
+   "Returns the interceptor inside the ui-state's interceptor map
+    that matches the interceptor pattern or event, if one exists."
+   [ui-state pattern-or-event]
+   (let [current-editor-state (history/current-state (:history ui-state))
+         matching-interceptor (interceptors/find-interceptor (:interceptors ui-state) pattern-or-event)]
+     (when (and matching-interceptor
+                ((:should-fire? matching-interceptor) current-editor-state))
+       matching-interceptor)))
+
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
   [*ui-state]
   (swap! *ui-state assoc :add-tip-to-backstack-callback #(add-tip-to-backstack-after-wait! *ui-state))
   (let [#_#_get-interceptor (partial interceptors/find-interceptor (:interceptors @*ui-state))
-        get-interceptor (fn [pattern]
-                          (let [ui-state @*ui-state
-                                current-editor-state (history/current-state (:history ui-state))
-                                matching-interceptor (interceptors/find-interceptor (:interceptors ui-state) pattern)]
-                            (when (and matching-interceptor
-                                       ((:should-fire? matching-interceptor) current-editor-state))
-                              matching-interceptor)))
+        get-interceptor (fn [pattern] (find-interceptor @*ui-state pattern))
         get-completion (fn [key-pressed]
                          (let [{:keys [interceptors history input-history]} @*ui-state
                                current-editor-state (history/current-state history)

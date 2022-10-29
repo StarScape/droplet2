@@ -105,9 +105,9 @@
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
         *find-and-replace-ref (r/atom nil)
-        focus-find-popup (fn []
-                           (when-let [elem @*find-and-replace-ref]
-                             (.focus elem)))
+        focus-find-popup! (fn []
+                            (when-let [elem @*find-and-replace-ref]
+                              (.focus elem)))
         current-file (:path @*open-file)
         deserialized-file-contents (when current-file
                                      (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
@@ -126,7 +126,7 @@
        [:div {:class "h-screen flex flex-row justify-center"}
         [slate-editor {:file-deserialized deserialized-file-contents
                        :ui-state-atom *slate-instance
-                       :on-focus-find focus-find-popup}]]
+                       :on-focus-find focus-find-popup!}]]
        (let [find-and-replace (-> @*slate-instance :find-and-replace)]
          [find-and-replace-popup {:activated? (:active? find-and-replace)
                                   :ignore-case-toggled? (not (:ignore-case? find-and-replace))
@@ -141,6 +141,13 @@
                                   :on-click-next #(ui-state/next-occurrence! *slate-instance)
                                   :on-click-prev #(ui-state/prev-occurrence! *slate-instance)
                                   :on-toggle-ignore-case #(ui-state/toggle-ignore-case! *slate-instance)
+                                  :on-key-down (fn [e]
+                                                 (let [ui-state @*slate-instance
+                                                       matching-interceptor (ui-state/find-interceptor ui-state e)]
+                                                   (when (or (= ui-state/undo! matching-interceptor)
+                                                             (= ui-state/redo! matching-interceptor))
+                                                     (ui-state/fire-interceptor! *slate-instance matching-interceptor nil)
+                                                     (focus-find-popup!))))
                                   :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}])
        [actionbar {:active-formats @*active-formats
                    :word-count @*word-count

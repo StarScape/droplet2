@@ -61,6 +61,7 @@
            on-click-prev
            on-click-exit
            on-toggle-ignore-case
+           on-key-down
            search-input-ref]}]
   (r/with-let [debounced-on-find (debounce 500 on-find)
                *replace-text (r/atom "")
@@ -70,32 +71,34 @@
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
-             :on-key-down #(cond
-                             (= "Escape" (.-code %))
-                             (on-click-exit)
+             :on-key-down (fn [e]
+                            (on-key-down ^js/Event (.-nativeEvent e))
+                            (cond
+                              (= "Escape" (.-code e))
+                              (on-click-exit)
 
-                             ;; cmd/ctrl+alt+c = toggle case sensitivity
-                             (and (= "KeyC" (.-code %))
-                                  (.-altKey %)
-                                  (slate-utils/cmd-or-ctrl-key %))
-                             (do
-                               (.preventDefault %)
-                               (on-toggle-ignore-case))
+                              ;; cmd/ctrl+alt+c = toggle case sensitivity
+                              (and (= "KeyC" (.-code e))
+                                   (.-altKey e)
+                                   (slate-utils/cmd-or-ctrl-key e))
+                              (do
+                                (.preventDefault e)
+                                (on-toggle-ignore-case))
 
-                             ;; cmd/ctrl+shift+r = replace all
-                             (and (= "KeyR" (.-code %))
-                                  (.-shiftKey %)
-                                  (slate-utils/cmd-or-ctrl-key %))
-                             (do
-                               (.preventDefault %)
-                               (replace-all!))
+                              ;; cmd/ctrl+shift+r = replace all
+                              (and (= "KeyR" (.-code e))
+                                   (.-shiftKey e)
+                                   (slate-utils/cmd-or-ctrl-key e))
+                              (do
+                                (.preventDefault e)
+                                (replace-all!))
 
-                             ;; cmd/ctrl+r = replace
-                             (and (= "KeyR" (.-code %))
-                                  (slate-utils/cmd-or-ctrl-key %))
-                             (do
-                               (.preventDefault %)
-                               (replace!)))}
+                              ;; cmd/ctrl+r = replace
+                              (and (= "KeyR" (.-code e))
+                                   (slate-utils/cmd-or-ctrl-key e))
+                              (do
+                                (.preventDefault e)
+                                (replace!))))}
        [input-row {:placeholder "Find"
                    :autofocus? true
                    :tab-index "1"
