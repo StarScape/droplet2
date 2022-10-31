@@ -267,9 +267,6 @@
     (testing "works across paragraphs"
       (is (= #{:bold} (sl/formatting formats-doc (selection ["f1" 8] ["f2" 3])))))))
 
-;; TODO NEXT: fix toggle-format tests
-;; TODO after that: get new transaction system rendering properly/fix any errors it's caused with view and event handling layers.
-
 (deftest toggle-format-test
   (testing "toggling single run"
     (is (= (sl/toggle-format doc (selection ["p1" 0] ["p1" 3]) :italic)

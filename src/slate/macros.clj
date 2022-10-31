@@ -1,7 +1,5 @@
 (ns slate.macros)
 
-;; TODO: add a comptime macro
-
 (defmacro comptime
   "Executes the code inside at compile time (in Clojure, not CLJS), and returns the result.
    Can be used for things like, e.g. programatically creating a large object and then injecting

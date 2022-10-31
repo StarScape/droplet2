@@ -315,7 +315,6 @@
       "\n" ; TODO: Not sure if this is the right approach here
       (char-at para (sel/shift-single sel -1))))
 
-  ;; TODO: should this return a paragraph instead of a list of runs?
   (selected-content [para sel]
     (fragment (second (separate-selected (:runs para) sel))))
 

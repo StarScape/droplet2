@@ -280,7 +280,6 @@
   ([doc sel]
    (enter doc sel (random-uuid))))
 
-;; TODO: move to block below?
 (defn doc-selected-content
   [doc sel]
   (let [start-para-uuid (-> sel :start :paragraph)
@@ -341,7 +340,6 @@
   [doc para]
   (= para (dll/last (:children doc))))
 
-;; TODO: should the functions be inlined here?
 (extend-type Document
   Selectable
   (char-at [doc sel] (char-at ((:children doc) (sel/caret-para sel)) sel))

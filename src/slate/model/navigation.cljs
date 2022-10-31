@@ -557,8 +557,6 @@
                (assoc sel :end new-caret, :backwards? false))
              (sel/remove-ends-from-between)))))))
 
-;; TODO: add :formats field to Selection object and change these methods to accomodate automatically updating it
-
 (comment
   (def my-par (p/paragraph [(r/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))
   (prev-word-offset (apply str (map :text (:runs my-par))) 0)

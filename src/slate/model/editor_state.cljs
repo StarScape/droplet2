@@ -65,9 +65,7 @@
    Takes keyword arguments :change-uuids, :inserted-uuids, and :deleted-uuids (each
    default to an empty set). If no arguments supplied, returns an empty changelist."
   ([& {:keys [changed-uuids inserted-uuids deleted-uuids rerender-uuids]}]
-   {#_#_:resolved? false ;; TODO: probably not needed now that we have monadic updates
-    ;; :base-state-hash base-state-hash
-    :changed-uuids (or changed-uuids #{})
+   {:changed-uuids (or changed-uuids #{})
     :inserted-uuids (or inserted-uuids #{})
     :deleted-uuids (or deleted-uuids #{})}))
 

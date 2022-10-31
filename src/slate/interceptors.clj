@@ -53,7 +53,6 @@
                       :should-fire? ~should-fire?
                       :interceptor-fn (fn [~@arglist] ~@fn-body)}))
 
-;; TODO: add docstring ability to definterceptor
 (defmacro definterceptor
   "Same as `interceptor`, but `def`'s the resulting interceptor using `name`.
    

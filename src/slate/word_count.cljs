@@ -36,4 +36,3 @@
         (- (words-in-paragraphs old-changed-paragraphs))
         (+ (words-in-paragraphs new-changed-paragraphs)))))
 
-;; TODO: make work on undo and redo

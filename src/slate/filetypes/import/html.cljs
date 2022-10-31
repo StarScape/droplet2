@@ -281,9 +281,6 @@
   (let [paragraphs (:paragraphs (html->fragment html-doc-str))]
     (document paragraphs)))
 
-;; TODO: rethink html import approach by recursing document tree and keeping track of style state
-;;       pull in some test string from g docs and see how they import
-
 (comment
   (.-styleSheets (str->document test-file))
   (js/Array.from (.-children (.-body (str->document test-file))))

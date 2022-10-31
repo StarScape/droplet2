@@ -147,9 +147,8 @@
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
   all paragraphs that have been inserted/changed/removed."
-  ;; TODO: args to this function have grown somewhat ridiculous. Should refactor to named args
-  [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist
-   & {:keys [focus? scroll-to-caret?] :or {focus? true, scroll-to-caret? false}}]
+  [& {:keys [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist focus? scroll-to-caret?]
+      :or {focus? true, scroll-to-caret? false}}]
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist
         rerender-uuids (set/difference (set/union (sel/all-uuids (:selection prev-state))
@@ -245,13 +244,13 @@
                                 :history new-history
                                 :viewmodels new-vms
                                 :word-count new-word-count)]
-        (sync-dom! (:shadow-root ui-state)
-                   (:dom-elem new-ui-state)
-                   (:hidden-input ui-state)
-                   (:editor-state restored-update)
-                   (history/current-state history)
-                   (:viewmodels new-ui-state)
-                   changelist)
+        (sync-dom! :shadow-root (:shadow-root ui-state)
+                   :dom-elem (:dom-elem new-ui-state)
+                   :hidden-input (:hidden-input ui-state)
+                   :editor-state (:editor-state restored-update)
+                   :prev-state (history/current-state history)
+                   :viewmodels (:viewmodels new-ui-state)
+                   :changelist changelist)
         (reset! *ui-state new-ui-state)))))
 
 (definterceptor redo!
@@ -272,13 +271,13 @@
                                 :history new-history
                                 :viewmodels new-vms
                                 :word-count new-word-count)]
-        (sync-dom! (:shadow-root new-ui-state)
-                   (:dom-elem new-ui-state)
-                   (:hidden-input new-ui-state)
-                   (:editor-state restored-update)
-                   (history/current-state history)
-                   (:viewmodels new-ui-state)
-                   changelist)
+        (sync-dom! :shadow-root (:shadow-root new-ui-state)
+                   :dom-elem (:dom-elem new-ui-state)
+                   :hidden-input (:hidden-input new-ui-state)
+                   :editor-state (:editor-state restored-update)
+                   :prev-state (history/current-state history)
+                   :viewmodels (:viewmodels new-ui-state)
+                   :changelist changelist)
         (reset! *ui-state new-ui-state)))))
 
 (definterceptor new-file!
@@ -309,13 +308,13 @@
                           (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
                           (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
                           (update-viewmodels editor-update))]
-     (sync-dom! (:shadow-root new-ui-state)
-                (:dom-elem new-ui-state)
-                (:hidden-input new-ui-state)
-                (:editor-state editor-update)
-                editor-state
-                (:viewmodels new-ui-state)
-                (:changelist editor-update)
+     (sync-dom! :shadow-root (:shadow-root new-ui-state)
+                :dom-elem (:dom-elem new-ui-state)
+                :hidden-input (:hidden-input new-ui-state)
+                :editor-state (:editor-state editor-update)
+                :prev-state editor-state
+                :viewmodels (:viewmodels new-ui-state)
+                :changelist (:changelist editor-update)
                 :focus? focus?
                 :scroll-to-caret? scroll-to-caret?)
      (reset! *ui-state new-ui-state)
@@ -476,8 +475,6 @@
     (let [*mousedown-event (atom nil :validator #(instance? js/MouseEvent %))]
       (.addEventListener editor-elem "mousedown"
                          (fn [e]
-                           ;; TODO: thoroughly profile all of this flow: find out exactly WHERE the bottleneck is that's causing
-                           ;; the lagginess on click inside the large document. Is it still present if I turn rendering off?
                            (.preventDefault e)
                            (.focus hidden-input #js {:preventScroll true})
                            (reset! *editor-surface-clicked? true)
