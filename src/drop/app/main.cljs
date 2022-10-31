@@ -6,7 +6,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; Prioritized:
-;; TODO: Bug - go up in first line of first para and it goes back to the last line in the para
 ;; PROG: Test with large documents
 ;; TODO: Test converting big HTML document; return nil on unrecognized objects, but send warning to console; throw in dev
 ;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)

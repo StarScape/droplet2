@@ -588,13 +588,12 @@
         destination-para (if (or first-para? (not caret-in-first-line?))
                            para
                            (dll/prev (:children doc) para-uuid))
-        prev-line (if (not caret-in-first-line?)
-                    (line-above-caret viewmodels collapsed-sel)
-                    (-> destination-para
-                        (:uuid)
-                        (viewmodels)
-                        (:lines)
-                        (peek)))
+        destination-para-lines (-> destination-para (:uuid) (viewmodels) (:lines))
+        prev-line (if caret-in-first-line?
+                    (if first-para?
+                      (first destination-para-lines)
+                      (peek destination-para-lines))
+                    (line-above-caret viewmodels collapsed-sel))
         new-uuid (:uuid destination-para)
         initial-para-margin (:left (margins (get-paragraph-elem editor-elem para-uuid)))
         dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:uuid destination-para))))

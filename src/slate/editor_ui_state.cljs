@@ -375,7 +375,7 @@
   "Scrolls to the location that the cursor was at before the find operation was started."
   ([*ui-state & {:keys [focus?] :or {focus? false}}]
    (let [{:keys [find-and-replace]} @*ui-state]
-     (goto-location! *ui-state (:location-before find-and-replace) :focus? #p focus?))))
+     (goto-location! *ui-state (:location-before find-and-replace) :focus? focus?))))
 
 (defn next-occurrence!
   "Handles going to the next-occurrence in the find."
