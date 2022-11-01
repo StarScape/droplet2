@@ -28,9 +28,12 @@
       (.close))))
 
 (defn- clean-whitespace
-  "Removes non-standard whitespace characters and makes them regular spaces"
+  "Removes non-standard whitespace characters and makes them regular spaces,
+   as well as converts any runs of 3 or more consecutive spaces to a tab char."
   [str]
-  (.replaceAll str (js/RegExp. "\\s" "g") " "))
+  (.. str
+      (replaceAll (js/RegExp. "\\s" "g") " ")
+      (replaceAll (js/RegExp. "\\s{3,}" "g") "\u2003")))
 
 (defn- root-font-size
   "Returns root font size for document, in pixels."

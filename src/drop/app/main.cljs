@@ -6,6 +6,8 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; Prioritized:
+;; TODO: When importing HTML, parse more than 2 consecutive spaces as a tab.
+
 ;; PROG: Test with large documents
 ;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Come up with a better criteria for history getting added to the backstack
