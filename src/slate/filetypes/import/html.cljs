@@ -1,6 +1,7 @@
 (ns slate.filetypes.import.html
   (:require-macros [slate.macros :refer [slurp-file]])
   (:require [clojure.set :as set]
+            [drop.utils :as drop-utils]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.run :as r :refer [run]]))
@@ -250,10 +251,14 @@
         (display-none? node)
         nil
 
-        :else (do
-                #_(js-debugger)
-                (js/console.error "Node: " node)
-                (throw (js/Error. "Unhandled condition in (convert-node)!")))))))
+        :else (if drop-utils/DEV
+                (do
+                  (js/console.error "Node: " node)
+                  (throw (js/Error. "Unhandled condition in (convert-node):")))
+                (do
+                  (js/console.warn "Unhandled condition in (convert-node): ")
+                  (js/console.warn "Node: " node)
+                  nil))))))
 
 (defn convert-all-nodes [nodes]
   (filter some? (flatten (map convert-node nodes))))
