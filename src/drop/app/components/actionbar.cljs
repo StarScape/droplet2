@@ -24,6 +24,11 @@
 (defn- invisible-button []
   [:div.invisible [button "icons/italic.svg" false false #()]])
 
+(defn word-count-display [num-words]
+  [:span {:class "flex text-slate-800 items-center text-sm mr-2"}
+   num-words
+   [:span {:class "text-xs text-slate-500 ml-1"} (if (= 1 num-words) "word" "words")]])
+
 (defn actionbar [{:keys [active-formats word-count on-format-toggle *full-screen?]}]
   (r/with-let [*transparent-mode? (r/atom false)
                set-transparent-debounced! (debounce actionbar-fade-out-ms #(when @*full-screen?
@@ -60,6 +65,4 @@
         ;; Even when all the others are hidden in fullscreen mode
         [invisible-button]]
        #_[:span {:class "flex items-center text-sm mr-2"} word-count " words"]
-       [:span {:class "flex text-slate-800 items-center text-sm mr-2"}
-        word-count
-        [:span {:class "text-xs text-slate-500 ml-1"} "words"]]])))
+       [word-count-display word-count]])))

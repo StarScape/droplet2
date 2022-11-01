@@ -4,9 +4,13 @@
 
 ;; TODO: a lil caching?
 (defn word-count [s]
-  (.. s (trim) (split #"\s+") -length))
+  (if (str/blank? s)
+    0
+    (.. s (trim) (split #"\s+") -length)))
 
 (comment
+  (word-count "")
+  (word-count "Hello")
   (word-count "Hello world!")
   (word-count "Hello world ")
   (word-count " Hello  world there")
