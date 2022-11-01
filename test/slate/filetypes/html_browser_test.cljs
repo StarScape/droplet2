@@ -107,7 +107,7 @@
                          (run " this is the second.")])
              (paragraph [(run "Paragraph 2. One sentence, two sentence.")])
              (paragraph [(run "And a third one, yessir.")])
-             (paragraph [(run "Forth paragraph, ")
+             (paragraph [(run "\u2003Forth paragraph, ")
                          (run "incoming." #{:bold})])]))
 
 (comment
