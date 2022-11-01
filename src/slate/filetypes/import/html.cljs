@@ -150,8 +150,7 @@
 (defn- no-block-level-children? [node]
   (and (elem? node)
        (let [children (js/Array.from (.-children node))]
-         (and (pos? (.-length children))
-              (every? (complement block-elem?) children)))))
+         (every? (complement block-elem?) children))))
 
 (defn- indented? [elem]
   (pos? (js/parseFloat (.-textIndent (js/getComputedStyle elem)))))

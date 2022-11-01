@@ -23,6 +23,8 @@
 
 (def test-file1 (slurp-file "test_files/html/the_quiet_universe.html"))
 (def test-file2 (slurp-file "test_files/html/conversion_test.html"))
+(def test-file3 (slurp-file "test_files/html/simple.html"))
+
 (def paste-tests (let [get-name-and-html (fn [s]
                                            (let [idx (.indexOf s "\n")]
                                              [(keyword (.substr s 0 idx))
@@ -98,6 +100,16 @@
              (paragraph [(run "")])
              (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
 
+(def test-file3-expected
+  (document [(paragraph (random-uuid) :h1 [(run "Title!" #{:bold})])
+             (paragraph [(run "This is the first sentence. ")
+                         (run "And" #{:italic})
+                         (run " this is the second.")])
+             (paragraph [(run "Paragraph 2. One sentence, two sentence.")])
+             (paragraph [(run "And a third one, yessir.")])
+             (paragraph [(run "Forth paragraph, ")
+                         (run "incoming." #{:bold})])]))
+
 (comment
   (html-import/html->droplet test-file2)
   (html-import/html->droplet (:gdocs-complex paste-tests))
@@ -109,7 +121,8 @@
 (deftest whole-document-import
   (testing "can import from google docs"
     (is (doc= (html-import/html->doc test-file1) test-file1-expected))
-    (is (doc= (html-import/html->doc test-file2) test-file2-expected))))
+    (is (doc= (html-import/html->doc test-file2) test-file2-expected))
+    (is (doc= (html-import/html->doc test-file3) test-file3-expected))))
 
 (deftest paste-import
   (testing "can handle pastes from google docs"
