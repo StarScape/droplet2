@@ -268,14 +268,17 @@
   [editor-state _ _]
   (es/select-all editor-state))
 
+(defn standard-auto-surround-should-fire?
+  [{:keys [selection] :as editor-state}]
+  (or (sel/range? selection)
+      ;; The chars immediately before and after the pipe cursor must not be content chars
+      (and (not (nav/content? (m/char-before editor-state)))
+           (not (nav/content? (m/char-at editor-state))))))
+
 ;; Auto-surrounding ;;
 (definterceptor auto-surround-double-quote
   {:add-to-history-immediately? true
-   :should-fire? (fn [{:keys [selection] :as editor-state}]
-                   (or (sel/range? selection)
-                       ;; Chars before and after the pipe cursor must not be a content char
-                       (and (not (nav/content? (m/char-before editor-state)))
-                            (not (nav/content? (m/char-at editor-state))))))}
+   :should-fire? standard-auto-surround-should-fire?}
   [editor-state _ui-state _e]
   (es/auto-surround editor-state \"))
 
@@ -292,7 +295,8 @@
   (es/auto-surround editor-state \'))
 
 (definterceptor auto-surround-paren
-  {:add-to-history-immediately? true}
+  {:add-to-history-immediately? true
+   :should-fire? standard-auto-surround-should-fire?}
   [editor-state _ui-state _e]
   (es/auto-surround editor-state "(" ")"))
 

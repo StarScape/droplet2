@@ -7,7 +7,6 @@
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
-;; TODO: Come up with a better criteria for history getting added to the backstack
 ;; TODO: More pastes tests
 ;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: RTF import/export
@@ -20,6 +19,7 @@
 ;; TODO: Break out all history fns into a protocol and implement for UIState
 ;; TODO: Rework/get rid of most of the slate.model.common protocols
 ;; TODO: Implement highlight part of find and replace
+;; TODO: Further polish criteria for history getting added to the backstack
 
 ;; Usability/Polish:
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
