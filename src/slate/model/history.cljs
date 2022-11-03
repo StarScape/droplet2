@@ -16,7 +16,9 @@
    rapidly and then pause, most editors will record this as a single level of undo.
    The tip is essentially saying 'here is a current state of the editor which does not
    yet merit being broken into separate levels of undo-ability.' The code in `fire-interceptor!`
-   will automatically incoporate the tip into the backstack after a certain period of inactivity"
+   will automatically incoporate the tip into the backstack after a certain period of inactivity,
+   but that is outside the responsibility of this module. This is just a pure data structure for
+   storing series of EditorStates."
   (:require [clojure.spec.alpha :as s]
             [slate.model.editor-state :as es :refer [editor-state]])
   (:refer-clojure :exclude [next]))

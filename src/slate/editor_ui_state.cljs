@@ -320,11 +320,11 @@
      (reset! *ui-state new-ui-state)
 
      (cond
-      ;; Adding to history has already be handled, cancel the debounced func if one is waiting to fire
+       ;; Adding to history has already be handled, cancel the debounced func if one is waiting to fire
        (and add-to-history-immediately? include-in-history?)
        (cancel-add-tip-to-backstack! *ui-state)
 
-      ;; Integrate the history tip into the backstack after a period of inactivity
+       ;; Integrate the history tip into the backstack after a period of inactivity
        include-in-history?
        (add-tip-to-backstack-after-wait! *ui-state))))
   ([*ui-state editor-update opts]

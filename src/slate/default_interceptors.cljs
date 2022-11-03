@@ -270,7 +270,11 @@
 
 ;; Auto-surrounding ;;
 (definterceptor auto-surround-double-quote
-  {:add-to-history-immediately? true}
+  {:add-to-history-immediately? true
+   :should-fire? (fn [{:keys [selection] :as editor-state}]
+                   (or (sel/range? selection)
+                       ;; Char after the pipe cursor must not be a content char
+                       (not (nav/content? (m/char-at editor-state)))))}
   [editor-state _ui-state _e]
   (es/auto-surround editor-state \"))
 
