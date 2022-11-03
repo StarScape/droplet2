@@ -99,6 +99,24 @@
         new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (view/elem-width ui-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
+(defn modifies-doc?
+  "Returns true if the `EditorUpdate` makes changes to the Document."
+  [{{:keys [inserted-uuids changed-uuids deleted-uuids]} :changelist :as _editor-update}]
+  (or (seq inserted-uuids)
+      (seq changed-uuids)
+      (seq deleted-uuids)))
+
+(def does-not-modify-doc?
+  "Returns true if the `EditorUpdate` does not make changes to the Document."
+  (complement modifies-doc?))
+
+(defn should-integrate-tip-first?
+  "Returns true if the history's tip should be integrated into the backstack before
+   `new-editor-update` is added to the history."
+  [history new-editor-update]
+  (and (modifies-doc? new-editor-update)
+       (does-not-modify-doc? (history/current history))))
+
 (defn update-history
   [history editor-update interceptor]
   ;; if completion:
@@ -106,12 +124,15 @@
   ;;   Then set the tip to the result of the completion interceptor.
   ;; else if normal:
   ;;   Just update tip, will be integrated into backstack after debounced timeout
-  (if (and (:add-to-history-immediately? interceptor)
-           (:include-in-history? interceptor))
-    (-> history
-        (history/add-tip-to-backstack)
-        (history/set-tip editor-update))
-    (history/set-tip history (es/merge-updates (:tip history) editor-update))))
+  (if-not (:include-in-history? interceptor)
+    (history/set-tip history editor-update)
+    (if (:add-to-history-immediately? interceptor)
+      (-> history
+          (history/add-tip-to-backstack)
+          (history/set-tip editor-update))
+      (as-> history $
+        (if (should-integrate-tip-first? $ editor-update) (history/add-tip-to-backstack $) $)
+        (history/set-tip $ editor-update)))))
 
 (defn add-tip-to-backstack!
   [*ui-state]

@@ -190,7 +190,9 @@
                     (subvec (:backstack history) 0 (inc (:current-state-index history)))
                     (:backstack history))]
     (assoc history
-           :tip new-tip
+           :tip (if (nil? (:tip history))
+                  new-tip
+                  (es/merge-updates (:tip history) new-tip))
            :backstack backstack
            :current-state-index (count backstack))))
 
