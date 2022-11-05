@@ -126,9 +126,10 @@
   [{:keys [doc selection] :as editor-state}, paragraphs]
   (if (sel/range? selection)
     (-> (delete editor-state) (>>= insert paragraphs))
-    (let [dedupe-para-uuid #(if (contains? (:children doc) (:uuid %))
-                              (assoc % :uuid (random-uuid))
-                              %)
+    (let [dedupe-para-uuid (fn [p]
+                             (if (contains? (:children doc) (:uuid p))
+                               (assoc p :uuid (random-uuid))
+                               p))
           paragraphs (map dedupe-para-uuid paragraphs)
           new-doc (insert doc selection paragraphs)
           last-paragraph (last paragraphs)
@@ -143,7 +144,10 @@
 ;; TODO: replace [EditorState [Paragraph]] with this
 (defmethod insert [EditorState DocumentFragment]
   [editor-state fragment]
-  (insert editor-state (m/items fragment)))
+  (let [paragraphs (m/items fragment)]
+    (if (= (count paragraphs) 1)
+      (insert editor-state (first paragraphs))
+      (insert editor-state paragraphs))))
 
 (defmethod insert [EditorState Paragraph]
   [editor-state paragraph]

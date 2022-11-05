@@ -117,40 +117,33 @@
    it's assumed any deleting of a range selection has already been done."
   [doc sel paragraphs]
   {:pre [(sel/single? sel)
-         (sequential? paragraphs)]}
+         (sequential? paragraphs)
+         (> (count paragraphs) 1)]}
   (let [target-para-uuid (-> sel :start :paragraph)
         target-para (get (:children doc) target-para-uuid)
         sel-caret (sel/caret sel)
-
         first-paragraph-in-list (first paragraphs)
-        first-paragraph
-        (-> target-para
-            (p/delete-after sel-caret)
-            (insert-end first-paragraph-in-list)
-            ;; TODO: should this be conditional based on the selection offset or something?
-            ;; Is this current behavior intuitive?
-            #_(assoc :type (:type first-paragraph-in-list)))
-
+        first-paragraph (-> target-para
+                            (p/delete-after sel-caret)
+                            (insert-end first-paragraph-in-list)
+                            ;; TODO: should this be conditional based on the selection offset or something?
+                            ;; Is this current behavior intuitive?
+                            #_(assoc :type (:type first-paragraph-in-list)))
         last-paragraph-in-list (if (satisfies? IStack paragraphs)
                                  (peek paragraphs)
                                  (last paragraphs))
-        last-paragraph
-        (-> target-para
-            (p/delete-before sel-caret)
-            (insert-start last-paragraph-in-list)
-            (assoc :uuid (:uuid last-paragraph-in-list)
-                   #_#_:type (:type last-paragraph-in-list)))
-
+        last-paragraph (-> target-para
+                           (p/delete-before sel-caret)
+                           (insert-start last-paragraph-in-list)
+                           (assoc :uuid (:uuid last-paragraph-in-list)))
         ;; TODO: optimize for case where `paragraphs` is DLL?
-        in-between-paragraphs
-        (->> paragraphs (drop 1) (drop-last 1))
-
+        in-between-paragraphs (->> paragraphs (drop 1) (drop-last 1))
         ;; New paragraphs taking the place of target-para
-        all-modified-paragraphs
-        (flatten [first-paragraph in-between-paragraphs last-paragraph])
-
-        new-children
-        (dll/replace-range (:children doc) target-para-uuid target-para-uuid all-modified-paragraphs)]
+        all-modified-paragraphs (flatten [first-paragraph in-between-paragraphs last-paragraph])
+        new-children (dll/replace-range (:children doc)
+                                        target-para-uuid
+                                        target-para-uuid
+                                        all-modified-paragraphs)]
     (assoc doc :children new-children)))
 
 #_(defn- doc-insert-list
