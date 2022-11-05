@@ -154,7 +154,12 @@
                         (paragraph (random-uuid) :ul [(run "UL 3")])
                         (paragraph [(run "")])
                         (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
-                        (paragraph [(run "")])]))))
+                        (paragraph [(run "")])])))
+    (testing "converts whitespace"
+      (is (doc-frag= (html-import/html->fragment "<span>&nbsp;</span>")
+                     (paragraph [(run " ")])))
+      (is (doc-frag= (html-import/html->fragment "<span>\t</span>")
+                     (paragraph [(run "\u2003")])))))
 
   (testing "can handle pastes from MS Word online"
     (is (= (html-import/html->fragment (:word-online-simple paste-tests))

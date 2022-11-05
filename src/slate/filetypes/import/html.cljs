@@ -27,12 +27,20 @@
       (.write html-document-str)
       (.close))))
 
+(def non-standard-whitespace
+  "Regex matching all whitespace not used by Slate.
+   Note: currently this is a naive implementation because Slate
+   is only concerned with English. Eventually it will need to support
+   double-width spaces and such as well."
+  (js/RegExp. "[\\r\\n\\t\\f\\v\u00a0\u1680\u2000-\u2002\u2004-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]" "g"))
+
 (defn- clean-whitespace
   "Removes non-standard whitespace characters and makes them regular spaces,
    as well as converts any runs of 3 or more consecutive spaces to a tab char."
   [str]
   (.. str
-      (replaceAll (js/RegExp. "\\s" "g") " ")
+      (replaceAll (js/RegExp. "\\t" "g") "\u2003")
+      (replaceAll non-standard-whitespace " ")
       (replaceAll (js/RegExp. "\\s{3,}" "g") "\u2003")))
 
 (defn- root-font-size
