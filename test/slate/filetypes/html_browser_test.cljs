@@ -27,8 +27,8 @@
 
 (def paste-tests (let [get-name-and-html (fn [s]
                                            (let [idx (.indexOf s "\n")]
-                                             [(keyword (.substr s 0 idx))
-                                              (.substr s (inc idx))]))
+                                             [(keyword (.substring s 0 idx))
+                                              (.substring s (inc idx))]))
                        sections (-> (slurp-file "test_files/html/paste_tests.html")
                                     (.split "\n---\n"))]
                    (into {} (map get-name-and-html sections))))

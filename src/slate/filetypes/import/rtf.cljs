@@ -25,19 +25,21 @@
   [rtf-str start-i])
 
 (defn parse-command [rtf-str start-i]
-  (loop [i start-i, command-name nil, num-arg nil]
+  (loop [i start-i, command-name nil, num-arg-start-i nil]
     (let [char (nth rtf-str i)]
       (cond
         (re-matches? #"[a-z]" char)
         (recur (inc i) nil nil)
 
         (re-matches? #"-|[0-9]" char)
-        (recur (inc i) (.substring start-i i) nil)
+        (recur (inc i) (.substring start-i i) (or num-arg-start-i i))
 
         :else
         (if command-name
           {:command command-name
-           :num })))))
+           :num (.substring num-arg-start-i i)}
+          {:command command-name
+           :num (.substring num-arg-start-i i)})))))
 
 (re-matches? #"\-|[0-9]" "-")
 

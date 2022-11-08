@@ -15,7 +15,7 @@
 
 (defn dom-id->paragraph-uuid
   [dom-id]
-  (uuid (.substr dom-id 2)))
+  (uuid (.substring dom-id 2)))
 
 (defn get-paragraph-elem
   [editor-elem paragraph-or-uuid]

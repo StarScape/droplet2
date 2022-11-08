@@ -50,7 +50,7 @@
               :ol :li
               :ul :li)
         runs (if (p/indented? p)
-               (update-in (:runs p) [0 :text] #(.substr % 1))
+               (update-in (:runs p) [0 :text] #(.substring % 1))
                (:runs p))]
     (if (blank? p)
       [:br {:key (random-uuid)}]

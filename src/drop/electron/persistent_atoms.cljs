@@ -10,7 +10,7 @@
 (defn persistent-atom-name->file-path
   [atom-name]
   (let [file-name (-> (str atom-name)
-                      (.substr 1)
+                      (.substring 1)
                       (.replaceAll "/" "_")
                       (str ".edn"))]
     (path/join (.getPath app "userData") file-name)))
