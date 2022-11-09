@@ -1,7 +1,12 @@
 (ns slate.filetypes.import.rtf
+  "Code for parsing and importing RTF documents.
+   Internally, this import process is separated into two logical parts:
+   First the raw RTF is parsed into a data structure easily readable by
+   Clojure (a sort of IR), and another in which this data structure is
+   converted into a Slate Document."
   (:require [clojure.string :as str]))
 
-(def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\par\n\r}")
+(def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
 
 (defn re-matches?
   [re str]
@@ -39,7 +44,6 @@
           [i, cmd])))))
 
 (comment
-  (+ 1 1)
   (parse-command "\\para1234" 1)
   )
 
@@ -53,18 +57,26 @@
 
 (defn parse-group
   ([rtf-str start-i]
-   (loop [i start-i
-          group []]
-     (let [char (get rtf-str i)]
-       (cond
-         (= i (count rtf-str)) (first group)
-         (= char "{") (let [[new-i, parsed-group] (parse-group rtf-str (inc i))]
-                        (recur new-i (conj group parsed-group)))
-         (= char "}") [(inc i), group]
-         (= char "\\") (let [[new-i, parsed-entity] (parse-backslash-entity rtf-str (inc i))]
-                         (recur new-i (conj group parsed-entity)))
-         :else (recur (inc i) (append-or-create-text group char))))))
+   (letfn [(conj-to-group [group entity]
+            ((if (string? entity) append-or-create-text conj) group entity))]
+     (loop [i start-i
+            group []]
+       (let [char (nth rtf-str i)]
+         (cond
+           (= char "{") (let [[new-i, parsed-group] (parse-group rtf-str (inc i))]
+                          (recur new-i (conj-to-group group parsed-group)))
+           (= char "}") [(inc i), group]
+           (= char "\\") (let [[new-i, parsed-entity] (parse-backslash-entity rtf-str (inc i))]
+                           (recur new-i (conj-to-group group parsed-entity)))
+         ;;(= i (count rtf-str)) (throw (js/Error. "Parsing of RTF document failed."))
+           :else (recur (inc i) (append-or-create-text group char)))))))
   ([rtf-str] (parse-group rtf-str 0)))
+
+(defn parse-rtf-doc
+  [rtf-str]
+  (assert (.startsWith rtf-str "{\\rtf1") "Argument to parse-rtf-doc is not a valid RTF document.")
+  (let [[_, main-group] (parse-group rtf-str 1)]
+    main-group))
 
 ;;  {\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard
 ;;  This is some {\b bold} text.\par
@@ -73,6 +85,6 @@
 (comment
   (parse-ascii-escape "\\'eaAnd" 2)
   (count basic)
-  (parse-group basic 0)
+  (parse-rtf-doc basic)
 
   )
