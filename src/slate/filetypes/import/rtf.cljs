@@ -4,9 +4,10 @@
    First the raw RTF is parsed into a data structure easily readable by
    Clojure (a sort of IR), and another in which this data structure is
    converted into a Slate Document."
+  (:require-macros [slate.macros :refer [slurp-file]])
   (:require [clojure.string :as str]))
 
-(def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
+;; Text to IR Parsing ;;
 
 (defn re-matches?
   [re str]
@@ -29,7 +30,7 @@
   (loop [i start-i, command-name nil, num-arg-start-i nil]
     (let [char (get rtf-str i)]
       (cond
-        (re-matches? #"[a-z]" char)
+        (re-matches? #"[a-zA-Z]" char)
         (recur (inc i) nil nil)
 
         (re-matches? #"-|[0-9]" char)
@@ -42,10 +43,6 @@
                     (keyword (.substring rtf-str start-i i)))
               i (if (re-matches? #"\s" char) (inc i) i)]
           [i, cmd])))))
-
-(comment
-  (parse-command "\\para1234" 1)
-  )
 
 (defn parse-backslash-entity
   [rtf-str i]
@@ -72,19 +69,39 @@
            :else (recur (inc i) (append-or-create-text group char)))))))
   ([rtf-str] (parse-group rtf-str 0)))
 
-(defn parse-rtf-doc
+(defn parse-rtf-doc-str
   [rtf-str]
-  (assert (.startsWith rtf-str "{\\rtf1") "Argument to parse-rtf-doc is not a valid RTF document.")
+  (assert (.startsWith rtf-str "{\\rtf1") "Argument to parse-rtf-doc-str is not a valid RTF document.")
   (let [[_, main-group] (parse-group rtf-str 1)]
     main-group))
+
+;; IR to Slate native data types conversion ;;
+
+(defn parse-ir
+  [rtf-ir]
+  (let []))
+
 
 ;;  {\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard
 ;;  This is some {\b bold} text.\par
 ;;  }
 
+(defn extract-text-from-ir [ir]
+  (->> ir
+       (filter #(not (and (vector? %) (= {:escape "*"} (first %)))))
+       (map #(if (vector? %) (extract-text-from-ir %) %))
+       (filter string?)
+       (apply str)))
+
+(def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
+
 (comment
   (parse-ascii-escape "\\'eaAnd" 2)
   (count basic)
-  (parse-rtf-doc basic)
+  (parse-rtf-doc-str basic)
+  (extract-text-from-ir (parse-rtf-doc-str basic))
+  (parse-ir (parse-rtf-doc-str basic))
+  (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf"))
+  (extract-text-from-ir (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf")))
 
   )
