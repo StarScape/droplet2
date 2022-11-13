@@ -51,7 +51,7 @@
    Paragraph fields:
    - `uuid`: Unique ID for paragraph
    - `runs`: vector of runs within the paragraph (never empty, always at least 1 empty run)
-   - `type`: The type of paragraph -- either :h1, :h2, :ordered-li, :unordered-li, or :body (default)."
+   - `type`: The type of paragraph -- either :h1, :h2, :ul, :ol or :body (default)."
   ([]
    (->Paragraph (random-uuid) [(r/empty-run)] :body))
   ([runs]

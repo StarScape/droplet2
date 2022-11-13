@@ -5,7 +5,10 @@
    Clojure (a sort of IR), and another in which this data structure is
    converted into a Slate Document."
   (:require-macros [slate.macros :refer [slurp-file]])
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [slate.model.doc :as doc :refer [document]]
+            [slate.model.paragraph :as p :refer [paragraph]]
+            [slate.model.run :as r :refer [run]]))
 
 ;; Text to IR Parsing ;;
 
@@ -77,9 +80,63 @@
 
 ;; IR to Slate native data types conversion ;;
 
+(defn- command?
+  [rtf-ir-entity]
+  (or (keyword? rtf-ir-entity)
+      (contains? rtf-ir-entity :command)))
+
+(defn- command-name
+  [rtf-ir-entity]
+  (or (:command rtf-ir-entity) rtf-ir-entity))
+
+;; All of the handle-* fns take [something, parser-state] and return a new parser-state
+
+(defn- handle-text
+  [text {:keys [run] :as _parser-state}]
+  (if run
+    (update run :text str text)
+    (run text)))
+
+(defn- handle-command
+  "Handles the RTF command appropriately by updating
+   the parser-state and returning a new parser state."
+  [cmd parser-state]
+  (let [run-format (fn [cmd run-format]
+                     (let [update-fn (if (zero? (:num cmd)) conj disj)]
+                       (update-in parser-state [:run :formats] (update-fn run-format))))]
+    (case (command-name cmd)
+      :i (run-format cmd :italic)
+      :b (run-format cmd :bold)
+      :para (let [{:keys [paragraph document]} parser-state]
+              ;; Add current working paragraph to document and create new one
+              (merge parser-state {:document (update document :children conj paragraph)
+                                   ;; Paragraph with no runs, run will be added when first proceeding group with text ends
+                                   :paragraph (p/paragraph [])}))
+      ;; Create new paragraph if there is no current one, otherwise reset to default formatting
+      :parad (update parser-state :paragraph #(if-not %
+                                                (p/paragraph [])
+                                                (assoc % :type :body))))))
+
+(defn- parse-ir-group
+  [group parser-state]
+  (reduce (fn [parser-state entity]
+            (cond
+              (command? entity)
+              (handle-command entity parser-state)
+
+              (string? entity)
+              (handle-text entity parser-state)))
+          parser-state group))
+
 (defn parse-ir
-  [rtf-ir]
-  (let []))
+  [rtf-ir parse-state]
+  (let [initial-state (or parse-state
+                          {:document (document)
+                           ;; No paragraph to start, paragraph will be instantiated on finding the first \parad or \para
+                           :paragraph nil
+                           ;; No run either, run will be instantiated on finding first text
+                           :run (run)})]
+   (parse-ir-group rtf-ir initial-state)))
 
 
 ;;  {\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard
