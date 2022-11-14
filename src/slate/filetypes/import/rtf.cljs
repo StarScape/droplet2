@@ -6,9 +6,15 @@
    converted into a Slate Document."
   (:require-macros [slate.macros :refer [slurp-file]])
   (:require [clojure.string :as str]
-            [slate.model.doc :as doc :refer [document]]
-            [slate.model.paragraph :as p :refer [paragraph]]
-            [slate.model.run :as r :refer [run]]))
+            [slate.model.common :as m]
+            [slate.model.doc :as doc]
+            [slate.model.paragraph :as p]
+            [slate.model.run :as r]))
+
+(defn assoc?
+  "Like regular `assoc`, but only sets `k` to `v` if `k` is not present, or `nil`."
+  [coll k v]
+  (if (contains? coll k) coll (assoc coll k v)))
 
 ;; Text to IR Parsing ;;
 
@@ -80,6 +86,10 @@
 
 ;; IR to Slate native data types conversion ;;
 
+(defn- escape?
+  [rtf-ir-entity]
+  (contains? rtf-ir-entity :escape))
+
 (defn- command?
   [rtf-ir-entity]
   (or (keyword? rtf-ir-entity)
@@ -92,50 +102,84 @@
 ;; All of the handle-* fns take [something, parser-state] and return a new parser-state
 
 (defn- handle-text
-  [text {:keys [run] :as _parser-state}]
-  (if run
-    (update run :text str text)
-    (run text)))
+  [text {:keys [run paragraph] :as parser-state}]
+  (assoc parser-state :run (cond
+                             (and run paragraph) (m/insert-end run text)
+                             paragraph (r/run text)
+                             :else nil)))
+
+(defn- handle-escape
+  [escape parser-state]
+  ;; TODO
+  parser-state)
+
+(defn- add-run-if-appropriate
+  "Add run if (a) one does not exist and (b) paragraph exists"
+  [{:keys [paragraph run] :as parser-state}]
+  (if (and paragraph (not run))
+    (assoc parser-state :run (r/run))
+    parser-state))
 
 (defn- handle-command
   "Handles the RTF command appropriately by updating
    the parser-state and returning a new parser state."
   [cmd parser-state]
   (let [run-format (fn [cmd run-format]
-                     (let [update-fn (if (zero? (:num cmd)) conj disj)]
+                     (let [parser-state (add-run-if-appropriate parser-state)
+                           update-fn (if (zero? (:num cmd)) conj disj)]
                        (update-in parser-state [:run :formats] (update-fn run-format))))]
     (case (command-name cmd)
       :i (run-format cmd :italic)
       :b (run-format cmd :bold)
-      :para (let [{:keys [paragraph document]} parser-state]
-              ;; Add current working paragraph to document and create new one
-              (merge parser-state {:document (update document :children conj paragraph)
-                                   ;; Paragraph with no runs, run will be added when first proceeding group with text ends
-                                   :paragraph (p/paragraph [])}))
+      :par (let [{:keys [paragraph document]} parser-state]
+                ;; Add current working paragraph to document and create new one
+             (merge parser-state {:document (update document :children conj paragraph)
+                                     ;; Paragraph with no runs, run will be added when first proceeding group with text ends
+                                  :paragraph (p/paragraph [])}))
       ;; Create new paragraph if there is no current one, otherwise reset to default formatting
-      :parad (update parser-state :paragraph #(if-not %
-                                                (p/paragraph [])
-                                                (assoc % :type :body))))))
+      :pard (update parser-state :paragraph #(if-not %
+                                               (p/paragraph [])
+                                               (assoc % :type :body)))
+      parser-state)))
+
+(defn- add-run-to-paragraph
+  [{:keys [paragraph run] :as parser-state}]
+  (if (and paragraph run)
+    (-> parser-state
+        (update :paragraph m/insert-end run)
+        (assoc :run nil))
+    parser-state))
 
 (defn- parse-ir-group
   [group parser-state]
   (reduce (fn [parser-state entity]
-            (cond
-              (command? entity)
-              (handle-command entity parser-state)
+            (let [result (-> (cond
+                  ;; RTF Command
+                               (command? entity)
+                               (handle-command entity parser-state)
 
-              (string? entity)
-              (handle-text entity parser-state)))
+                  ;; RTF Group
+                               (vector? entity)
+                               (parse-ir-group entity parser-state)
+
+                  ;; RTF Escape
+                               (escape? entity)
+                               (handle-escape entity parser-state)
+
+                  ;; Plaintext
+                               (string? entity)
+                               (handle-text entity parser-state))
+                             (add-run-to-paragraph))]
+              result))
           parser-state group))
 
 (defn parse-ir
-  [rtf-ir parse-state]
-  (let [initial-state (or parse-state
-                          {:document (document)
-                           ;; No paragraph to start, paragraph will be instantiated on finding the first \parad or \para
-                           :paragraph nil
-                           ;; No run either, run will be instantiated on finding first text
-                           :run (run)})]
+  [rtf-ir]
+  (let [initial-state {:document (doc/document)
+                       ;; No paragraph to start, paragraph will be instantiated on finding the first \parad or \para
+                       :paragraph nil
+                       ;; No run either, run will be instantiated on finding first text
+                       :run nil}]
    (parse-ir-group rtf-ir initial-state)))
 
 
@@ -143,7 +187,7 @@
 ;;  This is some {\b bold} text.\par
 ;;  }
 
-(defn extract-text-from-ir [ir]
+(defn- extract-text-from-ir [ir]
   (->> ir
        (filter #(not (and (vector? %) (= {:escape "*"} (first %)))))
        (map #(if (vector? %) (extract-text-from-ir %) %))
@@ -160,5 +204,6 @@
   (parse-ir (parse-rtf-doc-str basic))
   (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf"))
   (extract-text-from-ir (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf")))
-
+  
+  (parse-ir (parse-rtf-doc-str basic))
   )
