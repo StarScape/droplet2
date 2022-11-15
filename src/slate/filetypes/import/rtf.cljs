@@ -99,6 +99,14 @@
   [rtf-ir-entity]
   (or (:command rtf-ir-entity) rtf-ir-entity))
 
+(defn- add-run-to-paragraph
+  [{:keys [paragraph run] :as parser-state}]
+  (if (and paragraph run)
+    (-> parser-state
+        (update :paragraph m/insert-end run)
+        (assoc :run nil))
+    parser-state))
+
 ;; All of the handle-* fns take [something, parser-state] and return a new parser-state
 
 (defn- handle-text
@@ -127,14 +135,14 @@
   (let [run-format (fn [cmd run-format]
                      (let [parser-state (add-run-if-appropriate parser-state)
                            update-fn (if (zero? (:num cmd)) conj disj)]
-                       (update-in parser-state [:run :formats] (update-fn run-format))))]
+                       (update-in parser-state [:run :formats] update-fn run-format)))]
     (case (command-name cmd)
       :i (run-format cmd :italic)
       :b (run-format cmd :bold)
       :par (let [{:keys [paragraph document]} parser-state]
-                ;; Add current working paragraph to document and create new one
+              ;; Add current working paragraph to document and create new one
              (merge parser-state {:document (update document :children conj paragraph)
-                                     ;; Paragraph with no runs, run will be added when first proceeding group with text ends
+                                  ;; Paragraph with no runs, run will be added when first proceeding group with text ends
                                   :paragraph (p/paragraph [])}))
       ;; Create new paragraph if there is no current one, otherwise reset to default formatting
       :pard (update parser-state :paragraph #(if-not %
@@ -142,36 +150,30 @@
                                                (assoc % :type :body)))
       parser-state)))
 
-(defn- add-run-to-paragraph
-  [{:keys [paragraph run] :as parser-state}]
-  (if (and paragraph run)
-    (-> parser-state
-        (update :paragraph m/insert-end run)
-        (assoc :run nil))
-    parser-state))
-
 (defn- parse-ir-group
   [group parser-state]
-  (reduce (fn [parser-state entity]
-            (let [result (-> (cond
-                  ;; RTF Command
-                               (command? entity)
-                               (handle-command entity parser-state)
+  (as-> parser-state $
+    (add-run-to-paragraph $)
+    (reduce (fn [parser-state entity]
+              #p entity
+              (cond
+                ;; RTF Command
+                (command? entity)
+                (handle-command entity parser-state)
 
-                  ;; RTF Group
-                               (vector? entity)
-                               (parse-ir-group entity parser-state)
+                ;; RTF Group
+                (vector? entity)
+                (parse-ir-group entity parser-state)
 
-                  ;; RTF Escape
-                               (escape? entity)
-                               (handle-escape entity parser-state)
+                ;; RTF Escape
+                (escape? entity)
+                (handle-escape entity parser-state)
 
-                  ;; Plaintext
-                               (string? entity)
-                               (handle-text entity parser-state))
-                             (add-run-to-paragraph))]
-              result))
-          parser-state group))
+                ;; Plaintext
+                (string? entity)
+                (handle-text entity parser-state)))
+            $ group)
+    (add-run-to-paragraph $)))
 
 (defn parse-ir
   [rtf-ir]
@@ -204,6 +206,6 @@
   (parse-ir (parse-rtf-doc-str basic))
   (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf"))
   (extract-text-from-ir (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf")))
-  
+
   (parse-ir (parse-rtf-doc-str basic))
   )
