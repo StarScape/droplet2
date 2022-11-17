@@ -24,7 +24,7 @@
                                      (run "bold and italic" #{:bold :italic})
                                      (run " text.")])]))))
   (testing "standard conversion test"
-    #_(is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/conversion_test.rtf"))
+    (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/conversion_test.rtf"))
               (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])
                          (paragraph (random-uuid) :h2 [(run "This is an H2")])
                          (paragraph [(run "")])

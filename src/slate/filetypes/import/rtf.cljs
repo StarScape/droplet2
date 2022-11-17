@@ -103,6 +103,15 @@
   [rtf-ir-entity]
   (or (:command rtf-ir-entity) rtf-ir-entity))
 
+;; This is just a utility function I was using at the very beginning stages
+;; of building out this NS, it can probably be thrown away at some point.
+(defn- extract-text-from-ir [ir]
+  (->> ir
+       (filter #(not (and (vector? %) (= {:escape "*"} (first %)))))
+       (map #(if (vector? %) (extract-text-from-ir %) %))
+       (filter string?)
+       (apply str)))
+
 ;; All of the handle-* fns take [something, parser-state] and return a new parser-state
 
 (defn- handle-text
@@ -175,29 +184,41 @@
       :pard (handle-pard parser-state)
       parser-state)))
 
+(defn- *-escape-group?
+  "Returns `true` if the RTF group begins with a \\* escape. These escapes (in the
+   format {\\*\\cmdname ...}) signal to the RTF processor 'ignore until the end of
+   this group if the command following \\* is not understood by this program', and
+   is typically used for marking custom or nonstandard behavior. For the basic needs
+   of Slate's RTF importer, any group with a \\* command can be safely ignored."
+  [group]
+  (and (= {:escape "*"} (first group))
+       (command? (second group))))
+
 (defn- handle-group
   [group parser-state]
-  (as-> parser-state $
-    (add-run-to-paragraph $)
-    (reduce (fn [parser-state entity]
-              (cond
-                ;; RTF Command
-                (command? entity)
-                (handle-command entity parser-state)
+  (if (*-escape-group? group)
+    parser-state
+    (as-> parser-state $
+      (add-run-to-paragraph $)
+      (reduce (fn [parser-state entity]
+                (cond
+                  ;; RTF Command
+                  (command? entity)
+                  (handle-command entity parser-state)
 
-                ;; RTF Group
-                (vector? entity)
-                (handle-group entity parser-state)
+                  ;; RTF Group
+                  (vector? entity)
+                  (handle-group entity parser-state)
 
-                ;; RTF Escape
-                (escape? entity)
-                (handle-escape entity parser-state)
+                  ;; RTF Escape
+                  (escape? entity)
+                  (handle-escape entity parser-state)
 
-                ;; Plaintext
-                (string? entity)
-                (handle-text entity parser-state)))
-            $ group)
-    (add-run-to-paragraph $)))
+                  ;; Plaintext
+                  (string? entity)
+                  (handle-text entity parser-state)))
+              $ group)
+      (add-run-to-paragraph $))))
 
 (defn parse-ir
   [rtf-ir]
@@ -216,16 +237,9 @@
   [rtf-str]
   (parse-ir (parse-rtf-doc-str rtf-str)))
 
-;;  {\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard
-;;  This is some {\b bold} text.\par
-;;  }
-
-(defn- extract-text-from-ir [ir]
-  (->> ir
-       (filter #(not (and (vector? %) (= {:escape "*"} (first %)))))
-       (map #(if (vector? %) (extract-text-from-ir %) %))
-       (filter string?)
-       (apply str)))
+;; TODO: implement unicode command
+;; TODO: implement h1/h2
+;; TODO: implement lists
 
 (def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
 
@@ -239,4 +253,7 @@
   (extract-text-from-ir (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf")))
 
   (parse-ir (parse-rtf-doc-str basic))
+
+  (parse-rtf-doc-str (slurp-file "test_files/rtf/conversion_test.rtf"))
+  (rtf->doc (slurp-file "test_files/rtf/conversion_test.rtf"))
   )
