@@ -141,6 +141,12 @@
       ;; ...and create new one. No runs, run will be added when first subsequent group with text ends
       (assoc :paragraph (p/paragraph []))))
 
+(defn- add-paragraph-to-doc?
+  [{:keys [paragraph] :as parser-state}]
+  (if (m/blank? paragraph)
+    parser-state
+    (add-paragraph-to-doc parser-state)))
+
 (defn- handle-par
   [parser-state]
   (-> parser-state
@@ -165,7 +171,7 @@
     (case (command-name cmd)
       :i (format-current-run cmd :italic)
       :b (format-current-run cmd :bold)
-      :par #p (handle-par #p parser-state)
+      :par (handle-par parser-state)
       :pard (handle-pard parser-state)
       parser-state)))
 
@@ -191,8 +197,7 @@
                 (string? entity)
                 (handle-text entity parser-state)))
             $ group)
-    (add-run-to-paragraph $)
-    (remove-last-paragraph? $)))
+    (add-run-to-paragraph $)))
 
 (defn parse-ir
   [rtf-ir]
@@ -201,8 +206,15 @@
                        :paragraph nil
                        ;; No run either, run will be instantiated on finding first text
                        :run nil}]
-   (handle-group rtf-ir initial-state)))
+   (->> initial-state
+        (handle-group rtf-ir)
+        (add-paragraph-to-doc?)
+        (:document))))
 
+(defn rtf->doc
+  "Main entry function for converting an RTF document (as a string) to a Document."
+  [rtf-str]
+  (parse-ir (parse-rtf-doc-str rtf-str)))
 
 ;;  {\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard
 ;;  This is some {\b bold} text.\par

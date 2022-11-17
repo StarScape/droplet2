@@ -1,25 +1,13 @@
 (ns slate.filetypes.html-browser-test
   (:require-macros [slate.macros :refer [slurp-file]])
-  (:require [cljs.test :include-macros true :refer [is deftest testing]]
+  (:require [cljs.test :refer-macros [is deftest testing]]
             [slate.filetypes.import.html :as html-import]
             [slate.filetypes.export.html :as html-export]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.run :as r :refer [run]]
+            [slate.test-utils :as test-utils :refer [doc= doc-frag=]]
             [reagent.dom.server :refer [render-to-static-markup]]))
-
-(defn doc=
-  "Tests if two docs are equal, disregarding paragraph UUIDs."
-  [doc1 doc2]
-  (letfn [(strip-uuids [doc]
-            (update doc :children
-                    (fn [children] (map #(dissoc % :uuid) children))))]
-    (= (strip-uuids doc1) (strip-uuids doc2))))
-
-(defn doc-frag=
-  [frag1 frag2]
-  (= (map #(dissoc % :uuid) (:paragraphs frag1))
-     (map #(dissoc % :uuid) (:paragraphs frag2))))
 
 (def test-file1 (slurp-file "test_files/html/the_quiet_universe.html"))
 (def test-file2 (slurp-file "test_files/html/conversion_test.html"))
