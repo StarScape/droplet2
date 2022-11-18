@@ -150,6 +150,12 @@
     parser-state
     (add-paragraph-to-doc parser-state)))
 
+(defn- set-paragraph-type
+  [{:keys [paragraph] :as parser-state} type]
+  (if paragraph
+    (assoc-in parser-state [:paragraph :type] type)
+    parser-state))
+
 ;; All of the handle-* fns take [something, parser-state] and return a new parser-state
 
 (defn- handle-text
@@ -177,17 +183,13 @@
                                      (p/paragraph [])
                                      (assoc % :type :body))))
 
-(comment
-  (code-point->unicode-char 24314)
-  )
-
-(comment
-  (code-point->unicode-char)
-  )
-
 (defn- handle-fs
-  [{:keys [num] :as _cmd} parser-state]
-  parser-state)
+  [{:keys [num] :as _cmd} {:keys [paragraph] :as parser-state}]
+  (let [font-size (/ num 2)] ; RTF doubles font sizes so you can use half points without having to parse floats
+    (cond
+      (>= font-size 25) (set-paragraph-type parser-state :h1)
+      (>= font-size 15) (set-paragraph-type parser-state :h2)
+      :else (set-paragraph-type parser-state (or (:type paragraph) :body)))))
 
 (defn- handle-u
   [{:keys [num] :as _cmd} parser-state]
@@ -200,7 +202,9 @@
   (letfn [(format-current-run [cmd run-format]
             (let [parser-state (add-run? parser-state)
                   update-fn (if (zero? (:num cmd)) disj conj)]
-              (update-in parser-state [:run :formats] update-fn run-format)))]
+              (if (:run parser-state)
+                (update-in parser-state [:run :formats] update-fn run-format)
+                parser-state)))]
     (case (command-name cmd)
       :i (format-current-run cmd :italic)
       :b (format-current-run cmd :bold)
@@ -264,8 +268,6 @@
   [rtf-str]
   (parse-ir (parse-rtf-doc-str rtf-str)))
 
-;; TODO: implement unicode command
-;; TODO: implement h1/h2
 ;; TODO: implement lists
 ;; TODO: implement tabs/leading indent
 
