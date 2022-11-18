@@ -22,8 +22,15 @@
     (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/basic2.rtf"))
               (document [(paragraph [(run "This is some ")
                                      (run "bold and italic" #{:bold :italic})
-                                     (run " text.")])]))))
-  (testing "standard conversion test"
+                                     (run " text.")])])))
+    ;; {\rtf1\ansi{\fonttbl\f0\fswiss Helvetica;}\f0\pard
+    ;; This is some {\b bold and italic\i} text. And some Japanese: \u24314\u21069\par
+    ;; }
+    (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/basic3.rtf"))
+              (document [(paragraph [(run "This is some ")
+                                     (run "bold and italic" #{:bold :italic})
+                                     (run " text. And some Japanese: 建前")])]))))
+  #_(testing "standard conversion test"
     (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/conversion_test.rtf"))
               (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])
                          (paragraph (random-uuid) :h2 [(run "This is an H2")])

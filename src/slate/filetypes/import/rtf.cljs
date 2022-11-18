@@ -45,15 +45,23 @@
         (recur (inc i) nil nil)
 
         (re-matches? #"-|[0-9]" char)
-        (recur (inc i) (.substring rtf-str start-i i) (or num-arg-start-i i))
+        (recur (inc i) (or command-name (.substring rtf-str start-i i)) (or num-arg-start-i i))
 
         :else
         (let [cmd (if command-name
-                    {:command command-name
+                    {:command (keyword command-name)
                      :num (js/parseInt (.substring rtf-str num-arg-start-i i))}
                     (keyword (.substring rtf-str start-i i)))
               i (if (re-matches? #"\s" char) (inc i) i)]
           [i, cmd])))))
+
+(comment
+  (parse-command "\\fs52" 1)
+  (parse-command "\\f52" 1)
+  (parse-command "\\f5" 1)
+  (parse-command "\\fs5" 1)
+  (parse-command "\\fs" 1)
+  )
 
 (defn parse-backslash-entity
   [rtf-str i]
@@ -112,20 +120,6 @@
        (filter string?)
        (apply str)))
 
-;; All of the handle-* fns take [something, parser-state] and return a new parser-state
-
-(defn- handle-text
-  [text {:keys [run paragraph] :as parser-state}]
-  (assoc parser-state :run (cond
-                             (and run paragraph) (m/insert-end run text)
-                             paragraph (r/run text)
-                             :else nil)))
-
-(defn- handle-escape
-  [escape parser-state]
-  ;; TODO
-  parser-state)
-
 (defn- add-run?
   "Add run if (a) one does not exist and (b) paragraph exists"
   [{:keys [paragraph run] :as parser-state}]
@@ -156,6 +150,20 @@
     parser-state
     (add-paragraph-to-doc parser-state)))
 
+;; All of the handle-* fns take [something, parser-state] and return a new parser-state
+
+(defn- handle-text
+  [text {:keys [run paragraph] :as parser-state}]
+  (assoc parser-state :run (cond
+                             (and run paragraph) (m/insert-end run text)
+                             paragraph (r/run text)
+                             :else nil)))
+
+(defn- handle-escape
+  [escape parser-state]
+  ;; TODO
+  parser-state)
+
 (defn- handle-par
   [parser-state]
   (-> parser-state
@@ -169,6 +177,22 @@
                                      (p/paragraph [])
                                      (assoc % :type :body))))
 
+(comment
+  (code-point->unicode-char 24314)
+  )
+
+(comment
+  (code-point->unicode-char)
+  )
+
+(defn- handle-fs
+  [{:keys [num] :as _cmd} parser-state]
+  parser-state)
+
+(defn- handle-u
+  [{:keys [num] :as _cmd} parser-state]
+  (handle-text (js/String.fromCharCode num) parser-state))
+
 (defn- handle-command
   "Handles the RTF command appropriately by updating
    the parser-state and returning a new parser state."
@@ -180,8 +204,11 @@
     (case (command-name cmd)
       :i (format-current-run cmd :italic)
       :b (format-current-run cmd :bold)
+      :strike (format-current-run cmd :strike)
       :par (handle-par parser-state)
       :pard (handle-pard parser-state)
+      :u (handle-u cmd parser-state)
+      :fs (handle-fs cmd parser-state)
       parser-state)))
 
 (defn- *-escape-group?
@@ -240,6 +267,7 @@
 ;; TODO: implement unicode command
 ;; TODO: implement h1/h2
 ;; TODO: implement lists
+;; TODO: implement tabs/leading indent
 
 (def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
 
