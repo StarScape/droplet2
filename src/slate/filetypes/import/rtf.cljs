@@ -9,7 +9,8 @@
             [slate.model.common :as m]
             [slate.model.doc :as doc]
             [slate.model.paragraph :as p]
-            [slate.model.run :as r]))
+            [slate.model.run :as r]
+            [slate.model.selection :as sel]))
 
 (defn assoc?
   "Like regular `assoc`, but only sets `k` to `v` if `k` is not present, or `nil`."
@@ -136,11 +137,30 @@
         (assoc :run nil))
     parser-state))
 
+(defn- convert-paragraph?
+  "If paragraph starts with '1.', '2.', etc, convert to an OL.
+   If it starts with ●, •, etc, convert to an UL."
+  [paragraph]
+  (let [text (m/text paragraph)
+        ol-regex (js/RegExp. "^[0-9]*\\.\\s?" "g")
+        ul-regex (js/RegExp. "^[●•⁃◦ ]\\s?" "g")
+        delete-first-n-chars (fn [paragraph n]
+                               (m/delete paragraph (sel/selection [(:uuid paragraph) 0] [(:uuid paragraph) n])))]
+    (cond
+      (.test ol-regex text)
+      (assoc (delete-first-n-chars paragraph (.-lastIndex ol-regex)) :type :ol)
+
+      (.test ul-regex text)
+      (assoc (delete-first-n-chars paragraph (.-lastIndex ul-regex)) :type :ul)
+
+      :else
+      paragraph)))
+
 (defn- add-paragraph-to-doc
   [{:keys [paragraph] :as parser-state}]
   (-> parser-state
       ;; Add current working paragraph to Document
-      (update-in [:document :children] conj paragraph)
+      (update-in [:document :children] conj (convert-paragraph? paragraph))
       ;; ...and create new one. No runs, run will be added when first subsequent group with text ends
       (assoc :paragraph (p/paragraph []))))
 
@@ -208,7 +228,7 @@
     (case (command-name cmd)
       :i (format-current-run cmd :italic)
       :b (format-current-run cmd :bold)
-      :strike (format-current-run cmd :strike)
+      :strike (format-current-run cmd :strikethrough)
       :par (handle-par parser-state)
       :pard (handle-pard parser-state)
       :u (handle-u cmd parser-state)
