@@ -211,6 +211,13 @@
       (>= font-size 15) (set-paragraph-type parser-state :h2)
       :else (set-paragraph-type parser-state (or (:type paragraph) :body)))))
 
+(defn- handle-fi
+  [{:keys [num] :as _cmd} parser-state]
+  (if (and (>= num 100) (:paragraph parser-state))
+    ;; Insert tab at start of paragraph if fi (first indent) is above a given threshold
+    (update parser-state :paragraph m/insert-start "\u2003")
+    parser-state))
+
 (defn- handle-u
   [{:keys [num] :as _cmd} parser-state]
   (handle-text (js/String.fromCharCode num) parser-state))
@@ -233,6 +240,7 @@
       :pard (handle-pard parser-state)
       :u (handle-u cmd parser-state)
       :fs (handle-fs cmd parser-state)
+      :fi (handle-fi cmd parser-state)
       parser-state)))
 
 (defn- *-escape-group?
@@ -278,20 +286,28 @@
                        :paragraph nil
                        ;; No run either, run will be instantiated on finding first text
                        :run nil}]
-   (->> initial-state
-        (handle-group rtf-ir)
-        (add-paragraph-to-doc?)
-        (:document))))
+    ;; The astute Clojurist (Clojurian? Clojurer? Clo-bro?) will note that the RTF conversion
+    ;; algorithm is, despite the functional patina given to it by essentially being one big
+    ;; reduction, very stateful. Tehcnically everything is a pure function, but all the child
+    ;; functions called by `parse-ir` basically just build up the parser-state value. This is on
+    ;; purpose--RTF itself is a *very* stateful format, to the point that it might be better to
+    ;; consider it a simple imperative language for mutating a document than a declarative format
+    ;; for defining one. Swimming upstream here is not worth the effort, and all things considered,
+    ;; I think this implementation works quite well.
+    (->> initial-state
+         (handle-group rtf-ir)
+         (add-paragraph-to-doc?)
+         (:document))))
 
 (defn rtf->doc
   "Main entry function for converting an RTF document (as a string) to a Document."
   [rtf-str]
   (parse-ir (parse-rtf-doc-str rtf-str)))
 
-;; TODO: implement lists
-;; TODO: implement tabs/leading indent
-
 (def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
+
+;; TODO: Add RTF import to Droplet UI
+;; TODO: RTF export
 
 (comment
   (parse-ascii-escape "\\'eaAnd" 2)

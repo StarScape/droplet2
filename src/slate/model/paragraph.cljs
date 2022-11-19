@@ -202,7 +202,11 @@
 
 (defmethod insert-start [Paragraph r/Run]
   [para run]
-  (insert para (selection [(:uuid para) 0]) run))
+  (insert para  run))
+
+(defmethod insert-start [Paragraph js/String]
+  [para text]
+  (insert para (selection [(:uuid para) 0]) (r/run text)))
 
 (defmethod insert-start [Paragraph Paragraph]
   [para para-to-insert]
