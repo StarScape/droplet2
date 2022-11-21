@@ -71,12 +71,12 @@
 (defn serialize
   "Serializes the history object to EDN."
   [{:keys [history] :as _ui-state}]
-  (prn-str history))
+  (prn-str {:version 1, :history history}))
 
 (defn deserialize
   "Parses the EDN of the saved editor file and returns the data structure (atm, the :history map)."
   [edn-str]
-  (edn/read-string {:readers slate-types-readers} edn-str))
+  #p (edn/read-string {:readers slate-types-readers} edn-str))
 
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
@@ -200,9 +200,9 @@
 (defn load-file!
   "Loads a serialized .drop file into the editor, discarding current document and history."
   [*ui-state file-contents-str]
-  (let [deserialized-file (deserialize file-contents-str)]
+  (let [deserialized (deserialize file-contents-str)]
     ;; TODO: throw user-visible error if the version of file is not compatible with this droplet version
-    (load-history! *ui-state deserialized-file)))
+    (load-history! *ui-state (:history deserialized))))
 
 (defn load-document!
   "Loads a Document object into the editor with a fresh history, discarding current document and history."
@@ -650,10 +650,10 @@
 
    :editor-state - The initial EditorState to load into the editor. Will default to an empty document.
    OR
-   :history - The restored, deserialized history object.
+   :save-file-contents - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom editor-state history dom-elem on-new on-save on-save-as on-open on-focus-find]
+  [& {:keys [*atom editor-state save-file-contents dom-elem on-new on-save on-save-as on-open on-focus-find]
       :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-focus-find #()}}]
   ;; Load global styles if not already loaded
   (style/install-global-styles!)
@@ -666,7 +666,9 @@
                    available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)
                    editor-state (or editor-state (es/editor-state))
-                   history (or history (history/init editor-state))
+                   history (if save-file-contents
+                             (:history (deserialize save-file-contents))
+                             (history/init editor-state))
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
                                         (interceptors/reg-interceptors manual-interceptors))

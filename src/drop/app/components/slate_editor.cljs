@@ -78,14 +78,14 @@
         exported (filetypes/export export-type doc)]
     (.invoke ipcRenderer "export-file-as" exported)))
 
-(defn slate-editor [{:keys [file-deserialized ui-state-atom on-focus-find]}]
+(defn slate-editor [{:keys [file-contents ui-state-atom on-focus-find]}]
   [:div
    {:class "react-slate-elem flex-1 overflow-y-auto"
     :tabIndex "-1"
     :ref (fn [elem]
            (when elem
              (let [*ui-state (ui-state/init! :*atom ui-state-atom
-                                       :history file-deserialized
+                                       :save-file-contents file-contents
                                        :dom-elem elem
                                        :on-new on-new!
                                        :on-open on-open!
@@ -112,22 +112,22 @@
                             (when-let [elem @*find-and-replace-ref]
                               (.focus elem)))
         current-file (:path @*open-file)
-        deserialized-file-contents (when current-file
-                                     (let [[error?, file-contents] (.sendSync ipcRenderer "read-file" current-file)]
-                                       (if error?
-                                         (do
-                                           (reset! *open-file {:path nil, :last-saved-doc (doc/document)})
-                                           ;; Slate instance will default to an empty history object
-                                           ;; when receiving nil, so propagating nil  works fine.
-                                           nil)
-                                         (ui-state/deserialize file-contents))))]
+        save-file-contents (when current-file
+                        (let [[error?, file-text] (.sendSync ipcRenderer "read-file" current-file)]
+                          (if error?
+                            (do
+                              (reset! *open-file {:path nil, :last-saved-doc (doc/document)})
+                              ;; Slate instance will default to an empty document
+                              ;; when receiving nil, so propagating nil  works fine.
+                              nil)
+                            file-text)))]
     (add-watch *slate-instance :watcher (fn [_key _atom _old-state new-ui-state]
                                           (reset! *active-formats (ui-state/active-formats new-ui-state))
                                           (reset! *word-count (:word-count new-ui-state))))
     (fn []
       [:<>
        [:div {:class "h-screen flex flex-row justify-center"}
-        [slate-editor {:file-deserialized deserialized-file-contents
+        [slate-editor {:file-contents save-file-contents
                        :ui-state-atom *slate-instance
                        :on-focus-find focus-find-popup!}]]
        (let [find-and-replace (-> @*slate-instance :find-and-replace)]
