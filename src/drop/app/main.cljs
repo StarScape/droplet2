@@ -8,8 +8,8 @@
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
 ;; TODO: More pastes tests
-;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: RTF import/export
+;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Marketing website
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode

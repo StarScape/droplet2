@@ -16,18 +16,21 @@
 
 (def *main-window (atom nil))
 
-(defn launch-import-dialog! []
+(defn launch-import-dialog!
+  "Launches an file dialog to import the specified format type.
+   Ex format-name and file-extension: 'HTML' and 'html'. Note the lack of leading '.' for the file-extension."
+  [format-name file-extension]
   (go
     (let [main-window @*main-window
           result (<p! (.showOpenDialog dialog main-window
-                                       (clj->js {:title "Open .html"
-                                                 :filters [{:name "HTML"
-                                                            :extensions [".html"]}]
+                                       (clj->js {:title (str "Open ." file-extension " file")
+                                                 :filters [{:name format-name
+                                                            :extensions [(str "." file-extension)]}]
                                                  :properties ["openFile"]})))]
       (when-not ^js (.-canceled result)
         (let [file-path (nth ^js (.-filePaths result) 0)
               file-contents (<p! (readFile file-path "utf8"))]
-          (.. main-window -webContents (send "import-file" "html" file-contents)))))))
+          (.. main-window -webContents (send "import-file" file-extension file-contents)))))))
 
 (defn launch-export-dialog! [data filter-name filter-extension]
   (go
@@ -121,7 +124,9 @@
                                        :click #(.. window -webContents (send "menubar-item-clicked" "save-as"))}
                                       {:label "Import"
                                        :submenu [{:label "HTML"
-                                                  :click #(launch-import-dialog!)}]}
+                                                  :click #(launch-import-dialog! "HTML" "html")}
+                                                 {:label "RTF"
+                                                  :click #(launch-import-dialog! "RTF" "rtf")}]}
                                       {:label "Export"
                                        :submenu [{:label "HTML"
                                                   :click #(.. window -webContents (send "menubar-item-clicked" "export-file" "html"))}]}

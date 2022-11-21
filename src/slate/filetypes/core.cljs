@@ -1,6 +1,7 @@
 (ns slate.filetypes.core
   (:refer-clojure :exclude [import])
   (:require [slate.filetypes.import.html :refer [html->doc]]
+            [slate.filetypes.import.rtf :refer [rtf->doc]]
             [slate.filetypes.export.html :refer [doc->html]]))
 
 (defmulti import
@@ -8,6 +9,8 @@
   (fn [filetype _file-contents] filetype))
 
 (defmethod import "html" [_ file-contents] (html->doc file-contents))
+
+(defmethod import "rtf" [_ file-contents] (rtf->doc file-contents))
 
 (defmulti export
   "Exports the Document to the specified format. Returns a string."
