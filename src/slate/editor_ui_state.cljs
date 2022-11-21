@@ -1,5 +1,6 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]]
+                   [slate.macros :refer [slurp-file]]
                    [dev.performance-utils :refer [inside-time-measurement!]])
   (:require [clojure.edn :as edn]
             [clojure.set :as set]
@@ -199,8 +200,9 @@
 (defn load-file!
   "Loads a serialized .drop file into the editor, discarding current document and history."
   [*ui-state file-contents-str]
-  (let [deserialized-history (deserialize file-contents-str)]
-    (load-history! *ui-state deserialized-history)))
+  (let [deserialized-file (deserialize file-contents-str)]
+    ;; TODO: throw user-visible error if the version of file is not compatible with this droplet version
+    (load-history! *ui-state deserialized-file)))
 
 (defn load-document!
   "Loads a Document object into the editor with a fresh history, discarding current document and history."
@@ -300,19 +302,6 @@
                    :viewmodels (:viewmodels new-ui-state)
                    :changelist changelist)
         (reset! *ui-state new-ui-state)))))
-
-(definterceptor new-file!
-  {:manual? true}
-  [*ui-state _]
-  (let [{:keys [shadow-root measure-fn] :as ui-state} @*ui-state
-        editor-state (es/editor-state)
-        available-width (.-width (.getBoundingClientRect (.-host shadow-root)))]
-    (swap! *ui-state merge {:viewmodels (vm/from-doc (:doc editor-state) available-width measure-fn)
-                            :history (history/init editor-state)
-                            :add-tip-to-backstack-timer-id nil
-                            :input-history []})
-    (full-dom-render! *ui-state)
-    ((:on-new ui-state) @*ui-state)))
 
 (defn fire-update!
   "Update the UI state and UI in response to an EditorUpdate.
@@ -461,6 +450,31 @@
     ;; Goto current occurrence if restarting find dialog with previous search
     (goto-current-occurrence! *ui-state)))
 
+(definterceptor new-file!
+  {:manual? true}
+  [*ui-state _]
+  (let [{:keys [shadow-root measure-fn] :as ui-state} @*ui-state
+        editor-state (es/editor-state)
+        available-width (.-width (.getBoundingClientRect (.-host shadow-root)))]
+    (swap! *ui-state merge {:viewmodels (vm/from-doc (:doc editor-state) available-width measure-fn)
+                            :history (history/init editor-state)
+                            :add-tip-to-backstack-timer-id nil
+                            :input-history []})
+    (full-dom-render! *ui-state)
+    ((:on-new ui-state) @*ui-state)))
+
+(definterceptor save!
+  {:manual? true}
+  [*ui-state _]
+  (let [ui-state @*ui-state]
+    ((:on-save ui-state) (serialize ui-state))))
+
+(definterceptor save-as!
+  {:manual? true}
+  [*ui-state _]
+  (let [ui-state @*ui-state]
+    ((:on-save-as ui-state) (serialize ui-state))))
+
  (defn find-interceptor
    "Returns the interceptor inside the ui-state's interceptor map
     that matches the interceptor pattern or event, if one exists."
@@ -577,12 +591,16 @@
      :cmd+= increase-font-size!
      :cmd+- decrease-font-size!
      :cmd+n new-file!
-     :cmd+f activate-find!}
+     :cmd+f activate-find!
+     :cmd+s save!
+     :cmd+shift+s save-as!}
     {:ctrl+z undo!
      :ctrl+shift+z redo!
      :ctrl+= increase-font-size!
      :ctrl+- decrease-font-size!
      :ctrl+n new-file!
+     :ctrl+s save!
+     :ctrl+shift+s save-as!
      :ctrl+f activate-find!}))
 
 (defn- init-shadow-dom!

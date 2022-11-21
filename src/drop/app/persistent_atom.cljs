@@ -27,6 +27,11 @@
                                 (persist! new-state)))
     *atom))
 
+(defn clear-persistent-atom!
+  "Debug function: clears the persistent atom from localStorage."
+  [atom-name]
+  (js/localStorage.removeItem (atom-name->local-storage-key atom-name)))
+
 #_(defn persistent-atom
     "Creates a new atom whose value will be persisted between sessions.
    The `atom-name` parameter exists to give the atom a unique filename,

@@ -369,18 +369,6 @@
   [editor-state _ e]
   (clipboard/paste editor-state e))
 
-(definterceptor save
-  {:manual? true}
-  [*ui-state _]
-  (let [{:keys [history] :as ui-state} @*ui-state]
-    ((:on-save ui-state) (prn-str history))))
-
-(definterceptor save-as
-  {:manual? true}
-  [*ui-state _]
-  (let [{:keys [history] :as ui-state} @*ui-state]
-    ((:on-save-as ui-state) (prn-str history))))
-
 (definterceptor open
   {:manual? true}
   [*ui-state _]
@@ -439,8 +427,6 @@
    :ctrl+b bold
    :ctrl+u ulist
    :ctrl+o olist
-   :ctrl+s save
-   :ctrl+shift+s save-as
    :ctrl+shift+o open})
 
 (def mac-interceptors
@@ -474,8 +460,6 @@
    :cmd+2 h2
    :cmd+u ulist
    :cmd+o olist
-   :cmd+s save
-   :cmd+shift+s save-as
    :cmd+shift+o open})
 
 (def default-interceptors

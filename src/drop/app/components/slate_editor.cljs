@@ -1,6 +1,6 @@
 (ns drop.app.components.slate-editor
   (:require [clojure.pprint :as pprint]
-            [drop.app.persistent-atom :refer [persistent-atom]]
+            [drop.app.persistent-atom :refer [persistent-atom clear-persistent-atom!]]
             [drop.app.components.actionbar :refer [actionbar]]
             [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
             [drop.app.utils :as app-utils]
@@ -19,13 +19,16 @@
 
 (declare *slate-instance)
 
-
 (def *full-screen? (r/atom false))
 (defonce *open-file (doto (persistent-atom ::open-file
                                            {:path nil, :last-saved-doc nil}
                                            :readers ui-state/slate-types-readers)
                       (add-watch :change-title (fn [_ _ _ new-open-file]
                                                  (app-utils/set-title! new-open-file (current-doc @*slate-instance))))))
+
+(comment
+  (clear-persistent-atom! ::open-file)
+  )
 
 ;; For now, there is a single global slate instance.
 ;; This will change at some point when tabs are implemented.
