@@ -8,8 +8,8 @@
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
 ;; TODO: More pastes tests
-;; TODO: RTF import/export
-;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
+;; TODO: RTF export
+;; TODO: Better actinonbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Marketing website
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode
@@ -22,6 +22,7 @@
 ;; TODO: Further polish criteria for history getting added to the backstack
 
 ;; Usability/Polish:
+;; TODO: Double/triple click should select word/paragraph
 ;; TODO: When a paragraph is already an h1/h2, "1. " autocomplete should not make it a list para
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always

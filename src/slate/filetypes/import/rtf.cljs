@@ -304,12 +304,9 @@
   [rtf-str]
   (parse-ir (parse-rtf-doc-str rtf-str)))
 
-(def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
-
-;; TODO: Add RTF import to Droplet UI
-;; TODO: RTF export
-
 (comment
+  (def basic "{\\rtf1\\ansi{\\fonttbl\\f0\\fswiss Helvetica;}\\f0\\pard\n\rThis is some {\\b bold} text.\\'ea\\par\n\r}")
+
   (parse-ascii-escape "\\'eaAnd" 2)
   (count basic)
   (parse-rtf-doc-str basic)
