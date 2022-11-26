@@ -29,7 +29,11 @@
     (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/basic3.rtf"))
               (document [(paragraph [(run "This is some ")
                                      (run "bold and italic" #{:bold :italic})
-                                     (run " text. And some Japanese: 建前")])]))))
+                                     (run " text. And some Japanese: 建前")])])))
+    (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/basic4.rtf"))
+              (document [(paragraph [(run "This is some ")
+                                     (run "bold and italic" #{:bold :italic})
+                                     (run " text. And some fäncy têxt.")])]))))
   (testing "standard conversion test"
     (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/conversion_test.rtf"))
               (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])

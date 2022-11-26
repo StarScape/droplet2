@@ -187,7 +187,6 @@
 
 (defn- handle-escape
   [escape parser-state]
-  ;; TODO
   parser-state)
 
 (defn- handle-par

@@ -5,11 +5,13 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
+;; TODO: RTF--write test for 'XX escape to make sure it's handled
+
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
 ;; TODO: More pastes tests
 ;; TODO: RTF export
-;; TODO: Better actinonbar timeout when in fullscreen (maybe copy iA Writer)
+;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Marketing website
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode
