@@ -36,36 +36,56 @@
       text-body
       (str "{" formatting-commands " " text-body "}"))))
 
+(defn- runs->rtf [runs]
+  (str-map run->rtf runs))
+
+(defn- ul->rtf
+  [paragraph]
+  (str "{\\listtext	\\uc0\\u8226 	}" (runs->rtf (:runs paragraph)) "\\\n"))
+
 (defn- ol->rtf
-  [runs-rtf list-num]
-  (str "{\\pard\\ls1\\ilvl0\\li720\\fi-720 {\\listtext	" list-num ".	} " runs-rtf "\\par}"))
+  [paragraph list-num]
+  (str "{\\listtext	" list-num ".	}" (runs->rtf (:runs paragraph)) "\\\n"))
 
 (defn- paragraph->rtf
-  [paragraph list-num?]
-  (let [runs-rtf (str-map run->rtf (:runs paragraph))]
-    (case (:type paragraph)
-      :ol (ol->rtf runs-rtf list-num?)
-      ;;:ul (ul->rtf runs-rtf)
-      (str "{\\pard " runs-rtf "\\par}"))))
+  [paragraph]
+  (str "{\\pard " (runs->rtf (:runs paragraph)) "\\par}"))
 
-(defn- list-paragraphs->rtf [paragraphs])
+(def ^:private list-preludes
+  {:ol "\\pard\\tx220\\tx720\\tx1440\\tx2160\\tx2880\\tx3600\\tx4320\\tx5040\\tx5760\\tx6480\\tx7200\\tx7920\\tx8640\\li720\\fi-720\\ls1\\ilvl0"
+   :ul "\\pard\\tx220\\tx720\\tx1440\\tx2160\\tx2880\\tx3600\\tx4320\\tx5040\\tx5760\\tx6480\\tx7200\\tx7920\\tx8640\\li720\\fi-720\\ls2\\ilvl0"})
+
+(defn- list-paragraphs->rtf
+  [paragraphs]
+  (let [list-type (:type (first paragraphs))]
+    (loop [paras paragraphs
+           list-num 1
+           rtf-str (get list-preludes list-type)]
+      (let [para (first paras)]
+        (if-not para
+          rtf-str
+          (recur (next paras)
+                 (inc list-num)
+                 (str rtf-str (case list-type
+                                :ul (ul->rtf para)
+                                :ol (ol->rtf para list-num)))))))))
 
 (defn doc->rtf [doc]
   (str "{" header "\n"
        (loop [paragraphs (:children doc)
-              rtf-str ""
-              list-num 0]
+              rtf-str ""]
          (let [paragraph (first paragraphs)
-               list-num (if (= :ol (:type paragraph)) (inc list-num) 0)]
+               paragraph-type (:type paragraph)]
            (if-not paragraph
              rtf-str
-             (if (or (= :ol (:type paragraph))
-                     (= :ul (:type paragraph)))
-               (let [list-paragraphs
-                     [paragraphs, rtf] (list-paragraphs->rtf (drop paragraphs))]
-                 (recur (next paragraphs)
-                        (str rtf-str (paragraph->rtf paragraph list-num) "\n")
-                        list-num))))))
+             (if (or (= :ol paragraph-type)
+                     (= :ul paragraph-type))
+               (let [[list-paragraphs, remaining-paragraphs] (split-with #(= (:type %) paragraph-type) paragraphs)
+                     list-paragraphs-rtf (list-paragraphs->rtf list-paragraphs)]
+                 (recur remaining-paragraphs
+                        (str rtf-str list-paragraphs-rtf)))
+               (recur (next paragraphs)
+                      (str rtf-str (paragraph->rtf paragraph) "\n"))))))
        "}"))
 
 (def test-doc
