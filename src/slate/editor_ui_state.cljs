@@ -74,9 +74,9 @@
   (prn-str {:version 1, :history history}))
 
 (defn deserialize
-  "Parses the EDN of the saved editor file and returns the data structure (atm, the :history map)."
+  "Parses the EDN of the saved editor file and returns the data structure."
   [edn-str]
-  #p (edn/read-string {:readers slate-types-readers} edn-str))
+  (edn/read-string {:readers slate-types-readers} edn-str))
 
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
