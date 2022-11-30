@@ -24,12 +24,19 @@
                  :strikethrough "\\strike"}]
     (str-map mapping run-formats)))
 
+(defn- convert-non-ascii-char
+  "If char is not ASCII, will convert it to an RTF unicode command."
+  [char]
+  (let [char-code (.charCodeAt char 0)]
+    (if (<= char-code 127)
+      char
+      (str "\\uc0\\u" char-code))))
 
 (defn- text->rtf
   "RTF only accepts ASCII, and even then there are some restrictions, so anything outside
    of alphanumeric character range is escaped."
   [text]
-  text)
+  (str-map convert-non-ascii-char text))
 
 (defn- run->rtf
   [run]
@@ -115,11 +122,11 @@
              (paragraph (random-uuid) :ul [(run "UL 2")])
              (paragraph (random-uuid) :ul [(run "UL 3")])
              (paragraph [(run "")])
-             (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
+             (paragraph [(run "\u2003And a longer indented paragraph after, with Unicode: 建前. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
              (paragraph [(run "")])]))
 
 ;; TODO: handle tabs
-;; TODO: handle unicode
+;; TODO: UI in droplet
 
 (comment
   (print (doc->rtf test-doc))
