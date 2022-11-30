@@ -5,6 +5,9 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]))
 
+(def h1-font-size 48) ;; in half pts
+(def h2-font-size 36) ;; in half pts
+
 (def list-headers
   "{\\*\\listtable{\\list\\listtemplateid1\\listhybrid{\\listlevel\\levelnfc0\\levelnfcn0\\leveljc0\\leveljcn0\\levelfollow0\\levelstartat1\\levelspace360\\levelindent0{\\*\\levelmarker \\{decimal\\}.}{\\leveltext\\leveltemplateid1\\'02\\'00.;}{\\levelnumbers\\'01;}\\fi-360\\li720\\lin720 }{\\listname ;}\\listid1}
 {\\list\\listtemplateid2\\listhybrid{\\listlevel\\levelnfc23\\levelnfcn23\\leveljc0\\leveljcn0\\levelfollow0\\levelstartat1\\levelspace360\\levelindent0{\\*\\levelmarker \\{disc\\}}{\\leveltext\\leveltemplateid101\\'01\\uc0\\u8226 ;}{\\levelnumbers;}\\fi-360\\li720\\lin720 }{\\listname ;}\\listid2}}
@@ -49,11 +52,15 @@
 
 (defn- paragraph->rtf
   [paragraph]
-  (str "{\\pard " (runs->rtf (:runs paragraph)) "\\par}"))
+  (case (:type paragraph)
+    :h1 (str "{\\pard\\fs" h1-font-size (runs->rtf (:runs paragraph)) "\\par}")
+    :h2 (str "{\\pard\\fs" h2-font-size (runs->rtf (:runs paragraph)) "\\par}")
+    (str "{\\pard\\fs24" (runs->rtf (:runs paragraph)) "\\par}")))
 
 (def ^:private list-preludes
-  {:ol "\\pard\\tx220\\tx720\\tx1440\\tx2160\\tx2880\\tx3600\\tx4320\\tx5040\\tx5760\\tx6480\\tx7200\\tx7920\\tx8640\\li720\\fi-720\\ls1\\ilvl0"
-   :ul "\\pard\\tx220\\tx720\\tx1440\\tx2160\\tx2880\\tx3600\\tx4320\\tx5040\\tx5760\\tx6480\\tx7200\\tx7920\\tx8640\\li720\\fi-720\\ls2\\ilvl0"})
+  (let [common "\\pard\\tx220\\tx720\\tx1440\\tx2160\\tx2880\\tx3600\\tx4320\\tx5040\\tx5760\\tx6480\\tx7200\\tx7920\\tx8640\\li720\\fi-720\\fs24"]
+    {:ol (str common "\\ls1\\ilvl0")
+     :ul (str common "\\ls2\\ilvl0")}))
 
 (defn- list-paragraphs->rtf
   [paragraphs]
@@ -111,9 +118,8 @@
              (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
              (paragraph [(run "")])]))
 
-;; TODO: rtf H1
-;; TODO: rtf H2
 ;; TODO: handle tabs
+;; TODO: handle unicode
 
 (comment
   (print (doc->rtf test-doc))
