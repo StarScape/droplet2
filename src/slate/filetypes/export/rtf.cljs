@@ -17,20 +17,22 @@
 
 (defn- str-map [f coll] (apply str (map f coll)))
 
-(defn- formats->commands
-  [run-formats]
-  (let [mapping {:italic "\\i"
-                 :bold "\\b"
-                 :strikethrough "\\strike"}]
-    (str-map mapping run-formats)))
-
 (defn- convert-non-ascii-char
   "If char is not ASCII, will convert it to an RTF unicode command."
   [char]
   (let [char-code (.charCodeAt char 0)]
     (if (<= char-code 127)
       char
-      (str "\\uc0\\u" char-code))))
+      (case char
+        "\u2003" "\t"
+        (str "\\uc0\\u" char-code)))))
+
+(defn- formats->commands
+  [run-formats]
+  (let [mapping {:italic "\\i"
+                 :bold "\\b"
+                 :strikethrough "\\strike"}]
+    (str-map mapping run-formats)))
 
 (defn- text->rtf
   "RTF only accepts ASCII, and even then there are some restrictions, so anything outside
@@ -125,7 +127,6 @@
              (paragraph [(run "\u2003And a longer indented paragraph after, with Unicode: 建前. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
              (paragraph [(run "")])]))
 
-;; TODO: handle tabs
 ;; TODO: UI in droplet
 
 (comment
