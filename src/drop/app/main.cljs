@@ -5,8 +5,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: RTF--write test for 'XX escape to make sure it's handled
-
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
 ;; TODO: More pastes tests

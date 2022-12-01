@@ -12,59 +12,76 @@
             [slate.model.run :as r]
             [slate.model.selection :as sel]))
 
-(defn assoc?
-  "Like regular `assoc`, but only sets `k` to `v` if `k` is not present, or `nil`."
-  [coll k v]
-  (if (contains? coll k) coll (assoc coll k v)))
-
 ;; ================== ;;
 ;; Text to IR Parsing ;;
 ;; ================== ;;
 
-(defn re-matches?
+(defn- re-matches?
   [re str]
   {:pre [(or (string? str) (nil? str))]}
   (if str (.test re str) false))
 
-(defn append-or-create-text
+(defn- append-or-create-text
   [group char]
   (let [char (when-not (re-matches? #"\n|\r" char) char)]
     (if (string? (peek group))
       (update group (dec (count group)) #(str % char))
       (if (some? char) (conj group char) group))))
 
-(defn parse-ascii-escape [rtf-str i]
+(defn- parse-ascii-escape [rtf-str i]
   (let [hex-digits (.substring rtf-str i (+ 2 i))
         charcode (js/parseInt hex-digits 16)]
     [(+ 2 i), (js/String.fromCharCode charcode)]))
 
-(defn parse-command [rtf-str start-i]
-  (loop [i start-i, command-name nil, num-arg-start-i nil]
-    (let [char (get rtf-str i)]
-      (cond
-        (re-matches? #"[a-zA-Z]" char)
-        (recur (inc i) nil nil)
+(defn- parse-command-argument [rtf-str start-i]
+  (let [initial-i (if (= "-" (get rtf-str start-i))
+                    (inc start-i)
+                    start-i)]
+    (loop [i initial-i]
+      (let [char (get rtf-str i)]
+        (if (re-matches? #"[0-9]" char)
+          (recur (inc i))
+          [i, (js/parseInt (.substring rtf-str start-i i))])))))
 
-        (re-matches? #"-|[0-9]" char)
-        (recur (inc i) (or command-name (.substring rtf-str start-i i)) (or num-arg-start-i i))
+(comment
+  (parse-command-argument "\\fs24" 3)
+  (parse-command-argument "\\fs-24" 3)
+  (parse-command-argument "\\fs24-" 3)
+  (parse-command-argument "\\fs-2-4" 3)
+  )
 
-        :else
-        (let [cmd (if command-name
-                    {:command (keyword command-name)
-                     :num (js/parseInt (.substring rtf-str num-arg-start-i i))}
-                    (keyword (.substring rtf-str start-i i)))
-              i (if (re-matches? #"\s" char) (inc i) i)]
-          [i, cmd])))))
+(defn- parse-command [rtf-str start-i]
+  (let [skip-space? (fn [i]
+                      (if (= " " (get rtf-str i)) (inc i) i))]
+    (loop [i start-i]
+      (let [char (get rtf-str i)]
+        (cond
+          (re-matches? #"[a-zA-Z]" char)
+          (recur (inc i))
+
+          (re-matches? #"-|[0-9]" char)
+          (let [command-name (keyword (.substring rtf-str start-i i))
+                [new-i, parsed-num] (parse-command-argument rtf-str i)]
+            [(skip-space? new-i), {:command command-name
+                                   :num parsed-num}])
+
+          :else
+          [(skip-space? i), (keyword (.substring rtf-str start-i i))])))))
 
 (comment
   (parse-command "\\fs52" 1)
+  (parse-command "\\fs52This" 1)
+  (parse-command "\\fs52 This" 1)
+  (parse-command "\\fs-52 This" 1)
+  (parse-command "\\fs This" 1)
   (parse-command "\\f52" 1)
   (parse-command "\\f5" 1)
+  (parse-command "\\f-5" 1)
   (parse-command "\\fs5" 1)
   (parse-command "\\fs" 1)
   )
 
-(defn parse-backslash-entity
+(defn- parse-backslash-entity
   [rtf-str i]
   (let [char-after-backslash (nth rtf-str i)]
     (cond
@@ -72,7 +89,7 @@
       (= char-after-backslash "'") (parse-ascii-escape rtf-str (inc i))
       :else [(inc i), {:escape char-after-backslash}])))
 
-(defn parse-group
+(defn- parse-group
   ([rtf-str start-i]
    (letfn [(conj-to-group [group entity]
             ((if (string? entity) append-or-create-text conj) group entity))]
@@ -89,7 +106,8 @@
            :else (recur (inc i) (append-or-create-text group char)))))))
   ([rtf-str] (parse-group rtf-str 0)))
 
-(defn parse-rtf-doc-str
+(defn- parse-rtf-doc-str
+  "Main entry function for parsing an RTF string to IR."
   [rtf-str]
   (assert (.startsWith rtf-str "{\\rtf1") "Argument to parse-rtf-doc-str is not a valid RTF document.")
   (let [[_, main-group] (parse-group rtf-str 1)]
