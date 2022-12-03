@@ -161,7 +161,7 @@
   [paragraph]
   (let [text (m/text paragraph)
         ol-regex (js/RegExp. "^[0-9]*\\.\\s?" "g")
-        ul-regex (js/RegExp. "^[●•⁃◦ ]\\s?" "g")
+        ul-regex (js/RegExp. "^[●·•⁃◦ ]\\s?" "g")
         delete-first-n-chars (fn [paragraph n]
                                (m/delete paragraph (sel/selection [(:uuid paragraph) 0] [(:uuid paragraph) n])))]
     (cond
@@ -258,6 +258,11 @@
       :u (handle-u cmd parser-state)
       :fs (handle-fs cmd parser-state)
       :fi (handle-fi cmd parser-state)
+      :emdash (handle-text "—" parser-state)
+      :lquote (handle-text "'" parser-state)
+      :rquote (handle-text "'" parser-state)
+      :rdblquote (handle-text "\"" parser-state)
+      :ldblquote (handle-text "\"" parser-state)
       parser-state)))
 
 (defn- *-escape-group?
