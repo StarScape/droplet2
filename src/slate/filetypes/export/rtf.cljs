@@ -127,8 +127,6 @@
              (paragraph [(run "\u2003And a longer indented paragraph after, with Unicode: 建前. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
              (paragraph [(run "")])]))
 
-;; TODO: UI in droplet
-
 (comment
   (print (doc->rtf test-doc))
   )

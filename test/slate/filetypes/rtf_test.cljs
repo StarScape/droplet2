@@ -44,7 +44,9 @@
     (is (doc= (r-import/rtf->doc (slurp-file "test_files/rtf/basic5.rtf"))
               (document [(paragraph [(run "This is some ")
                                      (run "bold" #{:bold})
-                                     (run " text.")])]))))
+                                     (run " text.")])])))
+    (is (doc= (r-import/rtf->doc (slurp-file "test_files/rtf/basic6.rtf"))
+              (document [(paragraph [(run "Some emoji and special symbols: 🦎, 🏳️‍🌈, 🤦🏽, ñ.")])]))))
   (testing "standard conversion test"
     (is (doc= (r-import/rtf->doc (slurp-file "test_files/rtf/conversion_test.rtf"))
               (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])

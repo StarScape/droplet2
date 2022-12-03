@@ -5,6 +5,10 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
+;; TODO: RTF - UI in droplet
+;; TODO: RTF - Ensure emoji working import/export
+
+
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
 ;; TODO: More pastes tests
