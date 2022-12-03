@@ -6,10 +6,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: RTF - UI in droplet
-;; TODO: RTF - Parse \\n and \line as new paragraphs
-;; TODO: RTF - Make circular .drop -> .rtf -> .drop test pass
-;; TODO: RTF - Ensure { and } chars work correctly for import/export
-
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)

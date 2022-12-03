@@ -113,6 +113,32 @@
   (let [[_, main-group] (parse-group rtf-str 1)]
     main-group))
 
+(comment
+  (def test
+    "{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times;}}
+{\\*\\listtable{\\list\\listtemplateid1\\listhybrid{\\listlevel\\levelnfc0\\levelnfcn0\\leveljc0\\leveljcn0\\levelfollow0\\levelstartat1\\levelspace360\\levelindent0{\\*\\levelmarker \\{decimal\\}.}{\\leveltext\\leveltemplateid1\\'02\\'00.;}{\\levelnumbers\\'01;}\\fi-360\\li720\\lin720 }{\\listname ;}\\listid1}
+{\\list\\listtemplateid2\\listhybrid{\\listlevel\\levelnfc23\\levelnfcn23\\leveljc0\\leveljcn0\\levelfollow0\\levelstartat1\\levelspace360\\levelindent0{\\*\\levelmarker \\{disc\\}}{\\leveltext\\leveltemplateid101\\'01\\uc0\\u8226 ;}{\\levelnumbers;}\\fi-360\\li720\\lin720 }{\\listname ;}\\listid2}}
+{\\*\\listoverridetable{\\listoverride\\listid1\\listoverridecount0\\ls1}{\\listoverride\\listid2\\listoverridecount0\\ls2}}
+{\\pard\\fs48This is an H1\\par}
+{\\pard\\fs36This is an H2\\par}
+{\\pard\\fs24\\par}
+{\\pard\\fs24Normal paragraph with a sentence, some {\\i italics}, {\\b bold}, and {\\strike strikethrough}. Plus some emoji and special symbols: \\uc0\\u55358\\uc0\\u56718, \\uc0\\u55356\\uc0\\u57331\\uc0\\u65039\\uc0\\u8205\\uc0\\u55356\\uc0\\u57096, \\uc0\\u55358\\uc0\\u56614\\uc0\\u55356\\uc0\\u57341, \\uc0\\u241, \\{, \\}, \\\\.\\par}
+{\\pard\\fs24\\par}
+\\pard\\tx220\\tx720\\tx1440\\tx2160\\tx2880\\tx3600\\tx4320\\tx5040\\tx5760\\tx6480\\tx7200\\tx7920\\tx8640\\li720\\fi-720\\fs24\\ls1\\ilvl0{\\listtext	1.	}OL 1\\
+{\\listtext	2.	}OL 2\\
+{\\listtext	3.	}OL 3\\
+{\\pard\\fs24\\par}
+\\pard\\tx220\\tx720\\tx1440\\tx2160\\tx2880\\tx3600\\tx4320\\tx5040\\tx5760\\tx6480\\tx7200\\tx7920\\tx8640\\li720\\fi-720\\fs24\\ls2\\ilvl0{\\listtext	\\uc0\\u8226 	}UL 1\\
+{\\listtext	\\uc0\\u8226 	}UL 2\\
+{\\listtext	\\uc0\\u8226 	}UL 3\\
+{\\pard\\fs24\\par}
+{\\pard\\fs24	And a longer indented paragraph after, with Unicode: \\uc0\\u24314\\uc0\\u21069. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.\\par}
+{\\pard\\fs24\\par}
+}")
+
+  (parse-rtf-doc-str test)
+  )
+
 ;; ======================================== ;;
 ;; IR to Slate native data types conversion ;;
 ;; ======================================== ;;
@@ -155,13 +181,13 @@
         (assoc :run nil))
     parser-state))
 
-(defn- convert-paragraph?
+(defn- convert-paragraph-type?
   "If paragraph starts with '1.', '2.', etc, convert to an OL.
    If it starts with ●, •, etc, convert to an UL."
   [paragraph]
   (let [text (m/text paragraph)
-        ol-regex (js/RegExp. "^[0-9]*\\.\\s?" "g")
-        ul-regex (js/RegExp. "^[●·•⁃◦ ]\\s?" "g")
+        ol-regex (js/RegExp. "^\\s*[0-9]*\\.\\s?" "g")
+        ul-regex (js/RegExp. "^\\s*[●·•⁃◦ ]\\s?" "g")
         delete-first-n-chars (fn [paragraph n]
                                (m/delete paragraph (sel/selection [(:uuid paragraph) 0] [(:uuid paragraph) n])))]
     (cond
@@ -174,13 +200,28 @@
       :else
       paragraph)))
 
+(defn- convert-leading-tab?
+  [paragraph]
+  (if (.startsWith (m/text paragraph) "\t")
+    (-> paragraph
+        (m/delete (sel/selection [(:uuid paragraph) 1]))
+        (m/insert-start "\u2003"))
+    paragraph))
+
+(defn- adjust-paragraph?
+  [paragraph]
+  (-> paragraph
+      (convert-paragraph-type?)
+      (convert-leading-tab?)))
+
 (defn- add-paragraph-to-doc
+  "Adds current paragraph to doc and creates a new, empty paragraph"
   [{:keys [paragraph] :as parser-state}]
   (-> parser-state
       ;; Add current working paragraph to Document
-      (update-in [:document :children] conj (convert-paragraph? paragraph))
+      (update-in [:document :children] conj (adjust-paragraph? paragraph))
       ;; ...and create new one. No runs, run will be added when first subsequent group with text ends
-      (assoc :paragraph (p/paragraph []))))
+      (assoc :paragraph (p/paragraph (random-uuid) (:type paragraph) []))))
 
 (defn- add-paragraph-to-doc?
   [{:keys [paragraph] :as parser-state}]
@@ -203,10 +244,6 @@
                              paragraph (r/run text)
                              :else nil)))
 
-(defn- handle-escape
-  [escape parser-state]
-  parser-state)
-
 (defn- handle-par
   [parser-state]
   (-> parser-state
@@ -219,6 +256,12 @@
   (update parser-state :paragraph #(if-not %
                                      (p/paragraph [])
                                      (assoc % :type :body))))
+
+(defn- handle-escape
+  [{:keys [escape]} parser-state]
+  (case escape
+    "\n" (handle-par parser-state)
+    parser-state))
 
 (defn- handle-fs
   [{:keys [num] :as _cmd} {:keys [paragraph] :as parser-state}]
@@ -258,6 +301,7 @@
       :u (handle-u cmd parser-state)
       :fs (handle-fs cmd parser-state)
       :fi (handle-fi cmd parser-state)
+      :tab (handle-text "\u2003" parser-state)
       :emdash (handle-text "—" parser-state)
       :lquote (handle-text "'" parser-state)
       :rquote (handle-text "'" parser-state)

@@ -5,8 +5,8 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]))
 
-(def h1-font-size 48) ;; in half pts
-(def h2-font-size 36) ;; in half pts
+(def h1-font-size 50) ;; in half pts
+(def h2-font-size 30) ;; in half pts
 
 (def list-headers
   "{\\*\\listtable{\\list\\listtemplateid1\\listhybrid{\\listlevel\\levelnfc0\\levelnfcn0\\leveljc0\\leveljcn0\\levelfollow0\\levelstartat1\\levelspace360\\levelindent0{\\*\\levelmarker \\{decimal\\}.}{\\leveltext\\leveltemplateid1\\'02\\'00.;}{\\levelnumbers\\'01;}\\fi-360\\li720\\lin720 }{\\listname ;}\\listid1}
