@@ -6,7 +6,9 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: RTF - UI in droplet
-;; TODO: RTF - Ensure emoji working import/export
+;; TODO: RTF - Parse \\n and \line as new paragraphs
+;; TODO: RTF - Make circular .drop -> .rtf -> .drop test pass
+;; TODO: RTF - Ensure { and } chars work correctly for import/export
 
 
 ;; Prioritized:

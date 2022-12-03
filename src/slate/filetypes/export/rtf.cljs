@@ -21,10 +21,14 @@
   "If char is not ASCII, will convert it to an RTF unicode command."
   [char]
   (let [char-code (.charCodeAt char 0)]
-    (if (<= char-code 127)
-      char
-      (case char
-        "\u2003" "\t"
+    (case char
+      "\\" "\\\\"
+      "{" "\\{"
+      "}" "\\}"
+      "\u2003" "\t"
+      ;; else
+      (if (<= char-code 127)
+        char
         (str "\\uc0\\u" char-code)))))
 
 (defn- formats->commands
@@ -114,7 +118,7 @@
                          (run "bold" #{:bold})
                          (run ", and ")
                          (run "strikethrough" #{:strikethrough})
-                         (run ".")])
+                         (run ". Plus some emoji and special symbols: 🦎, 🏳️‍🌈, 🤦🏽, ñ, {, }, \\.")])
              (paragraph [(run "")])
              (paragraph (random-uuid) :ol [(run "OL 1")])
              (paragraph (random-uuid) :ol [(run "OL 2")])
