@@ -8,7 +8,6 @@
 ;; TODO: RTF - UI in Droplet
 ;; TODO: RTF - Show error when file fails to import / parse correctly
 ;; TODO: Bug - Clicking breaks with emoji, need to offset based on graphemes, not chars
-;; TODO: Bug - word count not reset when making new file
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)

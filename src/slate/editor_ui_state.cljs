@@ -441,6 +441,19 @@
   (when-not (:active? @*ui-state)
     (goto-location-before! *ui-state :focus? true)))
 
+(defn new-document!
+  "Resets the editor surface to a new document."
+  [*ui-state]
+  (let [{:keys [shadow-root measure-fn]} @*ui-state
+        editor-state (es/editor-state)
+        available-width (.-width (.getBoundingClientRect (.-host shadow-root)))]
+    (swap! *ui-state merge {:viewmodels (vm/from-doc (:doc editor-state) available-width measure-fn)
+                            :history (history/init editor-state)
+                            :add-tip-to-backstack-timer-id nil
+                            :word-count 0
+                            :input-history []})
+    (full-dom-render! *ui-state)))
+
 (definterceptor activate-find!
   {:manual? true}
   [*ui-state _]
@@ -453,15 +466,8 @@
 (definterceptor new-file!
   {:manual? true}
   [*ui-state _]
-  (let [{:keys [shadow-root measure-fn] :as ui-state} @*ui-state
-        editor-state (es/editor-state)
-        available-width (.-width (.getBoundingClientRect (.-host shadow-root)))]
-    (swap! *ui-state merge {:viewmodels (vm/from-doc (:doc editor-state) available-width measure-fn)
-                            :history (history/init editor-state)
-                            :add-tip-to-backstack-timer-id nil
-                            :input-history []})
-    (full-dom-render! *ui-state)
-    ((:on-new ui-state) @*ui-state)))
+  (new-document! *ui-state)
+  ((:on-new @*ui-state) @*ui-state))
 
 (definterceptor save!
   {:manual? true}

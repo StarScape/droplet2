@@ -4,7 +4,7 @@
 (defn set-title!
   [{:keys [path last-saved-doc] :as _open-file-info} current-doc]
   (let [file-name (when path (path/basename path))
-        title (or file-name "Droplet")
+        title (or file-name "Untitled")
         title (if (and path (not= last-saved-doc current-doc))
                 (str title "*")
                 title)]

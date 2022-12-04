@@ -36,9 +36,12 @@
 (def *slate-instance (doto (r/atom nil)
                        (add-watch :change-title (fn [_ _ _ new-ui-state]
                                                   (app-utils/set-title! @*open-file (current-doc new-ui-state))))))
-(set! js/window.globalSlateInstance *slate-instance)
+(set! js/window.globalSlateInstance *slate-instance) ; for debugging use
 
-(defn on-new! [new-ui-state]
+(defn on-new!
+  "Resets the open-file information, after the editor has already been set to a new, empty document.
+   This **does not** reset the editor surface in any way. For that, see `slate.editor-ui-state/new-document!`"
+  [new-ui-state]
   (reset! *open-file {:path nil
                       :last-saved-doc (current-doc new-ui-state)}))
 
@@ -179,7 +182,9 @@
   (.on ipcRenderer "menubar-item-clicked"
        (fn [_e, item & args]
          (case item
-           "new" (on-new! @*slate-instance)
+           "new" (do
+                   (ui-state/new-document! *slate-instance)
+                   (on-new! @*slate-instance))
            "save" (on-save! (ui-state/serialize @*slate-instance))
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
            "open" (on-open! *slate-instance)
