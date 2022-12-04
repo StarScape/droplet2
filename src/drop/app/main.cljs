@@ -5,17 +5,20 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: RTF - UI in droplet
+;; TODO: RTF - UI in Droplet
+;; TODO: RTF - Show error when file fails to import / parse correctly
+;; TODO: Bug - Clicking breaks with emoji, need to offset based on graphemes, not chars
+;; TODO: Bug - word count not reset when making new file
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
-;; TODO: More pastes tests
-;; TODO: RTF export
+;; TODO: Drag n drog files
+;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Marketing website
+;; TODO: More pastes tests
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode
-;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Space out paragraphs somewhat
 ;; TODO: Bug - pressing fn+f to go to fullscreen still enters an 'f' inside the document
 ;; TODO: Break out all history fns into a protocol and implement for UIState

@@ -12,7 +12,8 @@
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
-            ["electron" :refer [ipcRenderer]]))
+            ["electron" :refer [ipcRenderer]]
+            ["path" :as path]))
 
 (defn- current-doc [ui-state]
   (some-> ui-state :history (history/current-state) :doc))
@@ -75,8 +76,9 @@
 (defn on-export! [*ui-state export-type]
   (let [{:keys [history]} @*ui-state
         doc (:doc (history/current-state history))
-        exported (filetypes/export export-type doc)]
-    (.invoke ipcRenderer "export-file-as" exported)))
+        exported (filetypes/export export-type doc)
+        suggested-file-name (.basename path (:path @*open-file) ".drop")]
+    (.send ipcRenderer "save-exported-file-as" exported export-type suggested-file-name)))
 
 (defn slate-editor [{:keys [file-contents ui-state-atom on-focus-find]}]
   [:div
@@ -181,7 +183,7 @@
            "save" (on-save! (ui-state/serialize @*slate-instance))
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
            "open" (on-open! *slate-instance)
-           "export-file" (apply on-export! *slate-instance args))))
+           "initiate-file-export" (apply on-export! *slate-instance args))))
 
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]

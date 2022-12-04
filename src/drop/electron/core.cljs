@@ -10,35 +10,43 @@
             [drop.electron.utils :refer [on-ipc handle-ipc]]
             [drop.electron.persistent-atoms :as p-atoms]))
 
-(def is-dev? true)
-
 (js/console.log "Evaluating main electron file...")
+
+(def file-formats-info {"rtf" {:file-type-name "RTF"
+                               :file-extension ".rtf"}
+                        "html" {:file-type-name "HTML"
+                                :file-extension ".html"}})
+
+(def is-dev? true)
 
 (def *main-window (atom nil))
 
 (defn launch-import-dialog!
   "Launches an file dialog to import the specified format type.
    Ex format-name and file-extension: 'HTML' and 'html'. Note the lack of leading '.' for the file-extension."
-  [format-name file-extension]
+  [file-type]
   (go
-    (let [main-window @*main-window
+    (let [{:keys [file-type-name file-extension]} (get file-formats-info file-type)
+          main-window @*main-window
           result (<p! (.showOpenDialog dialog main-window
                                        (clj->js {:title (str "Open ." file-extension " file")
-                                                 :filters [{:name format-name
-                                                            :extensions [(str "." file-extension)]}]
+                                                 :filters [{:name file-type-name
+                                                            :extensions [file-extension]}]
                                                  :properties ["openFile"]})))]
       (when-not ^js (.-canceled result)
         (let [file-path (nth ^js (.-filePaths result) 0)
               file-contents (<p! (readFile file-path "utf8"))]
-          (.. main-window -webContents (send "import-file" file-extension file-contents)))))))
+          (.. main-window -webContents (send "import-file" file-type file-contents)))))))
 
-(defn launch-export-dialog! [data filter-name filter-extension]
+(defn launch-export-dialog! [data file-type suggested-file-name]
   (go
     (try
-      (let [result (<p! (.showSaveDialog dialog @*main-window
+      (let [{:keys [file-type-name file-extension]} (get file-formats-info file-type)
+            result (<p! (.showSaveDialog dialog @*main-window
                                          (clj->js {:title "Export As..."
-                                                   :filters [{:name filter-name
-                                                              :extensions [filter-extension]}]})))]
+                                                   :defaultPath (str suggested-file-name file-extension)
+                                                   :filters [{:name file-type-name
+                                                              :extensions [file-extension]}]})))]
         (when-not ^js (.-canceled result)
           (<p! (writeFile (.-filePath result) data "utf8"))
           #_(.. main-window -webContents (send "export-file-successful" "html"))))
@@ -71,9 +79,9 @@
                           (resolve ^js (.-filePath result))))))
              (.catch #()))))))
 
-  (handle-ipc "export-file-as"
-              (fn [_ exported-file]
-                (launch-export-dialog! exported-file "HTML File" ".html")))
+  (on-ipc "save-exported-file-as"
+          (fn [_ exported-file exported-file-type suggested-file-name]
+            (launch-export-dialog! exported-file exported-file-type suggested-file-name)))
 
   (handle-ipc "choose-file"
     (fn [_]
@@ -113,7 +121,7 @@
                                       {:type "separator"}
                                       {:role "quit"}]}
                            {:label "File",
-                            :submenu [{:label "New"
+                            :submenu [{:label "New..."
                                        :accelerator "CmdOrCtrl+N"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "new"))}
                                       {:label "Save"
@@ -122,14 +130,16 @@
                                       {:label "Save As..."
                                        :accelerator "CmdOrCtrl+Shift+S"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "save-as"))}
-                                      {:label "Import"
+                                      {:label "Import..."
                                        :submenu [{:label "HTML"
-                                                  :click #(launch-import-dialog! "HTML" "html")}
+                                                  :click #(launch-import-dialog! "html")}
                                                  {:label "RTF"
-                                                  :click #(launch-import-dialog! "RTF" "rtf")}]}
-                                      {:label "Export"
+                                                  :click #(launch-import-dialog! "rtf")}]}
+                                      {:label "Export As..."
                                        :submenu [{:label "HTML"
-                                                  :click #(.. window -webContents (send "menubar-item-clicked" "export-file" "html"))}]}
+                                                  :click #(.. window -webContents (send "menubar-item-clicked" "initiate-file-export" "html"))}
+                                                 {:label "RTF"
+                                                  :click #(.. window -webContents (send "menubar-item-clicked" "initiate-file-export" "rtf"))}]}
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+Shift+O"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "open"))}]}
