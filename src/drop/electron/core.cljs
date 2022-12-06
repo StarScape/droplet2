@@ -56,6 +56,10 @@
 (defn reg-ipc-handlers! []
   (p-atoms/reg-handler!)
 
+  (on-ipc "show-error-dialog"
+          (fn [_ title dialog-text]
+            (.showErrorBox dialog title dialog-text)))
+
   (on-ipc "save-file"
     (fn [_ file-path file-contents]
       ;; #p "save-file"

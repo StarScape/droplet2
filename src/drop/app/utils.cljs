@@ -1,5 +1,6 @@
 (ns drop.app.utils
-  (:require ["path" :as path]))
+  (:require ["electron" :refer [ipcRenderer]]
+            ["path" :as path]))
 
 (defn set-title!
   [{:keys [path last-saved-doc] :as _open-file-info} current-doc]
@@ -9,3 +10,8 @@
                 (str title "*")
                 title)]
     (set! js/document.title title)))
+
+(defn show-error-dialog!
+  "Shows a system error dialog. This sends an IPC message to the main process."
+  [title dialog-text]
+  (.send ipcRenderer "show-error-dialog" title dialog-text))

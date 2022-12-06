@@ -46,7 +46,7 @@
                                      (run "bold" #{:bold})
                                      (run " text.")])])))
     (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/basic6.rtf"))
-              (document [(paragraph [(run "Some emoji and special symbols: 🦎, 🏳️‍🌈, 🤦🏽, ñ.")])]))))
+              (document [(paragraph [(run "Some emoji and special symbols: 🦎, 🏳️‍🌈, 🤦🏽, ñ, {, }, \\.")])]))))
   (testing "standard conversion test"
     (is (doc= (rtf-import/rtf->doc (slurp-file "test_files/rtf/conversion_test.rtf"))
               (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])
@@ -69,7 +69,10 @@
                          (paragraph (random-uuid) :ul [(run "UL 3")])
                          (paragraph [(run "")])
                          (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
-                         (paragraph [(run "")])])))))
+                         (paragraph [(run "")])]))))
+  (testing "errors"
+    (is (thrown? js/Error (rtf-import/rtf->doc "This is not an RTF document")))
+    (is (thrown? js/Error (rtf-import/rtf->doc "{\\rtf1}")))))
 
 (deftest rtf-export
   (let [test-doc (document [(paragraph (random-uuid) :h1 [(run "This is an H1")])

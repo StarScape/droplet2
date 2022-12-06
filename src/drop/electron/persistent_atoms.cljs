@@ -4,6 +4,10 @@
             ["electron" :refer [app]]
             [drop.electron.utils :refer [on-ipc]]))
 
+;; TODO: I switched from using this approach to just using localStorage, this can probably be done away with
+;; Save a copy of the code though, I thought the queue-ing was clever and a similar approach might be useful
+;; in the future for other things.
+
 (def *writer-queues (atom {}))
 (def *currently-writing (atom #{}))
 

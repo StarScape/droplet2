@@ -261,6 +261,9 @@
   [{:keys [escape]} parser-state]
   (case escape
     "\n" (handle-par parser-state)
+    "\\" (handle-text "\\" parser-state)
+    "{" (handle-text "{" parser-state)
+    "}" (handle-text "}" parser-state)
     parser-state))
 
 (defn- handle-fs

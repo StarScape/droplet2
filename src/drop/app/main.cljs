@@ -5,7 +5,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: RTF - UI in Droplet
 ;; TODO: RTF - Show error when file fails to import / parse correctly
 ;; TODO: Bug - Clicking breaks with emoji, need to offset based on graphemes, not chars
 

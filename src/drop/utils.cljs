@@ -17,6 +17,7 @@
     (fn [& args]
       (.apply (.-fire disposable-instance) disposable-instance (to-array args)))))
 
+;; TODO: this is used inside Slate and ought to be in its utils instead
 (defn throttle [interval listener]
   (disposable->function Throttle listener interval))
 

@@ -192,4 +192,8 @@
 
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]
-         (open-doc! *slate-instance (filetypes/import file-type file-contents)))))
+         (try
+           (open-doc! *slate-instance (filetypes/import file-type file-contents))
+           (catch :default e
+             (app-utils/show-error-dialog! "Import Failure" "Failed to import file.")
+             (js/console.log "Error thrown in ipcRenderer import-file:" e))))))
