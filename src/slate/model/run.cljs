@@ -6,13 +6,15 @@
                                         delete
                                         insert-start
                                         insert-end
-                                        len]]))
+                                        len
+                                        graphemes]]))
 
 (defrecord Run [text formats]
   TextContainer
   (text [r] (:text r))
   (len [r] (count (:text r)))
   (blank? [r] (or (= "" (:text r)) (= nil (:text r))))
+  (graphemes [r] (graphemes (:text r)))
 
   Formattable
   (apply-format

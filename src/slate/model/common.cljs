@@ -5,7 +5,7 @@
   (text [s] "Returns the text within the container, as a string.")
   (len [this] "Returns the number of chars (UTF-16 codepoints) in the container.")
   (blank? [this] "Returns true if the text container is empty.")
-  (graphemes [this] "Returns a seq of the visual graphemes in the TextContainer."))
+  (graphemes [this] "Returns a seq of the graphemes in the TextContainer."))
 
 (extend-type string
   TextContainer
