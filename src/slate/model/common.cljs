@@ -3,16 +3,27 @@
 
 (defprotocol TextContainer
   (text [s] "Returns the text within the container, as a string.")
-  (len [this] "Returns the number of chars in container.")
-  (blank? [this] "Returns true if the text container is empty."))
+  (len [this] "Returns the number of chars (UTF-16 codepoints) in the container.")
+  (blank? [this] "Returns true if the text container is empty.")
+  (graphemes [this] "Returns a seq of the visual graphemes in the TextContainer."))
 
 (extend-type string
   TextContainer
   (text [s] s)
   (len [s] (count s))
+  (blank? [s] (zero? (count s)))
+  (graphemes [s]
+    (let [segmenter (js/Intl.Segmenter. "en-US" #js {:granularity "grapheme"})
+          iterator (js* "~{}[Symbol.iterator]()" (.segment segmenter s))
+          transform-segment (fn [segment] {:index (.-index segment)
+                                           :segment (.-segment segment)})]
+      (map transform-segment (es6-iterator-seq iterator)))))
 
-  ;; TODO: this one can have a default implementation
-  (blank? [s] (zero? (count s))))
+(comment
+  (graphemes "Hello world!")
+  (graphemes "建前")
+  (graphemes "🏳️‍🌈🦎🤦🏽ñ")
+  )
 
 (defprotocol Formattable
   "Primitive operations for formatting text-containers (runs, paragraphs, documents)."

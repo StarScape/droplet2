@@ -320,7 +320,7 @@
       (autoset-formats para (sel/collapse-end sel))
 
       (and (single? sel) (< (caret sel) (m/len para)))
-      (autoset-formats para (sel/shift-single sel 1))
+      (autoset-formats para (sel/shift-single sel 1)) ;; TODO: change from shift by 1 to goto next grapheme
 
       :else
       sel))
