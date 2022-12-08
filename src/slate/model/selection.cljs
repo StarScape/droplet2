@@ -121,7 +121,7 @@
   (-> sel
       (assoc-in [:start :offset] offset)
       (assoc-in [:end :offset] offset)
-      (assoc :formats #{})))
+      (assoc :formats #{}, :between #{})))
 
 (defn correct-orientation
   "Sets the selection's :backwards? field to false if it is a single selection."

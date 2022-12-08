@@ -63,11 +63,11 @@
 
 (deftest graphemes-test
   (is (= (sl/graphemes (r/run "foo"))
-         [{:index 0, :segment "f"} {:index 1, :segment "o"} {:index 2, :segment "o"}]))
+         [{:offset 0, :segment "f"} {:offset 1, :segment "o"} {:offset 2, :segment "o"}]))
   (is (= (sl/graphemes (r/run "建前"))
-         [{:index 0, :segment "建"} {:index 1, :segment "前"}]))
+         [{:offset 0, :segment "建"} {:offset 1, :segment "前"}]))
   (is (= (sl/graphemes (r/run "🏳️‍🌈🦎🤦🏽ñ"))
-         [{:index 0, :segment "🏳️‍🌈"}
-          {:index 6, :segment "🦎"}
-          {:index 8, :segment "🤦🏽"}
-          {:index 12, :segment "ñ"}])))
+         [{:offset 0, :segment "🏳️‍🌈"}
+          {:offset 6, :segment "🦎"}
+          {:offset 8, :segment "🤦🏽"}
+          {:offset 12, :segment "ñ"}])))

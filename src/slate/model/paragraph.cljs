@@ -37,7 +37,7 @@
         segments
         (let [run (first runs)
               run-graphemes (graphemes run)
-              offset-graphemes (map #(update % :index (partial + segment-start-offset)) run-graphemes)]
+              offset-graphemes (map #(update % :offset (partial + segment-start-offset)) run-graphemes)]
           (recur (next runs)
                  (+ segment-start-offset (len run))
                  (concat segments offset-graphemes)))))))

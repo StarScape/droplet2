@@ -306,6 +306,20 @@
   [para-or-doc selection]
   (assoc selection :formats (m/formatting para-or-doc selection)))
 
+(defn- next-grapheme
+  [paragraph offset]
+  {:pre [(single? selection)]}
+  (let [graphemes (m/graphemes paragraph)
+        next-grapheme-segment (first (filter #(> (:offset %) offset) graphemes))]
+    (or (:offset next-grapheme-segment) (m/len paragraph))))
+
+(defn- prev-grapheme
+  [paragraph offset]
+  {:pre [(single? selection)]}
+  (let [graphemes (m/graphemes paragraph)
+        prev-grapheme-segment (first (reverse (filter #(< (:offset %) offset) graphemes)))]
+    (or (:offset prev-grapheme-segment) 0)))
+
 (extend-type Paragraph
   Navigable
   (start [para]
@@ -320,7 +334,8 @@
       (autoset-formats para (sel/collapse-end sel))
 
       (and (single? sel) (< (caret sel) (m/len para)))
-      (autoset-formats para (sel/shift-single sel 1)) ;; TODO: change from shift by 1 to goto next grapheme
+      (let [next-grapheme-offset (next-grapheme para (sel/caret sel))]
+        (autoset-formats para (sel/set-single sel next-grapheme-offset)))
 
       :else
       sel))
@@ -331,7 +346,8 @@
       (autoset-formats para (sel/collapse-start sel))
 
       (and (single? sel) (pos? (caret sel)))
-      (autoset-formats para (sel/shift-single sel -1))
+      (let [prev-grapheme-offset (prev-grapheme para (sel/caret sel))]
+        (autoset-formats para (sel/set-single sel prev-grapheme-offset)))
 
       :else
       sel))
