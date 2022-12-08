@@ -13,6 +13,7 @@
                                         text
                                         len
                                         blank?
+                                        graphemes
                                         apply-format
                                         remove-format
                                         formatting
@@ -27,7 +28,19 @@
   TextContainer
   (text [p] (reduce str (map text (:runs p))))
   (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p)))
-  (blank? [p] (zero? (len p))))
+  (blank? [p] (zero? (len p)))
+  (graphemes [p]
+    (loop [runs (:runs p)
+           segment-start-offset 0
+           segments []]
+      (if-not runs
+        segments
+        (let [run (first runs)
+              run-graphemes (graphemes run)
+              offset-graphemes (map #(update % :index (partial + segment-start-offset)) run-graphemes)]
+          (recur (next runs)
+                 (+ segment-start-offset (len run))
+                 (concat segments offset-graphemes)))))))
 
 (defrecord ParagraphFragment [runs]
   Fragment

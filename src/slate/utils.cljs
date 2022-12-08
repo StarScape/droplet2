@@ -65,3 +65,16 @@
                     pretty-backstack)]
      (js/console.log fmt-str "color: red;", "color: black;")))
   ([history] (pretty-history-stack history (count (:backstack history)))))
+
+;; TODO: test/finish
+
+(def ^:private -weak-caches (js/WeakMap.))
+
+(defn weak-cache
+  "Caches the results of functions `f` via a weak reference to `o`.
+   So long as `o` remains in memory, the result of `f` will remain in the cache. When `o`
+   is garbage-collected, the result will be evicted from the cache automatically."
+  [o f]
+  (if-let [cache (.get -weak-caches o)]
+    (get cache f)
+    (.set -weak-caches o {f (f)})))

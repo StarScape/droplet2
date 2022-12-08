@@ -277,3 +277,7 @@
         p (paragraph uuid [(r/run " \u00a0\n\tHello ") (r/run "world! \u00a0\n\t" #{:italic})])]
     (is (= (p/trim-start p) (paragraph uuid [(r/run "Hello ") (r/run "world! \u00a0\n\t" #{:italic})])))
     (is (= (p/trim-end p) (paragraph uuid [(r/run " \u00a0\n\tHello ") (r/run "world!" #{:italic})])))))
+
+(deftest graphemes-test
+  (let [p (paragraph [(r/run "🏳️‍🌈🦎") (r/run "🤦🏽ñ" #{:bold})])]
+    (is (= (sl/graphemes p) (sl/graphemes "🏳️‍🌈🦎🤦🏽ñ")))))
