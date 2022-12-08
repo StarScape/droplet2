@@ -317,6 +317,7 @@
   [paragraph offset]
   {:pre [(single? selection)]}
   (let [graphemes (m/graphemes paragraph)
+        ;; TODO: this can almost certainly be made for efficient
         prev-grapheme-segment (first (reverse (filter #(< (:offset %) offset) graphemes)))]
     (or (:offset prev-grapheme-segment) 0)))
 
@@ -465,12 +466,13 @@
   (shift+right [doc sel]
     (autoset-formats
      doc
-     (let [para ((:children doc) (sel/caret-para sel))
+     (let [caret-offset (sel/caret sel)
+           para ((:children doc) (sel/caret-para sel))
            para-length (m/len para)
            next-para (dll/next (:children doc) para)]
        (if (and (:backwards? sel) (sel/range? sel))
          (cond
-           (= (sel/caret sel) para-length)
+           (= caret-offset para-length)
            (-> sel
                (assoc :start {:offset 0, :paragraph (:uuid next-para)})
                ;; We just moved the caret from p1 to p2, removing p1 from the selection
@@ -478,33 +480,35 @@
                (sel/remove-ends-from-between))
 
            :else
-           (sel/shift-caret sel 1))
+           (sel/shift-caret sel (- (next-grapheme para caret-offset) caret-offset)))
          (cond
            (and (doc/last-para? doc para)
-                (= (sel/caret sel) para-length))
+                (= caret-offset para-length))
            sel
 
-           (= (sel/caret sel) para-length)
+           (= caret-offset para-length)
            (-> sel
                (assoc :end {:offset 0, :paragraph (:uuid next-para)})
               ;; We just shift+right'd from p1 to p2, so add p1 to :between IF it's not also :start
                (sel/add-to-between (:uuid para)))
 
            :else
-           (sel/shift-caret sel 1))))))
+           (sel/shift-caret sel (- (next-grapheme para caret-offset) caret-offset)))))))
 
   (shift+left [doc sel]
     (autoset-formats
      doc
-     (let [para ((:children doc) (sel/caret-para sel))
-           prev-para (dll/prev (:children doc) para)]
+     (let [caret-offset (sel/caret sel)
+           para ((:children doc) (sel/caret-para sel))
+           prev-para (dll/prev (:children doc) para)
+           prev-grapheme-offset (prev-grapheme para caret-offset)]
        (if (sel/single? sel)
          (cond
            (and (doc/first-para? doc para)
-                (zero? (sel/caret sel)))
+                (zero? caret-offset))
            sel
 
-           (zero? (sel/caret sel))
+           (zero? caret-offset)
            (-> sel
                (assoc :start {:paragraph (:uuid prev-para)
                               :offset (m/len prev-para)}
@@ -512,13 +516,15 @@
               ;; No need to update :between because this is operating on a single selection
 
            :else
-           (sel/shift-start sel -1))
+           (-> sel
+               (assoc-in [:start :offset] prev-grapheme-offset)
+               (assoc :backwards? true)))
          (cond
            (and (doc/first-para? doc para)
-                (zero? (sel/caret sel)))
+                (zero? caret-offset))
            sel
 
-           (zero? (sel/caret sel))
+           (zero? caret-offset)
            (if (:backwards? sel)
              (-> sel
                  (assoc :start {:offset (m/len prev-para)
@@ -535,7 +541,7 @@
                  (sel/remove-ends-from-between)))
 
            :else
-           (sel/shift-caret sel -1))))))
+           (sel/shift-caret sel (- prev-grapheme-offset caret-offset)))))))
 
   (ctrl+shift+right [doc sel]
     (autoset-formats

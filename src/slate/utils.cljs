@@ -77,4 +77,6 @@
   [o f]
   (if-let [cache (.get -weak-caches o)]
     (get cache f)
-    (.set -weak-caches o {f (f)})))
+    (let [result (f)]
+      (.set -weak-caches o {f result})
+      result)))

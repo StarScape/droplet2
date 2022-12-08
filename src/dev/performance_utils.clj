@@ -13,8 +13,10 @@
 
 (defmacro measure-time-and-print! [measurement-name expr]
   `(do
-     (inside-time-measurement! ~measurement-name ~expr)
-     (js/console.log (str ~measurement-name " took " (stop-time-measurement! ~measurement-name) "ms"))))
+     (js/setTimeout (fn []
+                      (js/console.log (str ~measurement-name " took " (stop-time-measurement! ~measurement-name) "ms")))
+                    0)
+     (inside-time-measurement! ~measurement-name ~expr)))
 
 (comment
   (macroexpand
