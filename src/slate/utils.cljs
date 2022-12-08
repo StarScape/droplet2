@@ -66,6 +66,14 @@
      (js/console.log fmt-str "color: red;", "color: black;")))
   ([history] (pretty-history-stack history (count (:backstack history)))))
 
+(defn paragraph-type->css-class [paragraph-type]
+  (if paragraph-type
+    (str (name paragraph-type) "-format")
+    ""))
+
+(defn formats->css-classes [formats]
+  (map #(str (name %) "-format") formats))
+
 ;; TODO: test/finish
 
 (def ^:private -weak-caches (js/WeakMap.))

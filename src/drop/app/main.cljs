@@ -6,6 +6,7 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: Bug - Clicking breaks with emoji, need to offset based on graphemes, not chars
+;; TODO: Bug - drag-selecting empty paragraph throws 'no method graphemes for type null'
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)

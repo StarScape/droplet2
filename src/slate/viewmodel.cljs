@@ -181,10 +181,10 @@
 
 (comment
   (lineify [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now.")] 300 fake-measure-fn)
-  (lineify [(r/run "abc" #{:italic}) (r/run "foobar")] 300 fake-measure-fn)
+  (lineify [(r/run "abc" #{:italic}) (r/run "foobar")] :body 300 fake-measure-fn)
   ;; TODO: add these as test cases
   (lineify [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
-           300 fake-measure-fn)
+           :body 300 fake-measure-fn)
   (lineify [(r/run "foobar bizz buzz hello hello goodbye. And this should be on the second line now. aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
            300 fake-measure-fn)
   (lineify [(r/run "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")] 300 fake-measure-fn)
@@ -217,3 +217,12 @@
                                 (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn)))
                               vms (concat inserted-uuids changed-uuids)))]
     updated-vms))
+
+(defn formats-at
+  [line offset]
+  (let [offset-within? (fn [span]
+                         (let [end-offset (+ (:start-offset span) (count (:text span)))]
+                           (and (> end-offset offset)
+                                (<= (:start-offset span) offset))))
+        span (first (filter offset-within? (:spans line)))]
+    (:formats span)))

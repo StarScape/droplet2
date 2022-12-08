@@ -16,7 +16,7 @@
     (let [segmenter (js/Intl.Segmenter. "en-US" #js {:granularity "grapheme"})
           iterator (js* "~{}[Symbol.iterator]()" (.segment segmenter s))
           transform-segment (fn [segment] {:offset (.-index segment)
-                                           :segment ^js/Object (.-segment segment)})]
+                                           :grapheme ^js/Object (.-segment segment)})]
       (map transform-segment (es6-iterator-seq iterator)))))
 
 (defprotocol Formattable

@@ -1,7 +1,8 @@
 (ns slate.measurement
   "Functions for measuring the widths of text as they will appear in the actual DOM."
   (:require [clojure.string :as str]
-            [slate.view :refer [formats->css-classes paragraph-type->css-class]]
+            [slate.model.common :refer [graphemes]]
+            [slate.utils :refer [formats->css-classes paragraph-type->css-class]]
             [dev.performance-utils :refer-macros [inside-time-measurement!]]))
 
 (defn- create-elem!
@@ -49,18 +50,18 @@
    (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
    (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
-         measure-char (fn [char]
+         measure-grapheme (fn [{:keys [grapheme]}]
                         (set! js/window.measureCharCalls (inc js/window.measureCharCalls))
-                        (let [cache-key (str char "-" formats-hash "-" type-hash)
+                        (let [cache-key (str grapheme "-" formats-hash "-" type-hash)
                               cache-val (aget cache cache-key)]
                           (if cache-val
                             cache-val
                             (do
                               (apply-css! elem formats paragraph-type)
-                              (set! (.-innerHTML elem) char)
+                              (set! (.-innerHTML elem) grapheme)
                               (aset cache cache-key (.. elem (getBoundingClientRect) -width))))))]
      ;;(when js/window.logText (js/console.log (str "text: \"" text "\"")))
-     (->> text (map measure-char) (reduce +)))))
+     (->> text (graphemes) (map measure-grapheme) (reduce +)))))
 
 (defn ruler
   "Given valid CSS values for a font size and family (e.g. `12px` and `Arial`),

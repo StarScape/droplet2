@@ -6,7 +6,9 @@
             [slate.model.common :as sl]
             [slate.model.editor-state :as es]
             [slate.model.navigation :as nav]
-            [slate.dll :as dll]))
+            [slate.dll :as dll]
+            [slate.viewmodel :as vm]
+            [slate.utils :refer [paragraph-type->css-class formats->css-classes]]))
 
 ;; Utility functions
 (defn paragraph-uuid->dom-id
@@ -86,14 +88,6 @@
      :bottom (js/parseFloat (.-marginBottom style))
      :left (js/parseFloat (.-marginLeft style))
      :right (js/parseFloat (.-marginRight style))}))
-
-(defn paragraph-type->css-class [paragraph-type]
-  (if paragraph-type
-    (str (name paragraph-type) "-format")
-    ""))
-
-(defn formats->css-classes [formats]
-  (map #(str (name %) "-format") formats))
 
 ;; Dynamic var to indicate whether the selection is still ongoing.
 ;; This is something we need to keep track of between paragraphs so it winds up a little
@@ -486,7 +480,7 @@
          caret-line (line-with-caret viewmodels (sel/smart-collapse selection))]
      (caret-px selection caret-line (:type caret-paragraph) measure-fn))))
 
-(defn chars-and-formats [span] (map #(hash-map :char %, :formats (:formats span)) (:text span)))
+(defn chars-and-formats [span] (map #(hash-map :grapheme %, :formats (:formats span)) (:text span)))
 
 (defn nearest-line-offset-to-pixel
   "Takes a viewmodel Line and a distance from the left side of the editor-elem in pixels,
@@ -500,31 +494,31 @@
    - `measure-fn`: measure function to use
    - `paragraph-type`: type of paragraph (:h1, :h2, :olist, :ulist)"
   [& {:keys [line target-px last-line-in-paragraph? measure-fn paragraph-type]}]
-  (let [chars-with-formats (->> (:spans line)
-                                (map chars-and-formats (:spans line))
-                                (flatten))]
-    (loop [chars-i 0
-           offset (:start-offset line)
+  (let [line-text (->> (:spans line) (map :text) (apply str))]
+    (loop [line-graphemes (map #(update % :offset + (:start-offset line)) (sl/graphemes line-text))
            offset-px 0]
-      (if (= chars-i (count chars-with-formats))
-        (if (not last-line-in-paragraph?)
-          ;; There is an invisible space at the end of each line - place the text caret directly in
-          ;; front of it, and the caret will be rendered at the start of the next line. However, it
-          ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
-          ;; show up on the next line, so we decrement by 1.
-          (dec offset)
-          ;; ...EXCEPT on the last line of the paragraph, where there is no invisible space
-          offset)
-        (let [{:keys [char formats]} (nth chars-with-formats chars-i)
-              new-offset-px (+ offset-px (measure-fn char formats paragraph-type))
-              delta-from-char-left (js/Math.abs (- offset-px target-px))
-              delta-from-char-right (js/Math.abs (- new-offset-px target-px))]
+      (if-not line-graphemes
+        ;; End reached of line reached
+        (let [last-grapheme (peek line-graphemes)]
+          (if-not last-line-in-paragraph?
+            ;; There is an invisible space at the end of each line - place the text caret directly in
+            ;; after it, and the caret will be rendered at the start of the next line. However, it
+            ;; would be visually confusing to click _past the right edge_ of a line and have your cursor
+            ;; show up on the next line, so we get the 2nd-to-last offset in the line.
+            (:offset last-grapheme)
+            ;; ...EXCEPT on the last line of the paragraph, where there is no invisible space
+            (:end-offset line)))
+        (let [{grapheme :grapheme, offset :offset} (first line-graphemes)
+              grapheme-width (measure-fn grapheme (vm/formats-at line offset) paragraph-type)
+              new-offset-px (+ offset-px grapheme-width)
+              delta-from-grapheme-left (js/Math.abs (- offset-px target-px))
+              delta-from-grapheme-right (js/Math.abs (- new-offset-px target-px))]
           (cond
-            (> delta-from-char-right delta-from-char-left)
+            (> delta-from-grapheme-right delta-from-grapheme-left)
             offset
 
             :else
-            (recur (inc chars-i) (inc offset) new-offset-px)))))))
+            (recur (next line-graphemes) new-offset-px)))))))
 
 (defn down-selection
   "Move the caret down into the next line. Returns a new Selection."
