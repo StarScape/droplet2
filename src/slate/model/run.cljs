@@ -75,5 +75,7 @@
 
 ;; Delete at offset, acts like backspace
 (defmethod delete [Run js/Number]
-  [run caret]
-  (delete run (dec caret) caret))
+  [run offset]
+  (let [graphemes (graphemes run)
+        prev-grapheme (first (reverse (filter #(< (:offset %) offset) graphemes)))]
+    (delete run (:offset prev-grapheme) offset)))

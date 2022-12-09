@@ -55,6 +55,11 @@
     (let [r (sl/delete run1 6)]
       (is (= "fooba" (:text r)))))
 
+  (testing "backspace with emoji"
+    (let [text "🏳️‍🌈🦎🤦🏽"
+          r (sl/delete (r/run text) (sl/len text))]
+      (is (= "🏳️‍🌈🦎" (:text r)))))
+
   (testing "backspace off end of range"
     (comment "TODO"))
 

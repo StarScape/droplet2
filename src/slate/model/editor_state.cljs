@@ -187,7 +187,7 @@
         ; Not the first char of the selected paragraph, normal backspace
         (->EditorUpdate (assoc editor-state
                                :doc new-doc
-                               :selection (nav/autoset-formats new-doc (sel/shift-single selection -1)))
+                               :selection (nav/prev-char doc selection))
                         (changelist :changed-uuids #{startp-uuid})))
       ;; Range selection
       (let [startp-uuid (-> selection :start :paragraph)
