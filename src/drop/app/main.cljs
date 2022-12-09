@@ -7,6 +7,7 @@
 
 ;; TODO: Bug - Clicking breaks with emoji, need to offset based on graphemes, not chars
 ;; TODO: Bug - drag-selecting empty paragraph throws 'no method graphemes for type null'
+;; TODO: Drag select is a bit slow?
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)

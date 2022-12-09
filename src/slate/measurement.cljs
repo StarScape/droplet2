@@ -47,6 +47,8 @@
    (throw "Invalid arity of measurement function!")
    #_(measure elem cache text formats nil))
   ([elem cache text formats paragraph-type]
+   #_(when (nil? text)
+     (throw (js/Error. "wtf dawg")))
    (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
    (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
@@ -83,7 +85,7 @@
   (let [cache #js {}
         elem (create-elem! shadow-root font-size font-family)]
     (fn [& args]
-      (inside-time-measurement! "measure-fn" (apply measure elem cache args)))))
+      (apply measure elem cache args))))
 
 (defn ruler-for-elem
   "Returns a measurement function for the given DOM element.

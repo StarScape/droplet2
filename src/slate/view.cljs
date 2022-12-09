@@ -494,10 +494,11 @@
    - `measure-fn`: measure function to use
    - `paragraph-type`: type of paragraph (:h1, :h2, :olist, :ulist)"
   [& {:keys [line target-px last-line-in-paragraph? measure-fn paragraph-type]}]
-  (let [line-text (->> (:spans line) (map :text) (apply str))]
-    (loop [line-graphemes (map #(update % :offset + (:start-offset line)) (sl/graphemes line-text))
+  (let [line-text (->> (:spans line) (map :text) (apply str))
+        line-graphemes (mapv #(update % :offset + (:start-offset line)) (sl/graphemes line-text))]
+    (loop [i 0
            offset-px 0]
-      (if-not line-graphemes
+      (if (= i (count line-graphemes))
         ;; End reached of line reached
         (let [last-grapheme (peek line-graphemes)]
           (if-not last-line-in-paragraph?
@@ -508,7 +509,7 @@
             (:offset last-grapheme)
             ;; ...EXCEPT on the last line of the paragraph, where there is no invisible space
             (:end-offset line)))
-        (let [{grapheme :grapheme, offset :offset} (first line-graphemes)
+        (let [{grapheme :grapheme, offset :offset} (nth line-graphemes i)
               grapheme-width (measure-fn grapheme (vm/formats-at line offset) paragraph-type)
               new-offset-px (+ offset-px grapheme-width)
               delta-from-grapheme-left (js/Math.abs (- offset-px target-px))
@@ -518,7 +519,7 @@
             offset
 
             :else
-            (recur (next line-graphemes) new-offset-px)))))))
+            (recur (inc i) new-offset-px)))))))
 
 (defn down-selection
   "Move the caret down into the next line. Returns a new Selection."
