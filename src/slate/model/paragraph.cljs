@@ -327,54 +327,55 @@
             run-text (:text ((:runs para) run-idx))]
         (nth run-text run-offset))))
 
+  ;; TODO: graphemes
   (char-before [para sel]
     (if (zero? (sel/caret sel))
       "\n" ; TODO: Not sure if this is the right approach here
-      (char-at para (sel/shift-single sel -1))))
+      (char-at para (sel/shift-single sel -1)))) ;; TODO: graphemes
 
   (selected-content [para sel]
     (fragment (second (separate-selected (:runs para) sel))))
 
   (formatting
-   ([para] (formatting para (selection [(:uuid para) 0]
-                                       [(:uuid para) (len para)])))
-   ([para sel]
-    (if (contains? (:between sel) (:uuid para))
-      (formatting para)
-      (if (sel/single? sel)
-        (if (zero? (sel/caret sel)) (formatting-at para sel) (formatting-before para sel))
-        (let [runs (:runs para)
-              [start-run-idx _] (at-offset runs (-> sel :start :offset))
-              [end-run-idx _] (before-offset runs (-> sel :end :offset))
-              selected-runs (subvec runs start-run-idx (inc end-run-idx))]
-          (->> selected-runs
-               (map :formats)
-               (apply set/intersection)))))))
+    ([para] (formatting para (selection [(:uuid para) 0]
+                                        [(:uuid para) (len para)])))
+    ([para sel]
+     (if (contains? (:between sel) (:uuid para))
+       (formatting para)
+       (if (sel/single? sel)
+         (if (zero? (sel/caret sel)) (formatting-at para sel) (formatting-before para sel))
+         (let [runs (:runs para)
+               [start-run-idx _] (at-offset runs (-> sel :start :offset))
+               [end-run-idx _] (before-offset runs (-> sel :end :offset))
+               selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+           (->> selected-runs
+                (map :formats)
+                (apply set/intersection)))))))
 
   ;; TODO: test these
   Formattable
   (apply-format
-   ([p format] (update p :runs (partial map #(apply-format % format))))
-   ([p sel format] (update-selected-runs p sel #(apply-format % format))))
+    ([p format] (update p :runs (partial map #(apply-format % format))))
+    ([p sel format] (update-selected-runs p sel #(apply-format % format))))
 
   (remove-format
-   ([p format] (update p :runs (partial map #(remove-format % format))))
-   ([p sel format] (update-selected-runs p sel #(remove-format % format))))
+    ([p format] (update p :runs (partial map #(remove-format % format))))
+    ([p sel format] (update-selected-runs p sel #(remove-format % format))))
 
   (toggle-format
-   [para sel format]
-   (let [[before in-selection after] (separate-selected (:runs para) sel)
+    [para sel format]
+    (let [[before in-selection after] (separate-selected (:runs para) sel)
 
-         common-formats (->> in-selection
-                             (map :formats)
-                             (apply set/intersection))
+          common-formats (->> in-selection
+                              (map :formats)
+                              (apply set/intersection))
 
-         in-selection-toggled (if (contains? common-formats format)
-                                (mapv #(remove-format % format) in-selection)
-                                (mapv #(apply-format % format) in-selection))
+          in-selection-toggled (if (contains? common-formats format)
+                                 (mapv #(remove-format % format) in-selection)
+                                 (mapv #(apply-format % format) in-selection))
 
-         new-runs (optimize-runs (concat before in-selection-toggled after))]
-     (assoc para :runs new-runs))))
+          new-runs (optimize-runs (concat before in-selection-toggled after))]
+      (assoc para :runs new-runs))))
 
 ;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs

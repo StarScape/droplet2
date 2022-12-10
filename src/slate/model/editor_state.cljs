@@ -302,20 +302,20 @@
    (if (sel/single? selection)
      (->EditorUpdate (assoc editor-state
                             :doc (insert doc selection (str opening closing))
-                            :selection (sel/shift-single selection 1))
+                            :selection (sel/shift-single selection (len opening)))
                      (changelist :changed-uuids #{(-> selection :start :paragraph)}))
      (let [opening-insert-point (sel/collapse-start selection)
            closing-insert-point (sel/collapse-end selection)
            same-para? (= (sel/caret-para opening-insert-point) (sel/caret-para closing-insert-point))
            closing-insert-point (if same-para?
-                                  (sel/shift-single closing-insert-point 1)
+                                  (sel/shift-single closing-insert-point (len opening))
                                   closing-insert-point)
            new-doc (-> doc
                        (insert opening-insert-point opening)
                        (insert closing-insert-point closing))
-           new-selection (update-in selection [:start :offset] inc)
+           new-selection (update-in selection [:start :offset] + (len opening))
            new-selection (if same-para?
-                           (sel/shift-end new-selection 1)
+                           (sel/shift-end new-selection (len opening))
                            new-selection)]
        (->EditorUpdate (assoc editor-state :doc new-doc :selection new-selection)
                        (changelist :changed-uuids #{(sel/start-para selection), (sel/end-para selection)})))))

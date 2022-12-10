@@ -52,18 +52,21 @@
    (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
    (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
-         measure-grapheme (fn [{:keys [grapheme]}]
-                        (set! js/window.measureCharCalls (inc js/window.measureCharCalls))
-                        (let [cache-key (str grapheme "-" formats-hash "-" type-hash)
-                              cache-val (aget cache cache-key)]
-                          (if cache-val
-                            cache-val
-                            (do
-                              (apply-css! elem formats paragraph-type)
-                              (set! (.-innerHTML elem) grapheme)
-                              (aset cache cache-key (.. elem (getBoundingClientRect) -width))))))]
+         measure-grapheme (fn [grapheme]
+                            (set! js/window.measureCharCalls (inc js/window.measureCharCalls))
+                            (let [cache-key (str grapheme "-" formats-hash "-" type-hash)
+                                  cache-val (aget cache cache-key)]
+                              (if cache-val
+                                cache-val
+                                (do
+                                  (apply-css! elem formats paragraph-type)
+                                  (set! (.-innerHTML elem) grapheme)
+                                  (aset cache cache-key (.. elem (getBoundingClientRect) -width))))))
+         text-graphemes (if (= 1 (.-length text))
+                          text
+                          (->> text (graphemes) (map :grapheme)))]
      ;;(when js/window.logText (js/console.log (str "text: \"" text "\"")))
-     (->> text (graphemes) (map measure-grapheme) (reduce +)))))
+     (->> text-graphemes (map measure-grapheme) (reduce +)))))
 
 (defn ruler
   "Given valid CSS values for a font size and family (e.g. `12px` and `Arial`),
