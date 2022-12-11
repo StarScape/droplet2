@@ -83,8 +83,9 @@
    So long as `o` remains in memory, the result of `f` will remain in the cache. When `o`
    is garbage-collected, the result will be evicted from the cache automatically."
   [o f]
-  (if-let [cache (.get -weak-caches o)]
-    (get cache f)
-    (let [result (f)]
-      (.set -weak-caches o {f result})
-      result)))
+  (let [cache-for-o (or (.get -weak-caches o) {})]
+    (if-let [cached-val (get cache-for-o f)]
+      cached-val
+      (let [computed-val (f)]
+        (.set -weak-caches o (assoc cache-for-o f computed-val))
+        computed-val))))

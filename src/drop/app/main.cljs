@@ -6,6 +6,9 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: Bug - focus breaks when clicking off to one side
+;; TODO: Graphemes - make grapheme-at and grapheme-before functions
+;; TODO: Graphemes - use WeakMap-based caching
+;; TODO: Graphemes - check all usages of selection constructor, selection shift fns, and set-single
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
