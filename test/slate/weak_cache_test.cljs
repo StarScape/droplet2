@@ -24,5 +24,5 @@
           call1 (weak-cache o1 expensive-fn)
           call2 (weak-cache o1 expensive-fn)
           call3 (weak-cache o1 expensive-fn)]
-      (is (= call1 call2))
+      (is (= call1 call2 call3))
       (is (= 1 @*num-calls)))))

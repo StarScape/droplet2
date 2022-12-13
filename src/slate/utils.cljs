@@ -78,6 +78,8 @@
 
 (def ^:private -weak-caches (js/WeakMap.))
 
+;; TODO: make weak-cache macro
+
 (defn weak-cache
   "Caches the results of functions `f` via a weak reference to `o`.
    So long as `o` remains in memory, the result of `f` will remain in the cache. When `o`

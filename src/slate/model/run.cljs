@@ -7,14 +7,15 @@
                                         insert-start
                                         insert-end
                                         len
-                                        graphemes]]))
+                                        graphemes]]
+            [slate.utils :refer [weak-cache]]))
 
 (defrecord Run [text formats]
   TextContainer
   (text [r] (:text r))
   (len [r] (count (:text r)))
   (blank? [r] (or (= "" (:text r)) (= nil (:text r))))
-  (graphemes [r] (graphemes (:text r)))
+  (graphemes [r] (weak-cache r #(graphemes (:text r))))
 
   Formattable
   (apply-format

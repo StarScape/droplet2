@@ -20,7 +20,8 @@
                                         char-at
                                         items]]
             [slate.model.run :as r]
-            [slate.model.selection :as sel :refer [Selection selection]]))
+            [slate.model.selection :as sel :refer [Selection selection]]
+            [slate.utils :refer [weak-cache]]))
 
 (declare optimize-runs)
 
