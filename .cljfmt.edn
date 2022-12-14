@@ -1,0 +1,4 @@
+{:indents {slate.utils/weak-cache-val [[:inner 0]]
+           weak-cache-val [[:inner 0]]}
+ :test-code (slate.utils/weak-cache-val foo
+              (bar!))}

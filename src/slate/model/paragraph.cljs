@@ -1,6 +1,7 @@
 (ns slate.model.paragraph
   "Paragraphs contain a series of one or more runs. This namespace
    contains functionality for using and manipulating paragraphs."
+  (:require-macros [slate.utils :refer [weak-cache-val]])
   (:require [clojure.set :as set]
             [slate.model.common :refer [TextContainer
                                         Selectable
@@ -31,17 +32,18 @@
   (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p)))
   (blank? [p] (zero? (len p)))
   (graphemes [p]
-    (loop [runs (:runs p)
-           segment-start-offset 0
-           segments []]
-      (if-not runs
-        segments
-        (let [run (first runs)
-              run-graphemes (graphemes run)
-              offset-graphemes (map #(update % :offset (partial + segment-start-offset)) run-graphemes)]
-          (recur (next runs)
-                (+ segment-start-offset (len run))
-                (concat segments offset-graphemes)))))))
+    (weak-cache-val p
+      (loop [runs (:runs p)
+             segment-start-offset 0
+             segments []]
+        (if-not runs
+          segments
+          (let [run (first runs)
+                run-graphemes (graphemes run)
+                offset-graphemes (map #(update % :offset (partial + segment-start-offset)) run-graphemes)]
+            (recur (next runs)
+                   (+ segment-start-offset (len run))
+                   (concat segments offset-graphemes))))))))
 
 (defrecord ParagraphFragment [runs]
   Fragment
