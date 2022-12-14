@@ -1,5 +1,5 @@
 (ns slate.filetypes.html-browser-test
-  (:require-macros [slate.macros :refer [slurp-file]])
+  (:require-macros [slate.utils :refer [slurp-file]])
   (:require [cljs.test :refer-macros [is deftest testing]]
             [slate.filetypes.import.html :as html-import]
             [slate.filetypes.export.html :as html-export]

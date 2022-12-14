@@ -1,5 +1,5 @@
 (ns slate.filetypes.rtf-test
-  (:require-macros [slate.macros :refer [slurp-file]])
+  (:require-macros [slate.utils :refer [slurp-file]])
   (:require [cljs.test :refer-macros [is deftest testing]]
             [slate.filetypes.import.rtf :as rtf-import]
             [slate.filetypes.export.rtf :as rtf-export]

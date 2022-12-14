@@ -1,5 +1,5 @@
 (ns dev.layout-perf-tests
-  (:require-macros [slate.macros :refer [slurp-file]])
+  (:require-macros [slate.utils :refer [slurp-file]])
   (:require [clojure.string :as str]
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]

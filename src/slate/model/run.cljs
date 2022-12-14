@@ -1,6 +1,7 @@
 (ns slate.model.run
   "Runs are the basic building blocks of a document: a string with associated styling.
    This namespace contains the functions for dealing with Runs."
+  (:require-macros [slate.utils :refer [weak-cache-val]])
   (:require [slate.model.common :refer [TextContainer
                                         Formattable
                                         delete
@@ -15,7 +16,7 @@
   (text [r] (:text r))
   (len [r] (count (:text r)))
   (blank? [r] (or (= "" (:text r)) (= nil (:text r))))
-  (graphemes [r] (weak-cache r #(graphemes (:text r))))
+  (graphemes [r] (weak-cache-val r (graphemes (:text r))))
 
   Formattable
   (apply-format

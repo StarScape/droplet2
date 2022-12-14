@@ -4,7 +4,7 @@
    First the raw RTF is parsed into a data structure easily readable by
    Clojure (a sort of IR), and another in which this data structure is
    converted into a Slate Document."
-  (:require-macros [slate.macros :refer [slurp-file]])
+  (:require-macros [slate.utils :refer [slurp-file]])
   (:require [clojure.string :as str]
             [slate.model.common :as m]
             [slate.model.doc :as doc]

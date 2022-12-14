@@ -1,6 +1,6 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]]
-                   [slate.macros :refer [slurp-file]]
+                   [slate.utils :refer [slurp-file]]
                    [dev.performance-utils :refer [inside-time-measurement!]])
   (:require [clojure.edn :as edn]
             [clojure.set :as set]
