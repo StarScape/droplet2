@@ -90,13 +90,13 @@
     :ref (fn [elem]
            (when elem
              (let [*ui-state (ui-state/init! :*atom ui-state-atom
-                                       :save-file-contents file-contents
-                                       :dom-elem elem
-                                       :on-new on-new!
-                                       :on-open on-open!
-                                       :on-save on-save!
-                                       :on-save-as on-save-as!
-                                       :on-focus-find on-focus-find)]
+                                             :save-file-contents file-contents
+                                             :dom-elem elem
+                                             :on-new on-new!
+                                             :on-open on-open!
+                                             :on-save on-save!
+                                             :on-save-as on-save-as!
+                                             :on-focus-find on-focus-find)]
                ;; Utility for viewing editor history from console
                (when utils/DEV
                  (set! js/dumpHistory (fn
@@ -131,7 +131,9 @@
                                           (reset! *word-count (:word-count new-ui-state))))
     (fn []
       [:<>
-       [:div {:class "h-screen flex flex-row justify-center"}
+       [:div {:class "h-screen flex flex-row justify-center"
+              :on-focus #(when-let [instance @*slate-instance]
+                           (ui-state/focus! instance))}
         [slate-editor {:file-contents save-file-contents
                        :ui-state-atom *slate-instance
                        :on-focus-find focus-find-popup!}]]

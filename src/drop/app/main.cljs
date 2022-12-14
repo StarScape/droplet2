@@ -5,17 +5,16 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: Bug - focus breaks when clicking off to one side
-;; TODO: Graphemes - make grapheme-at and grapheme-before functions
-;; TODO: Graphemes - use WeakMap-based caching
-;; TODO: Graphemes - check all usages of selection constructor, selection shift fns, and set-single
+;; TODO: Bug - multi-paragraph select, toggle bold then toggle off
+;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
-;; TODO: Drag n drog files
-;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
 ;; TODO: Marketing website
+;; TODO: Packaging for prod version
+;; TODO: Drag n drog files
+;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: More pastes tests
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode

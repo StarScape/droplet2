@@ -74,11 +74,7 @@
 (defn formats->css-classes [formats]
   (map #(str (name %) "-format") formats))
 
-;; TODO: test/finish
-
 (def ^:private -weak-caches (js/WeakMap.))
-
-;; TODO: make weak-cache macro
 
 (defn weak-cache
   "Caches the results of functions `f` via a weak reference to `o`.

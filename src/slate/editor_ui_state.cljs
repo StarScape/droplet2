@@ -454,6 +454,12 @@
                             :input-history []})
     (full-dom-render! *ui-state)))
 
+(defn focus!
+  "Focuses the hidden-input, if it is not already focused"
+  [{:keys [hidden-input] :as _ui-state}]
+  #p "focusing!!!!"
+  (.focus hidden-input #js {:preventScroll true}))
+
 (definterceptor activate-find!
   {:manual? true}
   [*ui-state _]
@@ -481,15 +487,15 @@
   (let [ui-state @*ui-state]
     ((:on-save-as ui-state) (serialize ui-state))))
 
- (defn find-interceptor
-   "Returns the interceptor inside the ui-state's interceptor map
+(defn find-interceptor
+  "Returns the interceptor inside the ui-state's interceptor map
     that matches the interceptor pattern or event, if one exists."
-   [ui-state pattern-or-event]
-   (let [current-editor-state (history/current-state (:history ui-state))
-         matching-interceptor (interceptors/find-interceptor (:interceptors ui-state) pattern-or-event)]
-     (when (and matching-interceptor
-                ((:should-fire? matching-interceptor) current-editor-state))
-       matching-interceptor)))
+  [ui-state pattern-or-event]
+  (let [current-editor-state (history/current-state (:history ui-state))
+        matching-interceptor (interceptors/find-interceptor (:interceptors ui-state) pattern-or-event)]
+    (when (and matching-interceptor
+               ((:should-fire? matching-interceptor) current-editor-state))
+      matching-interceptor)))
 
 (defn init-event-handlers!
   "Registers event listeners for the editor surface with their default interceptors."
