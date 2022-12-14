@@ -455,9 +455,8 @@
     (full-dom-render! *ui-state)))
 
 (defn focus!
-  "Focuses the hidden-input, if it is not already focused"
+  "Focuses the hidden-input, if it is not already focused."
   [{:keys [hidden-input] :as _ui-state}]
-  #p "focusing!!!!"
   (.focus hidden-input #js {:preventScroll true}))
 
 (definterceptor activate-find!

@@ -358,11 +358,11 @@
   ;; TODO: test these
   Formattable
   (apply-format
-    ([p format] (update p :runs (partial map #(apply-format % format))))
+    ([p format] (update p :runs (partial mapv #(apply-format % format))))
     ([p sel format] (update-selected-runs p sel #(apply-format % format))))
 
   (remove-format
-    ([p format] (update p :runs (partial map #(remove-format % format))))
+    ([p format] (update p :runs (partial mapv #(remove-format % format))))
     ([p sel format] (update-selected-runs p sel #(remove-format % format))))
 
   (toggle-format
