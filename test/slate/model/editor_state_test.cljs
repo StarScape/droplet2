@@ -461,7 +461,7 @@
            (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 0])) (changelist))))
 
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0] ["d1" 4])))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 0])) (changelist))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d2" 0] :formats #{:italic})) (changelist))))
     (is (= (nav/shift+right (editor-state long-doc (selection ["d1" 0] ["d3" 4] :between #{"d2"})))
            (->EditorUpdate (editor-state long-doc (selection ["d1" 0] ["d4" 0] :between #{"d2" "d3"})) (changelist)))))
 
@@ -486,7 +486,7 @@
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d4" 4], :backwards? true, :between #{"d3"})))
            (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d4" 4], :backwards? true, :between #{"d2" "d3"})) (changelist))))
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d2" 4], :backwards? true)))
-           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 4], :backwards? true)) (changelist))))))
+           (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 4], :backwards? true, :formats #{:bold})) (changelist))))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"

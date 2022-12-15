@@ -251,7 +251,7 @@
 
   ;; TODO: I **think** this is the correct implementation here...could be wrong though...
   (testing "returns just one paragraph (no empty next paragraph) when going from start of paragraph 1 to start of paragraph 2"
-    (is (= (doc/fragment [(paragraph "d1" [(run "foo1" #{:italic})]) #_(paragraph "d2" [])])
+    (is (= (doc/fragment [(paragraph "d1" [(run "foo1" #{:italic})]) (paragraph "d2" [])])
            (sl/selected-content long-doc (selection ["d1" 0] ["d2" 0]))))))
 
 (deftest formatting-test
@@ -328,7 +328,29 @@
                                          (run "bar" #{:bold :italic})
                                          (run "bizz" #{:italic})
                                          (run "buzz" #{:bold})])
-                        (paragraph "p2" [(run "aaabbbcccddd")])]))))))
+                        (paragraph "p2" [(run "aaabbbcccddd")])])))))
+
+  (testing "toggling with selection end on beginning of paragraph"
+    (let [d (document [(paragraph "p1" [(run "foo" #{:italic})])
+                       (paragraph "p2" [(run "bar")])])]
+      (is (= (sl/toggle-format d (selection ["p1" 0] ["p2" 0]) :italic)
+             (document [(paragraph "p1" [(run "foo" #{})])
+                        (paragraph "p2" [(run "bar" #{})])])))
+      (is (= (-> d
+                 (sl/toggle-format (selection ["p1" 0] ["p2" 0]) :italic)
+                 (sl/toggle-format (selection ["p1" 0] ["p2" 0]) :italic))
+             d))))
+
+  (testing "toggling with selection start on end of paragraph"
+    (let [d (document [(paragraph "p1" [(run "foo" #{:italic})])
+                       (paragraph "p2" [(run "bar")])])]
+      (is (= (sl/toggle-format d (selection ["p1" 3] ["p2" 3]) :bold)
+             (document [(paragraph "p1" [(run "foo" #{:italic})])
+                        (paragraph "p2" [(run "bar" #{:bold})])])))
+      (is (= (-> d
+                 (sl/toggle-format (selection ["p1" 3] ["p2" 3]) :bold)
+                 (sl/toggle-format (selection ["p1" 3] ["p2" 3]) :bold))
+             d)))))
 
 (deftest char-at-test
   (testing "works in 1st paragraph"

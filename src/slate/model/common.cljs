@@ -22,14 +22,14 @@
 (defprotocol Formattable
   "Primitive operations for formatting text-containers (runs, paragraphs, documents)."
   (apply-format
-    [this format]
-    [this sel format]
-    "Returns a new container with the format applied.
+   [this format]
+   [this sel format]
+   "Returns a new container with the format applied.
     Arity taking a selection is not implemented for runs.")
   (remove-format
-    [this format]
-    [this sel format]
-    "Returns a new container with the format removed, if it is present.
+   [this format]
+   [this sel format]
+   "Returns a new container with the format removed, if it is present.
     Arity taking a selection is not implemented for runs.")
   (toggle-format
    [this format]
@@ -46,22 +46,22 @@
    and therefore a 'paragraph offset into a run' would not make sense.
    Basically, this is a set of common operations on paragraphs and documents."
   (char-at
-    [container]
-    [container sel]
-    "Returns the character under the block cursor at the given single selection `sel`")
+   [container]
+   [container sel]
+   "Returns the character under the block cursor at the given single selection `sel`")
   (char-before
-    [container]
-    [container sel]
-    "Returns the character immediately before the block cursor at the given single selection `sel`")
+   [container]
+   [container sel]
+   "Returns the character immediately before the block cursor at the given single selection `sel`")
   (selected-content
-    [container]
-    [container sel]
-    "Returns the content within the range selection inside the container, either as a vector
+   [container]
+   [container sel]
+   "Returns the content within the range selection inside the container, either as a vector
     of runs or a list (probably a dll) of paragraphs, depending which is appropriate.")
   (formatting
-    [container]
-    [container sel]
-    "Returns the set of all the formats shared by each run that is wholly or partially
+   [container]
+   [container sel]
+   "Returns the set of all the formats shared by each run that is wholly or partially
     inside the selection. Will return an empty set if there are no formats shared.
     If not passed a selection, will return shared formats for the whole container."))
 

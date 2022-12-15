@@ -285,15 +285,9 @@
         (selected-content start-para sel))
       (let [start-offset (-> sel :start :offset)
             end-offset (-> sel :end :offset)
-            fragment-paragraphs (as-> (dll/between (:children doc) start-para-uuid end-para-uuid) $
-                                  ;; Only include start paragraph if selection doesn't start at the very end of that paragraph
-                                  (if (< start-offset (sl/len start-para))
-                                    (dll/prepend $ (p/delete-before start-para start-offset))
-                                    $)
-                                  ;; Only include end paragraph if selection doesn't end at the very start of that paragraph
-                                  (if (pos? end-offset)
-                                    (conj $ (p/delete-after end-para end-offset))
-                                    $))]
+            fragment-paragraphs (-> (dll/between (:children doc) start-para-uuid end-para-uuid)
+                                    (dll/prepend (p/delete-before start-para start-offset))
+                                    (conj (p/delete-after end-para end-offset)))]
         (fragment fragment-paragraphs)))))
 
 (defn- set-intersection
@@ -301,15 +295,24 @@
   ([] #{})
   ([& sets] (apply set/intersection sets)))
 
-(defn doc-formatting [doc sel]
+(defn doc-formatting
+  [doc sel]
   (let [caret-para (get (:children doc) (sel/caret-para sel))]
     (if (sel/single-paragraph? sel)
       (formatting caret-para sel)
-      (->> (selected-content doc sel)
+      (->> (doc-selected-content doc sel)
            (sl/items)
+           ;; Filter out empty paragraph from the selected paragraphs.
+           ;; Why? Because an empty paragraph is either (a) inconsequential to formatting, e.g.
+           ;; in the case of an empty paragraph between two content paragraphs or (b) the source
+           ;; paragraph is not actual empty, but the start of the selection is situated on the very
+           ;; end of a paragraph, or the end of the selection is situated at the very start of a paragraph,
+           ;; both of which mean no actual _text content_ from the paragraph is selected.
+           (filter #(not (sl/blank? %)))
+           ;; Get formatting for each remaining paragraph, calling set to insure uniqueness and type
            (map (comp set formatting))
-           ;; ↓↓↓ Calling apply on set/intersection with empty seq yields
-           ;; nil, we want to make sure that this always yields a set.
+            ;; ↓↓↓ Calling apply on set/intersection with empty seq yields
+            ;; nil, we want to make sure that this always yields a set.
            (apply set-intersection)))))
 
 (defn doc-toggle-format [doc sel format]
