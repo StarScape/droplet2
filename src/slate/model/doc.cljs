@@ -283,10 +283,23 @@
       (if (p/whole-paragraph-selected? start-para sel)
         (fragment start-para)
         (selected-content start-para sel))
-      (fragment
-       (-> (dll/between (:children doc) start-para-uuid end-para-uuid)
-           (dll/prepend (p/delete-before start-para (-> sel :start :offset)))
-           (conj (p/delete-after end-para (-> sel :end :offset))))))))
+      (let [start-offset (-> sel :start :offset)
+            end-offset (-> sel :end :offset)
+            fragment-paragraphs (as-> (dll/between (:children doc) start-para-uuid end-para-uuid) $
+                                  ;; Only include start paragraph if selection doesn't start at the very end of that paragraph
+                                  (if (< start-offset (sl/len start-para))
+                                    (dll/prepend $ (p/delete-before start-para start-offset))
+                                    $)
+                                  ;; Only include end paragraph if selection doesn't end at the very start of that paragraph
+                                  (if (pos? end-offset)
+                                    (conj $ (p/delete-after end-para end-offset))
+                                    $))]
+        (fragment fragment-paragraphs)))))
+
+(defn- set-intersection
+  "Like set/intersection, but will return an empty set if supplied no arguments"
+  ([] #{})
+  ([& sets] (apply set/intersection sets)))
 
 (defn doc-formatting [doc sel]
   (let [caret-para (get (:children doc) (sel/caret-para sel))]
@@ -295,7 +308,9 @@
       (->> (selected-content doc sel)
            (sl/items)
            (map (comp set formatting))
-           (apply set/intersection)))))
+           ;; ↓↓↓ Calling apply on set/intersection with empty seq yields
+           ;; nil, we want to make sure that this always yields a set.
+           (apply set-intersection)))))
 
 (defn doc-toggle-format [doc sel format]
   (if (sel/single-paragraph? sel)

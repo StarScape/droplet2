@@ -304,7 +304,7 @@
 
 (defn autoset-formats
   [para-or-doc selection]
-  (assoc selection :formats (m/formatting para-or-doc selection)))
+  (assoc selection :formats #p (m/formatting #p para-or-doc selection)))
 
 (defn- next-grapheme
   [paragraph offset]

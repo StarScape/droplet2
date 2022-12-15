@@ -5,7 +5,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: Bug - 3-paragraph select, toggle bold then toggle off
 ;; TODO: Bug - select from h1 to empty para, then try to toggle and de-toggle bolding
 ;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 
