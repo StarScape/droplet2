@@ -13,11 +13,13 @@
     "start-stories": "start-storybook -p 9090",
     "storybook-dev": "concurrently npm:watch-stories npm:start-stories",
     "dev-watch": "concurrently \"shadow-cljs watch electron app\" \"npx tailwindcss -i ./src/index.css -o ./public/index.css --watch\"",
-    "build-release-files": "rm ./public/js/* ./public/index.css && shadow-cljs release electron app && npx tailwindcss -i ./src/index.css -o ./public/index.css --minify",
+    "build-tailwind": "NODE_ENV=production npx tailwindcss -i ./src/index.css -o ./public/index.css --minify",
+    "build-js": "shadow-cljs release electron app",
+    "build-release-files": "rm -rf ./dist/* ./public/js/* ./public/index.css && npm run build-js && npm run build-tailwind",
     "build-release-installer-mac": "electron-builder -m",
-    "build-release-installers": "electron-builder -mwl",
-    "build-release-mac": "npm:build-release-files && npm:build-release-installer-mac",
-    "build-releases": "npm:build-release-files && npm:build-release-installers"
+    "build-release-installers": "electron-builder -mwl --x64 --arm64",
+    "build-release-mac": "npm run build-release-files && npm run build-release-installer-mac",
+    "build-releases": "npm run build-release-files && npm run build-release-installers"
   },
   "devDependencies": {
     "@storybook/addon-essentials": "^6.5.7",

@@ -32,7 +32,7 @@
    Note: currently this is a naive implementation because Slate
    is only concerned with English. Eventually it will need to support
    double-width spaces and such as well."
-  (js/RegExp. "[\\r\\n\\t\\f\\v\u00a0\u1680\u2000-\u2002\u2004-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]" "g"))
+  (js/RegExp. "[\\r\\n\\t\\f\\v\u00a0\u1680\u2000\u2001\u2002\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]" "g"))
 
 (defn- clean-whitespace
   "Removes non-standard whitespace characters and makes them regular spaces,

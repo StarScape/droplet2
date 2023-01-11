@@ -8,6 +8,11 @@
 ;; TODO: Bug - select from h1 to empty para, then try to toggle and de-toggle bolding
 ;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 
+;; TODO: Droplet - Associate .drop with app on install
+;; TODO: Droplet - Don't open dev tools in prod version
+;; TODO: Website - Record video (basic)
+;; TODO: Website - Detect ARM/x64 architecture
+
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
 ;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
@@ -26,6 +31,7 @@
 ;; TODO: Further polish criteria for history getting added to the backstack
 
 ;; Usability/Polish:
+;; TODO: When merging two paragraphs, the merged paragraph has the :type of the first. Make it have the type of the second **iff** the first is blank.
 ;; TODO: Double/triple click should select word/paragraph
 ;; TODO: When a paragraph is already an h1/h2, "1. " autocomplete should not make it a list para
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
@@ -49,6 +55,7 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn main []
+  (js/console.log "Main!")
   (slate-editor/on-startup)
   (mount-main-component))
 

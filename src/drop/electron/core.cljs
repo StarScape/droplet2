@@ -17,7 +17,8 @@
                         "html" {:file-type-name "HTML"
                                 :file-extension ".html"}})
 
-(def is-dev? true)
+(goog-define DEV true)
+(def is-dev? DEV)
 
 (def *main-window (atom nil))
 

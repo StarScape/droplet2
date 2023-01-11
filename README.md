@@ -69,6 +69,18 @@ shadow-cljs compile test-dll
 
 That build is set to autorun `:autorun true`, so there is no need for any additional step.
 
+# Release
+
+Build installers for all platforms:
+
+```bash
+build-releases
+```
+
+Installers and binaries will be outputted to `dist/`.
+
+It's a good idea not to have a dev instance of Droplet running before building the installers, as building a release will output JS files to the same directory that a developer session uses, and you want to make sure that the minified, production JS files are used.
+
 ## Output/other directories
 
 - Browser code is output to `public/js/`.

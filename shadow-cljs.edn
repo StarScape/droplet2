@@ -23,6 +23,8 @@
    :electron {:target :node-script
               :main drop.electron.core/main
               :devtools {:preloads [hashp.core]}
+              :dev {:closure-defines {drop.electron.core/DEV true}}
+              :release {:closure-defines {drop.electron.core/DEV false}}
               :output-to "public/js/electron.js"}
    ;; Tests that only need Node to run
    :node-test {:target :node-test

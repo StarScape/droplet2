@@ -308,6 +308,10 @@
            ;; paragraph is not actual empty, but the start of the selection is situated on the very
            ;; end of a paragraph, or the end of the selection is situated at the very start of a paragraph,
            ;; both of which mean no actual _text content_ from the paragraph is selected.
+           ;; ---
+           ;; In the future, it may be necessary to provide a "strict" and "non-strict" version of this function
+           ;; (and/or the (selected-content) function), where the strict version does not include empty paragraphs
+           ;; from (selected-content), but the non-strict version does.
            (filter #(not (sl/blank? %)))
            ;; Get formatting for each remaining paragraph, calling set to insure uniqueness and type
            (map (comp set formatting))

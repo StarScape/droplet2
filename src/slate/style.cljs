@@ -92,7 +92,8 @@
    [:.highlight-format {:background-color "#d1d5db"}]])
 
 (comment
-  (println (apply css shadow-elem-style)))
+  (println (apply css shadow-elem-style))
+  )
 
 (def shadow-elem-css-rendered (apply css shadow-elem-style))
 
