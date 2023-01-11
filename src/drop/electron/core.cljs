@@ -193,6 +193,10 @@
          #(.. window -webContents (send "change-full-screen-status", true)))
     (.on ^js/electron.BrowserWindow window "leave-full-screen"
          #(.. window -webContents (send "change-full-screen-status", false)))
+    (.on app "open-file"
+         (fn [event path]
+           (fs/readFile path "utf8" (fn [err, contents]
+                                      (.. window -webContents (send "open-file" path contents))))))
 
     (init-app-menu window)
 
@@ -213,4 +217,5 @@
   (.on app "activate" (fn []
                         (when (zero? (.. BrowserWindow (getAllWindows) -length))
                           (init-window))))
+
   (reg-ipc-handlers!))

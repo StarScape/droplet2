@@ -192,6 +192,16 @@
            "open" (on-open! *slate-instance)
            "initiate-file-export" (apply on-export! *slate-instance args))))
 
+  (.on ipcRenderer "open-file"
+       (fn [_e, file-path, file-contents]
+         ;;  (js/console.log "ipRenderer open-file!")
+         ;;  (js/console.log file-path file-contents)
+         (try
+           (open-file! *slate-instance file-path file-contents)
+           (catch :default e
+             (app-utils/show-error-dialog! "Failed to open file" "File failed to open")
+             (js/console.log "Error thrown in ipcRenderer open-file:" e)))))
+
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]
          (try
