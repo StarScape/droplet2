@@ -129,6 +129,9 @@
                             :submenu [{:label "New..."
                                        :accelerator "CmdOrCtrl+N"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "new"))}
+                                      {:label "Open..."
+                                       :accelerator "CmdOrCtrl+Shift+O"
+                                       :click #(.. window -webContents (send "menubar-item-clicked" "open"))}
                                       {:label "Save"
                                        :accelerator "CmdOrCtrl+S"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "save"))}
@@ -136,7 +139,7 @@
                                        :accelerator "CmdOrCtrl+Shift+S"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "save-as"))}
                                       {:label "Import..."
-                                       :submenu [{:label "HTML"
+                                       :submenu [#_{:label "HTML"
                                                   :click #(launch-import-dialog! "html")}
                                                  {:label "RTF"
                                                   :click #(launch-import-dialog! "rtf")}]}
@@ -144,10 +147,7 @@
                                        :submenu [{:label "HTML"
                                                   :click #(.. window -webContents (send "menubar-item-clicked" "initiate-file-export" "html"))}
                                                  {:label "RTF"
-                                                  :click #(.. window -webContents (send "menubar-item-clicked" "initiate-file-export" "rtf"))}]}
-                                      {:label "Open..."
-                                       :accelerator "CmdOrCtrl+Shift+O"
-                                       :click #(.. window -webContents (send "menubar-item-clicked" "open"))}]}
+                                                  :click #(.. window -webContents (send "menubar-item-clicked" "initiate-file-export" "rtf"))}]}]}
                            {:role "editMenu"}
                            {:label "View",
                             :submenu [{:role "togglefullscreen"}]}

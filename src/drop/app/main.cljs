@@ -8,8 +8,6 @@
 ;; TODO: Bug - select from h1 to empty para, then try to toggle and de-toggle bolding
 ;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 
-;; TODO: Droplet - Associate .drop with app on install
-;; TODO: Droplet - Don't open dev tools in prod version
 ;; TODO: Website - Record video (basic)
 ;; TODO: Website - Detect ARM/x64 architecture
 
