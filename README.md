@@ -86,3 +86,8 @@ It's a good idea not to have a dev instance of Droplet running before building t
 - Browser code is output to `public/js/`.
 - Test code is ouput to `dev_out/`.
 - When building, installers are output to `dist/`
+- `test_files/` contains `.drop`, `.rtf`, `.html` and other files used for running import and export tests
+- `build_res/` contains resources needed to build the Electron binaries like icons
+- `scripts/` contains bash scripts for running tests, etc.
+- `art_assets/` contains the .afdesign files for icons I've made
+- `public/` contains browser resources like the `index.html` file, CSS, fonts, and icons
