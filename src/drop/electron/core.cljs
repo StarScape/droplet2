@@ -130,7 +130,7 @@
                                        :accelerator "CmdOrCtrl+N"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "new"))}
                                       {:label "Open..."
-                                       :accelerator "CmdOrCtrl+Shift+O"
+                                       :accelerator "CmdOrCtrl+O"
                                        :click #(.. window -webContents (send "menubar-item-clicked" "open"))}
                                       {:label "Save"
                                        :accelerator "CmdOrCtrl+S"

@@ -2,11 +2,31 @@
   (:require [drop.app.components.layout :refer [h-spacer-sm]]
             [drop.utils :refer [debounce]]
             [reagent.core :as r :refer-macros [with-let]]
+            [slate.utils :as slate-utils]
             ["@headlessui/react" :refer [Transition]]))
 
 (def actionbar-fade-out-ms 2500)
 
-(defn button [img-url active? transparent-mode? on-click]
+(defn- shortcut-for [formatting-command]
+  (if slate-utils/is-mac?
+    (case formatting-command
+      :italic "⌘I"
+      :bold "⌘B"
+      :strikethrough "⌘T"
+      :h1 "⌘1"
+      :h2 "⌘2"
+      :ol "⌘⇧O"
+      :ul "⌘⇧U")
+    (case formatting-command
+      :italic "Ctrl+I"
+      :bold "Ctrl+B"
+      :strikethrough "Ctrl+T"
+      :h1 "Ctrl+1"
+      :h2 "Ctrl+2"
+      :ol "Ctrl+Shift+O"
+      :ul "Ctrl+Shift+U")))
+
+(defn button [{:keys [img-url active? transparent-mode? on-click mouseover-text]}]
   [:> Transition {:show (boolean (or active? (not transparent-mode?)))
                   :enter "transition-opacity duration-150"
                   :enterFrom "opacity-0"
@@ -17,7 +37,8 @@
    [:button {:on-mouse-down #(.preventDefault %) ; prevent losing focus
              :on-click on-click
              :class ["m-0.5" "p-2" "rounded-md"
-                     (if active? "bg-light-blue" "bg-white")]}
+                     (if active? "bg-light-blue" "bg-white")]
+             :title mouseover-text}
     [:img {:src img-url
            :style {:width "15px"}}]]])
 
@@ -51,15 +72,47 @@
                                         "bg-transparent"
                                         "bg-white border-t border-gray-200"))}
        [:div.flex
-        [button "icons/italic.svg" (active-formats :italic) transparent? #(on-format-toggle :italic)]
-        [button "icons/bold.svg" (active-formats :bold) transparent? #(on-format-toggle :bold)]
-        [button "icons/strikethrough.svg" (active-formats :strikethrough) transparent? #(on-format-toggle :strikethrough)]
+        [button {:img-url "icons/italic.svg"
+                 :active? (active-formats :italic)
+                 :transparent-mode? transparent?
+                 :on-click #(on-format-toggle :italic)
+                 :mouseover-text (str "Italic (" (shortcut-for :italic) ")")}]
+        [button {:img-url "icons/bold.svg"
+                 :active? (active-formats :bold)
+                 :transparent-mode? transparent?
+                 :on-click #(on-format-toggle :bold)
+                 :mouseover-text (str "Bold (" (shortcut-for :bold) ")")}]
+        [button {:img-url "icons/strikethrough.svg"
+                 :active? (active-formats :strikethrough)
+                 :transparent-mode? transparent?
+                 :on-click #(on-format-toggle :strikethrough)
+                 :mouseover-text (str "Strikethrough (" (shortcut-for :strikethrough) ")")}]
+
         [h-spacer-sm]
-        [button "icons/h1.svg" (active-formats :h1) transparent? #(on-format-toggle :h1)]
-        [button "icons/h2.svg" (active-formats :h2) transparent? #(on-format-toggle :h2)]
+
+        [button {:img-url "icons/h1.svg"
+                 :active? (active-formats :h1)
+                 :transparent-mode? transparent?
+                 :on-click #(on-format-toggle :h1)
+                 :mouseover-text (str "Heading 1 (" (shortcut-for :h1) ")")}]
+        [button {:img-url "icons/h2.svg"
+                 :active? (active-formats :h2)
+                 :transparent-mode? transparent?
+                 :on-click #(on-format-toggle :h2)
+                 :mouseover-text (str "Heading 2 (" (shortcut-for :h2) ")")}]
+
         [h-spacer-sm]
-        [button "icons/numbered.svg" (active-formats :ol) transparent? #(on-format-toggle :ol)]
-        [button "icons/bulleted.svg" (active-formats :ul) transparent? #(on-format-toggle :ul)]
+
+        [button {:img-url "icons/numbered.svg"
+                 :active? (active-formats :ol)
+                 :transparent-mode? transparent?
+                 :on-click #(on-format-toggle :ol)
+                 :mouseover-text (str "Ordered List (" (shortcut-for :ol) ")")}]
+        [button {:img-url "icons/bulleted.svg"
+                 :active? (active-formats :ul)
+                 :transparent-mode? transparent?
+                 :on-click #(on-format-toggle :ul)
+                 :mouseover-text (str "Unordered List (" (shortcut-for :ul) ")")}]
 
         ;; Invisible button so that element maintains its height
         ;; Even when all the others are hidden in fullscreen mode

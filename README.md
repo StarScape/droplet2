@@ -29,13 +29,13 @@ More details on the structure of the editor in `src/slate/README.md`. -->
 npm run dev-watch
 ```
 
-**Start up Electron**. Normally should be done in a separate terminal so that the electron process can be restarted, but if there's no need to modify the main NodeJS process's code then it can be started with `&&`.
+Then, **start up Electron** (normally should be done in a separate terminal so that the electron process can be restarted, but if there's no need to modify the main NodeJS process's code then it can be started with `&&`):
 
 ```
 electron .
 ```
 
-REPL can then be jacked into.
+REPL can then be jacked into in your editor.
 
 ## Testing
 

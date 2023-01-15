@@ -425,9 +425,9 @@
    :ctrl+i italic
    :ctrl+t strikethrough
    :ctrl+b bold
-   :ctrl+u ulist
-   :ctrl+o olist
-   :ctrl+shift+o open})
+   :ctrl+shift+u ulist
+   :ctrl+shift+o olist
+   :ctrl+o open})
 
 (def mac-interceptors
   {:alt+left ctrl+left
@@ -458,9 +458,9 @@
    :cmd+b bold
    :cmd+1 h1
    :cmd+2 h2
-   :cmd+u ulist
-   :cmd+o olist
-   :cmd+shift+o open})
+   :cmd+shift+u ulist
+   :cmd+shift+o olist
+   :cmd+o open})
 
 (def default-interceptors
   (merge universal-interceptors (if (utils/is-mac?)
