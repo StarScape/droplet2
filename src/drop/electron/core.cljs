@@ -151,7 +151,11 @@
                            {:role "editMenu"}
                            {:label "View",
                             :submenu [{:role "togglefullscreen"}]}
-                           {:role "windowMenu"}])]
+                           {:role "windowMenu"}
+                           {:label "Help"
+                            :role "help"
+                            :submenu [{:label "View Droplet Version",
+                                       :click #(.showMessageBox dialog #js {:message (str "Droplet Version: " (.getVersion app))})}]}])]
     (when is-dev?
       (.push template (clj->js {:label "Dev"
                                 :submenu [{:role "reload"}

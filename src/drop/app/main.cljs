@@ -5,7 +5,6 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: Change open shortcut to CMD+O
 ;; TODO: View version inside Droplet somewhere
 ;; TODO: Right-click context menu
 
