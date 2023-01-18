@@ -5,13 +5,11 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: View version inside Droplet somewhere
 ;; TODO: Right-click context menu
 
 ;; TODO: Bug - select from h1 to empty para, then try to toggle and de-toggle bolding
 ;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 
-;; TODO: Website - Record video (basic)
 ;; TODO: Website - Detect ARM/x64 architecture
 
 ;; Prioritized:

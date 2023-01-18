@@ -20,7 +20,7 @@
     "build-release-installers": "electron-builder -mwl --x64 --arm64",
     "build-release-mac": "npm run build-release-files && npm run build-release-installer-mac",
     "build-releases": "npm run build-release-files && npm run build-release-installers",
-    "copy-installers": "./scripts/copy_installers.sh $npm_package_version \"../droplet-website/public/binaries/\" || true"
+    "deploy-installers": "./scripts/deploy_installers.sh $npm_package_version \"../droplet-website/json\" || true"
   },
   "devDependencies": {
     "@storybook/addon-essentials": "^6.5.7",
