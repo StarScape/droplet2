@@ -14,8 +14,8 @@ MAC_ARM_FILE_SRCNAME="./dist/Droplet-${DROPLET_VERSION}-arm64.dmg"
 MAC_X64_FILE_DESTNAME="droplet_${DROPLET_VERSION}_x64.dmg"
 MAC_ARM_FILE_DESTNAME="droplet_${DROPLET_VERSION}_arm64.dmg"
 
-# aws s3 cp $MAC_X64_FILE_SRCNAME "s3://droplet-downloads/${MAC_X64_FILE_DESTNAME}"
-# aws s3 cp $MAC_ARM_FILE_SRCNAME "s3://droplet-downloads/${MAC_ARM_FILE_DESTNAME}"
+aws s3 cp $MAC_X64_FILE_SRCNAME "s3://droplet-downloads/${MAC_X64_FILE_DESTNAME}"
+aws s3 cp $MAC_ARM_FILE_SRCNAME "s3://droplet-downloads/${MAC_ARM_FILE_DESTNAME}"
 
 echo -e "\033[0;36m💧 Droplet: Generating JSON file...\n\033[0m"
 
