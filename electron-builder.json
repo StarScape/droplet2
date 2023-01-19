@@ -34,7 +34,11 @@
     },
     "mac": {
         "target": "dmg",
-        "category": "public.app-category.productivity"
+        "category": "public.app-category.productivity",
+        "hardenedRuntime": true,
+        "entitlements": "build_res/entitlements.mac.plist",
+        "entitlementsInherit": "build_res/entitlements.mac.plist",
+        "gatekeeperAssess": false
     },
     "win": {
         "target": "nsis"

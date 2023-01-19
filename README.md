@@ -83,6 +83,10 @@ Installers and binaries will be outputted to `dist/`.
 
 It's a good idea not to have a dev instance of Droplet running before building the installers, as building a release will output JS files to the same directory that a developer session uses, and you want to make sure that the minified, production JS files are used.
 
+## Signing Mac Apps
+
+If a valid Developer ID Application certificate and a Developer ID Installer certificate are both present in Keychain, `electron-builder` should automatically detect them and sign the binary. 
+
 ## Deploying to S3 and Cloudfront
 __After building the installers, they can be deployed with `npm run deploy-installers`__, which will upload them to their S3 bucket, generate a JSON file with their URLs, and then copy that file to the `../droplet-website` folder. The website will then have to be redeployed from its own repo in order for the change to take affect.
 
