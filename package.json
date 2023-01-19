@@ -23,9 +23,11 @@
     "deploy-installers": "./scripts/deploy_installers.sh $npm_package_version \"../droplet-website/json\" || true"
   },
   "devDependencies": {
+    "@electron/notarize": "^1.2.3",
     "@storybook/addon-essentials": "^6.5.7",
     "@storybook/react": "^6.5.7",
     "concurrently": "^7.2.1",
+    "dotenv": "^16.0.3",
     "electron": "^19.0.3",
     "electron-builder": "^23.3.3",
     "karma": "^6.3.1",

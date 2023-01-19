@@ -40,6 +40,7 @@
         "entitlementsInherit": "build_res/entitlements.mac.plist",
         "gatekeeperAssess": false
     },
+    "afterSign": "scripts/notarize.js",
     "win": {
         "target": "nsis"
     },
