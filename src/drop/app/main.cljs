@@ -6,8 +6,8 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; CLEANUP:
-;; TODO: Get rid of (insert) in doc.cljs
 ;; TODO: Get rid of (delete) in doc.cljs
+;; TODO: Decide if (insert-start) and (insert-end) should be polymorphic functions
 ;; TODO: Swap out [Run] and [Paragraph] for ParagraphFragment and DocumentFragment
 ;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively.
 ;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
@@ -30,6 +30,7 @@
 
 ;; Usability/Polish:
 ;; TODO: When merging two paragraphs, the merged paragraph has the :type of the first. Make it have the type of the second **iff** the first is blank.
+;; TODO: Select from end of one paragraph down into the next/multiple, there should be a "nub" at the end of the first one
 ;; TODO: Double/triple click should select word/paragraph
 ;; TODO: When a paragraph is already an h1/h2, "1. " autocomplete should not make it a list para
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.

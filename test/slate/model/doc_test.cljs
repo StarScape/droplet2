@@ -30,7 +30,7 @@
 
 (deftest insert-test
   (testing "insert 2 runs in middle of a paragraph"
-    (is (= (sl/insert test-doc (selection ["p1" 3]) (p/fragment [(run "Hello" #{:italic}) (run "Goodbye!")]))
+    (is (= (doc/insert test-doc (selection ["p1" 3]) (p/fragment [(run "Hello" #{:italic}) (run "Goodbye!")]))
            (document [(paragraph "p1" [(run "fooHello" #{:italic})
                                        (run "Goodbye!" #{})
                                        (run "bar" #{:bold :italic})
@@ -39,7 +39,7 @@
                       p2]))))
 
   (testing "insert single run in middle of a paragraph"
-    (is (= (sl/insert test-doc (selection ["p1" 3]) (run "Goodbye!"))
+    (is (= (doc/insert test-doc (selection ["p1" 3]) (run "Goodbye!"))
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "Goodbye!" #{})
                                        (run "bar" #{:bold :italic})
@@ -48,7 +48,7 @@
                       p2]))))
 
   (testing "insert run at start of paragraph"
-    (is (= (sl/insert test-doc (selection ["p1" 0]) (run "Hello!"))
+    (is (= (doc/insert test-doc (selection ["p1" 0]) (run "Hello!"))
            (document [(paragraph "p1" [(run "Hello!" #{})
                                        (run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
@@ -57,11 +57,11 @@
                       p2]))))
 
   (testing "insert run at end of paragraph"
-    (is (= (sl/insert test-doc (selection ["p2" 12]) (run "Goodbye!" #{:italic}))
+    (is (= (doc/insert test-doc (selection ["p2" 12]) (run "Goodbye!" #{:italic}))
            (document [p1, (paragraph "p2" [(run "aaabbbcccddd") (run "Goodbye!" #{:italic})])]))))
 
   (testing "multi-paragraph insert in the middle of a single paragraph"
-    (is (= (sl/insert test-doc (selection ["p1" 10]) to-insert)
+    (is (= (doc/insert test-doc (selection ["p1" 10]) to-insert)
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -72,14 +72,14 @@
                       p2]))))
 
   (testing "multi-paragraph insert at the start of a paragraph"
-    (is (= (sl/insert test-doc (selection ["p2" 0]) to-insert)
+    (is (= (doc/insert test-doc (selection ["p2" 0]) to-insert)
            (document [p1
                       (paragraph "p2" [(run "inserted paragraph 1")])
                       (paragraph "i2" [(run "inserted paragraph 2")])
                       (paragraph "i3" [(run "inserted paragraph 3aaabbbcccddd")])]))))
 
   (testing "multi-paragraph insert with duplicate UUIDs"
-    (let [result (sl/insert test-doc (selection ["p2" 0]) (doc/fragment [p1 p2]))
+    (let [result (doc/insert test-doc (selection ["p2" 0]) (doc/fragment [p1 p2]))
           children (:children result)]
       (is (= 3 (count children)))
       (is (= p1 (first children)))
@@ -88,7 +88,7 @@
       (is (= (:runs (nth children 2)) [(run "aaabbbcccdddaaabbbcccddd")]))))
 
   (testing "multi-paragraph insert at the end of a paragraph"
-    (is (= (sl/insert test-doc (selection ["p1" 14]) to-insert)
+    (is (= (doc/insert test-doc (selection ["p1" 14]) to-insert)
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -99,7 +99,7 @@
                       p2]))))
 
   (testing "inserting a plain string"
-    (is (= (sl/insert test-doc (selection ["p1" 3]) "inserted")
+    (is (= (doc/insert test-doc (selection ["p1" 3]) "inserted")
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "inserted")
                                        (run "bar" #{:bold :italic})
@@ -108,7 +108,7 @@
                       p2]))))
 
   (testing "inserting a plain string when selection has a format"
-    (is (= (sl/insert test-doc (selection ["p1" 3] ["p1" 3] :formats #{:underline}) "inserted")
+    (is (= (doc/insert test-doc (selection ["p1" 3] ["p1" 3] :formats #{:underline}) "inserted")
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "inserted" #{:underline})
                                        (run "bar" #{:bold :italic})
@@ -117,13 +117,13 @@
                       p2]))))
 
   (testing "when given a range selection, deletes before inserting"
-    (is (= (sl/insert test-doc (selection ["p1" 1] ["p2" 11]) (run "(inserted!)" #{}))
+    (is (= (doc/insert test-doc (selection ["p1" 1] ["p2" 11]) (run "(inserted!)" #{}))
            (document [(paragraph "p1" [(run "f" #{:italic}), (run "(inserted!)d")])]))))
 
   (testing "throws when out of range of paragraph"
     (is (thrown?
          js/Error
-         (sl/insert test-doc (selection ["p1" 55]) (run "Goodbye!" #{:italic}))))))
+         (doc/insert test-doc (selection ["p1" 55]) (run "Goodbye!" #{:italic}))))))
 
 (deftest delete-single-test
   (testing "does nothing at beginning of doc"

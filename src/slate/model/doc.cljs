@@ -4,7 +4,6 @@
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
                                                Fragment
-                                               insert
                                                delete
                                                insert-start
                                                insert-end
@@ -140,47 +139,45 @@
                                         all-modified-paragraphs)]
     (assoc doc :children new-children)))
 
-#_(defn- doc-insert-list
-  [doc sel runs-or-paras]
-  (if (sel/single? sel)
-    (condp = (type (first runs-or-paras))
-      Run (insert-into-single-paragraph doc sel (p/paragraph runs-or-paras))
-      Paragraph (insert-paragraphs-into-doc doc sel runs-or-paras))
-    (let [delete-transaction (delete doc sel)
-          insert-transaction (insert (:doc delete-transaction) (:selection delete-transaction) runs-or-paras)]
-      (merge-transactions delete-transaction insert-transaction))))
-
 ;; Document main operations ;;
+(defmulti insert "Inserts into the Document."
+  {:arglists '([Document selection content-to-insert])}
+  (fn [& args] (type (last args))))
 
-(defmethod insert [Document Selection p/ParagraphFragment]
+(defmethod insert
+  p/ParagraphFragment
   [doc sel fragment]
   (if (sel/single? sel)
     (insert-into-single-paragraph doc sel fragment)
     (-> (delete doc sel)
         (insert (sel/collapse-start sel) fragment))))
 
-(defmethod insert [Document Selection DocumentFragment]
+(defmethod insert
+  DocumentFragment
   [doc sel fragment]
   (if (sel/single? sel)
     (insert-paragraphs-into-doc doc sel (sl/items fragment))
     (-> (delete doc sel)
         (insert (sel/collapse-start sel) fragment))))
 
-(defmethod insert [Document Selection Paragraph]
+(defmethod insert
+  Paragraph
   [doc sel para]
   (if (sel/single? sel)
     (insert-into-single-paragraph doc sel para)
     (-> (delete doc sel)
         (insert (sel/collapse-start sel) para))))
 
-(defmethod insert [Document Selection Run]
+(defmethod insert
+  Run
   [doc sel r]
   (if (sel/single? sel)
     (insert-into-single-paragraph doc sel r)
     (-> (delete doc sel)
         (insert (sel/collapse-start sel) r))))
 
-(defmethod insert [Document Selection js/String]
+(defmethod insert
+  js/String
   [doc sel text]
   (if (sel/single? sel)
     (insert-into-single-paragraph doc sel (r/run text (:formats sel)))

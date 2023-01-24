@@ -94,7 +94,7 @@
   (if (sel/range? selection)
     (-> (delete editor-state)
         (>>= insert content))
-    (let [new-doc (insert doc selection content)
+    (let [new-doc (doc/insert doc selection content)
           new-sel (->> (sel/shift-single selection (len content))
                        (nav/autoset-formats new-doc))]
       (->EditorUpdate (assoc editor-state
@@ -108,7 +108,7 @@
   (if (sel/range? selection)
     (-> (delete editor-state)
         (>>= insert runs))
-    (let [new-doc (insert doc selection paragraph-fragment)
+    (let [new-doc (doc/insert doc selection paragraph-fragment)
           runs-len (reduce + (map len runs))
           new-sel (->> (sel/shift-single selection runs-len)
                        (nav/autoset-formats new-doc))]
@@ -130,7 +130,7 @@
                                (assoc p :uuid (random-uuid))
                                p))
           paragraphs (map dedupe-para-uuid paragraphs)
-          new-doc (insert doc selection (doc/fragment paragraphs))
+          new-doc (doc/insert doc selection (doc/fragment paragraphs))
           last-paragraph (last paragraphs)
           new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
                              (nav/autoset-formats last-paragraph))]
@@ -318,7 +318,7 @@
   ([{:keys [doc selection] :as editor-state} opening closing]
    (if (sel/single? selection)
      (->EditorUpdate (assoc editor-state
-                            :doc (insert doc selection (str opening closing))
+                            :doc (doc/insert doc selection (str opening closing))
                             :selection (sel/shift-single selection (len opening)))
                      (changelist :changed-uuids #{(-> selection :start :paragraph)}))
      (let [opening-insert-point (sel/collapse-start selection)
@@ -328,8 +328,8 @@
                                   (sel/shift-single closing-insert-point (len opening))
                                   closing-insert-point)
            new-doc (-> doc
-                       (insert opening-insert-point opening)
-                       (insert closing-insert-point closing))
+                       (doc/insert opening-insert-point opening)
+                       (doc/insert closing-insert-point closing))
            new-selection (update-in selection [:start :offset] + (len opening))
            new-selection (if same-para?
                            (sel/shift-end new-selection (len opening))
