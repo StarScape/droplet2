@@ -6,19 +6,11 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: Right-click context menu
-
-;; TODO: Bug - select from h1 to empty para, then try to toggle and de-toggle bolding
 ;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
-
-;; TODO: Website - Detect ARM/x64 architecture
 
 ;; Prioritized:
 ;; PROG: Test with large documents (100 pages)
-;; TODO: Better actionbar timeout when in fullscreen (maybe copy iA Writer)
-;; TODO: Marketing website
-;; TODO: Packaging for prod version
 ;; TODO: Drag n drog files
-;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: More pastes tests
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode
@@ -27,6 +19,7 @@
 ;; TODO: Break out all history fns into a protocol and implement for UIState
 ;; TODO: Rework/get rid of most of the slate.model.common protocols
 ;; TODO: Implement highlight part of find and replace
+;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Further polish criteria for history getting added to the backstack
 
 ;; Usability/Polish:

@@ -3,7 +3,6 @@
    This namespace contains the functions for dealing with Runs."
   (:require-macros [slate.utils :refer [weak-cache-val]])
   (:require [slate.model.common :refer [TextContainer
-                                        Formattable
                                         delete
                                         insert-start
                                         insert-end
@@ -16,15 +15,7 @@
   (text [r] (:text r))
   (len [r] (count (:text r)))
   (blank? [r] (or (= "" (:text r)) (= nil (:text r))))
-  (graphemes [r] (weak-cache-val r (graphemes (:text r))))
-
-  Formattable
-  (apply-format
-    [r format]
-    (update r :formats #(conj % format)))
-  (remove-format
-    [r format]
-    (update r :formats #(disj % format))))
+  (graphemes [r] (weak-cache-val r (graphemes (:text r)))))
 
 (defn run
   "Constructor for a new run, a container for text with associated formatting."
@@ -81,3 +72,11 @@
   (let [graphemes (graphemes run)
         prev-grapheme (first (reverse (filter #(< (:offset %) offset) graphemes)))]
     (delete run (:offset prev-grapheme) offset)))
+
+(defn apply-format
+ [r format]
+ (update r :formats #(conj % format)))
+
+(defn remove-format
+ [r format]
+ (update r :formats #(disj % format)))

@@ -19,27 +19,7 @@
                                            :grapheme ^js/Object (.-segment segment)})]
       (map transform-segment (es6-iterator-seq iterator)))))
 
-(defprotocol Formattable
-  "Primitive operations for formatting text-containers (runs, paragraphs, documents)."
-  (apply-format
-   [this format]
-   [this sel format]
-   "Returns a new container with the format applied.
-    Arity taking a selection is not implemented for runs.")
-  (remove-format
-   [this format]
-   [this sel format]
-   "Returns a new container with the format removed, if it is present.
-    Arity taking a selection is not implemented for runs.")
-  (toggle-format
-   [this format]
-   [this sel format]
-   "Either applies the selected format to the selection (if the selected text
-    does not already have that format) or removes it (if the selected text **does**
-    have that format)."))
-
 ;; TODO: this name overlaps with nav/Selectable
-
 (defprotocol Selectable
   "Operations for any text container on which paragraph offset selections are valid.
    Note that this precludes runs, as they are contained inside paragraphs

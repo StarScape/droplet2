@@ -4,14 +4,13 @@
             [clojure.spec.alpha :as s]
             [slate.dll :as dll]
             [slate.model.common :refer [TextContainer
-                                        Formattable
                                         insert
                                         delete
                                         len
                                         blank?] :as m]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph ParagraphFragment]]
-            [slate.model.doc :as d :refer [DocumentFragment]]
+            [slate.model.doc :as doc :refer [DocumentFragment]]
             [slate.model.selection :as sel]
             [slate.model.navigation :as nav :refer [Navigable]]))
 
@@ -87,7 +86,7 @@
      (editor-state doc (sel/selection [first-paragraph-uuid 0]))))
   ([]
    (let [p (p/paragraph)]
-     (editor-state (d/document [p]) (sel/selection [(:uuid p) 0])))))
+     (editor-state (doc/document [p]) (sel/selection [(:uuid p) 0])))))
 
 (defn- insert-text-container
   [{:keys [doc selection] :as editor-state}, content]
@@ -213,7 +212,7 @@
          (>>= enter new-uuid))
      (let [uuid (-> selection :start :paragraph)
            caret (sel/caret selection)
-           new-doc (d/enter doc selection new-uuid)
+           new-doc (doc/enter doc selection new-uuid)
            new-paragraph (get (:children new-doc) new-uuid)
            new-selection (if (= caret 0)
                            (sel/selection [(sel/caret-para selection) 0])
@@ -296,6 +295,24 @@
         new-doc (update doc :children dll/replace-range start-uuid end-uuid selected-paragraphs-updated)]
     (->EditorUpdate (assoc editor-state :doc new-doc)
                     (changelist :changed-uuids (sel/all-uuids selection)))))
+
+(defn toggle-format
+  [{:keys [doc selection] :as editor-state} format]
+  (if (sel/single? selection)
+    (->EditorUpdate (update editor-state :selection sel/toggle-format format)
+                      ;; No changelist, only the selection is updated
+                    (changelist))
+    (let [doc-children (:children doc)
+          start-para-uuid (-> selection :start :paragraph)
+          end-para-uuid (-> selection :end :paragraph)
+          changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)
+          common-formats (m/formatting doc selection)
+          format-modify-fn (if (contains? common-formats format) disj conj)
+          new-selection (update selection :formats format-modify-fn format)]
+      (->EditorUpdate (assoc editor-state
+                             :doc (doc/toggle-format doc selection format)
+                             :selection new-selection)
+                      (changelist :changed-uuids (set changed-uuids))))))
 
 (defn auto-surround
   ([{:keys [doc selection] :as editor-state} opening closing]
@@ -474,26 +491,7 @@
     (m/selected-content doc selection))
 
   (formatting [{:keys [doc selection]}]
-    (m/formatting doc selection))
-
-  Formattable
-  (toggle-format
-    [{:keys [doc selection] :as editor-state} format]
-    (if (sel/single? selection)
-      (->EditorUpdate (update editor-state :selection sel/toggle-format format)
-                      ;; No changelist, only the selection is updated
-                      (changelist))
-      (let [doc-children (:children doc)
-            start-para-uuid (-> selection :start :paragraph)
-            end-para-uuid (-> selection :end :paragraph)
-            changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)
-            common-formats (m/formatting doc selection)
-            format-modify-fn (if (contains? common-formats format) disj conj)
-            new-selection (update selection :formats format-modify-fn format)]
-        (->EditorUpdate (assoc editor-state
-                               :doc (m/toggle-format doc selection format)
-                               :selection new-selection)
-                        (changelist :changed-uuids (set changed-uuids)))))))
+    (m/formatting doc selection)))
 
 (defn merge-changelists
   "Takes two changelists and returns a third that combines them. UUIDs are rearranged

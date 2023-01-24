@@ -269,7 +269,7 @@
 
 (deftest toggle-format-test
   (testing "toggling single run"
-    (is (= (sl/toggle-format test-doc (selection ["p1" 0] ["p1" 3]) :italic)
+    (is (= (doc/toggle-format test-doc (selection ["p1" 0] ["p1" 3]) :italic)
            (document [(paragraph "p1" [(run "foo")
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -277,7 +277,7 @@
                       p2]))))
 
   (testing "toggling across runs WITH shared format"
-    (is (= (sl/toggle-format test-doc (selection ["p1" 0] ["p1" 10]) :italic)
+    (is (= (doc/toggle-format test-doc (selection ["p1" 0] ["p1" 10]) :italic)
            (document [(paragraph "p1" [(run "foo")
                                        (run "bar" #{:bold})
                                        (run "bizz" #{})
@@ -285,7 +285,7 @@
                       p2]))))
 
   (testing "toggling across runs WITH shared format, not on run boundaries"
-    (is (= (sl/toggle-format test-doc (selection ["p1" 1] ["p1" 8]) :italic)
+    (is (= (doc/toggle-format test-doc (selection ["p1" 1] ["p1" 8]) :italic)
            (document [(paragraph "p1" [(run "f" #{:italic})
                                        (run "oo")
                                        (run "bar" #{:bold})
@@ -295,7 +295,7 @@
                       p2]))))
 
   (testing "toggling across runs WITHOUT shared format"
-    (is (= (sl/toggle-format test-doc (selection ["p1" 0] ["p1" 14]) :italic)
+    (is (= (doc/toggle-format test-doc (selection ["p1" 0] ["p1" 14]) :italic)
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -303,7 +303,7 @@
                       p2]))))
 
   (testing "toggling across paragraphs WITHOUT shared format"
-    (is (= (sl/toggle-format test-doc (selection ["p1" 0] ["p2" 12]) :italic)
+    (is (= (doc/toggle-format test-doc (selection ["p1" 0] ["p2" 12]) :italic)
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -311,7 +311,7 @@
                       (paragraph "p2" [(run "aaabbbcccddd" #{:italic})])]))))
 
   (testing "toggling across paragraphs WITHOUT shared format, and not landing on run boundaries"
-    (is (= (sl/toggle-format test-doc (selection ["p1" 1] ["p2" 3]) :italic)
+    (is (= (doc/toggle-format test-doc (selection ["p1" 1] ["p2" 3]) :italic)
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -323,7 +323,7 @@
     (let [modified (-> test-doc
                        (update-in [:children "p1" :runs 3 :formats] conj :italic)
                        (update-in [:children "p2" :runs 0 :formats] conj :italic))]
-      (is (= (sl/toggle-format modified (selection ["p1" 10] ["p2" 12]) :italic)
+      (is (= (doc/toggle-format modified (selection ["p1" 10] ["p2" 12]) :italic)
              (document [(paragraph "p1" [(run "foo" #{:italic})
                                          (run "bar" #{:bold :italic})
                                          (run "bizz" #{:italic})
@@ -333,23 +333,23 @@
   (testing "toggling with selection end on beginning of paragraph"
     (let [d (document [(paragraph "p1" [(run "foo" #{:italic})])
                        (paragraph "p2" [(run "bar")])])]
-      (is (= (sl/toggle-format d (selection ["p1" 0] ["p2" 0]) :italic)
+      (is (= (doc/toggle-format d (selection ["p1" 0] ["p2" 0]) :italic)
              (document [(paragraph "p1" [(run "foo" #{})])
                         (paragraph "p2" [(run "bar" #{})])])))
       (is (= (-> d
-                 (sl/toggle-format (selection ["p1" 0] ["p2" 0]) :italic)
-                 (sl/toggle-format (selection ["p1" 0] ["p2" 0]) :italic))
+                 (doc/toggle-format (selection ["p1" 0] ["p2" 0]) :italic)
+                 (doc/toggle-format (selection ["p1" 0] ["p2" 0]) :italic))
              d))))
 
   (testing "toggling with selection start on end of paragraph"
     (let [d (document [(paragraph "p1" [(run "foo" #{:italic})])
                        (paragraph "p2" [(run "bar")])])]
-      (is (= (sl/toggle-format d (selection ["p1" 3] ["p2" 3]) :bold)
+      (is (= (doc/toggle-format d (selection ["p1" 3] ["p2" 3]) :bold)
              (document [(paragraph "p1" [(run "foo" #{:italic})])
                         (paragraph "p2" [(run "bar" #{:bold})])])))
       (is (= (-> d
-                 (sl/toggle-format (selection ["p1" 3] ["p2" 3]) :bold)
-                 (sl/toggle-format (selection ["p1" 3] ["p2" 3]) :bold))
+                 (doc/toggle-format (selection ["p1" 3] ["p2" 3]) :bold)
+                 (doc/toggle-format (selection ["p1" 3] ["p2" 3]) :bold))
              d)))))
 
 (deftest char-at-test

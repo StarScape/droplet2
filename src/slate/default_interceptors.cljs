@@ -328,15 +328,15 @@
 ;; Formatting
 (definterceptor italic
   [editor-state _ _]
-  (m/toggle-format editor-state :italic))
+  (es/toggle-format editor-state :italic))
 
 (definterceptor strikethrough
   [editor-state _ _]
-  (m/toggle-format editor-state :strikethrough))
+  (es/toggle-format editor-state :strikethrough))
 
 (definterceptor bold
   [editor-state _ _]
-  (m/toggle-format editor-state :bold))
+  (es/toggle-format editor-state :bold))
 
 (definterceptor h1
   [editor-state _ _]

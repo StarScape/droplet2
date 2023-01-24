@@ -5,7 +5,6 @@
   (:require [clojure.set :as set]
             [slate.model.common :refer [TextContainer
                                         Selectable
-                                        Formattable
                                         Fragment
                                         insert
                                         delete
@@ -15,14 +14,11 @@
                                         len
                                         blank?
                                         graphemes
-                                        apply-format
-                                        remove-format
                                         formatting
                                         char-at
                                         items]]
             [slate.model.run :as r]
-            [slate.model.selection :as sel :refer [Selection selection]]
-            [slate.utils :refer [weak-cache]]))
+            [slate.model.selection :as sel :refer [Selection selection]]))
 
 (declare optimize-runs)
 
@@ -321,6 +317,30 @@
   [paragraph]
   (update-in paragraph [:runs (dec (count (:runs paragraph))) :text] #(.trimEnd %)))
 
+(defn apply-format
+ ([p format]
+  (update p :runs (partial mapv #(r/apply-format % format))))
+ ([p sel format]
+  (update-selected-runs p sel #(r/apply-format % format))))
+
+(defn remove-format
+ ([p format]
+  (update p :runs (partial mapv #(r/remove-format % format))))
+ ([p sel format]
+  (update-selected-runs p sel #(r/remove-format % format))))
+
+(defn toggle-format
+ [para sel format]
+ (let [[runs-before runs-in-selection runs-after] (separate-selected (:runs para) sel)
+       common-formats (->> runs-in-selection
+                           (map :formats)
+                           (apply set/intersection))
+       new-runs-in-selection (if (contains? common-formats format)
+                               (mapv #(r/remove-format % format) runs-in-selection)
+                               (mapv #(r/apply-format % format) runs-in-selection))
+       new-runs (optimize-runs (concat runs-before new-runs-in-selection runs-after))]
+   (assoc para :runs new-runs)))
+
 (extend-type Paragraph
   Selectable
   (char-at [para sel]
@@ -353,32 +373,7 @@
                selected-runs (subvec runs start-run-idx (inc end-run-idx))]
            (->> selected-runs
                 (map :formats)
-                (apply set/intersection)))))))
-
-  ;; TODO: test these
-  Formattable
-  (apply-format
-    ([p format] (update p :runs (partial mapv #(apply-format % format))))
-    ([p sel format] (update-selected-runs p sel #(apply-format % format))))
-
-  (remove-format
-    ([p format] (update p :runs (partial mapv #(remove-format % format))))
-    ([p sel format] (update-selected-runs p sel #(remove-format % format))))
-
-  (toggle-format
-    [para sel format]
-    (let [[before in-selection after] (separate-selected (:runs para) sel)
-
-          common-formats (->> in-selection
-                              (map :formats)
-                              (apply set/intersection))
-
-          in-selection-toggled (if (contains? common-formats format)
-                                 (mapv #(remove-format % format) in-selection)
-                                 (mapv #(apply-format % format) in-selection))
-
-          new-runs (optimize-runs (concat before in-selection-toggled after))]
-      (assoc para :runs new-runs))))
+                (apply set/intersection))))))))
 
 ;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs

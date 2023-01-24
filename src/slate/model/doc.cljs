@@ -4,7 +4,6 @@
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
                                                Fragment
-                                               Formattable
                                                insert
                                                delete
                                                insert-start
@@ -12,9 +11,6 @@
                                                text
                                                len
                                                selected-content
-                                               toggle-format
-                                               apply-format
-                                               remove-format
                                                formatting
                                                char-before
                                                char-at]]
@@ -23,8 +19,6 @@
             [slate.model.selection :as sel :refer [Selection]]))
 
 (def ^:const types-preserved-on-enter #{:ul, :ol})
-
-(declare merge-transactions)
 
 (defrecord Document [children]
   TextContainer
@@ -319,12 +313,12 @@
             ;; nil, we want to make sure that this always yields a set.
            (apply set-intersection)))))
 
-(defn doc-toggle-format [doc sel format]
+(defn toggle-format [doc sel format]
   (if (sel/single-paragraph? sel)
-    (update-in doc [:children (sel/start-para sel)] #(toggle-format % sel format))
+    (update-in doc [:children (sel/start-para sel)] #(p/toggle-format % sel format))
     (let [children (:children doc)
           common-formats (formatting doc sel)
-          format-fn (if (contains? common-formats format) remove-format apply-format)
+          format-fn (if (contains? common-formats format) p/remove-format p/apply-format)
 
           start-para-uuid (-> sel :start :paragraph)
           start-para (children start-para-uuid)
@@ -360,10 +354,7 @@
   (char-at [doc sel] (char-at ((:children doc) (sel/caret-para sel)) sel))
   (char-before [doc sel] (char-before ((:children doc) (sel/caret-para sel)) sel))
   (selected-content [doc sel] (doc-selected-content doc sel)) ; TODO: how to handle UUIDs with this?
-  (formatting [doc sel] (doc-formatting doc sel))
-
-  Formattable
-  (toggle-format [doc sel format] (doc-toggle-format doc sel format)))
+  (formatting [doc sel] (doc-formatting doc sel)))
 
 (comment
   (def p1 (p/paragraph [(r/run "foo" #{:italic})
