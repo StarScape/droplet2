@@ -73,7 +73,7 @@
           ; shift future offsets by difference between oldtext and newtext
             new-offset-change (- selected-length (.-length text))
             new-para (-> para
-                         (m/delete sel)
+                         (p/delete sel)
                          (p/insert (sel/collapse-start sel) (r/run text prior-formatting)))]
         (recur new-para new-offset-change ls))
       para)))

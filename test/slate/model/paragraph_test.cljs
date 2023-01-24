@@ -86,24 +86,24 @@
 
 (deftest delete-single-test
   (testing "at beginning of paragraph"
-    (let [p (sl/delete simplep (selection ["s" 0]))]
+    (let [p (p/delete simplep (selection ["s" 0]))]
       (is (= p simplep))))
 
   (testing "in middle of paragraph"
-    (let [p (sl/delete simplep (selection ["s" 11]))]
+    (let [p (p/delete simplep (selection ["s" 11]))]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "gooar2")
                                (run "hoobar3" #{:italic})])))))
 
   (testing "end of run"
-    (let [p (sl/delete simplep (selection ["s" 14]))]
+    (let [p (p/delete simplep (selection ["s" 14]))]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "goobar")
                                (run "hoobar3" #{:italic})])))))
 
   (testing "end of paragraph"
     (let [sel (selection ["s" (sl/len simplep)])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "goobar2")
                                (run "hoobar" #{:italic})])))))
@@ -112,7 +112,7 @@
     (let [custom (paragraph "c" [(run "aaa" #{:italic})
                                  (run "b")
                                  (run "ccc" #{:bold})])
-          p (sl/delete custom (selection ["c" 4]))]
+          p (p/delete custom (selection ["c" 4]))]
       (is (= p (paragraph "c" [(run "aaa" #{:italic})
                                (run "ccc" #{:bold})])))))
 
@@ -125,44 +125,44 @@
 (deftest delete-range-test
   (testing "whole paragraph"
     (let [sel (selection ["s" 0] [simplep (sl/len simplep)])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "")])))))
 
   (testing "whole first run"
     (let [sel (selection ["s" 0] ["s" 7])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "goobar2")
                                (run "hoobar3" #{:italic})])))))
 
   (testing "partial first run, from beginning"
     (let [sel (selection ["s" 0] ["s" 6])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "1" #{:bold})
                                (run "goobar2")
                                (run "hoobar3" #{:italic})])))))
 
   (testing "partial first run, from middle"
     (let [sel (selection ["s" 1] ["s" 6])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "f1" #{:bold})
                                (run "goobar2")
                                (run "hoobar3" #{:italic})])))))
   (testing "whole run in middle of paragraph"
     (let [sel (selection ["s" 7] ["s" 14])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "hoobar3" #{:italic})])))))
 
   (testing "partial run in middle of paragraph"
     (let [sel (selection ["s" 8] ["s" 13])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "g2")
                                (run "hoobar3" #{:italic})])))))
 
   (testing "whole last run"
     (let [sel (selection ["s" 14] ["s" (sl/len simplep)])
-          p (sl/delete simplep sel)]
+          p (p/delete simplep sel)]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "goobar2")]))))))
 

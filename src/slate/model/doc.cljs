@@ -220,7 +220,7 @@
         ; First char of a different paragraph, merge with previous
         (merge-paragraph-with-previous doc para-uuid))
       ; Not the first char of the selected paragraph, normal backspace
-      (update-in doc [:children para-uuid] delete sel))))
+      (update-in doc [:children para-uuid] p/delete sel))))
 
 (defn- doc-range-delete
   "Helper function for deleting with a range selection."
@@ -231,7 +231,7 @@
         endp-uuid (-> sel :end :paragraph)
         ;; Replace one paragraph if start and end are in the same paragraph, or all of them if not.
         new-para (if (= startp-uuid endp-uuid)
-                   (delete (children startp-uuid) sel)
+                   (p/delete (children startp-uuid) sel)
                    (p/merge-paragraphs
                     (p/delete-after (children startp-uuid) (-> sel :start :offset))
                     (p/delete-before (children endp-uuid) (-> sel :end :offset))))

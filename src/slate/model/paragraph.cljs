@@ -5,7 +5,6 @@
             [slate.model.common :refer [TextContainer
                                         Selectable
                                         Fragment
-                                        delete
                                         insert-start
                                         insert-end
                                         text
@@ -179,6 +178,33 @@
     [runs-before within-sel after-sel]))
 
 ;; Main Paragraph operations
+(defn delete
+  [para sel]
+  (if (sel/single? sel)
+    (if (zero? (sel/caret sel))
+      para
+      (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
+            new-runs (update (:runs para) run-idx r/delete run-offset)]
+        (assoc para :runs (optimize-runs new-runs))))
+    (let [runs (:runs para)
+          [before _] (split-runs runs (-> sel :start :offset))
+          [_ after] (split-runs runs (-> sel :end :offset))
+          new-runs (optimize-runs (concat before after))]
+      (assoc para :runs new-runs))))
+
+(defn delete-after
+  "Removes everything in paragraph `para` after the provided offset."
+  [para offset]
+  (let [para-len (len para)]
+    (if (= offset para-len)
+      para
+      (delete para (selection [(:uuid para) offset] [(:uuid para) para-len])))))
+
+(defn delete-before
+  "Removes everything in paragraph `para` before the provided offset."
+  [para offset]
+  (delete para (selection [(:uuid para) 0] [(:uuid para) offset])))
+
 (defmulti insert "Inserts into the paragraph."
   {:arglists '([paragraph selection content-to-insert])}
   (fn [& args] (type (last args))))
@@ -207,7 +233,6 @@
     (assoc (insert para sel (fragment (:runs para-to-insert)))
            :type new-type)))
 
-;; TODO: these might stand some mild testing
 (defmethod insert-start [Paragraph ParagraphFragment]
   [para runs]
   (insert para (selection [(:uuid para) 0]) runs))
@@ -235,39 +260,6 @@
 (defmethod insert-end [Paragraph Paragraph]
   [para para-to-insert]
   (insert para (selection [(:uuid para) (len para)]) para-to-insert))
-
-(defn- paragraph-single-delete [para sel]
-  (if (zero? (sel/caret sel))
-    para
-    (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
-          new-runs (update (:runs para) run-idx r/delete run-offset)]
-      (assoc para :runs (optimize-runs new-runs)))))
-
-(defn- paragraph-range-delete [para sel]
-  (let [runs (:runs para)
-        [before _] (split-runs runs (-> sel :start :offset))
-        [_ after] (split-runs runs (-> sel :end :offset))
-        new-runs (optimize-runs (concat before after))]
-    (assoc para :runs new-runs)))
-
-(defmethod delete [Paragraph Selection]
-  [para sel]
-  (if (sel/single? sel)
-    (paragraph-single-delete para sel)
-    (paragraph-range-delete para sel)))
-
-(defn delete-after
-  "Removes everything in paragraph `para` after the provided offset."
-  [para offset]
-  (let [para-len (len para)]
-    (if (= offset para-len)
-      para
-      (delete para (selection [(:uuid para) offset] [(:uuid para) para-len])))))
-
-(defn delete-before
-  "Removes everything in paragraph `para` before the provided offset."
-  [para offset]
-  (delete para (selection [(:uuid para) 0] [(:uuid para) offset])))
 
 (defn update-selected-runs
   "Returns a new paragraph with f applied to each run inside the selection."

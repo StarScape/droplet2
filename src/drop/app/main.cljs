@@ -6,10 +6,9 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; CLEANUP:
-;; TODO: Get rid of (delete) in paragraph.cljs
 ;; TODO: Get rid of (insert) in doc.cljs
 ;; TODO: Get rid of (delete) in doc.cljs
-;; TODO: Swap out [Run] and [Paragraph] for [ParagraphFragment] and [DocumentFragment]
+;; TODO: Swap out [Run] and [Paragraph] for ParagraphFragment and DocumentFragment
 ;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively.
 ;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
 
