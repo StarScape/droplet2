@@ -1,12 +1,10 @@
 (ns slate.model.paragraph
   "Paragraphs contain a series of one or more runs. This namespace
    contains functionality for using and manipulating paragraphs."
-  (:require-macros [slate.utils :refer [weak-cache-val]])
   (:require [clojure.set :as set]
             [slate.model.common :refer [TextContainer
                                         Selectable
                                         Fragment
-                                        insert
                                         delete
                                         insert-start
                                         insert-end
@@ -18,7 +16,8 @@
                                         char-at
                                         items]]
             [slate.model.run :as r]
-            [slate.model.selection :as sel :refer [Selection selection]]))
+            [slate.model.selection :as sel :refer [Selection selection]]
+            [slate.utils :as utils :refer-macros [weak-cache-val]]))
 
 (declare optimize-runs)
 
@@ -72,7 +71,6 @@
   ([uuid runs]
    (->Paragraph uuid (optimize-runs runs) :body))
   ([uuid type runs]
-   #_{:pre [(uuid? uuid) (sequential? runs)]}
    (->Paragraph uuid (optimize-runs runs) type)))
 
 (defn empty-paragraph
@@ -81,11 +79,6 @@
    (paragraph uuid [(r/run)]))
   ([]
    (paragraph [(r/run)])))
-
-(defn- assoc-last
-  "Replaces the last item in a vector with a new value."
-  [v new-val]
-  (assoc v (dec (count v)) new-val))
 
 ;; Paragraph helper functions
 (defn optimize-runs
@@ -100,7 +93,7 @@
       (reduce (fn [optimized next-run]
                 (let [last-optimized-run (peek optimized)]
                   (if (= (:formats next-run) (:formats last-optimized-run))
-                    (assoc-last optimized (r/insert-end last-optimized-run (:text next-run)))
+                    (utils/assoc-last optimized (r/insert-end last-optimized-run (:text next-run)))
                     (conj optimized next-run))))
               (vector (first non-empty-runs))
               (subvec non-empty-runs 1)))))
@@ -186,8 +179,13 @@
     [runs-before within-sel after-sel]))
 
 ;; Main Paragraph operations
-(defmethod insert [Paragraph Selection [r/Run]]
-  [para sel runs]
+(defmulti insert "Inserts into the paragraph."
+  {:arglists '([paragraph selection content-to-insert])}
+  (fn [& args] (type (last args))))
+
+(defmethod insert
+  ParagraphFragment
+  [para sel {:keys [runs]}]
   (if (sel/single? sel)
     (let [[before after] (split-runs (:runs para) (sel/caret sel))
           new-runs (concat before runs after)]
@@ -195,26 +193,28 @@
     (let [selection-removed (delete para sel)]
       (insert selection-removed (sel/collapse-start sel) runs))))
 
-(defmethod insert [Paragraph Selection r/Run]
-  [para sel r]
-  (insert para sel [r]))
+(defmethod insert
+  r/Run
+  [para sel run]
+  (insert para sel (fragment run)))
 
-(defmethod insert [Paragraph Selection Paragraph]
+(defmethod insert
+  Paragraph
   [para sel para-to-insert]
   (let [new-type (if (zero? (-> sel :start :offset))
                    (:type para-to-insert)
                    (:type para))]
-    (assoc (insert para sel (:runs para-to-insert))
+    (assoc (insert para sel (fragment (:runs para-to-insert)))
            :type new-type)))
 
 ;; TODO: these might stand some mild testing
-(defmethod insert-start [Paragraph [r/Run]]
+(defmethod insert-start [Paragraph ParagraphFragment]
   [para runs]
   (insert para (selection [(:uuid para) 0]) runs))
 
 (defmethod insert-start [Paragraph r/Run]
   [para run]
-  (insert para  run))
+  (insert para run))
 
 (defmethod insert-start [Paragraph js/String]
   [para text]
@@ -224,9 +224,9 @@
   [para para-to-insert]
   (insert para (selection [(:uuid para) 0]) para-to-insert))
 
-(defmethod insert-end [Paragraph [r/Run]]
-  [para runs]
-  (insert para (selection [(:uuid para) (len para)]) runs))
+(defmethod insert-end [Paragraph ParagraphFragment]
+  [para fragment]
+  (insert para (selection [(:uuid para) (len para)]) fragment))
 
 (defmethod insert-end [Paragraph r/Run]
   [para run]

@@ -1,11 +1,11 @@
 (ns slate.model.run
   "Runs are the basic building blocks of a document: a string with associated styling.
    This namespace contains the functions for dealing with Runs."
-  (:require-macros [slate.utils :refer [weak-cache-val]])
   (:require [slate.model.common :refer [TextContainer
                                         len
                                         graphemes]]
-            [slate.utils :refer [weak-cache]]))
+            [slate.utils :refer [weak-cache]]
+            [slate.utils :refer-macros [weak-cache-val]]))
 
 (defrecord Run [text formats]
   TextContainer

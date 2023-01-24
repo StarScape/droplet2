@@ -87,3 +87,9 @@
       (let [computed-val (f)]
         (.set -weak-caches o (assoc cache-for-o f computed-val))
         computed-val))))
+
+(defn assoc-last
+  "Replaces the last item in a vector with a new value."
+  [v new-val]
+  {:pre [(vector? v)]}
+  (assoc v (dec (count v)) new-val))

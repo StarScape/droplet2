@@ -22,9 +22,9 @@
                          (run "ccc" #{})
                          (run "ddd" #{})]))
 
-(def to-insert [(paragraph "i1" [(run "inserted paragraph 1")])
-                (paragraph "i2" [(run "inserted paragraph 2")])
-                (paragraph "i3" [(run "inserted paragraph 3")])])
+(def to-insert (doc/fragment [(paragraph "i1" [(run "inserted paragraph 1")])
+                              (paragraph "i2" [(run "inserted paragraph 2")])
+                              (paragraph "i3" [(run "inserted paragraph 3")])]))
 
 (def doc (document [p1 p2]))
 
@@ -133,7 +133,6 @@
 
   (testing "multi-paragraph insert in the middle of a single paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p1" 10])) to-insert)
-           (sl/insert (editor-state doc (selection ["p1" 10])) (into (dll) to-insert))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
                                                                 (run "bar" #{:bold :italic})
@@ -150,7 +149,6 @@
 
   (testing "multi-paragraph insert at the start of a paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p2" 0])) to-insert)
-           (sl/insert (editor-state doc (selection ["p2" 0])) (into (dll) to-insert))
            (->EditorUpdate
             (map->EditorState {:doc (document [p1
                                                (paragraph "p2" [(run "inserted paragraph 1")])
@@ -163,7 +161,6 @@
 
   (testing "multi-paragraph insert at the end of a paragraph"
     (is (= (sl/insert (editor-state doc (selection ["p1" 14])) to-insert)
-           (sl/insert (editor-state doc (selection ["p1" 14])) (into (dll) to-insert))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph "p1" [(run "foo" #{:italic})
                                                                 (run "bar" #{:bold :italic})

@@ -5,10 +5,16 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: Right-click context menu
-;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
+;; CLEANUP:
+;; TODO: Get rid of (delete) in paragraph.cljs
+;; TODO: Get rid of (insert) in doc.cljs
+;; TODO: Get rid of (delete) in doc.cljs
+;; TODO: Swap out [Run] and [Paragraph] for [ParagraphFragment] and [DocumentFragment]
+;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively.
+;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
 
 ;; Prioritized:
+;; TODO: Right-click context menu
 ;; PROG: Test with large documents (100 pages)
 ;; TODO: Drag n drog files
 ;; TODO: More pastes tests
@@ -21,6 +27,7 @@
 ;; TODO: Implement highlight part of find and replace
 ;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Further polish criteria for history getting added to the backstack
+;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 
 ;; Usability/Polish:
 ;; TODO: When merging two paragraphs, the merged paragraph has the :type of the first. Make it have the type of the second **iff** the first is blank.

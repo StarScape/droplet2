@@ -74,7 +74,7 @@
             new-offset-change (- selected-length (.-length text))
             new-para (-> para
                          (m/delete sel)
-                         (m/insert (sel/collapse-start sel) (r/run text prior-formatting)))]
+                         (p/insert (sel/collapse-start sel) (r/run text prior-formatting)))]
         (recur new-para new-offset-change ls))
       para)))
 

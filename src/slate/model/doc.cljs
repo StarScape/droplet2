@@ -86,7 +86,7 @@
   (let [children (:children doc)
         para (get children para-uuid)
         prev (dll/prev children para-uuid)
-        merged (insert-end prev (:runs para))
+        merged (insert-end prev (p/fragment (:runs para)))
         new-children (-> children (dissoc para-uuid) (assoc (:uuid prev) merged))]
     (assoc doc :children new-children)))
 
@@ -102,7 +102,7 @@
   [doc sel content]
   (let [target-uuid (-> sel :start :paragraph)
         target-para (get (:children doc) target-uuid)
-        new-para (insert target-para sel content)]
+        new-para (p/insert target-para sel content)]
     (assoc-in doc [:children target-uuid] new-para)))
 
 (defn- insert-paragraphs-into-doc
@@ -152,19 +152,19 @@
 
 ;; Document main operations ;;
 
-(defmethod insert [Document Selection [Run]]
-  [doc sel runs]
+(defmethod insert [Document Selection p/ParagraphFragment]
+  [doc sel fragment]
   (if (sel/single? sel)
-    (insert-into-single-paragraph doc sel runs)
+    (insert-into-single-paragraph doc sel fragment)
     (-> (delete doc sel)
-        (insert (sel/collapse-start sel) runs))))
+        (insert (sel/collapse-start sel) fragment))))
 
-(defmethod insert [Document Selection [Paragraph]]
-  [doc sel paragraphs]
+(defmethod insert [Document Selection DocumentFragment]
+  [doc sel fragment]
   (if (sel/single? sel)
-    (insert-paragraphs-into-doc doc sel paragraphs)
+    (insert-paragraphs-into-doc doc sel (sl/items fragment))
     (-> (delete doc sel)
-        (insert (sel/collapse-start sel) paragraphs))))
+        (insert (sel/collapse-start sel) fragment))))
 
 (defmethod insert [Document Selection Paragraph]
   [doc sel para]
@@ -182,7 +182,10 @@
 
 (defmethod insert [Document Selection js/String]
   [doc sel text]
-  (insert-into-single-paragraph doc sel (r/run text (:formats sel))))
+  (if (sel/single? sel)
+    (insert-into-single-paragraph doc sel (r/run text (:formats sel)))
+    (-> (delete doc sel)
+        (insert (sel/collapse-start sel) text))))
 
 (defn insert-paragraph-before
   "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.

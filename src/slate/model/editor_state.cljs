@@ -102,12 +102,13 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
-(defmethod insert [EditorState [Run]]
-  [{:keys [doc selection] :as editor-state}, runs]
+;; TODO: replace [EditorState [Run]] with this
+(defmethod insert [EditorState ParagraphFragment]
+  [{:keys [doc selection] :as editor-state} {:keys [runs] :as paragraph-fragment}]
   (if (sel/range? selection)
     (-> (delete editor-state)
         (>>= insert runs))
-    (let [new-doc (insert doc selection runs)
+    (let [new-doc (insert doc selection paragraph-fragment)
           runs-len (reduce + (map len runs))
           new-sel (->> (sel/shift-single selection runs-len)
                        (nav/autoset-formats new-doc))]
@@ -116,10 +117,9 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
-;; TODO: replace [EditorState [Run]] with this
-(defmethod insert [EditorState ParagraphFragment]
-  [editor-state fragment]
-  (insert editor-state (m/items fragment)))
+(defmethod insert [EditorState [Run]]
+  [editor-state, runs]
+  (insert editor-state (p/fragment runs)))
 
 (defmethod insert [EditorState [Paragraph]]
   [{:keys [doc selection] :as editor-state}, paragraphs]
@@ -130,7 +130,7 @@
                                (assoc p :uuid (random-uuid))
                                p))
           paragraphs (map dedupe-para-uuid paragraphs)
-          new-doc (insert doc selection paragraphs)
+          new-doc (insert doc selection (doc/fragment paragraphs))
           last-paragraph (last paragraphs)
           new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
                              (nav/autoset-formats last-paragraph))]

@@ -52,17 +52,17 @@
 
 (deftest insert-single-test
   (testing "at end of run with same formatting"
-    (let [p (sl/insert para (selection [para 9]) (run " Foobar 1.5." #{:bold}))]
+    (let [p (p/insert para (selection [para 9]) (run " Foobar 1.5." #{:bold}))]
       (is (= (basic-paragraph-render p)
              "<p><bold>Foobar 1. Foobar 1.5.</bold> Foobar 2.<italic> Foobar 3.</italic></p>"))))
 
   (testing "at end of run with different formatting"
-    (let [p (sl/insert para (selection [para 9]) (run " Foobar 1.5."))]
+    (let [p (p/insert para (selection [para 9]) (run " Foobar 1.5."))]
       (is (= (basic-paragraph-render p)
              "<p><bold>Foobar 1.</bold> Foobar 1.5. Foobar 2.<italic> Foobar 3.</italic></p>"))))
 
   (testing "in middle of run with different formatting"
-    (let [p (sl/insert simplep (selection ["s" 13]) (run "bizzbuzz" #{:italic}))]
+    (let [p (p/insert simplep (selection ["s" 13]) (run "bizzbuzz" #{:italic}))]
       (is (= p (paragraph "s" [(run "foobar1" #{:bold})
                                (run "goobar" #{})
                                (run "bizzbuzz" #{:italic})
@@ -70,7 +70,7 @@
                                (run "hoobar3" #{:italic})])))))
 
   (testing "at start of paragraph"
-    (let [p (sl/insert simplep (selection ["s" 0]) (run "pre" #{:underline}))]
+    (let [p (p/insert simplep (selection ["s" 0]) (run "pre" #{:underline}))]
       (is (= p (paragraph "s" [(run "pre" #{:underline})
                                (run "foobar1" #{:bold})
                                (run "goobar2")
@@ -78,7 +78,7 @@
 
   (testing "at end of paragraph"
     (let [sel (selection ["s" (sl/len simplep)])
-          p (sl/insert simplep sel (run "post"))]
+          p (p/insert simplep sel (run "post"))]
       (is (= p (paragraph "s"[(run "foobar1" #{:bold})
                               (run "goobar2")
                               (run "hoobar3" #{:italic})

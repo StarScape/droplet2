@@ -34,7 +34,7 @@
    :browser-test {:target :karma
                   :ns-regexp "-browser-test$" ;; every ns ending in 'browser-test'
                   :output-to "dev_out/browser_test.js"}
-   ;; Test just for DLL code, for developmenet convenience
+   ;; Test just for DLL code, for development convenience
    :test-dll {:target :node-test
               :ns-regexp "slate.dll-test$"
               :output-to "dev_out/dll_test.js"

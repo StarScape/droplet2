@@ -17,9 +17,9 @@
                          (run "ccc" #{})
                          (run "ddd" #{})]))
 
-(def to-insert [(paragraph "i1" [(run "inserted paragraph 1")])
-                (paragraph "i2" [(run "inserted paragraph 2")])
-                (paragraph "i3" [(run "inserted paragraph 3")])])
+(def to-insert (doc/fragment [(paragraph "i1" [(run "inserted paragraph 1")])
+                              (paragraph "i2" [(run "inserted paragraph 2")])
+                              (paragraph "i3" [(run "inserted paragraph 3")])]))
 
 (def test-doc (document [p1 p2]))
 
@@ -30,7 +30,7 @@
 
 (deftest insert-test
   (testing "insert 2 runs in middle of a paragraph"
-    (is (= (sl/insert test-doc (selection ["p1" 3]) [(run "Hello" #{:italic}) (run "Goodbye!")])
+    (is (= (sl/insert test-doc (selection ["p1" 3]) (p/fragment [(run "Hello" #{:italic}) (run "Goodbye!")]))
            (document [(paragraph "p1" [(run "fooHello" #{:italic})
                                        (run "Goodbye!" #{})
                                        (run "bar" #{:bold :italic})
@@ -62,7 +62,6 @@
 
   (testing "multi-paragraph insert in the middle of a single paragraph"
     (is (= (sl/insert test-doc (selection ["p1" 10]) to-insert)
-           (sl/insert test-doc (selection ["p1" 10]) (into (dll) to-insert))
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -74,14 +73,13 @@
 
   (testing "multi-paragraph insert at the start of a paragraph"
     (is (= (sl/insert test-doc (selection ["p2" 0]) to-insert)
-           (sl/insert test-doc (selection ["p2" 0]) (into (dll) to-insert))
            (document [p1
                       (paragraph "p2" [(run "inserted paragraph 1")])
                       (paragraph "i2" [(run "inserted paragraph 2")])
                       (paragraph "i3" [(run "inserted paragraph 3aaabbbcccddd")])]))))
 
   (testing "multi-paragraph insert with duplicate UUIDs"
-    (let [result (sl/insert test-doc (selection ["p2" 0]) [p1 p2])
+    (let [result (sl/insert test-doc (selection ["p2" 0]) (doc/fragment [p1 p2]))
           children (:children result)]
       (is (= 3 (count children)))
       (is (= p1 (first children)))
@@ -91,7 +89,6 @@
 
   (testing "multi-paragraph insert at the end of a paragraph"
     (is (= (sl/insert test-doc (selection ["p1" 14]) to-insert)
-           (sl/insert test-doc (selection ["p1" 14]) (into (dll) to-insert))
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
