@@ -33,31 +33,31 @@
 
 (deftest delete-test
   (testing "range delete from beginning"
-    (let [r (sl/delete run1 0 1)]
+    (let [r (r/delete run1 0 1)]
       (is (= "oobar" (:text r)))))
 
   (testing "range delete from middle"
-    (let [r (sl/delete run1 1 3)]
+    (let [r (r/delete run1 1 3)]
       (is (= "fbar" (:text r)))))
 
   (testing "range delete of entire run"
-    (let [r (sl/delete run1 0 6)]
+    (let [r (r/delete run1 0 6)]
       (is (= "" (:text r)))))
 
   (testing "backspace at start"
     (comment "TODO"))
 
   (testing "backspace in the middle"
-    (let [r (sl/delete run1 5)]
+    (let [r (r/delete run1 5)]
       (is (= "foobr" (:text r)))))
 
   (testing "backspace at the end"
-    (let [r (sl/delete run1 6)]
+    (let [r (r/delete run1 6)]
       (is (= "fooba" (:text r)))))
 
   (testing "backspace with emoji"
     (let [text "🏳️‍🌈🦎🤦🏽"
-          r (sl/delete (r/run text) (sl/len text))]
+          r (r/delete (r/run text) (sl/len text))]
       (is (= "🏳️‍🌈🦎" (:text r)))))
 
   (testing "backspace off end of range"

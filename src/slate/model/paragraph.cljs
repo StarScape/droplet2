@@ -100,7 +100,7 @@
       (reduce (fn [optimized next-run]
                 (let [last-optimized-run (peek optimized)]
                   (if (= (:formats next-run) (:formats last-optimized-run))
-                    (assoc-last optimized (insert-end last-optimized-run (:text next-run)))
+                    (assoc-last optimized (r/insert-end last-optimized-run (:text next-run)))
                     (conj optimized next-run))))
               (vector (first non-empty-runs))
               (subvec non-empty-runs 1)))))
@@ -240,8 +240,7 @@
   (if (zero? (sel/caret sel))
     para
     (let [[run-idx run-offset] (before-offset (:runs para) (sel/caret sel))
-          new-run (delete ((:runs para) run-idx) run-offset)
-          new-runs (assoc (:runs para) run-idx new-run)]
+          new-runs (update (:runs para) run-idx r/delete run-offset)]
       (assoc para :runs (optimize-runs new-runs)))))
 
 (defn- paragraph-range-delete [para sel]

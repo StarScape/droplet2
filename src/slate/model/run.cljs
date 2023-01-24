@@ -3,9 +3,6 @@
    This namespace contains the functions for dealing with Runs."
   (:require-macros [slate.utils :refer [weak-cache-val]])
   (:require [slate.model.common :refer [TextContainer
-                                        delete
-                                        insert-start
-                                        insert-end
                                         len
                                         graphemes]]
             [slate.utils :refer [weak-cache]]))
@@ -28,7 +25,6 @@
 
 (defn empty-run "Helper function, returns an empty run." [] (run ""))
 
-;; TODO: test split
 (defn split
   "Splits the run at `offset`, returning a vector of two new runs containing the text to either side."
   [r offset]
@@ -51,27 +47,28 @@
    (assert (and (number? caret) (string? text)))
    (insert r text caret caret)))
 
-(defmethod insert-start [Run js/String]
+(defn insert-start
+  "Inserts `text` at the start of the run."
   [r text]
   (insert r text 0))
 
-(defmethod insert-end [Run js/String]
+(defn insert-end
+  "Inserts `text` at the end of the run."
   [r text]
   (insert r text (len r)))
 
 ;; Delete between start and end
-(defmethod delete [Run js/Number js/Number]
-  [run start end]
-  (let [before (.slice (:text run) 0 start)
-        after (.slice (:text run) end)]
-    (assoc run :text (str before after))))
-
-;; Delete at offset, acts like backspace
-(defmethod delete [Run js/Number]
-  [run offset]
-  (let [graphemes (graphemes run)
-        prev-grapheme (first (reverse (filter #(< (:offset %) offset) graphemes)))]
-    (delete run (:offset prev-grapheme) offset)))
+(defn delete
+  ;; Delete in range
+  ([run start-offset end-offset]
+   (let [before (.slice (:text run) 0 start-offset)
+         after (.slice (:text run) end-offset)]
+     (assoc run :text (str before after))))
+  ;; Delete at offset, acts like backspace
+  ([run offset]
+   (let [graphemes (graphemes run)
+         prev-grapheme (first (reverse (filter #(< (:offset %) offset) graphemes)))]
+     (delete run (:offset prev-grapheme) offset))))
 
 (defn apply-format
  [r format]

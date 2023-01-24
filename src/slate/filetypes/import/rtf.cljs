@@ -240,7 +240,7 @@
 (defn- handle-text
   [text {:keys [run paragraph] :as parser-state}]
   (assoc parser-state :run (cond
-                             (and run paragraph) (m/insert-end run text)
+                             (and run paragraph) (r/insert-end run text)
                              paragraph (r/run text)
                              :else nil)))
 
