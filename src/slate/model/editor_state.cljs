@@ -5,7 +5,6 @@
             [slate.dll :as dll]
             [slate.model.common :refer [TextContainer
                                         insert
-                                        delete
                                         len
                                         blank?] :as m]
             [slate.model.run :as r :refer [Run]]
@@ -88,6 +87,44 @@
    (let [p (p/paragraph)]
      (editor-state (doc/document [p]) (sel/selection [(:uuid p) 0])))))
 
+(defn delete
+  "Deletes the current selection. Returns an EditorUpdate."
+  [{:keys [doc selection] :as editor-state}]
+  (let [new-doc (doc/delete doc selection)
+        startp-uuid (-> selection :start :paragraph)]
+    (if (sel/single? selection)
+      ;; Single selection
+      (if (zero? (sel/caret selection))
+        (if (= startp-uuid (-> doc :children dll/first :uuid))
+          ; First char of first paragraph, do nothing
+          (identity-update editor-state)
+          ; First char of a different paragraph, merge with previous
+          (let [prev-para (dll/prev (:children doc) startp-uuid)
+                new-selection (->> (sel/selection [(:uuid prev-para), (len prev-para)])
+                                   (nav/autoset-formats prev-para))]
+            (->EditorUpdate (assoc editor-state
+                                   :doc new-doc
+                                   :selection new-selection)
+                            (changelist :changed-uuids #{(:uuid prev-para)}
+                                        :deleted-uuids #{startp-uuid}))))
+        ; Not the first char of the selected paragraph, normal backspace
+        (->EditorUpdate (assoc editor-state
+                               :doc new-doc
+                               :selection (nav/prev-char doc selection))
+                        (changelist :changed-uuids #{startp-uuid})))
+      ;; Range selection
+      (let [startp-uuid (-> selection :start :paragraph)
+            endp-uuid (-> selection :end :paragraph)
+            new-changelist (changelist :changed-uuids #{startp-uuid}
+                                       :deleted-uuids (when-not (= startp-uuid endp-uuid)
+                                                        (-> (dll/uuids-range (:children doc) startp-uuid endp-uuid)
+                                                            (rest)
+                                                            (set))))]
+        (->EditorUpdate (assoc editor-state
+                               :doc new-doc
+                               :selection (nav/autoset-formats new-doc (sel/collapse-start selection)))
+                        new-changelist)))))
+
 (defn- insert-text-container
   [{:keys [doc selection] :as editor-state}, content]
   {:pre [(satisfies? TextContainer content)]}
@@ -116,10 +153,6 @@
                              :doc new-doc
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
-
-(defmethod insert [EditorState [Run]]
-  [editor-state, runs]
-  (insert editor-state (p/fragment runs)))
 
 (defmethod insert [EditorState [Paragraph]]
   [{:keys [doc selection] :as editor-state}, paragraphs]
@@ -163,43 +196,6 @@
       (insert editor-state (map #(p/paragraph [(r/run %)]) paragraphs))
       ;; Insert string == insert run with current active formats
       (insert editor-state (r/run text (:formats selection))))))
-
-(defmethod delete [EditorState]
-  [{:keys [doc selection] :as editor-state}]
-  (let [new-doc (delete doc selection)
-        startp-uuid (-> selection :start :paragraph)]
-    (if (sel/single? selection)
-      ;; Single selection
-      (if (zero? (sel/caret selection))
-        (if (= startp-uuid (-> doc :children dll/first :uuid))
-          ; First char of first paragraph, do nothing
-          (identity-update editor-state)
-          ; First char of a different paragraph, merge with previous
-          (let [prev-para (dll/prev (:children doc) startp-uuid)
-                new-selection (->> (sel/selection [(:uuid prev-para), (len prev-para)])
-                                   (nav/autoset-formats prev-para))]
-            (->EditorUpdate (assoc editor-state
-                                   :doc new-doc
-                                   :selection new-selection)
-                            (changelist :changed-uuids #{(:uuid prev-para)}
-                                        :deleted-uuids #{startp-uuid}))))
-        ; Not the first char of the selected paragraph, normal backspace
-        (->EditorUpdate (assoc editor-state
-                               :doc new-doc
-                               :selection (nav/prev-char doc selection))
-                        (changelist :changed-uuids #{startp-uuid})))
-      ;; Range selection
-      (let [startp-uuid (-> selection :start :paragraph)
-            endp-uuid (-> selection :end :paragraph)
-            new-changelist (changelist :changed-uuids #{startp-uuid}
-                                       :deleted-uuids (when-not (= startp-uuid endp-uuid)
-                                                        (-> (dll/uuids-range (:children doc) startp-uuid endp-uuid)
-                                                            (rest)
-                                                            (set))))]
-        (->EditorUpdate (assoc editor-state
-                               :doc new-doc
-                               :selection (nav/autoset-formats new-doc (sel/collapse-start selection)))
-                        new-changelist)))))
 
 (defn enter
   "Equivalent to what happens when the user hits the enter button.

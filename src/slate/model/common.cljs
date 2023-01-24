@@ -78,7 +78,3 @@
 (defmulti insert-end "Shortcut for insert at the end of a text container."
   {:arglists '([container content-to-insert])}
   #'no-location-dispatch)
-
-(defmulti delete "Deletes from a Run/Paragraph/Document."
-  {:arglists '([container location])}
-  #'type-dispatch)

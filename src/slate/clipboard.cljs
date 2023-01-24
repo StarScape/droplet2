@@ -40,7 +40,7 @@
   (if (sel/range? selection)
     (let [content (selected-content editor-state)]
       (copy-to-clipboard! content event)
-      (model/delete editor-state))
+      (es/delete editor-state))
     (es/identity-update editor-state)))
 
 (defn copy

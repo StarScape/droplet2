@@ -4,7 +4,6 @@
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
                                                Fragment
-                                               delete
                                                insert-start
                                                insert-end
                                                text
@@ -15,7 +14,7 @@
                                                char-at]]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph]]
-            [slate.model.selection :as sel :refer [Selection]]))
+            [slate.model.selection :as sel]))
 
 (def ^:const types-preserved-on-enter #{:ul, :ol})
 
@@ -140,6 +139,31 @@
     (assoc doc :children new-children)))
 
 ;; Document main operations ;;
+(defn delete
+  "Deletes the selection from the Document. If single selection, acts as backspace."
+  [doc sel]
+  (if (sel/single? sel)
+    (let [para-uuid (sel/start-para sel)]
+      (if (zero? (sel/caret sel))
+        (if (= para-uuid (-> doc :children dll/first :uuid))
+          ; First char of first paragraph, do nothing
+          doc
+          ; First char of a different paragraph, merge with previous
+          (merge-paragraph-with-previous doc para-uuid))
+        ; Not the first char of the selected paragraph, normal backspace
+        (update-in doc [:children para-uuid] p/delete sel)))
+    (let [children (:children doc)
+          startp-uuid (-> sel :start :paragraph)
+          endp-uuid (-> sel :end :paragraph)
+          ;; Replace one paragraph if start and end are in the same paragraph, or all of them if not.
+          new-para (if (= startp-uuid endp-uuid)
+                     (p/delete (children startp-uuid) sel)
+                     (p/merge-paragraphs
+                      (p/delete-after (children startp-uuid) (-> sel :start :offset))
+                      (p/delete-before (children endp-uuid) (-> sel :end :offset))))
+          new-children (dll/replace-range children startp-uuid endp-uuid new-para)]
+      (assoc doc :children new-children))))
+
 (defmulti insert "Inserts into the Document."
   {:arglists '([Document selection content-to-insert])}
   (fn [& args] (type (last args))))
@@ -201,45 +225,6 @@
                                      (assoc (p/paragraph) :uuid new-para-uuid :type type)]))
   ([doc uuid]
    (insert-paragraph-after doc uuid (random-uuid) :body)))
-
-;; TODO: insert-after and insert-before functions which take a doc, a paragraph uuid/index, and a paragraph,
-;; and inserts that paragraph either before or after the paragraph with the uuid/index provided.
-
-(defn- doc-single-delete
-  "Helper function for deleting with a single selection."
-  [doc sel]
-  {:pre [(sel/single? sel)]}
-  (let [para-uuid (sel/start-para sel)]
-    (if (zero? (sel/caret sel))
-      (if (= para-uuid (-> doc :children dll/first :uuid))
-        ; First char of first paragraph, do nothing
-        doc
-        ; First char of a different paragraph, merge with previous
-        (merge-paragraph-with-previous doc para-uuid))
-      ; Not the first char of the selected paragraph, normal backspace
-      (update-in doc [:children para-uuid] p/delete sel))))
-
-(defn- doc-range-delete
-  "Helper function for deleting with a range selection."
-  [doc sel]
-  {:pre [(sel/range? sel)]}
-  (let [children (:children doc)
-        startp-uuid (-> sel :start :paragraph)
-        endp-uuid (-> sel :end :paragraph)
-        ;; Replace one paragraph if start and end are in the same paragraph, or all of them if not.
-        new-para (if (= startp-uuid endp-uuid)
-                   (p/delete (children startp-uuid) sel)
-                   (p/merge-paragraphs
-                    (p/delete-after (children startp-uuid) (-> sel :start :offset))
-                    (p/delete-before (children endp-uuid) (-> sel :end :offset))))
-        new-children (dll/replace-range children startp-uuid endp-uuid new-para)]
-    (assoc doc :children new-children)))
-
-(defmethod delete [Document sel/Selection]
-  [doc sel]
-  (if (sel/single? sel)
-    (doc-single-delete doc sel)
-    (doc-range-delete doc sel)))
 
 (defn enter
   "Equivalent to what happens when the user hits the enter button.

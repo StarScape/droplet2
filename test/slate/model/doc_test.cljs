@@ -127,10 +127,10 @@
 
 (deftest delete-single-test
   (testing "does nothing at beginning of doc"
-    (is (= (sl/delete test-doc (selection ["p1" 0])) test-doc)))
+    (is (= (doc/delete test-doc (selection ["p1" 0])) test-doc)))
 
   (testing "deletes single char in middle of paragraph"
-    (is (= (sl/delete test-doc (selection ["p1" 1]))
+    (is (= (doc/delete test-doc (selection ["p1" 1]))
            (document [(paragraph "p1" [(run "oo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -138,7 +138,7 @@
                       p2]))))
 
   (testing "deletes single char at end of paragraph"
-    (is (= (sl/delete test-doc (selection ["p1" 14]))
+    (is (= (doc/delete test-doc (selection ["p1" 14]))
            (document [(paragraph "p1" [(run "foo" #{:italic})
                                        (run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
@@ -146,15 +146,15 @@
                       p2]))))
 
   (testing "merges paragraphs when backspacing from start of paragraph that is not first"
-    (is (= (sl/delete test-doc (selection ["p2" 0]))
+    (is (= (doc/delete test-doc (selection ["p2" 0]))
            (document [(paragraph "p1" (concat (:runs p1) (:runs p2)))]))))
 
   (testing "deletes single char as normal at end of the paragraph"
-    (is (= (sl/delete test-doc (selection ["p2" 12]))
+    (is (= (doc/delete test-doc (selection ["p2" 12]))
            (document [p1, (paragraph "p2" [(run "aaabbbcccdd")])]))))
 
   (testing "does nothing when backspacing at start of first paragraph"
-    (is (= (sl/delete test-doc (selection ["p1" 0])) test-doc))))
+    (is (= (doc/delete test-doc (selection ["p1" 0])) test-doc))))
 
 
 ;; TODO: weirdly, a test seems to be failing below because delete is returning a plain map instead of a Document
@@ -163,21 +163,21 @@
 
 (deftest delete-range-test
   (testing "deletes from start of paragraph"
-    (is (= (sl/delete test-doc (selection ["p1" 0] ["p1" 3]))
+    (is (= (doc/delete test-doc (selection ["p1" 0] ["p1" 3]))
            (document [(paragraph "p1" [(run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
                                        (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "deletes from start of paragraph backwards"
-    (is (= (sl/delete test-doc (selection ["p1" 0] ["p1" 3] :backwards? true))
+    (is (= (doc/delete test-doc (selection ["p1" 0] ["p1" 3] :backwards? true))
            (document [(paragraph "p1" [(run "bar" #{:bold :italic})
                                        (run "bizz" #{:italic})
                                        (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "deletes up to end of paragraph"
-    (is (= (sl/delete test-doc (selection ["p1" 3] ["p1" 14]))
+    (is (= (doc/delete test-doc (selection ["p1" 3] ["p1" 14]))
            (document [(paragraph "p1" [(run "foo" #{:italic})]), p2]))))
 
   (testing "deletes whole paragraph"
@@ -185,19 +185,19 @@
     ;; The reason it's like this is because the code merges the paragraph at the end
     ;; of the range selection with the paragraph at the beginning of the range selection,
     ;; and gives it the UUID of the first.
-    (is (= (sl/delete test-doc (selection ["p1" 0] ["p2" 0]))
+    (is (= (doc/delete test-doc (selection ["p1" 0] ["p2" 0]))
            (document [(assoc p2 :uuid "p1")]))))
 
   (testing "merges start and ending paragraphs when deleting across paragraphs"
-    (is (= (sl/delete test-doc (selection ["p1" 3] ["p2" 3]))
+    (is (= (doc/delete test-doc (selection ["p1" 3] ["p2" 3]))
            (document [(paragraph "p1" [(run "foo" #{:italic}), (run "bbbcccddd")])]))))
 
   (testing "merges start and ending paragraphs when deleting across more than 2 paragraphs"
-    (is (= (sl/delete long-doc (selection ["d1" 4] ["d4" 0]))
+    (is (= (doc/delete long-doc (selection ["d1" 4] ["d4" 0]))
            (document [(paragraph "d1" [(run "foo1" #{:italic}), (run "foo4" #{:strike})])]))))
 
   (testing "deletes whole document"
-    (is (= (sl/delete test-doc (selection ["p1" 0] ["p2" 12]))
+    (is (= (doc/delete test-doc (selection ["p1" 0] ["p2" 12]))
            (document [(paragraph "p1" [(run)])])))))
 
 (deftest enter-test

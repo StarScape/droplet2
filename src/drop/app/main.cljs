@@ -6,19 +6,23 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; CLEANUP:
-;; TODO: Get rid of (delete) in doc.cljs
+;; TODO: Get rid of (insert) in editor_state.cljs
+;; TODO: Get rid of (delete) in editor_state.cljs
 ;; TODO: Decide if (insert-start) and (insert-end) should be polymorphic functions
 ;; TODO: Swap out [Run] and [Paragraph] for ParagraphFragment and DocumentFragment
 ;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively.
 ;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
 
 ;; Prioritized:
-;; TODO: Right-click context menu
 ;; PROG: Test with large documents (100 pages)
+;; TODO: Rewrite render engine with Canvas approach
+;; TODO: Tabs
+;; TODO: File browser
+;; TODO: Right-click context menu
 ;; TODO: Drag n drog files
-;; TODO: More pastes tests
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode
+;; TODO: More pastes tests
 ;; TODO: Space out paragraphs somewhat
 ;; TODO: Bug - pressing fn+f to go to fullscreen still enters an 'f' inside the document
 ;; TODO: Break out all history fns into a protocol and implement for UIState

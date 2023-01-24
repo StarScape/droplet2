@@ -31,7 +31,7 @@
              (zero? (-> selection :start :offset))
              (or (= paragraph-type :ol) (= paragraph-type :ul)))
       (es/toggle-paragraph-type editor-state paragraph-type)
-      (m/delete editor-state))))
+      (es/delete editor-state))))
 
 (definterceptor enter
   [{:keys [doc selection] :as editor-state} _ui-state _e]
@@ -304,8 +304,8 @@
 (definterceptor transform-double-dash-to-em-dash
   {:add-to-history-immediately? true}
   [editor-state _ _]
-  (-> (m/delete editor-state)
-      (>>= m/delete)
+  (-> (es/delete editor-state)
+      (>>= es/delete)
       (>>= m/insert "—")))
 
 (definterceptor insert-ol-at-paragraph-start
@@ -313,8 +313,8 @@
    :should-fire? (fn [{:keys [selection]}]
                    (and (sel/single? selection) (= 2 (sel/caret selection))))}
   [editor-state _ui-state _e]
-  (-> (m/delete editor-state)
-      (>>= m/delete)
+  (-> (es/delete editor-state)
+      (>>= es/delete)
       (>>= es/toggle-paragraph-type :ol)))
 
 (definterceptor insert-ul-at-paragraph-start
@@ -322,7 +322,7 @@
    :should-fire? (fn [{:keys [selection]}]
                    (and (sel/single? selection) (= 1 (sel/caret selection))))}
   [editor-state _ui-state _e]
-  (-> (m/delete editor-state)
+  (-> (es/delete editor-state)
       (>>= es/toggle-paragraph-type :ul)))
 
 ;; Formatting
