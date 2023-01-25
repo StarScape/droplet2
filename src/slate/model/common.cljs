@@ -49,19 +49,3 @@
   "Fragment of a Document or Paragraph"
   (items [fragment] "Returns a seqable list of the items in the fragment")
   (fragment-type [fragment] "Returns either :document (fragment is a series of paragraphs) or :paragraph (fragment is a series of runs)"))
-
-(defn content-type [c]
-  (if (sequential? c)
-    [(type (first c))]
-    (type c)))
-
-(defn insert-dispatch [& args]
-  (conj (vec (map type (butlast args)))
-        (content-type (last args))))
-
-;; TODO: once all implementations of insert are done, there should be a HELLUVA
-;; docstring explaining its use...the various forms it can take, etc. The goal is
-;; for it to be "don't think about it, it just works, using this general form."
-(defmulti insert "Inserts into a Run/Paragraph/Document."
-  {:arglists '([container location content-to-insert])}
-  #'insert-dispatch)

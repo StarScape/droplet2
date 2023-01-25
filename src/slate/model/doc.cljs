@@ -163,7 +163,7 @@
       (assoc doc :children new-children))))
 
 (defmulti insert "Inserts into the Document."
-  {:arglists '([Document selection content-to-insert])}
+  {:arglists '([document selection content-to-insert])}
   (fn [& args] (type (last args))))
 
 (defmethod insert

@@ -22,7 +22,7 @@
 
 (definterceptor insert
   [editor-state _ e]
-  (m/insert editor-state (.-data e)))
+  (es/insert editor-state (.-data e)))
 
 (definterceptor delete
   [{:keys [doc selection] :as editor-state} _ui-state _e]
@@ -45,7 +45,7 @@
 
 (definterceptor tab
   [editor-state _ui-state _e]
-  (m/insert editor-state "\u2003"))
+  (es/insert editor-state "\u2003"))
 
 ;; Movement / navigation ;;
 (definterceptor click
@@ -306,7 +306,7 @@
   [editor-state _ _]
   (-> (es/delete editor-state)
       (>>= es/delete)
-      (>>= m/insert "—")))
+      (>>= es/insert "—")))
 
 (definterceptor insert-ol-at-paragraph-start
   {:add-to-history-immediately? true

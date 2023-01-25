@@ -3,10 +3,7 @@
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [slate.dll :as dll]
-            [slate.model.common :refer [TextContainer
-                                        insert
-                                        len
-                                        blank?] :as m]
+            [slate.model.common :refer [TextContainer len blank?] :as m]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph ParagraphFragment]]
             [slate.model.doc :as doc :refer [DocumentFragment]]
@@ -31,6 +28,7 @@
   (bind ma f args))
 
 (defrecord EditorState [doc, selection]
+  ;; TODO: needed for EditorState?
   TextContainer
   (len [{:keys [doc]}] (len doc))
   (blank? [{:keys [doc]}] (blank? doc)))
@@ -125,6 +123,11 @@
                                :selection (nav/autoset-formats new-doc (sel/collapse-start selection)))
                         new-changelist)))))
 
+(defmulti insert
+  "Inserts into the EditorState's document at the current selection. Returns an EditorUpdate."
+  {:arglists '([editor-state selection content-to-insert])}
+  (fn [& args] (type (last args))))
+
 (defn- insert-text-container
   [{:keys [doc selection] :as editor-state}, content]
   {:pre [(satisfies? TextContainer content)]}
@@ -139,16 +142,18 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
-(defmethod insert [EditorState Run]
+(defmethod insert
+  Run
   [editor-state run]
   (insert-text-container editor-state run))
 
-(defmethod insert [EditorState Paragraph]
+(defmethod insert
+  Paragraph
   [editor-state paragraph]
   (insert-text-container editor-state paragraph))
 
-;; TODO: replace [EditorState [Run]] with this
-(defmethod insert [EditorState ParagraphFragment]
+(defmethod insert
+  ParagraphFragment
   [{:keys [doc selection] :as editor-state} {:keys [runs] :as paragraph-fragment}]
   (if (sel/range? selection)
     (-> (delete editor-state)
@@ -162,7 +167,8 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
-(defmethod insert [EditorState DocumentFragment]
+(defmethod insert
+  DocumentFragment
   [{:keys [doc selection] :as editor-state}, fragment]
   (let [paragraphs (m/items fragment)]
     (if (= (count paragraphs) 1)
@@ -187,7 +193,8 @@
                           (changelist :changed-uuids #{(sel/start-para selection)}
                                       :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))))
 
-(defmethod insert [EditorState js/String]
+(defmethod insert
+  js/String
   [{:keys [selection] :as editor-state} text]
   (let [paragraphs (str/split-lines text)]
     (if (< 1 (count paragraphs))

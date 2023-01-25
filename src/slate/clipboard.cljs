@@ -64,13 +64,13 @@
         plain-text? (.. event -clipboardData -types (includes mime-plaintext))]
     (cond
       paste-from-slate?
-      (model/insert editor-state (:content clipboard-data))
+      (es/insert editor-state (:content clipboard-data))
 
       (and html? html-converted)
-      (model/insert editor-state html-converted)
+      (es/insert editor-state html-converted)
 
       plain-text?
-      (model/insert editor-state (.. event -clipboardData (getData mime-plaintext)))
+      (es/insert editor-state (.. event -clipboardData (getData mime-plaintext)))
 
       :else
       (es/identity-update editor-state))))
