@@ -4,8 +4,6 @@
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
                                                Fragment
-                                               insert-start
-                                               insert-end
                                                text
                                                len
                                                selected-content
@@ -84,7 +82,7 @@
   (let [children (:children doc)
         para (get children para-uuid)
         prev (dll/prev children para-uuid)
-        merged (insert-end prev (p/fragment (:runs para)))
+        merged (p/insert-end prev (p/fragment (:runs para)))
         new-children (-> children (dissoc para-uuid) (assoc (:uuid prev) merged))]
     (assoc doc :children new-children)))
 
@@ -110,14 +108,14 @@
   [doc sel paragraphs]
   {:pre [(sel/single? sel)
          (sequential? paragraphs)
-         (> (count paragraphs) 1)]}
+         #_(> (count paragraphs) 1)]}
   (let [target-para-uuid (-> sel :start :paragraph)
         target-para (get (:children doc) target-para-uuid)
         sel-caret (sel/caret sel)
         first-paragraph-in-list (first paragraphs)
         first-paragraph (-> target-para
                             (p/delete-after sel-caret)
-                            (insert-end first-paragraph-in-list)
+                            (p/insert-end first-paragraph-in-list)
                             ;; TODO: should this be conditional based on the selection offset or something?
                             ;; Is this current behavior intuitive?
                             #_(assoc :type (:type first-paragraph-in-list)))
@@ -126,7 +124,7 @@
                                  (last paragraphs))
         last-paragraph (-> target-para
                            (p/delete-before sel-caret)
-                           (insert-start last-paragraph-in-list)
+                           (p/insert-start last-paragraph-in-list)
                            (assoc :uuid (:uuid last-paragraph-in-list)))
         ;; TODO: optimize for case where `paragraphs` is DLL?
         in-between-paragraphs (->> paragraphs (drop 1) (drop-last 1))
@@ -180,7 +178,10 @@
   DocumentFragment
   [doc sel fragment]
   (if (sel/single? sel)
-    (insert-paragraphs-into-doc doc sel (sl/items fragment))
+    (let [paragraphs (sl/items fragment)]
+      (if (= 1 (count paragraphs))
+        (insert-into-single-paragraph doc sel (first paragraphs))
+        (insert-paragraphs-into-doc doc sel paragraphs)))
     (-> (delete doc sel)
         (insert (sel/collapse-start sel) fragment))))
 

@@ -177,7 +177,7 @@
   [{:keys [paragraph run] :as parser-state}]
   (if (and paragraph run)
     (-> parser-state
-        (update :paragraph m/insert-end run)
+        (update :paragraph p/insert-end run)
         (assoc :run nil))
     parser-state))
 
@@ -205,7 +205,7 @@
   (if (.startsWith (m/text paragraph) "\t")
     (-> paragraph
         (p/delete (sel/selection [(:uuid paragraph) 1]))
-        (m/insert-start "\u2003"))
+        (p/insert-start "\u2003"))
     paragraph))
 
 (defn- adjust-paragraph?
@@ -278,7 +278,7 @@
   [{:keys [num] :as _cmd} parser-state]
   (if (and (>= num 100) (:paragraph parser-state))
     ;; Insert tab at start of paragraph if fi (first indent) is above a given threshold
-    (update parser-state :paragraph m/insert-start "\u2003")
+    (update parser-state :paragraph p/insert-start "\u2003")
     parser-state))
 
 (defn- handle-u

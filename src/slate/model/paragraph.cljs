@@ -5,8 +5,6 @@
             [slate.model.common :refer [TextContainer
                                         Selectable
                                         Fragment
-                                        insert-start
-                                        insert-end
                                         text
                                         len
                                         blank?
@@ -233,31 +231,46 @@
     (assoc (insert para sel (fragment (:runs para-to-insert)))
            :type new-type)))
 
-(defmethod insert-start [Paragraph ParagraphFragment]
+(defmulti insert-start
+  "Inserts at the start of the paragraph."
+  (fn [& args] (type (last args))))
+
+(defmulti insert-end
+  "Inserts at the end of the paragraph."
+  (fn [& args] (type (last args))))
+
+(defmethod insert-start
+  ParagraphFragment
   [para runs]
   (insert para (selection [(:uuid para) 0]) runs))
 
-(defmethod insert-start [Paragraph r/Run]
+(defmethod insert-start
+  r/Run
   [para run]
   (insert para run))
 
-(defmethod insert-start [Paragraph js/String]
+(defmethod insert-start
+  js/String
   [para text]
   (insert para (selection [(:uuid para) 0]) (r/run text)))
 
-(defmethod insert-start [Paragraph Paragraph]
+(defmethod insert-start
+  Paragraph
   [para para-to-insert]
   (insert para (selection [(:uuid para) 0]) para-to-insert))
 
-(defmethod insert-end [Paragraph ParagraphFragment]
+(defmethod insert-end
+  ParagraphFragment
   [para fragment]
   (insert para (selection [(:uuid para) (len para)]) fragment))
 
-(defmethod insert-end [Paragraph r/Run]
+(defmethod insert-end
+  r/Run
   [para run]
   (insert para (selection [(:uuid para) (len para)]) run))
 
-(defmethod insert-end [Paragraph Paragraph]
+(defmethod insert-end
+  Paragraph
   [para para-to-insert]
   (insert para (selection [(:uuid para) (len para)]) para-to-insert))
 

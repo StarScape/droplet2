@@ -139,6 +139,14 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
+(defmethod insert [EditorState Run]
+  [editor-state run]
+  (insert-text-container editor-state run))
+
+(defmethod insert [EditorState Paragraph]
+  [editor-state paragraph]
+  (insert-text-container editor-state paragraph))
+
 ;; TODO: replace [EditorState [Run]] with this
 (defmethod insert [EditorState ParagraphFragment]
   [{:keys [doc selection] :as editor-state} {:keys [runs] :as paragraph-fragment}]
@@ -154,46 +162,36 @@
                              :selection new-sel)
                       (changelist :changed-uuids #{(sel/start-para selection)})))))
 
-(defmethod insert [EditorState [Paragraph]]
-  [{:keys [doc selection] :as editor-state}, paragraphs]
-  (if (sel/range? selection)
-    (-> (delete editor-state) (>>= insert paragraphs))
-    (let [dedupe-para-uuid (fn [p]
-                             (if (contains? (:children doc) (:uuid p))
-                               (assoc p :uuid (random-uuid))
-                               p))
-          paragraphs (map dedupe-para-uuid paragraphs)
-          new-doc (doc/insert doc selection (doc/fragment paragraphs))
-          last-paragraph (last paragraphs)
-          new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
-                             (nav/autoset-formats last-paragraph))]
-      (->EditorUpdate (assoc editor-state
-                             :doc new-doc
-                             :selection new-selection)
-                      (changelist :changed-uuids #{(sel/start-para selection)}
-                                  :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))
-
-;; TODO: replace [EditorState [Paragraph]] with this
 (defmethod insert [EditorState DocumentFragment]
-  [editor-state fragment]
+  [{:keys [doc selection] :as editor-state}, fragment]
   (let [paragraphs (m/items fragment)]
     (if (= (count paragraphs) 1)
+      ;; For a number of reasons, it's easier to handle
+      ;; inserting a single paragraph as a distinct case.
       (insert editor-state (first paragraphs))
-      (insert editor-state paragraphs))))
-
-(defmethod insert [EditorState Paragraph]
-  [editor-state paragraph]
-  (insert-text-container editor-state paragraph))
-
-(defmethod insert [EditorState Run]
-  [editor-state run]
-  (insert-text-container editor-state run))
+      ;; Insert multiple paragraphs
+      (if (sel/range? selection)
+        (-> (delete editor-state) (>>= insert paragraphs))
+        (let [dedupe-para-uuid (fn [p]
+                                 (if (contains? (:children doc) (:uuid p))
+                                   (assoc p :uuid (random-uuid))
+                                   p))
+              paragraphs (map dedupe-para-uuid paragraphs)
+              new-doc (doc/insert doc selection (doc/fragment paragraphs))
+              last-paragraph (last paragraphs)
+              new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
+                                 (nav/autoset-formats last-paragraph))]
+          (->EditorUpdate (assoc editor-state
+                                 :doc new-doc
+                                 :selection new-selection)
+                          (changelist :changed-uuids #{(sel/start-para selection)}
+                                      :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))))
 
 (defmethod insert [EditorState js/String]
   [{:keys [selection] :as editor-state} text]
   (let [paragraphs (str/split-lines text)]
     (if (< 1 (count paragraphs))
-      (insert editor-state (map #(p/paragraph [(r/run %)]) paragraphs))
+      (insert editor-state (doc/fragment (map #(p/paragraph [(r/run %)]) paragraphs)))
       ;; Insert string == insert run with current active formats
       (insert editor-state (r/run text (:formats selection))))))
 
