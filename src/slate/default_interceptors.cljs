@@ -420,6 +420,20 @@
    :pagedown end-of-line
    :home start-of-doc
    :end end-of-doc
+
+   :ctrl+0 next-paragraph
+   :ctrl+shift+0 expand-right-paragraph
+   :ctrl+9 prev-paragraph
+   :ctrl+shift+9 expand-left-paragraph
+   (keyword "ctrl+]") next-sentence
+   (keyword "ctrl+shift+]") expand-right-sentence
+   (keyword "ctrl+[") prev-sentence
+   (keyword "ctrl+shift+[") expand-left-sentence
+   (keyword "ctrl+,") prev-clause
+   (keyword "ctrl+shift+,") expand-left-clause
+   :ctrl+. next-clause
+   :ctrl+shift+. expand-right-clause
+
    :ctrl+1 h1
    :ctrl+2 h2
    :ctrl+i italic
@@ -438,21 +452,23 @@
    :cmd+right end-of-line
    :cmd+shift+left expand-to-start-of-line
    :cmd+shift+right expand-to-end-of-line
-   :cmd+0 next-clause
-   :cmd+shift+0 expand-right-clause
-   :cmd+9 prev-clause
-   :cmd+shift+9 expand-left-clause
+   :cmd+up start-of-doc
+   :cmd+down end-of-doc
+   :cmd+a select-all
+
+   :cmd+0 next-paragraph
+   :cmd+shift+0 expand-right-paragraph
+   :cmd+9 prev-paragraph
+   :cmd+shift+9 expand-left-paragraph
    (keyword "cmd+]") next-sentence
    (keyword "cmd+shift+]") expand-right-sentence
    (keyword "cmd+[") prev-sentence
    (keyword "cmd+shift+[") expand-left-sentence
-   (keyword "cmd+,") prev-paragraph
-   (keyword "cmd+shift+,") expand-left-paragraph
-   :cmd+. next-paragraph
-   :cmd+shift+. expand-right-paragraph
-   :cmd+up start-of-doc
-   :cmd+down end-of-doc
-   :cmd+a select-all
+   (keyword "cmd+,") prev-clause
+   (keyword "cmd+shift+,") expand-left-clause
+   :cmd+. next-clause
+   :cmd+shift+. expand-right-clause
+
    :cmd+i italic
    :cmd+t strikethrough
    :cmd+b bold
@@ -460,6 +476,7 @@
    :cmd+2 h2
    :cmd+shift+u ulist
    :cmd+shift+o olist
+
    :cmd+o open})
 
 (def default-interceptors

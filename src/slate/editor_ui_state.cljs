@@ -492,6 +492,7 @@
   (let [current-editor-state (history/current-state (:history ui-state))
         matching-interceptor (interceptors/find-interceptor (:interceptors ui-state) pattern-or-event)]
     (when (and matching-interceptor
+               ;; TODO: should this instead by integrated into the custom implementation of (-invoke) for interceptors?
                ((:should-fire? matching-interceptor) current-editor-state))
       matching-interceptor)))
 
@@ -506,6 +507,7 @@
                                current-editor-state (history/current-state history)
                                matching-interceptor (interceptors/find-completion key-pressed interceptors input-history)]
                            (when (and matching-interceptor
+                                      ;; TODO: should this instead by integrated into the custom implementation of (-invoke) for interceptors?
                                       ((:should-fire? matching-interceptor) current-editor-state))
                              matching-interceptor)))
         {editor-elem :dom-elem

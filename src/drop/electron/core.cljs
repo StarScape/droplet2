@@ -139,16 +139,16 @@
                            {:label "File",
                             :submenu [{:label "New..."
                                        :accelerator "CmdOrCtrl+N"
-                                       :click #(.. window -webContents (send "menubar-item-clicked" "new"))}
+                                       :click #(.. window -webContents (send "file-menu-item-clicked" "new"))}
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+O"
-                                       :click #(.. window -webContents (send "menubar-item-clicked" "open"))}
+                                       :click #(.. window -webContents (send "file-menu-item-clicked" "open"))}
                                       {:label "Save"
                                        :accelerator "CmdOrCtrl+S"
-                                       :click #(.. window -webContents (send "menubar-item-clicked" "save"))}
+                                       :click #(.. window -webContents (send "file-menu-item-clicked" "save"))}
                                       {:label "Save As..."
                                        :accelerator "CmdOrCtrl+Shift+S"
-                                       :click #(.. window -webContents (send "menubar-item-clicked" "save-as"))}
+                                       :click #(.. window -webContents (send "file-menu-item-clicked" "save-as"))}
                                       {:label "Import..."
                                        :submenu [#_{:label "HTML"
                                                   :click #(launch-import-dialog! "html")}
@@ -156,12 +156,31 @@
                                                   :click #(launch-import-dialog! "rtf")}]}
                                       {:label "Export As..."
                                        :submenu [{:label "HTML"
-                                                  :click #(.. window -webContents (send "menubar-item-clicked" "initiate-file-export" "html"))}
+                                                  :click #(.. window -webContents (send "file-menu-item-clicked" "initiate-file-export" "html"))}
                                                  {:label "RTF"
-                                                  :click #(.. window -webContents (send "menubar-item-clicked" "initiate-file-export" "rtf"))}]}]}
+                                                  :click #(.. window -webContents (send "file-menu-item-clicked" "initiate-file-export" "rtf"))}]}]}
                            {:role "editMenu"}
                            {:label "View",
                             :submenu [{:role "togglefullscreen"}]}
+                           {:label "Selection",
+                            :submenu [{:label "Next Clause"
+                                       :accelerator "CmdOrCtrl+."
+                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "next-clause"))}
+                                      {:label "Prev Clause"
+                                       :accelerator "CmdOrCtrl+,"
+                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-clause"))}
+                                      {:label "Next Sentence"
+                                       :accelerator "CmdOrCtrl+]"
+                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "next-sentence"))}
+                                      {:label "Prev Sentence"
+                                       :accelerator "CmdOrCtrl+["
+                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-sentence"))}
+                                      {:label "Next Paragraph"
+                                       :accelerator "CmdOrCtrl+0"
+                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "next-paragraph"))}
+                                      {:label "Prev Paragraph"
+                                       :accelerator "CmdOrCtrl+9"
+                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-paragraph"))}]}
                            {:role "windowMenu"}
                            {:label "Help"
                             :role "help"

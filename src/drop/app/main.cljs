@@ -51,7 +51,7 @@
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
 ;; TODO: shorten interval between cmd++'s and cmd+-'s. Current difference in font size is too large.
-
+;; TODO: notable edge case for next/prev clause: , in middle of number, like 200,000
 
 ;; TECHNICAL IMPROVEMENTS
 

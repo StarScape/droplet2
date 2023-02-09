@@ -106,3 +106,11 @@ The AWS CLI must be configured in order for this to work.
 - `scripts/` contains bash scripts for running tests, etc.
 - `art_assets/` contains the .afdesign files for icons I've made
 - `public/` contains browser resources like the `index.html` file, CSS, fonts, and icons
+
+# Changelog
+
+### 0.0.2
+
+- Added a confirmation dialog before saving file
+- Added smart-nav actions to the application menu
+- Enabled the smart-nav shortcuts for Windows

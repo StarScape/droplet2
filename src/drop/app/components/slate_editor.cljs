@@ -5,6 +5,7 @@
             [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
             [drop.app.utils :as app-utils]
             [drop.utils :as utils]
+            [slate.api :as slate-api]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
             [slate.filetypes.core :as filetypes]
@@ -190,7 +191,7 @@
        (fn [_e, message-contents]
          (reset! *full-screen? message-contents)))
 
-  (.on ipcRenderer "menubar-item-clicked"
+  (.on ipcRenderer "file-menu-item-clicked"
        (fn [_e, item & args]
          (case item
            "new" (on-new!)
@@ -198,6 +199,16 @@
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
            "open" (on-open! *slate-instance)
            "initiate-file-export" (apply on-export! *slate-instance args))))
+
+  (.on ipcRenderer "selection-menu-item-clicked"
+       (fn [_e, item]
+         (case item
+           "next-clause" (slate-api/next-clause! *slate-instance)
+           "prev-clause" (slate-api/prev-clause! *slate-instance)
+           "next-sentence" (slate-api/next-sentence! *slate-instance)
+           "prev-sentence" (slate-api/prev-sentence! *slate-instance)
+           "next-paragraph" (slate-api/next-paragraph! *slate-instance)
+           "prev-paragraph" (slate-api/prev-paragraph! *slate-instance))))
 
   (.on ipcRenderer "open-file"
        (fn [_e, file-path, file-contents]
