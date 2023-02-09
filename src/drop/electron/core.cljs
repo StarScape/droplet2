@@ -54,6 +54,13 @@
       (catch js/Error e
         (js/console.log e)))))
 
+(defn show-new-file-confirmation-dialog!
+  "Synchronously show new file confirmation dialog. Return true if user presses confirm."
+  []
+  (let [result (.showMessageBoxSync dialog (clj->js {:message "Create new file? The current file will be closed."
+                                                     :buttons ["Confirm", "Cancel"]}))]
+    (= 0 result)))
+
 (defn reg-ipc-handlers! []
   (p-atoms/reg-handler!)
 
@@ -112,7 +119,11 @@
         (let [file-contents (fs/readFileSync file-path "utf8")]
           (set! (.-returnValue e) #js [false, file-contents]))
         (catch js/Error _
-          (set! (.-returnValue e) #js [true, ""]))))))
+          (set! (.-returnValue e) #js [true, ""])))))
+
+  (on-ipc "new-file-confirmation-dialog"
+    (fn [e]
+      (set! (.-returnValue e) (show-new-file-confirmation-dialog!)))))
 
 (defn init-app-menu [window]
   (let [template (clj->js [{:label (.-name app)

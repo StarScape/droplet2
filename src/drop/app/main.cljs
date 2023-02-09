@@ -5,14 +5,23 @@
             [reagent.dom :as rdom]
             [orchestra-cljs.spec.test :as st]))
 
-;; CLEANUP:
-;; TODO: Get rid of (insert) in editor_state.cljs
-;; TODO: Swap out [Run] and [Paragraph] for ParagraphFragment and DocumentFragment
-;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively.
+;; CORE CLEANUP
+
+;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively (don't for now)
+;; TODO: Possibly remove Selectable protocol in common.cljs
 ;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
 
-;; Prioritized:
+
+;; FEATURES
+
 ;; PROG: Test with large documents (100 pages)
+;; PROG: Test with large documents (100 pages)
+;; TODO: Add auto-updates capability
+;; TODO: Add automated crash reporting
+;; TODO: Add payment system
+;; TODO: Add spellcheck
+;; TODO: Add ⌃F/Alt+F/Hold shortcut button to display all shortcuts in actionbar
+;; TODO: Add Command Palette
 ;; TODO: Rewrite render engine with Canvas approach
 ;; TODO: Tabs
 ;; TODO: File browser
@@ -20,16 +29,20 @@
 ;; TODO: Drag n drog files
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Dark mode
-;; TODO: More pastes tests
-;; TODO: Space out paragraphs somewhat
 ;; TODO: Bug - pressing fn+f to go to fullscreen still enters an 'f' inside the document
-;; TODO: Break out all history fns into a protocol and implement for UIState
 ;; TODO: Implement highlight part of find and replace
 ;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Further polish criteria for history getting added to the backstack
-;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 
-;; Usability/Polish:
+
+;; USABILITY/POLISH
+
+;; TODO: I think it makes sense to reverse the nav shortcuts--ctrl+</> for clauses, [/] for sentences, (/) for paragraphs,
+;;       that way the scheme is directionally consistent across the keyboard, i.e. bottom -> top = jump words, clauses, sentences, paragraphs
+;; TODO: File -> Open Recent menu
+;; TODO: Right click on Dock Icon -> open file
+;; TODO: Add nav-shortcuts to window menubar
+;; TODO: Space out paragraphs somewhat
 ;; TODO: When merging two paragraphs, the merged paragraph has the :type of the first. Make it have the type of the second **iff** the first is blank.
 ;; TODO: Select from end of one paragraph down into the next/multiple, there should be a "nub" at the end of the first one
 ;; TODO: Double/triple click should select word/paragraph
@@ -39,12 +52,21 @@
 ;; auto-scrolls so that the cursor is the same distance down the screen that it was previously
 ;; TODO: shorten interval between cmd++'s and cmd+-'s. Current difference in font size is too large.
 
-;; TODO: command palette
-;; TODO: learn about React Spring
-;; TODO: learn about DataScript
-;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
+
+;; TECHNICAL IMPROVEMENTS
+
+;; TODO: Break out all history fns into a protocol and implement for UIState
+;; TODO: More pastes tests
 ;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to repro, upgrade shadow-cljs and then fire the save interceptor with cmd+
 ;; BUG: persistent atom causes issues with live-reloading. Nothing with persistent-atom specifically; something happening when file loading
+;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
+;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
+
+;; LEARNING
+
+;; TODO: learn about React Spring
+;; TODO: learn about DataScript
+
 
 (when utils/DEV
   (st/instrument))

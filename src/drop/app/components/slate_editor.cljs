@@ -8,6 +8,7 @@
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
             [slate.filetypes.core :as filetypes]
+            [slate.model.common :as slate-common]
             [slate.model.doc :as doc]
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
@@ -38,12 +39,20 @@
                                                   (app-utils/set-title! @*open-file (current-doc new-ui-state))))))
 (set! js/window.globalSlateInstance *slate-instance) ; for debugging use
 
+(defn spawn-new-file-confirmation-dialog!
+  "Spawns a dialog asking the user to confirm that they'd like to create a new file.
+   Will return `true` if the user confirms, false otherwise."
+  []
+  (.sendSync ipcRenderer "new-file-confirmation-dialog"))
+
 (defn on-new!
-  "Resets the open-file information, after the editor has already been set to a new, empty document.
-   This **does not** reset the editor surface in any way. For that, see `slate.editor-ui-state/new-document!`"
-  [new-ui-state]
-  (reset! *open-file {:path nil
-                      :last-saved-doc (current-doc new-ui-state)}))
+  "Spawns a confirmation dialog, and if confirmed, resets the editor
+   surface to a new file, and resets the open-file information."
+  []
+  (when (spawn-new-file-confirmation-dialog!)
+    (ui-state/new-document! *slate-instance)
+    (reset! *open-file {:path nil
+                        :last-saved-doc (current-doc @*slate-instance)})))
 
 (defn open-doc!
   [*ui-state doc]
@@ -184,9 +193,7 @@
   (.on ipcRenderer "menubar-item-clicked"
        (fn [_e, item & args]
          (case item
-           "new" (do
-                   (ui-state/new-document! *slate-instance)
-                   (on-new! @*slate-instance))
+           "new" (on-new!)
            "save" (on-save! (ui-state/serialize @*slate-instance))
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
            "open" (on-open! *slate-instance)
