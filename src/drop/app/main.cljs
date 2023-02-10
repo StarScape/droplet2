@@ -11,7 +11,6 @@
 ;; TODO: Possibly remove Selectable protocol in common.cljs
 ;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
 
-
 ;; FEATURES
 
 ;; PROG: Test with large documents (100 pages)

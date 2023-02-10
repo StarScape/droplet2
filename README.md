@@ -114,3 +114,4 @@ The AWS CLI must be configured in order for this to work.
 - Added a confirmation dialog before saving file
 - Added smart-nav actions to the application menu
 - Enabled the smart-nav shortcuts for Windows
+- Added 5px gap between paragraphs

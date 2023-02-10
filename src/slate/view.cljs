@@ -707,10 +707,13 @@
         dom-elem-rect (.getBoundingClientRect paragraph-dom-elem)
         px (- client-x (.-x dom-elem-rect))
         py (- client-y (.-y dom-elem-rect))
-        line (cond
-               (< py 0) (first lines)
-               (>= py (.-height dom-elem-rect)) (peek lines)
-               :else (nth lines (int (/ py line-height))))
+        line-idx (cond
+                   (< py 0) 0
+                   (>= py (.-height dom-elem-rect)) (dec (count lines))
+                   :else (min (int (/ py line-height))
+                              ;; account for paragraph bottom padding
+                              (dec (count lines))))
+        line (nth lines line-idx)
         offset (cond
                  (< px 0) (:start-offset line)
                  (> px (.-width dom-elem-rect)) (if (= line (peek lines))
@@ -772,6 +775,7 @@
    a paragraph to start searching at."
   ([event doc viewmodels editor-elem measure-fn shadow-root]
    (let [paragraph-in-path (match-elem-in-path event ".paragraph")
+         _ (js/console.log paragraph-in-path)
          paragraph-uuid (if paragraph-in-path
                           (dom-id->paragraph-uuid (.-id paragraph-in-path))
                           (find-overlapping-paragraph (:children doc) editor-elem (.-y event) shadow-root))
