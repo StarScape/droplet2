@@ -1,8 +1,11 @@
 (ns drop.app.main
-  (:require [drop.app.components.core :as components]
+  (:require [drop.app.events] ;; These two are only required to make the compiler
+            [drop.app.subs]
+            [drop.app.components.core :as components]
             [drop.app.components.slate-editor :as slate-editor]
             [drop.utils :as utils]
             [reagent.dom :as rdom]
+            [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
 ;; CORE CLEANUP
@@ -36,12 +39,8 @@
 
 ;; USABILITY/POLISH
 
-;; TODO: I think it makes sense to reverse the nav shortcuts--ctrl+</> for clauses, [/] for sentences, (/) for paragraphs,
-;;       that way the scheme is directionally consistent across the keyboard, i.e. bottom -> top = jump words, clauses, sentences, paragraphs
 ;; TODO: File -> Open Recent menu
 ;; TODO: Right click on Dock Icon -> open file
-;; TODO: Add nav-shortcuts to window menubar
-;; TODO: Space out paragraphs somewhat
 ;; TODO: When merging two paragraphs, the merged paragraph has the :type of the first. Make it have the type of the second **iff** the first is blank.
 ;; TODO: Select from end of one paragraph down into the next/multiple, there should be a "nub" at the end of the first one
 ;; TODO: Double/triple click should select word/paragraph
@@ -66,6 +65,7 @@
 ;; TODO: learn about React Spring
 ;; TODO: learn about DataScript
 
+(rf/dispatch-sync [:initialise-db])
 
 (when utils/DEV
   (st/instrument))
