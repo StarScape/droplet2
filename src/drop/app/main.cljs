@@ -1,6 +1,7 @@
 (ns drop.app.main
   (:require [drop.app.events] ;; These two are only required to make the compiler
             [drop.app.subs]
+            [drop.app.effects]
             [drop.app.components.core :as components]
             [drop.app.components.slate-editor :as slate-editor]
             [drop.utils :as utils]

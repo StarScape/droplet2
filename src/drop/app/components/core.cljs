@@ -11,6 +11,4 @@
   "Main app component."
   []
   [:div
-   #_[:h1 {:on-click #(rf/dispatch [:set-open-file (str "file-" (rand-int 100))])}
-    @(rf/subscribe [:open-file])]
    [main-editor]])

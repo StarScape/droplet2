@@ -14,8 +14,12 @@
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
+            [re-frame.core :as rf :refer [dispatch subscribe]]
+            [re-frame.db]
             ["electron" :refer [ipcRenderer]]
             ["path" :as path]))
+
+;; TODO: fix app title bar and * indicating non-saved state
 
 (defn- current-doc [ui-state]
   (some-> ui-state :history (history/current-state) :doc))
@@ -23,7 +27,7 @@
 (declare *slate-instance)
 
 (def *full-screen? (r/atom false))
-(defonce *open-file (doto (persistent-atom ::open-file
+#_(defonce *open-file (doto (persistent-atom ::open-file
                                            {:path nil, :last-saved-doc nil}
                                            :readers ui-state/slate-types-readers)
                       (add-watch :change-title (fn [_ _ _ new-open-file]
@@ -37,7 +41,7 @@
 ;; This will change at some point when tabs are implemented.
 (def *slate-instance (doto (r/atom nil)
                        (add-watch :change-title (fn [_ _ _ new-ui-state]
-                                                  (app-utils/set-title! @*open-file (current-doc new-ui-state))))))
+                                                  #_(app-utils/set-title! @*open-file (current-doc new-ui-state))))))
 (set! js/window.globalSlateInstance *slate-instance) ; for debugging use
 
 (defn spawn-new-file-confirmation-dialog!
@@ -52,19 +56,24 @@
   []
   (when (spawn-new-file-confirmation-dialog!)
     (ui-state/new-document! *slate-instance)
-    (reset! *open-file {:path nil
+    (dispatch [:set-open-file {:path nil
+                               :last-saved-doc (current-doc @*slate-instance)}])
+    #_(reset! *open-file {:path nil
                         :last-saved-doc (current-doc @*slate-instance)})))
 
 (defn open-doc!
   [*ui-state doc]
   (ui-state/load-document! *ui-state doc)
-  (swap! *open-file assoc :path nil))
+  #_(swap! *open-file assoc :path nil)
+  (dispatch [:set-open-file-path nil]))
 
 (defn open-file!
   [*ui-state file-path contents]
   (ui-state/load-file! *ui-state contents)
-  (reset! *open-file {:path file-path
-                      :last-saved-doc (current-doc @*ui-state)}))
+  #_(reset! *open-file {:path file-path
+                      :last-saved-doc (current-doc @*ui-state)})
+  (dispatch [:set-open-file {:path file-path
+                             :last-saved-doc (current-doc @*ui-state)}]))
 
 (defn on-open! [*ui-state]
   (-> (.invoke ipcRenderer "choose-file")
@@ -75,22 +84,25 @@
 (defn on-save-as!
   [serialized-history]
   (-> (.invoke ipcRenderer "save-file-as" serialized-history)
-      (.then #(reset! *open-file {:path %, :last-saved-doc (current-doc @*slate-instance)}))
+      (.then #(dispatch [:set-open-file {:path %, :last-saved-doc (current-doc @*slate-instance)}]))
+      ;; (.then #(reset! *open-file {:path %, :last-saved-doc (current-doc @*slate-instance)}))
       (.catch #())))
 
 (defn on-save! [serialized-history]
-  (let [{open-file-path :path} @*open-file]
+  (let [{open-file-path :path} (:open-file @re-frame.db/app-db)]
     (if open-file-path
       (do
         (.send ipcRenderer "save-file" open-file-path serialized-history)
-        (swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance)))
+        (dispatch [:set-last-saved-doc (current-doc @*slate-instance)])
+        #_(swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance)))
       (on-save-as! serialized-history))))
 
 (defn on-export! [*ui-state export-type]
   (let [{:keys [history]} @*ui-state
         doc (:doc (history/current-state history))
         exported (filetypes/export export-type doc)
-        suggested-file-name (.basename path (:path @*open-file) ".drop")]
+        open-file (:open-file @re-frame.db/app-db)
+        suggested-file-name (.basename path (:path open-file) ".drop")]
     (.send ipcRenderer "save-exported-file-as" exported export-type suggested-file-name)))
 
 (defn slate-editor [{:keys [file-contents ui-state-atom on-focus-find]}]
@@ -126,16 +138,17 @@
         focus-find-popup! (fn []
                             (when-let [elem @*find-and-replace-ref]
                               (.focus elem)))
-        current-file (:path @*open-file)
+        current-file @(subscribe [:open-file-path])
         save-file-contents (when current-file
-                        (let [[error?, file-text] (.sendSync ipcRenderer "read-file" current-file)]
-                          (if error?
-                            (do
-                              (reset! *open-file {:path nil, :last-saved-doc (doc/document)})
-                              ;; Slate instance will default to an empty document
-                              ;; when receiving nil, so propagating nil  works fine.
-                              nil)
-                            file-text)))]
+                             (let [[error?, file-text] (.sendSync ipcRenderer "read-file" current-file)]
+                               (if error?
+                                 (do
+                                   (dispatch [:set-open-file {:path nil, :last-saved-doc (doc/document)}])
+                                   #_(reset! *open-file {:path nil, :last-saved-doc (doc/document)})
+                                   ;; Slate instance will default to an empty document
+                                   ;; when receiving nil, so propagating nil works fine.
+                                   nil)
+                                 file-text)))]
     (add-watch *slate-instance :watcher (fn [_key _atom _old-state new-ui-state]
                                           (reset! *active-formats (ui-state/active-formats new-ui-state))
                                           (reset! *word-count (:word-count new-ui-state))))
@@ -185,7 +198,7 @@
 (defn on-startup
   "There is some global state and handlers in this namespace that need to be configured on startup."
   []
-  (app-utils/set-title! @*open-file (current-doc @*slate-instance))
+  #_(app-utils/set-title! @*open-file (current-doc @*slate-instance))
 
   (.on ipcRenderer "change-full-screen-status"
        (fn [_e, message-contents]
