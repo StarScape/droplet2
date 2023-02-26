@@ -57,7 +57,6 @@
 ;; TODO: Break out all history fns into a protocol and implement for UIState
 ;; TODO: More pastes tests
 ;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to repro, upgrade shadow-cljs and then fire the save interceptor with cmd+
-;; BUG: persistent atom causes issues with live-reloading. Nothing with persistent-atom specifically; something happening when file loading
 ;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
 

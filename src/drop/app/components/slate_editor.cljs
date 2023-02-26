@@ -1,6 +1,5 @@
 (ns drop.app.components.slate-editor
   (:require [clojure.pprint :as pprint]
-            [drop.app.persistent-atom :refer [persistent-atom clear-persistent-atom!]]
             [drop.app.components.actionbar :refer [actionbar]]
             [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
             [drop.app.utils :as app-utils]

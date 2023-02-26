@@ -7,8 +7,7 @@
             ["path" :as path]
             [cljs.core.async :refer [go]]
             [cljs.core.async.interop :refer-macros [<p!]]
-            [drop.electron.utils :refer [on-ipc handle-ipc]]
-            [drop.electron.persistent-atoms :as p-atoms]))
+            [drop.electron.utils :refer [on-ipc handle-ipc]]))
 
 (js/console.log "Evaluating main electron file...")
 
