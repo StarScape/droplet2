@@ -775,7 +775,6 @@
    a paragraph to start searching at."
   ([event doc viewmodels editor-elem measure-fn shadow-root]
    (let [paragraph-in-path (match-elem-in-path event ".paragraph")
-         _ (js/console.log paragraph-in-path)
          paragraph-uuid (if paragraph-in-path
                           (dom-id->paragraph-uuid (.-id paragraph-in-path))
                           (find-overlapping-paragraph (:children doc) editor-elem (.-y event) shadow-root))

@@ -61,8 +61,6 @@
     (= 0 result)))
 
 (defn reg-ipc-handlers! []
-  (p-atoms/reg-handler!)
-
   (on-ipc "show-error-dialog"
           (fn [_ title dialog-text]
             (.showErrorBox dialog title dialog-text)))

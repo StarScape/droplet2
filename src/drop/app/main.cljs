@@ -11,6 +11,8 @@
 
 ;; CORE CLEANUP
 
+;; TODO: Paste bug: try pasting the whole "Cristao Leaving the District" document into Droplet
+
 ;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively (don't for now)
 ;; TODO: Possibly remove Selectable protocol in common.cljs
 ;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
@@ -76,7 +78,6 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn main []
-  (js/console.log "Main!")
   (slate-editor/on-startup)
   (mount-main-component))
 

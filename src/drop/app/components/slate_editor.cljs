@@ -32,10 +32,6 @@
                       (add-watch :change-title (fn [_ _ _ new-open-file]
                                                  (app-utils/set-title! new-open-file (current-doc @*slate-instance))))))
 
-(comment
-  (clear-persistent-atom! ::open-file)
-  )
-
 ;; For now, there is a single global slate instance.
 ;; This will change at some point when tabs are implemented.
 (def *slate-instance (doto (r/atom nil)

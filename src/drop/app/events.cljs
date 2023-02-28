@@ -9,7 +9,7 @@
  :initialise-db
  [(inject-cofx :local-store-read [ls-key-open-file ui-state/slate-types-readers])]
  (fn [{:keys [ls-open-file] :as cofx}]
-   {:db (cond-> default-db
+   {:db (cond-> default-db ;; place in DB
           (some? ls-open-file) (assoc :open-file ls-open-file))}))
 
 (reg-event-fx
