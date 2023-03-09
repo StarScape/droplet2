@@ -110,7 +110,7 @@
                (paragraph (random-uuid) :ul [(run "UL 2")])
                (paragraph (random-uuid) :ul [(run "UL 3")])
                (paragraph [(run "")])
-               (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
+               (paragraph [(run "\tAnd a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])]))
   (doc->html test-doc)
   (->> (:children test-doc)
        (partition-by #(:type %))

@@ -39,9 +39,9 @@
    as well as converts any runs of 3 or more consecutive spaces to a tab char."
   [str]
   (.. str
-      (replaceAll (js/RegExp. "\\t" "g") "\u2003")
+      ;; (replaceAll (js/RegExp. "\\t" "g") "\u2003")
       (replaceAll non-standard-whitespace " ")
-      (replaceAll (js/RegExp. "\\s{3,}" "g") "\u2003")))
+      (replaceAll (js/RegExp. "\\s{3,}" "g") "\t")))
 
 (defn- root-font-size
   "Returns root font size for document, in pixels."

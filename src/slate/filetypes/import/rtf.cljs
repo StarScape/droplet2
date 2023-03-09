@@ -200,19 +200,20 @@
       :else
       paragraph)))
 
-(defn- convert-leading-tab?
-  [paragraph]
-  (if (.startsWith (m/text paragraph) "\t")
-    (-> paragraph
-        (p/delete (sel/selection [(:uuid paragraph) 1]))
-        (p/insert-start "\u2003"))
-    paragraph))
+;; (defn- convert-leading-tab?
+;;   [paragraph]
+;;   (if (.startsWith (m/text paragraph) "\t")
+;;     (-> paragraph
+;;         (p/delete (sel/selection [(:uuid paragraph) 1]))
+;;         (p/insert-start "\t"))
+;;     paragraph))
 
 (defn- adjust-paragraph?
   [paragraph]
   (-> paragraph
       (convert-paragraph-type?)
-      (convert-leading-tab?)))
+      ;; #_(convert-leading-tab?)
+      ))
 
 (defn- add-paragraph-to-doc
   "Adds current paragraph to doc and creates a new, empty paragraph"
@@ -278,7 +279,7 @@
   [{:keys [num] :as _cmd} parser-state]
   (if (and (>= num 100) (:paragraph parser-state))
     ;; Insert tab at start of paragraph if fi (first indent) is above a given threshold
-    (update parser-state :paragraph p/insert-start "\u2003")
+    (update parser-state :paragraph p/insert-start "\t")
     parser-state))
 
 (defn- handle-u
@@ -304,7 +305,7 @@
       :u (handle-u cmd parser-state)
       :fs (handle-fs cmd parser-state)
       :fi (handle-fi cmd parser-state)
-      :tab (handle-text "\u2003" parser-state)
+      :tab (handle-text "\t" parser-state)
       :emdash (handle-text "—" parser-state)
       :lquote (handle-text "'" parser-state)
       :rquote (handle-text "'" parser-state)

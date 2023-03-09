@@ -43,6 +43,7 @@
                     :height "0px"
                     :pointer-events "none"}]
    [:.slate-editor {:white-space "pre"
+                    :tab-size "25px"
                     :box-sizing "border-box"
                     :margin 0
                     :padding-top "20px"

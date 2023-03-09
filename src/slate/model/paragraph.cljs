@@ -300,7 +300,7 @@
 (defn indented?
   "Returns true if there is a tab at the start of the paragraph."
   [paragraph]
-  (= "\u2003" (some-> paragraph :runs (get 0) :text (aget 0))))
+  (= "\t" (some-> paragraph :runs (get 0) :text (aget 0))))
 
 (defn indent
   "Adds a tab to the start of the paragraph, if there is not already one present."
@@ -309,7 +309,7 @@
     paragraph
     (assoc paragraph :runs (-> (:runs paragraph)
                                (vec)
-                               (update-in [0 :text] #(str "\u2003" %))))))
+                               (update-in [0 :text] #(str "\t" %))))))
 
 (defn trim-start
   "Removes any leading whitespace from the paragraph (including tabs)."

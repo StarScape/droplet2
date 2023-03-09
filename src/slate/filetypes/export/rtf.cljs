@@ -25,7 +25,7 @@
       "\\" "\\\\"
       "{" "\\{"
       "}" "\\}"
-      "\u2003" "\t"
+      ;; "\u2003" "\t"
       ;; else
       (if (<= char-code 127)
         char
@@ -128,7 +128,7 @@
              (paragraph (random-uuid) :ul [(run "UL 2")])
              (paragraph (random-uuid) :ul [(run "UL 3")])
              (paragraph [(run "")])
-             (paragraph [(run "\u2003And a longer indented paragraph after, with Unicode: 建前. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
+             (paragraph [(run "\tAnd a longer indented paragraph after, with Unicode: 建前. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
              (paragraph [(run "")])]))
 
 (comment

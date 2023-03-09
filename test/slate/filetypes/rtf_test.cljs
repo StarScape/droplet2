@@ -68,7 +68,7 @@
                          (paragraph (random-uuid) :ul [(run "UL 2")])
                          (paragraph (random-uuid) :ul [(run "UL 3")])
                          (paragraph [(run "")])
-                         (paragraph [(run "\u2003And a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
+                         (paragraph [(run "\tAnd a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
                          (paragraph [(run "")])]))))
   (testing "errors"
     (is (thrown? js/Error (rtf-import/rtf->doc "This is not an RTF document")))
@@ -94,7 +94,7 @@
                             (paragraph (random-uuid) :ul [(run "UL 2")])
                             (paragraph (random-uuid) :ul [(run "UL 3")])
                             (paragraph [(run "")])
-                            (paragraph [(run "\u2003And a longer indented paragraph after, with Unicode: 建前. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
+                            (paragraph [(run "\tAnd a longer indented paragraph after, with Unicode: 建前. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
                             (paragraph [(run "")])])
         rtf (rtf-export/doc->rtf test-doc)
         reconverted-doc (rtf-import/rtf->doc rtf)]

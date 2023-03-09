@@ -45,7 +45,7 @@
 
 (definterceptor tab
   [editor-state _ui-state _e]
-  (es/insert editor-state "\u2003"))
+  (es/insert editor-state "\t"))
 
 ;; Movement / navigation ;;
 (definterceptor click
