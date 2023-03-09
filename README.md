@@ -115,3 +115,5 @@ The AWS CLI must be configured in order for this to work.
 - Added smart-nav actions to the application menu
 - Enabled the smart-nav shortcuts for Windows
 - Added 5px gap between paragraphs
+- Switch file open/close handling from persistent-atom to Re-frame
+- Remove gap between hightlighted lines (also temporarily remove border-radius from highlighting)

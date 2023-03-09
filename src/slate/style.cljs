@@ -60,6 +60,16 @@
    ;; of text, so that the height of the paragraph is set to the same as any other ('font height' is
    ;; not possible to get programmatically) . This solves that.
    [:.line::after {:content "\" \""}]
+   [:.span {:display "inline-block"}]
+   [:.slate-range-selection {:background-color "var(--range-selection-color)"
+                             ;;  :border-radius "3px"
+                             :z-index 1000}]
+   ;; Selected elements whose previous sibling is a .slate-range-selection (all but first)
+  ;;  [(keyword ".slate-range-selection + .slate-range-selection") {:border-top-left-radius 0
+  ;;                                                                :border-bottom-left-radius 0}]
+  ;;  ;; Selected elements whose next sibling is a .slate-range-selection (all but last)
+  ;;  [(keyword ".slate-range-selection:has(+ .slate-range-selection)") {:border-top-right-radius 0
+  ;;                                                                     :border-bottom-right-radius 0}]
    [:.slate-text-caret {:position "relative"}
     [:&::after {:position "absolute"
                 :content "\" \""
@@ -68,16 +78,6 @@
                 :background-color "var(--text-caret-color)"
                 :animation "blink-anim 1.2s infinite"
                 :animation-delay "0.5s"}]]
-   [:.slate-range-selection {:background-color "var(--range-selection-color)"
-                             :border-radius "3px"
-                             :z-index 1000}]
-   ;; Selected elements whose previous sibling is a .slate-range-selection (all but first)
-   [(keyword ".slate-range-selection + .slate-range-selection") {:border-top-left-radius 0
-                                                                 :border-bottom-left-radius 0}]
-   ;; Selected elements whose next sibling is a .slate-range-selection (all but last)
-   [(keyword ".slate-range-selection:has(+ .slate-range-selection)") {:border-top-right-radius 0
-                                                                      :border-bottom-right-radius 0}]
-
    [:ul :ol {:padding 0
              :margin 0}]
    [:.ul-format :.ol-format {:display "list-item"
