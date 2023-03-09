@@ -57,7 +57,7 @@
 
 (def ^:const font-size-min 10)
 (def ^:const font-size-max 70)
-(def ^:const font-size-delta "Amount to increase/decrease font size by each time." 5)
+(def ^:const font-size-delta "Amount to increase/decrease font size by each time." 1)
 
 (def slate-types-readers
   {'slate.model.selection.Selection map->Selection
@@ -623,7 +623,7 @@
   (let [shadow-dom-wrapper (js/document.createElement "div")
         shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
     (set! (.-className shadow-dom-wrapper) "slate-shadow-dom-wrapper")
-    (set! (.-maxWidth shadow-dom-wrapper-style) "800px")
+    (set! (.-maxWidth shadow-dom-wrapper-style) "700px")
     (set! (.-minWidth shadow-dom-wrapper-style) "300px")
     (set! (.-margin shadow-dom-wrapper-style) "0 auto")
 
