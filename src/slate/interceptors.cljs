@@ -228,7 +228,8 @@
                       ;; or something, depending on future needs. This behavior may not make sense e.g. for paren completion
                       (and (:add-to-history-immediately? interceptor)
                            (:include-in-history? interceptor))
-                      :completion
+                      (:input-name interceptor)
+                      ;; :completion
 
                       (= :insert (:input-name interceptor))
                       (.-data event)

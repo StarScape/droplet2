@@ -9,6 +9,12 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
+;; TODO: BUG - files don't open
+;; TODO: doubling clicking a word should select it, triple clicking should select paragraph
+;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
+;; TODO: consider not changing focus when switched windows
+;; TODO: selected words counter
+
 ;; CORE CLEANUP
 
 ;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively (don't for now)

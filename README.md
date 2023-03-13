@@ -118,3 +118,5 @@ The AWS CLI must be configured in order for this to work.
 - Switch file open/close handling from persistent-atom to Re-frame
 - Remove gap between hightlighted lines (also temporarily remove border-radius from highlighting)
 - Better tab handling, and increase tab width
+- Decrease maximum width of editor area
+- Change font size change delta from 5px to 1px
