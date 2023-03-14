@@ -304,7 +304,8 @@
                         [backward-fn, forward-fn] (cond
                                                     (nav/word? char) [nav/back-until-non-word nav/until-non-word]
                                                     (nav/separator? char) [nav/back-until-non-separator nav/until-non-separator]
-                                                    (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace])
+                                                    (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace]
+                                                    :else [(fn [_ i] i), (fn [_ i] i)])
                         para-text (m/text para)]
                     (sel/selection [(:uuid para) (backward-fn para-text (sel/caret selection))]
                                    [(:uuid para) (forward-fn para-text (sel/caret selection))])))]

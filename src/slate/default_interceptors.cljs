@@ -74,7 +74,6 @@
 (definterceptor triple-click
   {:include-in-history? false}
   [editor-state ui-state event]
-  ;; #p "triple click fired!"
   (let [click-location (view/mouse-event->selection event
                                                     (:doc editor-state)
                                                     (:viewmodels ui-state)
