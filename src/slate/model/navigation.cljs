@@ -63,11 +63,37 @@
        (not= nil char)
        (not= "" char)))
 
-(defn inside-word?
-  "Are the characters on either side of the char at index `idx` in the string `text` word-chars?"
-  [text idx]
-  (and (word? (.charAt text (dec idx)))
-       (word? (.charAt text (inc idx)))))
+(defprotocol WordLocations
+  (inside-word?
+   [entity location]
+    "Are the characters on either side of the text entity at the location word-chars?")
+  (at-word-start?
+    [entity location]
+    "Is the specified location in the text entity at the start of a word?")
+  (at-word-end?
+   [entity location]
+   "Is the specified location in the text entity at the start of a word?"))
+
+(extend-protocol WordLocations
+  string
+  (inside-word?
+   [text idx]
+   (and (word? (.charAt text (dec idx)))
+        (word? (.charAt text (inc idx)))))
+
+  Paragraph
+  (inside-word?
+   [paragraph selection]
+    (and (word? (m/char-before paragraph selection))
+         (word? (m/char-at paragraph selection))))
+  (at-word-start?
+   [paragraph selection]
+   (and (whitespace? (m/char-before paragraph selection))
+        (word? (m/char-at paragraph selection))))
+  (at-word-end?
+   [paragraph selection]
+   (and (word? (m/char-before paragraph selection))
+        (str/blank? (m/char-at paragraph selection)))))
 
 (defn until
   "Advance in string `text` beginning at index `start` until a character

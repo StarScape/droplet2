@@ -55,6 +55,18 @@
   ([arg1]
    (selection-impl :start arg1 :end arg1)))
 
+(defn single?
+  "Returns true if argument is a single selection."
+  [sel]
+  (= (:start sel) (:end sel)))
+
+(defn from-singles
+  "Constructs a Selection from two single Selections, where the first one will
+   be the start point of the new selection and the second one will be the end."
+  [sel1 sel2]
+  (selection [(-> sel1 :start :paragraph) (-> sel1 :start :offset)]
+             [(-> sel2 :end :paragraph) (-> sel2 :end :offset)]))
+
 (defn caret
   "Returns the location the caret will be rendered at."
   [sel]
@@ -78,11 +90,6 @@
   "Shortcut for (-> sel :end :paragraph)."
   [sel]
   (-> sel :end :paragraph))
-
-(defn single?
-  "Returns true if argument is a single selection."
-  [sel]
-  (= (:start sel) (:end sel)))
 
 (def range?
   "Returns true if argument is a range selection."

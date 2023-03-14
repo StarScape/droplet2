@@ -56,7 +56,7 @@
 
 (def valid-interceptor-keywords
   ^{:doc "Set of legal modifier keys and events for an interceptor pattern."}
-  (set/union modifier-keys #{:tab :right :up :delete :click :drag :down :insert :enter :left :cut :copy :paste}))
+  (set/union modifier-keys #{:tab :right :up :delete :click :double-click :triple-click :drag :down :insert :enter :left :cut :copy :paste}))
 
 (defn valid-interceptor-key?
   "Returns true if key (a string) is a valid interceptor key, otherwise false."

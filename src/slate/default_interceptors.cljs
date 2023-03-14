@@ -59,6 +59,30 @@
                                              (:shadow-root ui-state))]
     (es/set-selection editor-state new-sel)))
 
+(definterceptor double-click
+  {:include-in-history? false}
+  [editor-state ui-state event]
+  (let [click-location (view/mouse-event->selection event
+                                                    (:doc editor-state)
+                                                    (:viewmodels ui-state)
+                                                    (:dom-elem ui-state)
+                                                    (:measure-fn ui-state)
+                                                    (:shadow-root ui-state))]
+    (-> (es/set-selection editor-state click-location)
+        (>>= es/select-whole-word editor-state))))
+
+(definterceptor triple-click
+  {:include-in-history? false}
+  [editor-state ui-state event]
+  ;; #p "triple click fired!"
+  (let [new-sel (view/mouse-event->selection event
+                                             (:doc editor-state)
+                                             (:viewmodels ui-state)
+                                             (:dom-elem ui-state)
+                                             (:measure-fn ui-state)
+                                             (:shadow-root ui-state))]
+    (es/set-selection editor-state new-sel)))
+
 (definterceptor drag
   {:include-in-history? false}
   [editor-state ui-state event]
@@ -376,6 +400,8 @@
 
 (def universal-interceptors
   {:click click
+   :double-click double-click
+   :triple-click triple-click
    :drag drag
    :insert insert
    :delete delete

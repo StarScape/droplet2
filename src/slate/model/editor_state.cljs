@@ -284,6 +284,32 @@
                              :between between)]
     (set-selection editor-state new-selection)))
 
+(defn select-whole-word
+  [{:keys [selection] :as editor-state}]
+  {:pre [(sel/single? selection)]}
+  ;; TODO: would be good to write a test for this
+  (let [para (current-paragraph editor-state)
+        new-sel (cond
+                  (nav/inside-word? para selection)
+                  (sel/from-singles (nav/prev-word para selection) (nav/next-word para selection))
+
+                  (nav/at-word-start? para selection)
+                  (sel/from-singles selection (nav/next-word para selection))
+
+                  (nav/at-word-end? para selection)
+                  (sel/from-singles (nav/prev-word para selection) selection)
+
+                  :else
+                  (let [char (m/char-at para selection)
+                        [backward-fn, forward-fn] (cond
+                                                    (nav/word? char) [nav/back-until-non-word nav/until-non-word]
+                                                    (nav/separator? char) [nav/back-until-non-separator nav/until-non-separator]
+                                                    (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace])
+                        para-text (m/text para)]
+                    (sel/selection [(:uuid para) (backward-fn para-text (sel/caret selection))]
+                                   [(:uuid para) (forward-fn para-text (sel/caret selection))])))]
+    (set-selection editor-state new-sel)))
+
 ;; TODO: test
 (defn toggle-paragraph-type
   [{:keys [selection doc] :as editor-state} type]

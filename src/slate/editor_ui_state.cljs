@@ -501,7 +501,7 @@
   [*ui-state]
   (swap! *ui-state assoc :add-tip-to-backstack-callback #(add-tip-to-backstack-after-wait! *ui-state))
   (let [#_#_get-interceptor (partial interceptors/find-interceptor (:interceptors @*ui-state))
-        get-interceptor (fn [pattern] (find-interceptor @*ui-state pattern))
+        get-interceptor (fn [pattern-or-event] (find-interceptor @*ui-state pattern-or-event))
         get-completion (fn [key-pressed]
                          (let [{:keys [interceptors history input-history]} @*ui-state
                                current-editor-state (history/current-state history)
@@ -526,7 +526,11 @@
                            (.focus hidden-input #js {:preventScroll true})
                            (reset! *editor-surface-clicked? true)
                            (reset! *mousedown-event e)
-                           (fire-interceptor! *ui-state (get-interceptor :click) e)))
+                           (let [click-interceptor (case (.-detail e)
+                                                     3 (get-interceptor :triple-click)
+                                                     2 (get-interceptor :double-click)
+                                                     (get-interceptor :click))]
+                             (fire-interceptor! *ui-state click-interceptor e))))
 
       (.addEventListener js/window "mousemove"
                          (utils/throttle 50

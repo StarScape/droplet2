@@ -9,7 +9,8 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: BUG - files don't open
+;; TODO: BUG - files don't open when clicked
+;; TODO: BUG - leading tab doesn't appear to be being measured correctly
 ;; TODO: doubling clicking a word should select it, triple clicking should select paragraph
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
 ;; TODO: consider not changing focus when switched windows
