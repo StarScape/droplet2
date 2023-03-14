@@ -75,13 +75,14 @@
   {:include-in-history? false}
   [editor-state ui-state event]
   ;; #p "triple click fired!"
-  (let [new-sel (view/mouse-event->selection event
-                                             (:doc editor-state)
-                                             (:viewmodels ui-state)
-                                             (:dom-elem ui-state)
-                                             (:measure-fn ui-state)
-                                             (:shadow-root ui-state))]
-    (es/set-selection editor-state new-sel)))
+  (let [click-location (view/mouse-event->selection event
+                                                    (:doc editor-state)
+                                                    (:viewmodels ui-state)
+                                                    (:dom-elem ui-state)
+                                                    (:measure-fn ui-state)
+                                                    (:shadow-root ui-state))]
+    (-> (es/set-selection editor-state click-location)
+        (>>= es/select-whole-paragraph editor-state))))
 
 (definterceptor drag
   {:include-in-history? false}

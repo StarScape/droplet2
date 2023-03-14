@@ -310,6 +310,14 @@
                                    [(:uuid para) (forward-fn para-text (sel/caret selection))])))]
     (set-selection editor-state new-sel)))
 
+(defn select-whole-paragraph
+  [{:keys [selection] :as editor-state}]
+  {:pre [(sel/single? selection)]}
+  ;; TODO: would be good to write a test for this
+  (let [para (current-paragraph editor-state)
+        new-sel (sel/selection [(:uuid para) 0] [(:uuid para) (m/len para)])]
+    (set-selection editor-state new-sel)))
+
 ;; TODO: test
 (defn toggle-paragraph-type
   [{:keys [selection doc] :as editor-state} type]
