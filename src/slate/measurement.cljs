@@ -7,7 +7,7 @@
 
 (defn- create-elem!
   "Creates measurement element and adds it to the DOM."
-  [shadow-root font-size font-family]
+  [shadow-root font-size font-family tab-size]
   (let [outer-elem (.createElement js/document "div")
         elem (.createElement js/document "div")
         outer-style (.-style outer-elem)
@@ -29,6 +29,8 @@
     (set! (.-fontFamily style) font-family)
     (set! (.-fontStyle style) "normal")
     (set! (.-fontWeight style) "normal")
+    (set! (.-fontWeight style) "normal")
+    (set! (.-tabSize style) tab-size)
     (.appendChild outer-elem elem)
     (.appendChild shadow-root outer-elem)
     elem))
@@ -69,11 +71,11 @@
      (->> text-graphemes (map measure-grapheme) (reduce +)))))
 
 (defn ruler
-  "Given valid CSS values for a font size and family (e.g. `12px` and `Arial`),
-   returns a function that takes a string and (optionally) a list of formats,
-   and return the width (in pixels) that that string will **actually take up**
-   in the real DOM. This is important for rendering as we split text into lines
-   ourselves. Example:
+  "Given valid CSS values for a font size and family (e.g. `\"12px\"` and `\"Arial\"`),
+   as well as the tab size (e.g. `\"25px\"`), returns a function that takes a string
+   and (optionally) a list of formats, and return the width (in pixels) that that
+   string will **actually take up** in the real DOM. This is important for rendering
+   as we split text into lines ourselves. Example:
 
    ```
    (def measure-fn (ruler \"12px\" \"Times\"))
@@ -84,9 +86,9 @@
    Measurements are made by capturing the width of a hidden DOM element, but
    a cache of these values is maintained in the background, so subsequent calls
    will be cheaper."
-  [shadow-root font-size font-family]
+  [shadow-root font-size font-family tab-size]
   (let [cache #js {}
-        elem (create-elem! shadow-root font-size font-family)]
+        elem (create-elem! shadow-root font-size font-family tab-size)]
     (fn [& args]
       (apply measure elem cache args))))
 
@@ -100,8 +102,10 @@
 
    And returns the width the text will take up, in pixels."
   [elem shadow-root]
-  (let [style (js/getComputedStyle elem)]
-    (ruler shadow-root (.getPropertyValue style "font-size") (.getPropertyValue style "font-family"))))
+  (let [style (js/getComputedStyle elem)
+        ;; I literally don't know why but when you query the tab-size it always returns double what it should
+        tab-size-adjusted (str "calc(" (.getPropertyValue style "tab-size") " / 2)")]
+    (ruler shadow-root (.getPropertyValue style "font-size") (.getPropertyValue style "font-family") tab-size-adjusted)))
 
 (defn fake-measure-fn
   "For testing, returns every char width as 10px.
