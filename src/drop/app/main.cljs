@@ -10,7 +10,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: BUG - files don't open when clicked
-;; TODO: BUG - leading tab doesn't appear to be being measured correctly
 ;; TODO: move es/select-whole-word and es/select-whole-paragraph to navigation NS
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
 ;; TODO: consider not changing focus when switched windows

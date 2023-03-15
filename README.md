@@ -120,3 +120,6 @@ The AWS CLI must be configured in order for this to work.
 - Better tab handling, and increase tab width
 - Decrease maximum width of editor area
 - Change font size change delta from 5px to 1px
+- Fix bug where cut action was not added to editor history
+- Implement double click to select a word, and triple click to select a paragraph
+- Don't grey out editor surface when losing focus to another window, only when losing focus to something else inside Droplet

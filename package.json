@@ -1,7 +1,7 @@
 {
   "name": "droplet",
   "productName": "Droplet",
-  "version": "0.0.1",
+  "version": "0.0.2-SNAPSHOT",
   "author": "Jack Arrignton",
   "license": "Proprietary",
   "main": "public/js/electron.js",

@@ -589,8 +589,10 @@
 
     (bind-hidden-input-event! "focusout"
       (fn [e]
-        (.preventDefault e)
-        (handle-focus-out! *ui-state)))
+        (let [{:keys [hidden-input shadow-root]} @*ui-state]
+          (when (not= hidden-input (.-activeElement shadow-root))
+            (.preventDefault e)
+            (handle-focus-out! *ui-state)))))
 
     (bind-hidden-input-event! "focusin"
       (fn [e]
