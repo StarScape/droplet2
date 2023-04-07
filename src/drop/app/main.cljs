@@ -9,6 +9,8 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
+;; TODO: Figure out source of extremely slow initial render with current doc.
+;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
 ;; TODO: BUG - files don't open when clicked
 ;; TODO: should only make actionbar reappear in fullscreen if the user moves their mouse sufficiently close to it
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab

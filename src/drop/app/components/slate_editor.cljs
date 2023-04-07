@@ -32,8 +32,7 @@
                       (add-watch :change-title (fn [_ _ _ new-open-file]
                                                  (app-utils/set-title! new-open-file (current-doc @*slate-instance))))))
 
-;; For now, there is a single global slate instance.
-;; This will change at some point when tabs are implemented.
+;; For now, there is a single global slate instance. This will change at some point when tabs are implemented.
 (def *slate-instance (doto (r/atom nil)
                        (add-watch :change-title (fn [_ _ _ new-ui-state]
                                                   #_(app-utils/set-title! @*open-file (current-doc new-ui-state))))))
@@ -52,21 +51,16 @@
   (when (spawn-new-file-confirmation-dialog!)
     (ui-state/new-document! *slate-instance)
     (dispatch [:set-open-file {:path nil
-                               :last-saved-doc (current-doc @*slate-instance)}])
-    #_(reset! *open-file {:path nil
-                        :last-saved-doc (current-doc @*slate-instance)})))
+                               :last-saved-doc (current-doc @*slate-instance)}])))
 
 (defn open-doc!
   [*ui-state doc]
   (ui-state/load-document! *ui-state doc)
-  #_(swap! *open-file assoc :path nil)
   (dispatch [:set-open-file-path nil]))
 
 (defn open-file!
   [*ui-state file-path contents]
   (ui-state/load-file! *ui-state contents)
-  #_(reset! *open-file {:path file-path
-                      :last-saved-doc (current-doc @*ui-state)})
   (dispatch [:set-open-file {:path file-path
                              :last-saved-doc (current-doc @*ui-state)}]))
 
@@ -88,8 +82,7 @@
     (if open-file-path
       (do
         (.send ipcRenderer "save-file" open-file-path serialized-history)
-        (dispatch [:set-last-saved-doc (current-doc @*slate-instance)])
-        #_(swap! *open-file assoc :last-saved-doc (current-doc @*slate-instance)))
+        (dispatch [:set-last-saved-doc (current-doc @*slate-instance)]))
       (on-save-as! serialized-history))))
 
 (defn on-export! [*ui-state export-type]
@@ -100,95 +93,102 @@
         suggested-file-name (.basename path (:path open-file) ".drop")]
     (.send ipcRenderer "save-exported-file-as" exported export-type suggested-file-name)))
 
-(defn slate-editor [{:keys [file-contents ui-state-atom on-focus-find]}]
+(defn slate-editor [{:keys [file-contents *ui-state on-focus-find]}]
   [:div
    {:class "react-slate-elem flex-1 overflow-y-auto"
     :tabIndex "-1"
     :ref (fn [elem]
            (when elem
-             (let [*ui-state (ui-state/init! :*atom ui-state-atom
-                                             :save-file-contents file-contents
-                                             :dom-elem elem
-                                             :on-new on-new!
-                                             :on-open on-open!
-                                             :on-save on-save!
-                                             :on-save-as on-save-as!
-                                             :on-focus-find on-focus-find)]
-               ;; Utility for viewing editor history from console
-               (when utils/DEV
-                 (set! js/dumpHistory (fn
-                                        ([n]
-                                         (slate-utils/pretty-history-stack (:history @*ui-state) n))
-                                        ([]
-                                         (slate-utils/pretty-history-stack (:history @*ui-state) 10))))
-                 (set! js/printCurrentState #(-> (:history @*ui-state)
-                                                 history/current-state
-                                                 pprint/pprint
-                                                 js/console.log))))))}])
+             (ui-state/init! :*atom *ui-state
+                             :save-file-contents file-contents
+                             :dom-elem elem
+                             :on-new on-new!
+                             :on-open on-open!
+                             :on-save on-save!
+                             :on-save-as on-save-as!
+                             :on-focus-find on-focus-find)
+
+             ;; Utility for viewing editor history from console
+             (when utils/DEV
+               (set! js/dumpHistory (fn
+                                      ([n]
+                                       (slate-utils/pretty-history-stack (:history @*ui-state) n))
+                                      ([]
+                                       (slate-utils/pretty-history-stack (:history @*ui-state) 10))))
+               (set! js/printCurrentState #(-> (:history @*ui-state)
+                                               history/current-state
+                                               pprint/pprint
+                                               js/console.log)))))}])
+
+(defn find-and-replace
+  [*find-and-replace-ref focus-find-popup!]
+  (let [find-and-replace (-> @*slate-instance :find-and-replace)]
+    [find-and-replace-popup {:activated? (:active? find-and-replace)
+                             :ignore-case-toggled? (not (:ignore-case? find-and-replace))
+                             :current-occurrence (:current-occurrence-idx find-and-replace)
+                             :total-occurrences (count (:occurrences find-and-replace))
+                             :find-text (:find-text find-and-replace)
+                             :on-find-text-changed #(ui-state/set-find-text! *slate-instance %)
+                             :on-find #(ui-state/find! *slate-instance)
+                             :on-replace #(ui-state/replace-current! *slate-instance %)
+                             :on-replace-all #(ui-state/replace-all! *slate-instance %)
+                             :on-click-exit #(ui-state/cancel-find! *slate-instance)
+                             :on-click-next #(ui-state/next-occurrence! *slate-instance)
+                             :on-click-prev #(ui-state/prev-occurrence! *slate-instance)
+                             :on-toggle-ignore-case #(ui-state/toggle-ignore-case! *slate-instance)
+                             :on-key-down (fn [e]
+                                            (let [ui-state @*slate-instance
+                                                  matching-interceptor (ui-state/find-interceptor ui-state e)]
+                                              (when (or (= ui-state/undo! matching-interceptor)
+                                                        (= ui-state/redo! matching-interceptor))
+                                                (ui-state/fire-interceptor! *slate-instance matching-interceptor nil)
+                                                (focus-find-popup!))))
+                             :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}]))
 
 (defn main-editor []
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
-        *find-and-replace-ref (r/atom nil)
-        focus-find-popup! (fn []
-                            (when-let [elem @*find-and-replace-ref]
-                              (.focus elem)))
         current-file @(subscribe [:open-file-path])
         save-file-contents (when current-file
                              (let [[error?, file-text] (.sendSync ipcRenderer "read-file" current-file)]
                                (if error?
                                  (do
                                    (dispatch [:set-open-file {:path nil, :last-saved-doc (doc/document)}])
-                                   #_(reset! *open-file {:path nil, :last-saved-doc (doc/document)})
                                    ;; Slate instance will default to an empty document
                                    ;; when receiving nil, so propagating nil works fine.
                                    nil)
-                                 file-text)))]
+                                 file-text)))
+        *find-and-replace-ref (r/atom nil)
+        focus-find-ref! (fn []
+                          (when-let [elem @*find-and-replace-ref]
+                            (.focus elem)))]
     (add-watch *slate-instance :watcher (fn [_key _atom _old-state new-ui-state]
                                           (reset! *active-formats (ui-state/active-formats new-ui-state))
                                           (reset! *word-count (:word-count new-ui-state))))
     (fn []
       [:<>
+       ;; Find and replace outside of div with editor and actionbar bc it needs separate focus
+       [find-and-replace *find-and-replace-ref focus-find-ref!]
+
+       ;; Editor and actionbar
        [:div {:class "h-screen flex flex-row justify-center"
               :on-focus #(when-let [instance @*slate-instance]
                            (ui-state/focus! instance))}
         [slate-editor {:file-contents save-file-contents
-                       :ui-state-atom *slate-instance
-                       :on-focus-find focus-find-popup!}]]
-       (let [find-and-replace (-> @*slate-instance :find-and-replace)]
-         [find-and-replace-popup {:activated? (:active? find-and-replace)
-                                  :ignore-case-toggled? (not (:ignore-case? find-and-replace))
-                                  :current-occurrence (:current-occurrence-idx find-and-replace)
-                                  :total-occurrences (count (:occurrences find-and-replace))
-                                  :find-text (:find-text find-and-replace)
-                                  :on-find-text-changed #(ui-state/set-find-text! *slate-instance %)
-                                  :on-find #(ui-state/find! *slate-instance)
-                                  :on-replace #(ui-state/replace-current! *slate-instance %)
-                                  :on-replace-all #(ui-state/replace-all! *slate-instance %)
-                                  :on-click-exit #(ui-state/cancel-find! *slate-instance)
-                                  :on-click-next #(ui-state/next-occurrence! *slate-instance)
-                                  :on-click-prev #(ui-state/prev-occurrence! *slate-instance)
-                                  :on-toggle-ignore-case #(ui-state/toggle-ignore-case! *slate-instance)
-                                  :on-key-down (fn [e]
-                                                 (let [ui-state @*slate-instance
-                                                       matching-interceptor (ui-state/find-interceptor ui-state e)]
-                                                   (when (or (= ui-state/undo! matching-interceptor)
-                                                             (= ui-state/redo! matching-interceptor))
-                                                     (ui-state/fire-interceptor! *slate-instance matching-interceptor nil)
-                                                     (focus-find-popup!))))
-                                  :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}])
-       [actionbar {:active-formats @*active-formats
-                   :word-count @*word-count
-                   :*full-screen? *full-screen?
-                   :on-format-toggle #(let [interceptor (case %
-                                                          :italic ints/italic
-                                                          :strikethrough ints/strikethrough
-                                                          :bold ints/bold
-                                                          :h1 ints/h1
-                                                          :h2 ints/h2
-                                                          :ol ints/olist
-                                                          :ul ints/ulist)]
-                                        (ui-state/fire-interceptor! *slate-instance interceptor (js/Event. "keydown")))}]])))
+                       :*ui-state *slate-instance
+                       :on-focus-find focus-find-ref!}]
+        [actionbar {:active-formats @*active-formats
+                    :word-count @*word-count
+                    :*full-screen? *full-screen?
+                    :on-format-toggle #(let [interceptor (case %
+                                                           :italic ints/italic
+                                                           :strikethrough ints/strikethrough
+                                                           :bold ints/bold
+                                                           :h1 ints/h1
+                                                           :h2 ints/h2
+                                                           :ol ints/olist
+                                                           :ul ints/ulist)]
+                                         (ui-state/fire-interceptor! *slate-instance interceptor (js/Event. "keydown")))}]]])))
 
 (defn on-startup
   "There is some global state and handlers in this namespace that need to be configured on startup."
@@ -220,8 +220,6 @@
 
   (.on ipcRenderer "open-file"
        (fn [_e, file-path, file-contents]
-         ;;  (js/console.log "ipRenderer open-file!")
-         ;;  (js/console.log file-path file-contents)
          (try
            (open-file! *slate-instance file-path file-contents)
            (catch :default e
