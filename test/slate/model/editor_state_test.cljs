@@ -484,6 +484,15 @@
     (is (= (nav/shift+left (editor-state long-doc (selection ["d2" 0] ["d2" 4], :backwards? true)))
            (->EditorUpdate (editor-state long-doc (selection ["d1" 4] ["d2" 4], :backwards? true, :formats #{:bold})) (changelist))))))
 
+;; TODO: fix and add a select-whole-word function for doc
+
+(comment
+  (def single-para-doc (doc/document [(p/paragraph "p1" [(r/run "\t\"And so he said, like....hello world!\"")])]))
+
+  (deftest select-whole-word-test
+    (is (= 1 (es/select-whole-word (editor-state single-para-doc (selection ["p1" 2]))))))
+  )
+
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"
 ;;     (is (= [(run "bar" #{:bold :italic})

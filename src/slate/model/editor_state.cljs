@@ -71,7 +71,7 @@
   (->EditorUpdate editor-state (changelist)))
 
 (defn editor-state
-  "Creates a new EditorState object with the given doc and selection
+  "Creates a new EditorState object with the given doc and selection.
    If no args supplied, creates an EditorState with an empty, single-document
    paragraph and the selection at the start of that paragraph."
   ([doc selection]

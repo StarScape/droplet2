@@ -6,6 +6,10 @@
             ["@headlessui/react" :refer [Transition]]))
 
 (def actionbar-fade-out-ms 2500)
+(def actionbar-fullscreen-wakeup-threshold
+  "Threshold at which the actionbar will reappear when it has auto-hid itself in fullscreen mode,
+   expressed as a percentage of the vertical distance the mouse is from the top of the window."
+  0.85)
 
 (defn- shortcut-for [formatting-command]
   (if slate-utils/is-mac?
@@ -54,9 +58,11 @@
   (r/with-let [*transparent-mode? (r/atom false)
                set-transparent-debounced! (debounce actionbar-fade-out-ms #(when @*full-screen?
                                                                              (reset! *transparent-mode? true)))
-               move-handler (fn [_]
-                              (reset! *transparent-mode? false)
-                              (set-transparent-debounced!))
+               move-handler (fn [e]
+                              (let [mouse-percent-y (/ (.-clientY e) js/window.innerHeight)]
+                                (when (>= mouse-percent-y actionbar-fullscreen-wakeup-threshold)
+                                  (reset! *transparent-mode? false)
+                                  (set-transparent-debounced!))))
                _ (add-watch *full-screen? :fs-event-handler
                             (fn [_ _ _ fs?]
                               (if fs?

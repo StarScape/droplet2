@@ -10,7 +10,7 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: BUG - files don't open when clicked
-;; TODO: move es/select-whole-word and es/select-whole-paragraph to navigation NS
+;; TODO: should only make actionbar reappear in fullscreen if the user moves their mouse sufficiently close to it
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
 ;; TODO: consider not changing focus when switched windows
 ;; TODO: selected words counter

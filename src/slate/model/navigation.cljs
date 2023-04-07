@@ -77,23 +77,31 @@
 (extend-protocol WordLocations
   string
   (inside-word?
-   [text idx]
-   (and (word? (.charAt text (dec idx)))
-        (word? (.charAt text (inc idx)))))
+    [text idx]
+    (and (word? (.charAt text (dec idx)))
+         (word? (.charAt text (inc idx)))))
+  (at-word-start?
+    [paragraph idx]
+    (and (whitespace? (.charAt paragraph (dec idx)))
+         (word? (.charAt paragraph idx))))
+  (at-word-end?
+    [paragraph idx]
+    (and (word? (.charAt paragraph (dec idx)))
+         (str/blank? (.charAt paragraph idx))))
 
   Paragraph
   (inside-word?
-   [paragraph selection]
+    [paragraph selection]
     (and (word? (m/char-before paragraph selection))
          (word? (m/char-at paragraph selection))))
   (at-word-start?
-   [paragraph selection]
-   (and (whitespace? (m/char-before paragraph selection))
-        (word? (m/char-at paragraph selection))))
+    [paragraph selection]
+    (and (whitespace? (m/char-before paragraph selection))
+         (word? (m/char-at paragraph selection))))
   (at-word-end?
-   [paragraph selection]
-   (and (word? (m/char-before paragraph selection))
-        (str/blank? (m/char-at paragraph selection)))))
+    [paragraph selection]
+    (and (word? (m/char-before paragraph selection))
+         (str/blank? (m/char-at paragraph selection)))))
 
 (defn until
   "Advance in string `text` beginning at index `start` until a character
