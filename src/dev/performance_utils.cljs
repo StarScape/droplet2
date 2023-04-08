@@ -39,10 +39,25 @@
     (swap! registry dissoc name)
     result))
 
+(def ^:private *last-time-called (atom nil))
+
+(defn print-time-since-last!
+  "Prints the time since the last time this function was called.
+   Useful for narrowing down where bottlenecks are."
+  []
+  (let [last-time-called @*last-time-called
+        now (js/Date.now)]
+    (if last-time-called
+      (js/console.log (str (- now last-time-called) "ms"))
+      (js/console.log "No previous call."))
+    (reset! *last-time-called now)))
+
 (comment
   (start-time-measurement! "foobar")
   (pause-time-measurement! "foobar")
   (continue-time-measurement! "foobar")
   (stop-time-measurement! "foobar")
+
+  (print-time-since-last!)
 
   )

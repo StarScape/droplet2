@@ -77,8 +77,8 @@
         (dispatch [:doc-saved]))
       (on-save-as! serialized-history))))
 
-(defn on-export! [*ui-state export-type]
-  (let [{:keys [history]} @*ui-state
+(defn on-export! [ui-state export-type]
+  (let [{:keys [history]} ui-state
         doc (:doc (history/current-state history))
         exported (filetypes/export export-type doc)
         open-file-path (:open-file-path @re-frame.db/app-db)
@@ -199,7 +199,7 @@
            "save" (on-save! (ui-state/serialize @*slate-instance))
            "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
            "open" (on-open! *slate-instance)
-           "initiate-file-export" (apply on-export! *slate-instance args))))
+           "initiate-file-export" (apply on-export! @*slate-instance args))))
 
   (.on ipcRenderer "selection-menu-item-clicked"
        (fn [_e, item]
