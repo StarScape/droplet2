@@ -45,17 +45,17 @@
   []
   (when (spawn-new-file-confirmation-dialog!)
     (ui-state/new-document! *slate-instance)
-    (dispatch [:set-open-file nil])))
+    (dispatch [:set-open-file-path nil])))
 
 (defn open-doc!
   [*ui-state doc]
   (ui-state/load-document! *ui-state doc)
-  (dispatch [:set-open-file nil]))
+  (dispatch [:set-open-file-path nil]))
 
 (defn open-file!
   [*ui-state file-path contents]
   (ui-state/load-file! *ui-state contents)
-  (dispatch [:set-open-file file-path]))
+  (dispatch [:set-open-file-path file-path]))
 
 (defn on-open! [*ui-state]
   (-> (.invoke ipcRenderer "choose-file")
@@ -66,7 +66,7 @@
 (defn on-save-as!
   [serialized-history]
   (-> (.invoke ipcRenderer "save-file-as" serialized-history)
-      (.then #(dispatch [:set-open-file %]))
+      (.then #(dispatch [:set-open-file-path %]))
       (.catch #())))
 
 (defn on-save! [serialized-history]
@@ -82,7 +82,9 @@
         doc (:doc (history/current-state history))
         exported (filetypes/export export-type doc)
         open-file-path (:open-file-path @re-frame.db/app-db)
-        suggested-file-name (.basename path open-file-path ".drop")]
+        suggested-file-name (if open-file-path
+                              (.basename path open-file-path ".drop")
+                              "untitled")]
     (.send ipcRenderer "save-exported-file-as" exported export-type suggested-file-name)))
 
 (defn slate-editor [{:keys [file-contents *ui-state on-focus-find]}]
@@ -142,15 +144,15 @@
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
         current-file @(subscribe [:open-file-path])
-        save-file-contents (when current-file
-                             (let [[error?, file-text] (.sendSync ipcRenderer "read-file" #p current-file)]
-                               (if error?
-                                 (do
-                                   (dispatch [:set-open-file nil])
+        saved-file-contents (when current-file
+                              (let [[error?, file-text] (.sendSync ipcRenderer "read-file" current-file)]
+                                (if error?
+                                  (do
+                                    (dispatch [:set-open-file-path nil])
                                    ;; Slate instance will default to an empty document
                                    ;; when receiving nil, so propagating nil works fine.
-                                   nil)
-                                 file-text)))
+                                    nil)
+                                  file-text)))
         *find-and-replace-ref (r/atom nil)
         focus-find-ref! (fn []
                           (when-let [elem @*find-and-replace-ref]
@@ -167,7 +169,7 @@
        [:div {:class "h-screen flex flex-row justify-center"
               :on-focus #(when-let [instance @*slate-instance]
                            (ui-state/focus! instance))}
-        [slate-editor {:file-contents save-file-contents
+        [slate-editor {:file-contents saved-file-contents
                        :*ui-state *slate-instance
                        :on-focus-find focus-find-ref!}]
         [actionbar {:active-formats @*active-formats
@@ -186,8 +188,6 @@
 (defn on-startup
   "There is some global state and handlers in this namespace that need to be configured on startup."
   []
-  #_(app-utils/set-title! @*open-file (current-doc @*slate-instance))
-
   (.on ipcRenderer "change-full-screen-status"
        (fn [_e, message-contents]
          (reset! *full-screen? message-contents)))

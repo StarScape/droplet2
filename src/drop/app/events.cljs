@@ -15,7 +15,7 @@
       :set-title [(:open-file-path initial-db) true]})))
 
 (reg-event-fx
- :set-open-file
+ :set-open-file-path
  (fn [{:keys [db]} [_ file-path]]
    {:db (assoc db :open-file-path file-path)
     :fx [[:local-store-write [ls-key-open-file file-path]]
