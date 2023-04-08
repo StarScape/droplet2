@@ -5,7 +5,7 @@
 (defn get-ls-key [key] (str "ls-" key))
 
 (def default-db
-  {:open-file {:path nil, :last-saved-doc nil}})
+  {:open-file-path nil})
 
 (re-frame/reg-cofx
  :local-store-read

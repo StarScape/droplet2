@@ -8,22 +8,25 @@
 (reg-event-fx
  :initialise-db
  [(inject-cofx :local-store-read [ls-key-open-file ui-state/slate-types-readers])]
- (fn [{:keys [ls-open-file] :as cofx}]
-   {:db (cond-> default-db ;; place in DB
-          (some? ls-open-file) (assoc :open-file ls-open-file))}))
+ (fn [{:keys [ls-open-file] :as _cofx}]
+   (let [initial-db (cond-> default-db ;; place in DB
+                      (some? ls-open-file) (assoc :open-file-path ls-open-file))]
+     {:db initial-db
+      :set-title [(:open-file-path initial-db) true]})))
 
 (reg-event-fx
  :set-open-file
- (fn [{:keys [db]} [_ file-name]]
-   {:db (assoc db :open-file file-name)
-    :fx [[:local-store-write [ls-key-open-file file-name]]]}))
+ (fn [{:keys [db]} [_ file-path]]
+   {:db (assoc db :open-file-path file-path)
+    :fx [[:local-store-write [ls-key-open-file file-path]]
+         [:set-title [file-path true]]]}))
 
-(reg-event-db
- :set-open-file-path
- (fn [db [_ new-path]]
-   (assoc-in db [:open-file :path] new-path)))
+(reg-event-fx
+ :doc-changed
+ (fn [{:keys [db]} [_]]
+   {:set-title [(:open-file-path db) false]}))
 
-(reg-event-db
- :set-last-saved-doc
- (fn [db [_ new-last-saved]]
-   (assoc-in db [:open-file :last-saved-doc] new-last-saved)))
+(reg-event-fx
+ :doc-saved
+ (fn [{:keys [db]} [_]]
+   {:set-title [(:open-file-path db) true]}))

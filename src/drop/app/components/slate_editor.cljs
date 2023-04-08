@@ -26,11 +26,6 @@
 (declare *slate-instance)
 
 (def *full-screen? (r/atom false))
-#_(defonce *open-file (doto (persistent-atom ::open-file
-                                           {:path nil, :last-saved-doc nil}
-                                           :readers ui-state/slate-types-readers)
-                      (add-watch :change-title (fn [_ _ _ new-open-file]
-                                                 (app-utils/set-title! new-open-file (current-doc @*slate-instance))))))
 
 ;; For now, there is a single global slate instance. This will change at some point when tabs are implemented.
 (def *slate-instance (doto (r/atom nil)
@@ -50,19 +45,17 @@
   []
   (when (spawn-new-file-confirmation-dialog!)
     (ui-state/new-document! *slate-instance)
-    (dispatch [:set-open-file {:path nil
-                               :last-saved-doc (current-doc @*slate-instance)}])))
+    (dispatch [:set-open-file nil])))
 
 (defn open-doc!
   [*ui-state doc]
   (ui-state/load-document! *ui-state doc)
-  (dispatch [:set-open-file-path nil]))
+  (dispatch [:set-open-file nil]))
 
 (defn open-file!
   [*ui-state file-path contents]
   (ui-state/load-file! *ui-state contents)
-  (dispatch [:set-open-file {:path file-path
-                             :last-saved-doc (current-doc @*ui-state)}]))
+  (dispatch [:set-open-file file-path]))
 
 (defn on-open! [*ui-state]
   (-> (.invoke ipcRenderer "choose-file")
@@ -73,24 +66,23 @@
 (defn on-save-as!
   [serialized-history]
   (-> (.invoke ipcRenderer "save-file-as" serialized-history)
-      (.then #(dispatch [:set-open-file {:path %, :last-saved-doc (current-doc @*slate-instance)}]))
-      ;; (.then #(reset! *open-file {:path %, :last-saved-doc (current-doc @*slate-instance)}))
+      (.then #(dispatch [:set-open-file %]))
       (.catch #())))
 
 (defn on-save! [serialized-history]
-  (let [{open-file-path :path} (:open-file @re-frame.db/app-db)]
+  (let [open-file-path (:open-file-path @re-frame.db/app-db)]
     (if open-file-path
       (do
         (.send ipcRenderer "save-file" open-file-path serialized-history)
-        (dispatch [:set-last-saved-doc (current-doc @*slate-instance)]))
+        (dispatch [:doc-saved]))
       (on-save-as! serialized-history))))
 
 (defn on-export! [*ui-state export-type]
   (let [{:keys [history]} @*ui-state
         doc (:doc (history/current-state history))
         exported (filetypes/export export-type doc)
-        open-file (:open-file @re-frame.db/app-db)
-        suggested-file-name (.basename path (:path open-file) ".drop")]
+        open-file-path (:open-file-path @re-frame.db/app-db)
+        suggested-file-name (.basename path open-file-path ".drop")]
     (.send ipcRenderer "save-exported-file-as" exported export-type suggested-file-name)))
 
 (defn slate-editor [{:keys [file-contents *ui-state on-focus-find]}]
@@ -106,7 +98,8 @@
                              :on-open on-open!
                              :on-save on-save!
                              :on-save-as on-save-as!
-                             :on-focus-find on-focus-find)
+                             :on-focus-find on-focus-find
+                             :on-doc-changed #(dispatch [:doc-changed]))
 
              ;; Utility for viewing editor history from console
              (when utils/DEV
@@ -150,10 +143,10 @@
         *word-count (r/atom 0)
         current-file @(subscribe [:open-file-path])
         save-file-contents (when current-file
-                             (let [[error?, file-text] (.sendSync ipcRenderer "read-file" current-file)]
+                             (let [[error?, file-text] (.sendSync ipcRenderer "read-file" #p current-file)]
                                (if error?
                                  (do
-                                   (dispatch [:set-open-file {:path nil, :last-saved-doc (doc/document)}])
+                                   (dispatch [:set-open-file nil])
                                    ;; Slate instance will default to an empty document
                                    ;; when receiving nil, so propagating nil works fine.
                                    nil)

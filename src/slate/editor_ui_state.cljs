@@ -303,6 +303,20 @@
                    :changelist changelist)
         (reset! *ui-state new-ui-state)))))
 
+(defn- fire-doc-and-selection-changed-callbacks!
+  "Checks if doc and selection callbacks need to be fired based on
+   and old and new ui-state, and fires one or both of them if they do."
+  [old-ui-state new-ui-state on-doc-changed on-selection-changed]
+  (let [old-state (history/current-state (:history old-ui-state))
+        new-state (history/current-state (:history new-ui-state))]
+    ;; Fire doc changed listener if new and old docs are not the same object
+    (when-not (identical? (:doc old-state) (:doc new-state))
+      (on-doc-changed))
+    ;; Fire selection changed listener if new and old sels are not equal
+    ;; (Selection is a much smaller object, so a full equality check isn't as expensive.)
+    (when-not (= (:selection old-state) (:selection new-state))
+      (on-selection-changed))))
+
 (defn fire-update!
   "Update the UI state and UI in response to an EditorUpdate.
    If no event is supplied, nothing will be added to the input-history.
@@ -336,12 +350,15 @@
 
        ;; Integrate the history tip into the backstack after a period of inactivity
        include-in-history?
-       (add-tip-to-backstack-after-wait! *ui-state))))
+       (add-tip-to-backstack-after-wait! *ui-state))
+
+     ;; Fire doc and/or selection changed callbacks IF they have changed
+     (fire-doc-and-selection-changed-callbacks! ui-state @*ui-state (:on-doc-changed ui-state) (:on-selection-changed ui-state))))
   ([*ui-state editor-update opts]
    (fire-update! *ui-state editor-update nil opts)))
 
 (defn fire-normal-interceptor!
-  "This the core of Slate's main data loop.
+  "This is the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
    is called, which handles updating the state stored in the UIState atom and re-rendering
    elements in the DOM.
@@ -357,11 +374,20 @@
         opts (select-keys interceptor [:scroll-to-caret? :add-to-history-immediately? :include-in-history? :input-name])]
     (fire-update! *ui-state editor-update event opts)))
 
+(defn fire-manual-interceptor!
+  [*ui-state interceptor event]
+  (let [{:keys [on-doc-changed on-selection-changed] :as initial-ui-state} @*ui-state]
+    (interceptor *ui-state event)
+    ;; Fire doc and/or selection changed callbacks IF they have changed
+    ;; There is also a check for this in (fire-update!), but it needs to be handled separately for manual interceptors
+    (fire-doc-and-selection-changed-callbacks! initial-ui-state @*ui-state on-doc-changed on-selection-changed)))
+
 (defn fire-interceptor!
+  "Main function for firing an interceptor."
   [*ui-state interceptor event]
   (if (:manual? interceptor)
     ;; Manual interceptors circumvent Slate's default data-loop and just fire as regular functions
-    (interceptor *ui-state event)
+    (fire-manual-interceptor! *ui-state interceptor event)
     (fire-normal-interceptor! *ui-state interceptor event)))
 
 (defn goto-location!
@@ -671,8 +697,8 @@
    :save-file-contents - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom editor-state save-file-contents dom-elem on-new on-save on-save-as on-open on-focus-find]
-      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-focus-find #()}}]
+  [& {:keys [*atom editor-state save-file-contents dom-elem on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed]
+      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-focus-find #(), on-doc-changed #(), on-selection-changed #()}}]
   ;; Load global styles if not already loaded
   (style/install-global-styles!)
   ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
@@ -711,7 +737,9 @@
                               :on-save on-save
                               :on-save-as on-save-as
                               :on-load on-open
-                              :on-focus-find on-focus-find})
+                              :on-focus-find on-focus-find
+                              :on-doc-changed on-doc-changed
+                              :on-selection-changed on-selection-changed})
                (init-event-handlers! *atom)
                (full-dom-render! *atom))))
   *atom)
