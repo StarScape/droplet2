@@ -42,15 +42,20 @@
 (def ^:private *last-time-called (atom nil))
 
 (defn print-time-since-last!
-  "Prints the time since the last time this function was called.
-   Useful for narrowing down where bottlenecks are."
-  []
-  (let [last-time-called @*last-time-called
+  "Prints the time since the last time this function was called,
+   along with the tag supplied in the last call. Useful for narrowing
+   down where bottlenecks are."
+  [tag]
+  (let [last-time @*last-time-called
         now (js/Date.now)]
-    (if last-time-called
-      (js/console.log (str (- now last-time-called) "ms"))
+    (if last-time
+      (js/console.log (str (:tag last-time) ": " (- now (:time last-time)) "ms"))
       (js/console.log "No previous call."))
-    (reset! *last-time-called now)))
+    (reset! *last-time-called {:time now, :tag tag})))
+
+(defn clear-time-since-last!
+  []
+  (reset! *last-time-called nil))
 
 (comment
   (start-time-measurement! "foobar")
@@ -58,6 +63,8 @@
   (continue-time-measurement! "foobar")
   (stop-time-measurement! "foobar")
 
-  (print-time-since-last!)
+  (print-time-since-last! "marker1")
+  (print-time-since-last! "marker2")
+  (clear-time-since-last!)
 
   )

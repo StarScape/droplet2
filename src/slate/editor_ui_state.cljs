@@ -1,7 +1,7 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]]
                    [slate.utils :refer [slurp-file]]
-                   [dev.performance-utils :refer [inside-time-measurement!]])
+                   [dev.performance-utils :refer [measure-time-and-print! inside-time-measurement!]])
   (:require [clojure.edn :as edn]
             [clojure.set :as set]
             [clojure.string :as str]
@@ -76,7 +76,9 @@
 (defn deserialize
   "Parses the EDN of the saved editor file and returns the data structure."
   [edn-str]
-  (edn/read-string {:readers slate-types-readers} edn-str))
+  (let [res (edn/read-string {:readers slate-types-readers} edn-str)]
+    (def my-res res)
+    res))
 
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))

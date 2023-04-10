@@ -16,7 +16,8 @@
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [re-frame.db]
             ["electron" :refer [ipcRenderer]]
-            ["path" :as path]))
+            ["path" :as path]
+            [dev.performance-utils :as perf-utils :refer-macros [measure-time-and-print!]]))
 
 ;; TODO: fix app title bar and * indicating non-saved state
 
