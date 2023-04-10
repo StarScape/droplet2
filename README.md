@@ -123,3 +123,4 @@ The AWS CLI must be configured in order for this to work.
 - Fix bug where cut action was not added to editor history
 - Implement double click to select a word, and triple click to select a paragraph
 - Don't grey out editor surface when losing focus to another window, only when losing focus to something else inside Droplet
+- Removed editor history from .drop file; this is regrettable but the price of serializing and deserializing all that data was getting steep, with 5+ second load times for files with significant history. Files sizes were also blooming to ~45MB for a ~3500 word document.

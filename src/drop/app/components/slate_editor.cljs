@@ -5,6 +5,7 @@
             [drop.app.utils :as app-utils]
             [drop.utils :as utils]
             [slate.api :as slate-api]
+            [slate.serialization :as serialization]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
             [slate.filetypes.core :as filetypes]
@@ -197,8 +198,8 @@
        (fn [_e, item & args]
          (case item
            "new" (on-new!)
-           "save" (on-save! (ui-state/serialize @*slate-instance))
-           "save-as" (on-save-as! (ui-state/serialize @*slate-instance))
+           "save" (on-save! (serialization/serialize @*slate-instance))
+           "save-as" (on-save-as! (serialization/serialize @*slate-instance))
            "open" (on-open! *slate-instance)
            "initiate-file-export" (apply on-export! @*slate-instance args))))
 

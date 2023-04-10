@@ -19,6 +19,7 @@
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
+            [slate.serialization :refer [serialize deserialize]]
             [slate.view :as view]
             [slate.viewmodel :as vm]
             [slate.style :as style]
@@ -58,27 +59,6 @@
 (def ^:const font-size-min 10)
 (def ^:const font-size-max 70)
 (def ^:const font-size-delta "Amount to increase/decrease font size by each time." 1)
-
-(def slate-types-readers
-  {'slate.model.selection.Selection map->Selection
-   'slate.model.run.Run map->Run
-   'slate.model.paragraph.Paragraph map->Paragraph
-   'slate.model.doc.Document map->Document
-   'slate.model.editor-state.EditorState map->EditorState
-   'slate.model.editor-state.EditorUpdate map->EditorUpdate
-   'DoublyLinkedList #(apply dll %)})
-
-(defn serialize
-  "Serializes the history object to EDN."
-  [{:keys [history] :as _ui-state}]
-  (prn-str {:version 1, :history history}))
-
-(defn deserialize
-  "Parses the EDN of the saved editor file and returns the data structure."
-  [edn-str]
-  (let [res (edn/read-string {:readers slate-types-readers} edn-str)]
-    (def my-res res)
-    res))
 
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
@@ -189,12 +169,12 @@
     (view/relocate-hidden-input! shadow-root hidden-input focus?)
     (when scroll-to-caret? (view/scroll-to-caret! shadow-root))))
 
-(defn load-history!
-  "Loads a serialized .drop file into the editor, discarding current document and history."
-  [*ui-state history]
-  (let [word-count (word-count/full-count (:doc (history/current-state history)))]
+(defn load-editor-state!
+  "Loads an editor-state into the editor with a blank history, discarding current document and history."
+  [*ui-state editor-state]
+  (let [word-count (word-count/full-count (:doc editor-state))]
     (cancel-add-tip-to-backstack! *ui-state)
-    (swap! *ui-state merge {:history history
+    (swap! *ui-state merge {:history (history/init editor-state)
                             :word-count word-count
                             :input-history []})
     (full-dom-render! *ui-state)))
@@ -204,12 +184,12 @@
   [*ui-state file-contents-str]
   (let [deserialized (deserialize file-contents-str)]
     ;; TODO: throw user-visible error if the version of file is not compatible with this droplet version
-    (load-history! *ui-state (:history deserialized))))
+    (load-editor-state! *ui-state (:editor-state deserialized))))
 
 (defn load-document!
   "Loads a Document object into the editor with a fresh history, discarding current document and history."
   [*ui-state document]
-  (load-history! *ui-state (history/init (es/editor-state document))))
+  (load-editor-state! *ui-state (history/init (es/editor-state document))))
 
 (defn handle-resize!
   "Called when the window is resized, handles re-rendering the full doc."
@@ -699,7 +679,7 @@
    :save-file-contents - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom editor-state save-file-contents dom-elem on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed]
+  [& {:keys [*atom save-file-contents dom-elem on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed]
       :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-focus-find #(), on-doc-changed #(), on-selection-changed #()}}]
   ;; Load global styles if not already loaded
   (style/install-global-styles!)
@@ -711,10 +691,10 @@
                    [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
                    available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)
-                   editor-state (or editor-state (es/editor-state))
-                   history (if save-file-contents
-                             (:history (deserialize save-file-contents))
-                             (history/init editor-state))
+                   editor-state (if save-file-contents
+                                  (:editor-state (deserialize save-file-contents))
+                                  (es/editor-state))
+                   history (history/init editor-state)
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
                                         (interceptors/reg-interceptors manual-interceptors))

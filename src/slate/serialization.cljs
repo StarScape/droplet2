@@ -44,11 +44,12 @@
               deserialized-data migrations))))
 
 (defn serialize
-  "Serializes the history object to EDN."
+  "Serializes the history object to EDN, to be saved in a .drop file."
   [{:keys [history] :as _ui-state}]
-  (prn-str {:version current-version, :editor-state history}))
+  (prn-str {:version current-version, :editor-state (history/current-state history)}))
 
 (defn deserialize
-  "Parses the EDN of the saved editor file and returns the data structure."
+  "Parses the EDN of the saved .drop file and returns the data structure."
   [edn-str]
-  (-> (edn/read-string {:readers slate-types-readers} edn-str)))
+  (-> (edn/read-string {:readers slate-types-readers} edn-str)
+      (migrate)))
