@@ -3,6 +3,7 @@
   "productName": "Droplet",
   "version": "0.0.2-SNAPSHOT",
   "author": "Jack Arrignton",
+  "description": "Minimalist prose editor.",
   "license": "Proprietary",
   "main": "public/js/electron.js",
   "scripts": {
@@ -19,6 +20,7 @@
     "build-release-installer-mac": "electron-builder -m",
     "build-release-installers": "electron-builder -mwl --x64 --arm64",
     "build-release-mac": "npm run build-release-files && npm run build-release-installer-mac",
+    "build-snapshot-mac": "SNAPSHOT=true npm run build-release-mac",
     "build-releases": "npm run build-release-files && npm run build-release-installers",
     "deploy-installers": "./scripts/deploy_installers.sh $npm_package_version \"../droplet-website/json\" || true"
   },
