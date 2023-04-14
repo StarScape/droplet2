@@ -11,17 +11,23 @@
 
 (js/console.log "Evaluating main electron file...")
 
+(goog-define DEV true)
+(def is-dev? DEV)
+
+(declare init-window!)
+
+(def *main-window (atom nil))
+(def *all-windows-closed? (atom false))
+(def *slate-ready? (atom false))
+
+(def window-ready-chan (chan))
+(def slate-ready-chan (chan))
+(def opened-file-chan (chan))
+
 (def file-formats-info {"rtf" {:file-type-name "RTF"
                                :file-extension ".rtf"}
                         "html" {:file-type-name "HTML"
                                 :file-extension ".html"}})
-
-(goog-define DEV true)
-(def is-dev? DEV)
-
-(def *main-window (atom nil))
-(def window-ready-chan (chan))
-(def opened-file-chan (chan))
 
 (defn launch-import-dialog!
   "Launches an file dialog to import the specified format type.
@@ -61,6 +67,21 @@
   (let [result (.showMessageBoxSync dialog (clj->js {:message "Create new file? The current file will be closed."
                                                      :buttons ["Confirm", "Cancel"]}))]
     (= 0 result)))
+
+
+
+(defn listen-for-file-open-events! []
+  (go-loop []
+    (let [[path contents] (<! opened-file-chan)]
+      (when-not @*main-window ; window either not finished opening, or closed but app running (macOS)
+        ;; Reinitialize window (macOS)
+        (when @*all-windows-closed?
+          (init-window!))
+        (<! window-ready-chan)) ; wait for window to be ready
+
+      (when-not @*slate-ready? (<! slate-ready-chan)) ; wait for slate to be ready
+      (.. @*main-window -webContents (send "open-file" path contents))
+      (recur))))
 
 (defn reg-ipc-handlers! []
   (on-ipc "show-error-dialog"
@@ -124,15 +145,11 @@
     (fn [e]
       (set! (.-returnValue e) (show-new-file-confirmation-dialog!))))
 
-  (on-ipc-once "slate-ready"
-               (fn [e]
-                 ;; Listen for open-file events (macOS only)
-                 (go-loop []
-                   (let [[path contents] (<! opened-file-chan)]
-                     ;; TODO: window needs to open if not open
-                     (<! window-ready-chan) ; wait for window to be ready
-                     (.. @*main-window -webContents (send "open-file" path contents))
-                     (recur))))))
+  (on-ipc "slate-ready"
+          (fn [_e]
+            ;; Listen for open-file events (macOS only)
+            (reset! *slate-ready? true)
+            (go (>! slate-ready-chan true)))))
 
 (defn init-app-menu [window]
   (let [template (clj->js [{:label (.-name app)
@@ -159,7 +176,7 @@
                                        :accelerator "CmdOrCtrl+Shift+S"
                                        :click #(.. window -webContents (send "file-menu-item-clicked" "save-as"))}
                                       {:label "Import..."
-                                       :submenu [#_{:label "HTML"
+                                       :submenu [{:label "HTML"
                                                   :click #(launch-import-dialog! "html")}
                                                  {:label "RTF"
                                                   :click #(launch-import-dialog! "rtf")}]}
@@ -195,15 +212,14 @@
                             :role "help"
                             :submenu [{:label "View Droplet Version",
                                        :click #(.showMessageBox dialog #js {:message (str "Droplet Version: " (.getVersion app))})}]}])]
-    (when true #_is-dev?
+    (when is-dev?
       (.push template (clj->js {:label "Dev"
                                 :submenu [{:role "reload"}
                                           {:role "forcereload"}
                                           {:role "toggledevtools"}]})))
-
     (.setApplicationMenu Menu (.buildFromTemplate Menu template))))
 
-(defn init-window []
+(defn init-window! []
   (let [window-state (window-state-keeper #js {:defaultWidth 1200
                                                :defaultHeight 900})
         window (BrowserWindow.
@@ -238,17 +254,12 @@
 
     (init-app-menu window)
 
-    (async/close! window-ready-chan)
+    (go (>! window-ready-chan true))
+    (reset! *all-windows-closed? false)
 
     (js/console.log "Initialized Electron browser window")))
 
 (defn main []
-  (.on app "open-file"
-       (fn [event path]
-         (fs/readFile path "utf8" (fn [err, contents]
-                                    (when-not err
-                                      (go (>! opened-file-chan [path contents])))))))
-
   ; CrashReporter can just be omitted
   (.start crashReporter
           #js {:companyName "Droplet"
@@ -256,11 +267,22 @@
                :submitURL "https://example.com/submit-url"
                :autoSubmit false})
 
-  (.on app "window-all-closed" #(when-not (= js/process.platform "darwin") (.quit app)))
-  (.on app "ready" init-window)
+  (.on app "open-file"
+       (fn [_event path]
+         (fs/readFile path "utf8" (fn [err, contents]
+                                    (when-not err
+                                      (go (>! opened-file-chan [path contents])))))))
+
+  (.on app "window-all-closed" #(if (= js/process.platform "darwin")
+                                  (do
+                                    (reset! *all-windows-closed? true)
+                                    (reset! *slate-ready? false))
+                                  (.quit app)))
+  (.on app "ready" init-window!)
 
   (.on app "activate" (fn []
                         (when (zero? (.. BrowserWindow (getAllWindows) -length))
-                          (init-window))))
+                          (init-window!))))
 
-  (reg-ipc-handlers!))
+  (reg-ipc-handlers!)
+  (listen-for-file-open-events!))
