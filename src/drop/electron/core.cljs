@@ -5,9 +5,9 @@
             ["fs" :as fs]
             ["node:fs/promises" :refer [readFile writeFile]]
             ["path" :as path]
-            [cljs.core.async :refer [go]]
+            [cljs.core.async :as async :refer [chan <! >!] :refer-macros [go go-loop]]
             [cljs.core.async.interop :refer-macros [<p!]]
-            [drop.electron.utils :refer [on-ipc handle-ipc]]))
+            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc]]))
 
 (js/console.log "Evaluating main electron file...")
 
@@ -20,6 +20,8 @@
 (def is-dev? DEV)
 
 (def *main-window (atom nil))
+(def window-ready-chan (chan))
+(def opened-file-chan (chan))
 
 (defn launch-import-dialog!
   "Launches an file dialog to import the specified format type.
@@ -120,7 +122,17 @@
 
   (on-ipc "new-file-confirmation-dialog"
     (fn [e]
-      (set! (.-returnValue e) (show-new-file-confirmation-dialog!)))))
+      (set! (.-returnValue e) (show-new-file-confirmation-dialog!))))
+
+  (on-ipc-once "slate-ready"
+               (fn [e]
+                 ;; Listen for open-file events (macOS only)
+                 (go-loop []
+                   (let [[path contents] (<! opened-file-chan)]
+                     ;; TODO: window needs to open if not open
+                     (<! window-ready-chan) ; wait for window to be ready
+                     (.. @*main-window -webContents (send "open-file" path contents))
+                     (recur))))))
 
 (defn init-app-menu [window]
   (let [template (clj->js [{:label (.-name app)
@@ -183,7 +195,7 @@
                             :role "help"
                             :submenu [{:label "View Droplet Version",
                                        :click #(.showMessageBox dialog #js {:message (str "Droplet Version: " (.getVersion app))})}]}])]
-    (when is-dev?
+    (when true #_is-dev?
       (.push template (clj->js {:label "Dev"
                                 :submenu [{:role "reload"}
                                           {:role "forcereload"}
@@ -219,21 +231,24 @@
 
     (.on ^js/electron.BrowserWindow window "closed"
          #(reset! *main-window nil))
-
     (.on ^js/electron.BrowserWindow window "enter-full-screen"
          #(.. window -webContents (send "change-full-screen-status", true)))
     (.on ^js/electron.BrowserWindow window "leave-full-screen"
          #(.. window -webContents (send "change-full-screen-status", false)))
-    (.on app "open-file"
-         (fn [event path]
-           (fs/readFile path "utf8" (fn [err, contents]
-                                      (.. window -webContents (send "open-file" path contents))))))
 
     (init-app-menu window)
+
+    (async/close! window-ready-chan)
 
     (js/console.log "Initialized Electron browser window")))
 
 (defn main []
+  (.on app "open-file"
+       (fn [event path]
+         (fs/readFile path "utf8" (fn [err, contents]
+                                    (when-not err
+                                      (go (>! opened-file-chan [path contents])))))))
+
   ; CrashReporter can just be omitted
   (.start crashReporter
           #js {:companyName "Droplet"
@@ -243,8 +258,7 @@
 
   (.on app "window-all-closed" #(when-not (= js/process.platform "darwin") (.quit app)))
   (.on app "ready" init-window)
-  #_(.. app (whenReady) (then (fn []
-                                (.on app "activate" #(js/console.log "activate!")))))
+
   (.on app "activate" (fn []
                         (when (zero? (.. BrowserWindow (getAllWindows) -length))
                           (init-window))))

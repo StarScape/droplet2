@@ -20,9 +20,7 @@
             ["path" :as path]
             [dev.performance-utils :as perf-utils :refer-macros [measure-time-and-print!]]))
 
-;; TODO: fix app title bar and * indicating non-saved state
-
-(defn- current-doc [ui-state]
+#_(defn- current-doc [ui-state]
   (some-> ui-state :history (history/current-state) :doc))
 
 (declare *slate-instance)
@@ -30,9 +28,7 @@
 (def *full-screen? (r/atom false))
 
 ;; For now, there is a single global slate instance. This will change at some point when tabs are implemented.
-(def *slate-instance (doto (r/atom nil)
-                       (add-watch :change-title (fn [_ _ _ new-ui-state]
-                                                  #_(app-utils/set-title! @*open-file (current-doc new-ui-state))))))
+(def *slate-instance (r/atom nil))
 (set! js/window.globalSlateInstance *slate-instance) ; for debugging use
 
 (defn spawn-new-file-confirmation-dialog!
@@ -103,7 +99,8 @@
                              :on-save on-save!
                              :on-save-as on-save-as!
                              :on-focus-find on-focus-find
-                             :on-doc-changed #(dispatch [:doc-changed]))
+                             :on-doc-changed #(dispatch [:doc-changed])
+                             :on-ready #(.send ipcRenderer "slate-ready"))
 
              ;; Utility for viewing editor history from console
              (when utils/DEV

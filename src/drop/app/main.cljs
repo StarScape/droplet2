@@ -9,10 +9,6 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: Very slow initial render is due to deserializing an extremely large file (45MB).
-;; I imagine most of this space is being taken up by the backstack, since it's shoving a full
-;; copy of the document in there every single time. Figure out a way to get this number down.
-
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
 ;; TODO: BUG - files don't open when clicked
 ;; TODO: should only make actionbar reappear in fullscreen if the user moves their mouse sufficiently close to it

@@ -2,20 +2,19 @@
   (:require-macros [slate.interceptors :refer [definterceptor]]
                    [slate.utils :refer [slurp-file]]
                    [dev.performance-utils :refer [measure-time-and-print! inside-time-measurement!]])
-  (:require [clojure.edn :as edn]
-            [clojure.set :as set]
+  (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [drop.utils :as utils]
             [slate.model.common :as m]
             [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
-            [slate.model.editor-state :as es :refer [map->EditorState map->EditorUpdate]]
-            [slate.model.doc :refer [map->Document]]
-            [slate.model.paragraph :refer [map->Paragraph]]
-            [slate.model.run :refer [map->Run]]
-            [slate.model.selection :as sel :refer [map->Selection]]
-            [slate.dll :refer [dll]]
+            [slate.model.editor-state :as es]
+            [slate.model.doc]
+            [slate.model.paragraph]
+            [slate.model.run]
+            [slate.model.selection :as sel]
+            [slate.dll]
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
@@ -663,6 +662,8 @@
                        (js/document.fonts.load "bold 16px Merriweather")
                        (js/document.fonts.load "bold italic 16px Merriweather")]))
 
+(defn- nop [])
+
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
    atom will continue to be updated throughout the lifetime of the editor. Takes a series
@@ -679,8 +680,8 @@
    :save-file-contents - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom save-file-contents dom-elem on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed]
-      :or {*atom (atom nil), on-new #(), on-save #(), on-save-as #(), on-open #(), on-focus-find #(), on-doc-changed #(), on-selection-changed #()}}]
+  [& {:keys [*atom save-file-contents dom-elem on-ready on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed]
+      :or {*atom (atom nil), on-ready nop, on-new nop, on-save nop, on-save-as nop, on-open nop, on-focus-find nop, on-doc-changed nop, on-selection-changed nop}}]
   ;; Load global styles if not already loaded
   (style/install-global-styles!)
   ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
@@ -723,5 +724,6 @@
                               :on-doc-changed on-doc-changed
                               :on-selection-changed on-selection-changed})
                (init-event-handlers! *atom)
-               (full-dom-render! *atom))))
+               (full-dom-render! *atom)
+               (on-ready))))
   *atom)
