@@ -106,7 +106,6 @@
                        :on-selection-changed #(reset! *word-count (:word-count @*slate-instance))}]
         [actionbar {:active-formats @*active-formats
                     :word-count @*word-count
-                    :*full-screen? @(subscribe [:fullscreen?])
                     :on-format-toggle #(let [interceptor (case %
                                                            :italic ints/italic
                                                            :strikethrough ints/strikethrough

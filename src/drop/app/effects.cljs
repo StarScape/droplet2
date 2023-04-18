@@ -11,6 +11,23 @@
  (fn [[key val]]
    (.setItem js/localStorage (get-ls-key key) (prn-str val))))
 
+(defonce debounce-timeouts
+  (atom {}))
+
+(rf/reg-fx :dispatch-debounce
+        (fn [[id event-vec n]]
+          (js/clearTimeout (@debounce-timeouts id))
+          (swap! debounce-timeouts assoc id
+                 (js/setTimeout (fn []
+                                  (rf/dispatch event-vec)
+                                  (swap! debounce-timeouts dissoc id))
+                                n))))
+
+(rf/reg-fx :stop-debounce
+        (fn [id]
+          (js/clearTimeout (@debounce-timeouts id))
+          (swap! debounce-timeouts dissoc id)))
+
 (rf/reg-fx
  :set-title
  (fn [[open-file-path saved?]]

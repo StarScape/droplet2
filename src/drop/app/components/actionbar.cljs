@@ -1,15 +1,14 @@
 (ns drop.app.components.actionbar
-  (:require [drop.app.components.layout :refer [h-spacer-sm]]
+  (:require [drop.app.consts :as consts]
+            [drop.app.components.layout :refer [h-spacer-sm]]
             [drop.utils :refer [debounce]]
             [reagent.core :as r :refer-macros [with-let]]
+            [re-frame.core :as rf :refer [dispatch subscribe]]
             [slate.utils :as slate-utils]
-            ["@headlessui/react" :refer [Transition]]))
+            ["@headlessui/react" :refer [Transition]]
+            [re-frame.db :as db]))
 
-(def actionbar-fade-out-ms 2500)
-(def actionbar-fullscreen-wakeup-threshold
-  "Threshold at which the actionbar will reappear when it has auto-hid itself in fullscreen mode,
-   expressed as a percentage of the vertical distance the mouse is from the top of the window."
-  0.85)
+
 
 (defn- shortcut-for [formatting-command]
   (if slate-utils/is-mac?
@@ -54,25 +53,14 @@
    num-words
    [:span {:class "text-xs text-slate-500 ml-1"} (if (= 1 num-words) "word" "words")]])
 
-(defn actionbar [{:keys [active-formats word-count on-format-toggle *full-screen?]}]
-  (r/with-let [*transparent-mode? (r/atom false)
-               set-transparent-debounced! (debounce actionbar-fade-out-ms #(when @*full-screen?
-                                                                             (reset! *transparent-mode? true)))
-               move-handler (fn [e]
-                              (let [mouse-percent-y (/ (.-clientY e) js/window.innerHeight)]
-                                (when (>= mouse-percent-y actionbar-fullscreen-wakeup-threshold)
-                                  (reset! *transparent-mode? false)
-                                  (set-transparent-debounced!))))
-               #_ #__(add-watch *full-screen? :fs-event-handler
-                            (fn [_ _ _ fs?]
-                              (if fs?
-                                (do
-                                  (set-transparent-debounced!)
-                                  (.addEventListener js/window "mousemove" move-handler))
-                                (do
-                                  (reset! *transparent-mode? false)
-                                  (.removeEventListener js/window "mousemove" move-handler)))))]
-    (let [transparent? @*transparent-mode?
+(defn actionbar [{:keys [active-formats word-count on-format-toggle]}]
+  (r/with-let [move-handler (fn [e]
+                              (when (:fullscreen? @re-frame.db/app-db)
+                                (let [mouse-percent-y (/ (.-clientY e) js/window.innerHeight)]
+                                  (when (>= mouse-percent-y consts/actionbar-fullscreen-wakeup-threshold)
+                                    (dispatch [:actionbar-woken])))))
+               _ (.addEventListener js/window "mousemove" move-handler)]
+    (let [transparent? @(subscribe [:actionbar-transparent?])
           base-classes "fixed bottom-0 w-screen px-1 py-1 flex place-content-between transition-all duration-150 "]
       [:div {:class (str base-classes (if transparent?
                                         "bg-transparent"

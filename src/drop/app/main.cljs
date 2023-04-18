@@ -10,15 +10,12 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: fix actionbar after re-frame cleanup
 ;; TODO: move word-count and active-formats to re-frame db
 ;; TODO: test file opening from Finder
 ;; TODO: possibly clean up common before around setting localstorage val and title w/ a re-frame interceptor
 ;; TODO: implement loading spinner
 
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
-;; TODO: BUG - files don't open when clicked
-;; TODO: should only make actionbar reappear in fullscreen if the user moves their mouse sufficiently close to it
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
 ;; TODO: consider not changing focus when switched windows
 ;; TODO: selected words counter
@@ -79,9 +76,6 @@
 ;; TODO: learn about React Spring
 ;; TODO: learn about DataScript
 
-(rf/dispatch-sync [:boot])
-(ipc/init-handlers!)
-
 (when utils/DEV
   (st/instrument))
 
@@ -91,6 +85,8 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn main []
+  (rf/dispatch-sync [:boot])
+  (ipc/init-handlers!)
   (mount-main-component))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}

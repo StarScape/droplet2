@@ -15,3 +15,8 @@
  :fullscreen?
  (fn [db _]
    (-> db :fullscreen?)))
+
+(rf/reg-sub
+ :actionbar-transparent?
+ (fn [db _]
+   (-> db :actionbar-transparent?)))

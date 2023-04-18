@@ -10,7 +10,8 @@
   {:open-file {:path nil,
                :loading? true}
    :*slate-instance (r/atom nil)
-   :fullscreen? false})
+   :fullscreen? false
+   :actionbar-transparent? false})
 
 (defn- check-matches-spec
   "Returns the localstore-value if it matches the spec,

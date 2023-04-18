@@ -3,7 +3,8 @@
             [re-frame.core :refer [reg-event-db reg-event-fx inject-cofx path after]]
             [drop.app.db :refer [default-db]]
             [slate.serialization :refer [slate-types-readers]]
-            [slate.editor-ui-state :as ui-state]))
+            [slate.editor-ui-state :as ui-state]
+            [drop.app.consts :as consts]))
 
 (def ls-key-open-file "open-file-path")
 (s/def ::open-file-path string?)
@@ -54,3 +55,25 @@
  :doc-saved
  (fn [{:keys [db]} [_]]
    {:set-title [(-> db :open-file :path) true]}))
+
+(reg-event-fx
+ :set-full-screen
+ (fn [{:keys [db]} [_ fullscreen?]]
+   {:db (cond-> (assoc db :fullscreen? fullscreen?)
+                (not fullscreen?) (assoc :actionbar-transparent? false))
+    :fx [(when fullscreen?
+           ; Make actionbar transparent after n seconds
+           [:dispatch-debounce [::actionbar [:set-actionbar-transparent true] consts/actionbar-fade-out-ms]])]}))
+
+(reg-event-db
+ :set-actionbar-transparent
+ (fn [db [_ transparent?]]
+   (assoc db :actionbar-transparent? (if (and transparent? (not (:fullscreen? db))) ; this can happen after a debounce
+                                       false
+                                       transparent?))))
+
+(reg-event-fx
+ :actionbar-woken
+ (fn [{:keys [db]} _]
+   {:db (assoc db :actionbar-transparent? false)
+    :fx [[:dispatch-debounce [::actionbar [:set-actionbar-transparent true] consts/actionbar-fade-out-ms]]]}))

@@ -12,7 +12,7 @@
 (defn init-handlers! []
   (.on ipcRenderer "change-full-screen-status"
        (fn [_e, message-contents]
-         #(dispatch [:set-full-screen message-contents])))
+         (dispatch [:set-full-screen message-contents])))
 
   (.on ipcRenderer "file-menu-item-clicked"
        (fn [_e, item & args]
