@@ -63,7 +63,7 @@
                                 (when (>= mouse-percent-y actionbar-fullscreen-wakeup-threshold)
                                   (reset! *transparent-mode? false)
                                   (set-transparent-debounced!))))
-               _ (add-watch *full-screen? :fs-event-handler
+               #_ #__(add-watch *full-screen? :fs-event-handler
                             (fn [_ _ _ fs?]
                               (if fs?
                                 (do

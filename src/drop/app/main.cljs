@@ -2,12 +2,19 @@
   (:require [drop.app.events] ;; These two are only required to make the compiler
             [drop.app.subs]
             [drop.app.effects]
+            [drop.app.ipc :as ipc]
             [drop.app.components.core :as components]
             [drop.app.components.slate-editor :as slate-editor]
             [drop.utils :as utils]
             [reagent.dom :as rdom]
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
+
+;; TODO: fix actionbar after re-frame cleanup
+;; TODO: move word-count and active-formats to re-frame db
+;; TODO: test file opening from Finder
+;; TODO: possibly clean up common before around setting localstorage val and title w/ a re-frame interceptor
+;; TODO: implement loading spinner
 
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
 ;; TODO: BUG - files don't open when clicked
@@ -72,7 +79,8 @@
 ;; TODO: learn about React Spring
 ;; TODO: learn about DataScript
 
-(rf/dispatch-sync [:initialise-db])
+(rf/dispatch-sync [:boot])
+(ipc/init-handlers!)
 
 (when utils/DEV
   (st/instrument))
@@ -83,7 +91,6 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn main []
-  (slate-editor/on-startup)
   (mount-main-component))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}

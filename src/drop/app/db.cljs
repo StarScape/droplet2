@@ -1,12 +1,16 @@
 (ns drop.app.db
   (:require [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
-            [re-frame.core :as re-frame]))
+            [re-frame.core :as re-frame]
+            [reagent.core :as r]))
 
 (defn get-ls-key [key] (str "ls-" key))
 
 (def default-db
-  {:open-file-path nil})
+  {:open-file {:path nil,
+               :loading? true}
+   :*slate-instance (r/atom nil)
+   :fullscreen? false})
 
 (defn- check-matches-spec
   "Returns the localstore-value if it matches the spec,

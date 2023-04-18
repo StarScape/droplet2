@@ -20,3 +20,16 @@
 
 (defn prev-paragraph! [*ui-state]
   (ui-state/fire-interceptor! *ui-state default-ints/prev-paragraph nil))
+
+(defn when-ready
+  "Executes a provided function when the Slate editor is ready."
+  [*ui-state f]
+  (let [watch-key (rand-int 100000000)]
+    (if (:ready? @*ui-state)
+      (f)
+      (add-watch *ui-state watch-key
+                 (fn [_ _ _ new-state]
+                   (when (:ready? new-state)
+                     ; if f modifies the atom, watch needs to be removed before calling f to prevent an infinite loop
+                     (remove-watch *ui-state watch-key)
+                     (f)))))))

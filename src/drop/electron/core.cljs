@@ -17,12 +17,15 @@
 (declare init-window!)
 
 (def *main-window (atom nil))
+
 (def *all-windows-closed? (atom false))
 (def *slate-ready? (atom false))
+(def *file-opened-from-os-check-done? (atom false))
 
 (def window-ready-chan (chan))
 (def slate-ready-chan (chan))
 (def opened-file-chan (chan))
+(def file-opened-from-os-chan (chan))
 
 (def file-formats-info {"rtf" {:file-type-name "RTF"
                                :file-extension ".rtf"}
@@ -68,19 +71,20 @@
                                                      :buttons ["Confirm", "Cancel"]}))]
     (= 0 result)))
 
-
-
 (defn listen-for-file-open-events! []
   (go-loop []
     (let [[path contents] (<! opened-file-chan)]
       (when-not @*main-window ; window either not finished opening, or closed but app running (macOS)
-        ;; Reinitialize window (macOS)
-        (when @*all-windows-closed?
-          (init-window!))
+        (when @*all-windows-closed? (init-window!)) ; reinitialize window if closed (macOS)
         (<! window-ready-chan)) ; wait for window to be ready
 
-      (when-not @*slate-ready? (<! slate-ready-chan)) ; wait for slate to be ready
-      (.. @*main-window -webContents (send "open-file" path contents))
+      (if @*file-opened-from-os-check-done?
+        (do
+          (when-not @*slate-ready? (<! slate-ready-chan)) ; wait for slate to be ready
+          (.. @*main-window -webContents (send "open-file" path contents))) ; send open client event to renderer
+        ; Initial check from renderer for if a file was opened from Finder not done yet, place
+        ; onto chan so that the listener for that IPC event can take and pass to renderer proc.
+        (>! file-opened-from-os-chan [path contents]))
       (recur))))
 
 (defn reg-ipc-handlers! []
@@ -109,7 +113,18 @@
                         (do
                           (fs/writeFileSync ^js (.-filePath result) file-contents)
                           (resolve ^js (.-filePath result))))))
-             (.catch #()))))))
+             (.catch #(js/console.log %)))))))
+
+  (handle-ipc "file-opened-from-os?"
+    ;; On startup, the renderer process queries the main process if an OS 'open-file' event has occurred.
+    (fn [_]
+      (js/Promise.
+        (fn [resolve, _reject]
+          (let [[path, content :as opened-file] (async/poll! file-opened-from-os-chan)]
+            (if opened-file
+              (resolve #js [true, path, content])
+              (resolve #js [false, nil, nil]))
+            (reset! *file-opened-from-os-check-done? true))))))
 
   (on-ipc "save-exported-file-as"
           (fn [_ exported-file exported-file-type suggested-file-name]
@@ -276,7 +291,8 @@
   (.on app "window-all-closed" #(if (= js/process.platform "darwin")
                                   (do
                                     (reset! *all-windows-closed? true)
-                                    (reset! *slate-ready? false))
+                                    (reset! *slate-ready? false)
+                                    (reset! *file-opened-from-os-check-done? true))
                                   (.quit app)))
   (.on app "ready" init-window!)
 

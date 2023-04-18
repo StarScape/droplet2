@@ -2,126 +2,26 @@
   (:require [clojure.pprint :as pprint]
             [drop.app.components.actionbar :refer [actionbar]]
             [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
-            [drop.app.utils :as app-utils]
+            [drop.app.file-handling :as file-handling]
             [drop.utils :as utils]
-            [slate.api :as slate-api]
-            [slate.serialization :as serialization]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
             [slate.filetypes.core :as filetypes]
-            [slate.model.common :as slate-common]
-            [slate.model.doc :as doc]
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
             [reagent.core :as r]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [re-frame.db]
-            ["electron" :refer [ipcRenderer]]
-            ["path" :as path]
-            [dev.performance-utils :as perf-utils :refer-macros [measure-time-and-print!]]))
-
-#_(defn- current-doc [ui-state]
-  (some-> ui-state :history (history/current-state) :doc))
-
-(declare *slate-instance)
-
-(def *full-screen? (r/atom false))
-
-;; For now, there is a single global slate instance. This will change at some point when tabs are implemented.
-(def *slate-instance (r/atom nil))
-(set! js/window.globalSlateInstance *slate-instance) ; for debugging use
-
-(defn spawn-new-file-confirmation-dialog!
-  "Spawns a dialog asking the user to confirm that they'd like to create a new file.
-   Will return `true` if the user confirms, false otherwise."
-  []
-  (.sendSync ipcRenderer "new-file-confirmation-dialog"))
-
-(defn on-new!
-  "Spawns a confirmation dialog, and if confirmed, resets the editor
-   surface to a new file, and resets the open-file information."
-  []
-  (when (spawn-new-file-confirmation-dialog!)
-    (ui-state/new-document! *slate-instance)
-    (dispatch [:set-open-file-path nil])))
-
-(defn open-doc!
-  [*ui-state doc]
-  (ui-state/load-document! *ui-state doc)
-  (dispatch [:set-open-file-path nil]))
-
-(defn open-file!
-  [*ui-state file-path contents]
-  (ui-state/load-file! *ui-state contents)
-  (dispatch [:set-open-file-path file-path]))
-
-(defn on-open! [*ui-state]
-  (-> (.invoke ipcRenderer "choose-file")
-      (.then (fn [[file-path contents]]
-               (open-file! *ui-state file-path contents)))
-      (.catch #(js/console.log %))))
-
-(defn on-save-as!
-  [serialized-history]
-  (-> (.invoke ipcRenderer "save-file-as" serialized-history)
-      (.then #(dispatch [:set-open-file-path %]))
-      (.catch #())))
-
-(defn on-save! [serialized-history]
-  (let [open-file-path (:open-file-path @re-frame.db/app-db)]
-    (if open-file-path
-      (do
-        (.send ipcRenderer "save-file" open-file-path serialized-history)
-        (dispatch [:doc-saved]))
-      (on-save-as! serialized-history))))
-
-(defn on-export! [ui-state export-type]
-  (let [{:keys [history]} ui-state
-        doc (:doc (history/current-state history))
-        exported (filetypes/export export-type doc)
-        open-file-path (:open-file-path @re-frame.db/app-db)
-        suggested-file-name (if open-file-path
-                              (.basename path open-file-path ".drop")
-                              "untitled")]
-    (.send ipcRenderer "save-exported-file-as" exported export-type suggested-file-name)))
-
-(defn slate-editor [{:keys [file-contents *ui-state on-focus-find]}]
-  [:div
-   {:class "react-slate-elem flex-1 overflow-y-auto"
-    :tabIndex "-1"
-    :ref (fn [elem]
-           (when elem
-             (ui-state/init! :*atom *ui-state
-                             :save-file-contents file-contents
-                             :dom-elem elem
-                             :on-new on-new!
-                             :on-open on-open!
-                             :on-save on-save!
-                             :on-save-as on-save-as!
-                             :on-focus-find on-focus-find
-                             :on-doc-changed #(dispatch [:doc-changed])
-                             :on-ready #(.send ipcRenderer "slate-ready"))
-
-             ;; Utility for viewing editor history from console
-             (when utils/DEV
-               (set! js/dumpHistory (fn
-                                      ([n]
-                                       (slate-utils/pretty-history-stack (:history @*ui-state) n))
-                                      ([]
-                                       (slate-utils/pretty-history-stack (:history @*ui-state) 10))))
-               (set! js/printCurrentState #(-> (:history @*ui-state)
-                                               history/current-state
-                                               pprint/pprint
-                                               js/console.log)))))}])
+            ["electron" :refer [ipcRenderer]]))
 
 (defn find-and-replace
-  [*find-and-replace-ref focus-find-popup!]
-  (let [find-and-replace (-> @*slate-instance :find-and-replace)]
-    [find-and-replace-popup {:activated? (:active? find-and-replace)
-                             :ignore-case-toggled? (not (:ignore-case? find-and-replace))
-                             :current-occurrence (:current-occurrence-idx find-and-replace)
-                             :total-occurrences (count (:occurrences find-and-replace))
-                             :find-text (:find-text find-and-replace)
+  [*slate-instance *find-and-replace-ref focus-find-popup!]
+  (let [f+r-state (-> @*slate-instance :find-and-replace)]
+    [find-and-replace-popup {:activated? (:active? f+r-state)
+                             :ignore-case-toggled? (not (:ignore-case? f+r-state))
+                             :current-occurrence (:current-occurrence-idx f+r-state)
+                             :total-occurrences (count (:occurrences f+r-state))
+                             :find-text (:find-text f+r-state)
                              :on-find-text-changed #(ui-state/set-find-text! *slate-instance %)
                              :on-find #(ui-state/find! *slate-instance)
                              :on-replace #(ui-state/replace-current! *slate-instance %)
@@ -139,26 +39,56 @@
                                                 (focus-find-popup!))))
                              :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}]))
 
+(defn slate-editor [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed]}]
+  (let [*editor-elem-ref (atom nil)]
+   (r/create-class
+    {:display-name "slate-editor"
+
+     :component-did-mount
+     (fn [_this]
+       ;; Call init only once, when component initialized
+       (ui-state/init! :*atom *ui-state
+                       :save-file-contents file-contents
+                       :dom-elem @*editor-elem-ref
+                       :on-new file-handling/on-new!
+                       :on-open file-handling/on-open!
+                       :on-save file-handling/on-save!
+                       :on-save-as file-handling/on-save-as!
+                       :on-focus-find on-focus-find
+                       :on-doc-changed on-doc-changed
+                       :on-selection-changed on-selection-changed
+                       :on-ready (fn []
+                                   (.send ipcRenderer "slate-ready")))
+
+       ;; Utility for viewing editor history from console
+       (when utils/DEV
+         (set! js/dumpHistory (fn
+                                ([n]
+                                 (slate-utils/pretty-history-stack (:history @*ui-state) n))
+                                ([]
+                                 (slate-utils/pretty-history-stack (:history @*ui-state) 10))))
+         (set! js/printCurrentState #(-> (:history @*ui-state)
+                                         history/current-state
+                                         pprint/pprint
+                                         js/console.log))))
+
+     :reagent-render
+     (fn []
+       [:div
+        {:class "react-slate-elem flex-1 overflow-y-auto"
+         :tabIndex "-1"
+         :ref (fn [elem]
+                (when elem
+                  (reset! *editor-elem-ref elem)))}])})))
+
 (defn main-editor []
   (let [*active-formats (r/atom #{})
         *word-count (r/atom 0)
-        current-file @(subscribe [:open-file-path])
-        saved-file-contents (when current-file
-                              (let [[error?, file-text] (.sendSync ipcRenderer "read-file" current-file)]
-                                (if error?
-                                  (do
-                                    (dispatch [:set-open-file-path nil])
-                                   ;; Slate instance will default to an empty document
-                                   ;; when receiving nil, so propagating nil works fine.
-                                    nil)
-                                  file-text)))
+        *slate-instance @(subscribe [:slate-instance])
         *find-and-replace-ref (r/atom nil)
         focus-find-ref! (fn []
                           (when-let [elem @*find-and-replace-ref]
                             (.focus elem)))]
-    (add-watch *slate-instance :watcher (fn [_key _atom _old-state new-ui-state]
-                                          (reset! *active-formats (ui-state/active-formats new-ui-state))
-                                          (reset! *word-count (:word-count new-ui-state))))
     (fn []
       [:<>
        ;; Find and replace outside of div with editor and actionbar bc it needs separate focus
@@ -168,12 +98,15 @@
        [:div {:class "h-screen flex flex-row justify-center"
               :on-focus #(when-let [instance @*slate-instance]
                            (ui-state/focus! instance))}
-        [slate-editor {:file-contents saved-file-contents
-                       :*ui-state *slate-instance
-                       :on-focus-find focus-find-ref!}]
+        [slate-editor {:*ui-state *slate-instance
+                       :on-focus-find focus-find-ref!
+                       :on-doc-changed (fn []
+                                         (reset! *active-formats (ui-state/active-formats @*slate-instance))
+                                         (dispatch [:doc-changed]))
+                       :on-selection-changed #(reset! *word-count (:word-count @*slate-instance))}]
         [actionbar {:active-formats @*active-formats
                     :word-count @*word-count
-                    :*full-screen? *full-screen?
+                    :*full-screen? @(subscribe [:fullscreen?])
                     :on-format-toggle #(let [interceptor (case %
                                                            :italic ints/italic
                                                            :strikethrough ints/strikethrough
@@ -183,45 +116,3 @@
                                                            :ol ints/olist
                                                            :ul ints/ulist)]
                                          (ui-state/fire-interceptor! *slate-instance interceptor (js/Event. "keydown")))}]]])))
-
-(defn on-startup
-  "There is some global state and handlers in this namespace that need to be configured on startup."
-  []
-  (.on ipcRenderer "change-full-screen-status"
-       (fn [_e, message-contents]
-         (reset! *full-screen? message-contents)))
-
-  (.on ipcRenderer "file-menu-item-clicked"
-       (fn [_e, item & args]
-         (case item
-           "new" (on-new!)
-           "save" (on-save! (serialization/serialize @*slate-instance))
-           "save-as" (on-save-as! (serialization/serialize @*slate-instance))
-           "open" (on-open! *slate-instance)
-           "initiate-file-export" (apply on-export! @*slate-instance args))))
-
-  (.on ipcRenderer "selection-menu-item-clicked"
-       (fn [_e, item]
-         (case item
-           "next-clause" (slate-api/next-clause! *slate-instance)
-           "prev-clause" (slate-api/prev-clause! *slate-instance)
-           "next-sentence" (slate-api/next-sentence! *slate-instance)
-           "prev-sentence" (slate-api/prev-sentence! *slate-instance)
-           "next-paragraph" (slate-api/next-paragraph! *slate-instance)
-           "prev-paragraph" (slate-api/prev-paragraph! *slate-instance))))
-
-  (.on ipcRenderer "open-file"
-       (fn [_e, file-path, file-contents]
-         (try
-           (open-file! *slate-instance file-path file-contents)
-           (catch :default e
-             (app-utils/show-error-dialog! "Failed to open file" "File failed to open")
-             (js/console.log "Error thrown in ipcRenderer open-file:" e)))))
-
-  (.on ipcRenderer "import-file"
-       (fn [_e, file-type, file-contents]
-         (try
-           (open-doc! *slate-instance (filetypes/import file-type file-contents))
-           (catch :default e
-             (app-utils/show-error-dialog! "Import Failure" "Failed to import file.")
-             (js/console.log "Error thrown in ipcRenderer import-file:" e))))))

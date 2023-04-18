@@ -722,8 +722,10 @@
                               :on-load on-open
                               :on-focus-find on-focus-find
                               :on-doc-changed on-doc-changed
-                              :on-selection-changed on-selection-changed})
+                              :on-selection-changed on-selection-changed
+                              :ready? false})
                (init-event-handlers! *atom)
                (full-dom-render! *atom)
+               (swap! *atom assoc :ready? true)
                (on-ready))))
   *atom)
