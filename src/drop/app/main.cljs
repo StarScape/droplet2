@@ -36,6 +36,7 @@
 ;; TODO: Add spellcheck
 ;; TODO: Add ⌃F/Alt+F/Hold shortcut button to display all shortcuts in actionbar
 ;; TODO: Add Command Palette
+;; TODO: Make work with IME (https://w3c.github.io/uievents/#events-compositionevents)
 ;; TODO: Rewrite render engine with Canvas approach
 ;; TODO: Tabs
 ;; TODO: File browser

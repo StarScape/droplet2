@@ -39,7 +39,7 @@
                                                 (focus-find-popup!))))
                              :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}]))
 
-(defn slate-editor [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed]}]
+(defn slate-editor [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed on-ready]}]
   (let [*editor-elem-ref (atom nil)]
    (r/create-class
     {:display-name "slate-editor"
@@ -58,7 +58,7 @@
                        :on-doc-changed on-doc-changed
                        :on-selection-changed on-selection-changed
                        :on-ready (fn []
-                                   (.send ipcRenderer "slate-ready")))
+                                   (on-ready)))
 
        ;; Utility for viewing editor history from console
        (when utils/DEV
@@ -82,7 +82,7 @@
                   (reset! *editor-elem-ref elem)))}])})))
 
 (defn main-editor []
-  (let [*active-formats (r/atom #{})
+  (let [#_#_#_#_*active-formats (r/atom #{})
         *word-count (r/atom 0)
         *slate-instance @(subscribe [:slate-instance])
         *find-and-replace-ref (r/atom nil)
@@ -100,12 +100,18 @@
                            (ui-state/focus! instance))}
         [slate-editor {:*ui-state *slate-instance
                        :on-focus-find focus-find-ref!
+                       :on-ready (fn []
+                                   (.send ipcRenderer "slate-ready")
+                                   (dispatch [:set-word-count (:word-count @*slate-instance)])
+                                   (dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)])
+                                   #_#_(reset! *word-count (:word-count @*slate-instance))
+                                   (reset! *active-formats (ui-state/active-formats @*slate-instance)))
                        :on-doc-changed (fn []
-                                         (reset! *active-formats (ui-state/active-formats @*slate-instance))
+                                         (dispatch [:set-word-count (:word-count @*slate-instance)])
                                          (dispatch [:doc-changed]))
-                       :on-selection-changed #(reset! *word-count (:word-count @*slate-instance))}]
-        [actionbar {:active-formats @*active-formats
-                    :word-count @*word-count
+                       :on-selection-changed #(dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)])}]
+        [actionbar {:active-formats @(subscribe [:active-formats])
+                    :word-count @(subscribe [:word-count])
                     :on-format-toggle #(let [interceptor (case %
                                                            :italic ints/italic
                                                            :strikethrough ints/strikethrough

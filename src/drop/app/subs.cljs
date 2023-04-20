@@ -20,3 +20,13 @@
  :actionbar-transparent?
  (fn [db _]
    (-> db :actionbar-transparent?)))
+
+(rf/reg-sub
+ :active-formats
+ (fn [db _]
+   (-> db :active-formats)))
+
+(rf/reg-sub
+ :word-count
+ (fn [db _]
+   (-> db :word-count)))

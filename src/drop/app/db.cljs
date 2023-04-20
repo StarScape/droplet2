@@ -11,7 +11,9 @@
                :loading? true}
    :*slate-instance (r/atom nil)
    :fullscreen? false
-   :actionbar-transparent? false})
+   :actionbar-transparent? false
+   :active-formats #{}
+   :word-count 0})
 
 (defn- check-matches-spec
   "Returns the localstore-value if it matches the spec,

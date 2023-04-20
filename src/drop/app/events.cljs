@@ -77,3 +77,13 @@
  (fn [{:keys [db]} _]
    {:db (assoc db :actionbar-transparent? false)
     :fx [[:dispatch-debounce [::actionbar [:set-actionbar-transparent true] consts/actionbar-fade-out-ms]]]}))
+
+(reg-event-db
+ :set-word-count
+ (fn [db [_ new-word-count]]
+   (assoc db :word-count new-word-count)))
+
+(reg-event-db
+ :set-active-formats
+ (fn [db [_ new-active-formats]]
+   (assoc db :active-formats new-active-formats)))
