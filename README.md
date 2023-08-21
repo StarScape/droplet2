@@ -29,7 +29,7 @@ More details on the structure of the editor in `src/slate/README.md`. -->
 npm run dev-watch
 ```
 
-Then, **start up Electron** (normally should be done in a separate terminal so that the electron process can be restarted, but if there's no need to modify the main NodeJS process's code then it can be started with `&&`):
+Then, **start up Electron**/. Normally this should be done in a separate terminal so that the main Electron process can be restarted as needed.
 
 ```
 electron .
