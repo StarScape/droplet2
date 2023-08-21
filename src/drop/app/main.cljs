@@ -11,7 +11,7 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; BUG: Double-click to select a word does not correctly set formatting if word is italic/bold/etc
-;; BUG: F+R doesn't seem to launch on cmd+fut
+;; BUG: F+R doesn't seem to launch on cmd+F
 ;; TODO: Maybe lighten selection color just slightly, darken cursor color just slightly, or both
 ;; TODO: Word count should show word count of current selection
 ;; TODO: move word-count and active-formats to re-frame db

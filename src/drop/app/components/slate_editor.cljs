@@ -92,7 +92,7 @@
     (fn []
       [:<>
        ;; Find and replace outside of div with editor and actionbar bc it needs separate focus
-       [find-and-replace *find-and-replace-ref focus-find-ref!]
+       [find-and-replace *slate-instance *find-and-replace-ref focus-find-ref!]
 
        ;; Editor and actionbar
        [:div {:class "h-screen flex flex-row justify-center"
