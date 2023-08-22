@@ -128,3 +128,4 @@ The AWS CLI must be configured in order for this to work.
 - Fixed bug where double and triple click were not getting selection formatting set correctly
 - Fixed bug where find and replace popover was not appearing
 - Minor tweaks to colors
+- Word count will display word count of selection when selection is range

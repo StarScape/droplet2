@@ -6,6 +6,7 @@
             [drop.utils :as utils]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
+            [slate.model.selection :as sel]
             [slate.filetypes.core :as filetypes]
             [slate.model.history :as history]
             [slate.utils :as slate-utils]
@@ -103,13 +104,13 @@
                        :on-ready (fn []
                                    (.send ipcRenderer "slate-ready")
                                    (dispatch [:set-word-count (:word-count @*slate-instance)])
-                                   (dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)])
-                                   #_#_(reset! *word-count (:word-count @*slate-instance))
-                                   (reset! *active-formats (ui-state/active-formats @*slate-instance)))
+                                   (dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)]))
                        :on-doc-changed (fn []
                                          (dispatch [:set-word-count (:word-count @*slate-instance)])
                                          (dispatch [:doc-changed]))
-                       :on-selection-changed #(dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)])}]
+                       :on-selection-changed (fn [_new-selection]
+                                               (dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)])
+                                               (dispatch [:set-word-count (:word-count @*slate-instance)]))}]
         [actionbar {:active-formats @(subscribe [:active-formats])
                     :word-count @(subscribe [:word-count])
                     :on-format-toggle #(let [interceptor (case %

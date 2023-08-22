@@ -11,7 +11,6 @@
             [orchestra-cljs.spec.test :as st]))
 
 ;; TODO: Maybe lighten selection color just slightly, darken cursor color just slightly, or both
-;; TODO: Word count should show word count of current selection
 ;; TODO: Don't cause selection to grey out if find and replace is what is currently focused
 
 ;; TODO: Improve opening-file flow on startup. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.

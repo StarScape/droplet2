@@ -171,12 +171,11 @@
 (defn load-editor-state!
   "Loads an editor-state into the editor with a blank history, discarding current document and history."
   [*ui-state editor-state]
-  (let [word-count (word-count/full-count (:doc editor-state))]
-    (cancel-add-tip-to-backstack! *ui-state)
-    (swap! *ui-state merge {:history (history/init editor-state)
-                            :word-count word-count
-                            :input-history []})
-    (full-dom-render! *ui-state)))
+  (cancel-add-tip-to-backstack! *ui-state)
+  (swap! *ui-state merge {:history (history/init editor-state)
+                          :word-count (word-count/init editor-state)
+                          :input-history []})
+  (full-dom-render! *ui-state))
 
 (defn load-file!
   "Loads a serialized .drop file into the editor, discarding current document and history."
@@ -242,7 +241,9 @@
             restored-state (:editor-state restored-update)
             changelist (es/reverse-changelist (:changelist current-update))
             new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn changelist)
-            new-word-count (word-count/update-count word-count (-> current-update :editor-state :doc) (:doc restored-state) changelist)
+            new-word-count (word-count/update word-count
+                                              (:editor-state current-update)
+                                              restored-update)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
@@ -269,7 +270,9 @@
             restored-state (:editor-state restored-update)
             changelist (:changelist restored-update)
             new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn changelist)
-            new-word-count (word-count/update-count word-count (:doc (history/current-state history)) (:doc restored-state) changelist)
+            new-word-count (word-count/update word-count
+                                              (history/current-state history)
+                                              restored-update)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
@@ -296,7 +299,7 @@
     ;; Fire selection changed listener if new and old sels are not equal
     ;; (Selection is a much smaller object, so a full equality check isn't as expensive.)
     (when-not (= (:selection old-state) (:selection new-state))
-      (on-selection-changed))))
+      (on-selection-changed (:selection new-state)))))
 
 (defn fire-update!
   "Update the UI state and UI in response to an EditorUpdate.
@@ -305,19 +308,17 @@
   ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately? focus? scroll-to-caret?]
                                    :or {focus? true}, :as opts}]
    (let [ui-state @*ui-state ; only deref once a cycle
-         editor-state (history/current-state (:history ui-state))
-         old-doc (:doc editor-state)
-         new-doc (-> editor-update :editor-state :doc)
+         current-editor-state (history/current-state (:history ui-state))
          new-ui-state (-> ui-state
                           (update :history update-history editor-update opts)
-                          (update :word-count word-count/update-count old-doc new-doc (:changelist editor-update))
+                          (update :word-count word-count/update current-editor-state editor-update)
                           (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
                           (update-viewmodels editor-update))]
      (sync-dom! :shadow-root (:shadow-root new-ui-state)
                 :dom-elem (:dom-elem new-ui-state)
                 :hidden-input (:hidden-input new-ui-state)
                 :editor-state (:editor-state editor-update)
-                :prev-state editor-state
+                :prev-state current-editor-state
                 :viewmodels (:viewmodels new-ui-state)
                 :changelist (:changelist editor-update)
                 :focus? focus?
@@ -457,7 +458,7 @@
     (swap! *ui-state merge {:viewmodels (vm/from-doc (:doc editor-state) available-width measure-fn)
                             :history (history/init editor-state)
                             :add-tip-to-backstack-timer-id nil
-                            :word-count 0
+                            :word-count (word-count/init)
                             :input-history []})
     (full-dom-render! *ui-state)))
 
@@ -700,13 +701,14 @@
                                         (interceptors/reg-interceptors default-interceptors)
                                         (interceptors/reg-interceptors manual-interceptors))
                    hidden-input (view/create-hidden-input! shadow-root)
-                   current-doc (:doc (history/current-state history))]
+                   current-state (history/current-state history)
+                   current-doc (:doc current-state)]
                ;; Focus hidden input without scrolling to it (it will be at the bottom)
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
                               :viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :history history
-                              :word-count (word-count/full-count current-doc)
+                              :word-count (word-count/init editor-state)
                               :input-history []
                               :find-and-replace (f+r/init)
                               :interceptors interceptors-map
