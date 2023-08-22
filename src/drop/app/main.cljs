@@ -10,8 +10,7 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
-;; BUG: Double-click to select a word does not correctly set formatting if word is italic/bold/etc
-;; BUG: F+R doesn't seem to launch on cmd+F
+;; TODO: The find and replace popup is ass-ugly. Do something about that.
 ;; TODO: Maybe lighten selection color just slightly, darken cursor color just slightly, or both
 ;; TODO: Word count should show word count of current selection
 ;; TODO: move word-count and active-formats to re-frame db

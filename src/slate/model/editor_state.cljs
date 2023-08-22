@@ -289,35 +289,37 @@
   {:pre [(sel/single? selection)]}
   ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
-        new-sel (cond
-                  (nav/inside-word? para selection)
-                  (sel/from-singles (nav/prev-word para selection) (nav/next-word para selection))
+        raw-selection (cond
+                        (nav/inside-word? para selection)
+                        (sel/from-singles (nav/prev-word para selection) (nav/next-word para selection))
 
-                  (nav/at-word-start? para selection)
-                  (sel/from-singles selection (nav/next-word para selection))
+                        (nav/at-word-start? para selection)
+                        (sel/from-singles selection (nav/next-word para selection))
 
-                  (nav/at-word-end? para selection)
-                  (sel/from-singles (nav/prev-word para selection) selection)
+                        (nav/at-word-end? para selection)
+                        (sel/from-singles (nav/prev-word para selection) selection)
 
-                  :else
-                  (let [char (m/char-at para selection)
-                        [backward-fn, forward-fn] (cond
-                                                    (nav/word? char) [nav/back-until-non-word nav/until-non-word]
-                                                    (nav/separator? char) [nav/back-until-non-separator nav/until-non-separator]
-                                                    (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace]
-                                                    :else [(fn [_ i] i), (fn [_ i] i)])
-                        para-text (m/text para)]
-                    (sel/selection [(:uuid para) (backward-fn para-text (sel/caret selection))]
-                                   [(:uuid para) (forward-fn para-text (sel/caret selection))])))]
-    (set-selection editor-state new-sel)))
+                        :else
+                        (let [char (m/char-at para selection)
+                              [backward-fn, forward-fn] (cond
+                                                          (nav/word? char) [nav/back-until-non-word nav/until-non-word]
+                                                          (nav/separator? char) [nav/back-until-non-separator nav/until-non-separator]
+                                                          (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace]
+                                                          :else [(fn [_ i] i), (fn [_ i] i)])
+                              para-text (m/text para)]
+                          (sel/selection [(:uuid para) (backward-fn para-text (sel/caret selection))]
+                                         [(:uuid para) (forward-fn para-text (sel/caret selection))])))
+        new-selection (nav/autoset-formats para raw-selection)]
+    (set-selection editor-state new-selection)))
 
 (defn select-whole-paragraph
   [{:keys [selection] :as editor-state}]
   {:pre [(sel/single? selection)]}
   ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
-        new-sel (sel/selection [(:uuid para) 0] [(:uuid para) (m/len para)])]
-    (set-selection editor-state new-sel)))
+        raw-selection (sel/selection [(:uuid para) 0] [(:uuid para) (m/len para)])
+        new-selection (nav/autoset-formats para raw-selection)]
+    (set-selection editor-state new-selection)))
 
 ;; TODO: test
 (defn toggle-paragraph-type
