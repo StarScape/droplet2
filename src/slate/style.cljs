@@ -32,8 +32,17 @@
 
 (def shadow-elem-style
   [blink-anim
-   [(keyword ":host") {:--range-selection-color "#b4ddff"
-                       :--text-caret-color "#008cff"}]
+   [(keyword ":host") {:--text-color "#202124"
+
+                       :--caret-color-focused "#0085f2"
+                       :--caret-colored-unfocused "#4496da"
+                       :--caret-color "var(--caret-color-focused)"
+
+                       :--range-selection-color-focused "#b4ddff"
+                       :--range-selection-color-unfocused "#bdcddb"
+                       :--range-selection-color "var(--range-selection-color-focused)"
+
+                       :--find-highlight-color "#d1d5db"}]
    [:body {:font-kerning "none !important"}]
    [:.hidden-input {:opacity 0
                     :position "absolute"
@@ -51,7 +60,7 @@
                     :font-size "16px"
                     :font-family "Merriweather, serif"
                     :user-select "none"
-                    :color "#202124"}
+                    :color "var(--text-color)"}
     [:&:hover {:cursor "text"}]]
    [:.paragraph {:margin "0px"
                  :padding 0
@@ -63,7 +72,6 @@
    [:.line::after {:content "\" \""}]
    [:.span {:display "inline-block"}]
    [:.slate-range-selection {:background-color "var(--range-selection-color)"
-                             ;;  :border-radius "3px"
                              :z-index 1000}]
    ;; Selected elements whose previous sibling is a .slate-range-selection (all but first)
    ;;  [(keyword ".slate-range-selection + .slate-range-selection") {:border-top-left-radius 0
@@ -75,8 +83,8 @@
     [:&::after {:position "absolute"
                 :content "\" \""
                 :width "2px"
-                :border-radius "2px"
-                :background-color "var(--text-caret-color)"
+                ;;:border-radius "2px"
+                :background-color "var(--caret-color)"
                 :animation "blink-anim 1.2s infinite"
                 :animation-delay "0.5s"}]]
    [:ul :ol {:padding 0
@@ -91,7 +99,7 @@
    [:.strikethrough-format {:text-decoration "line-through"}]
    [:.bold-format {:font-weight "bold !important"}]
    #_[:.underline-format {:text-decoration "line-through !important"}]
-   [:.highlight-format {:background-color "#d1d5db"}]])
+   [:.highlight-format {:background-color "var(--find-highlight-color)"}]])
 
 (comment
   (println (apply css shadow-elem-style))
@@ -102,10 +110,12 @@
 (defn set-css-prop! [shadow-root prop val]
   (.. shadow-root -host -style (setProperty prop val)))
 
-(defn lose-focus! [shadow-root]
-  (set-css-prop! shadow-root "--range-selection-color", "#bdcddb")
-  (set-css-prop! shadow-root "--text-caret-color", "#4496da"))
-
 (defn gain-focus! [shadow-root]
-  (set-css-prop! shadow-root "--range-selection-color" "#b4ddff")
-  (set-css-prop! shadow-root "--text-caret-color", "#008cff"))
+  (set-css-prop! shadow-root "--range-selection-color" "var(--range-selection-color-focused)")
+  (set-css-prop! shadow-root "--caret-color", "var(--caret-color-focused)"))
+
+(defn lose-focus! [shadow-root]
+  (set-css-prop! shadow-root "--range-selection-color", "var(--range-selection-color-unfocused)")
+  (set-css-prop! shadow-root "--caret-color", "var(--caret-color-unfocused)"))
+
+

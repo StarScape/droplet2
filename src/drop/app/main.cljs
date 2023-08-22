@@ -10,9 +10,14 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
-;; TODO: The find and replace popup is ass-ugly. Do something about that.
 ;; TODO: Maybe lighten selection color just slightly, darken cursor color just slightly, or both
 ;; TODO: Word count should show word count of current selection
+;; TODO: Don't cause selection to grey out if find and replace is what is currently focused
+
+;; TODO: Improve opening-file flow on startup. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
+;; TODO: The find and replace popup is ass-ugly. Do something about that.
+;; TODO: Experiment with different fonts
+
 ;; TODO: move word-count and active-formats to re-frame db
 ;; TODO: test file opening from Finder
 ;; TODO: possibly clean up common before around setting localstorage val and title w/ a re-frame interceptor
