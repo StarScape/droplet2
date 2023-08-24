@@ -67,7 +67,6 @@
          text-graphemes (if (= 1 (.-length text))
                           text
                           (->> text (graphemes) (map :grapheme)))]
-     ;;(when js/window.logText (js/console.log (str "text: \"" text "\"")))
      (->> text-graphemes (map measure-grapheme) (reduce +)))))
 
 (defn ruler

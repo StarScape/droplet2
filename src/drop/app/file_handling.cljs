@@ -22,8 +22,7 @@
 (defn open-file!
   [*ui-state file-path contents]
   (ui-state/load-file! *ui-state contents)
-  (dispatch [:set-open-file-path file-path])
-  #_(dispatch [:set-open-file-loading false]))
+  (dispatch [:set-open-file-path file-path]))
 
 (defn on-new!
   "Spawns a confirmation dialog, and if confirmed, resets the editor
@@ -33,11 +32,8 @@
     (ui-state/new-document! *slate-instance)
     (dispatch [:set-open-file-path nil])))
 
-(defn on-open! [*ui-state]
-  (-> (.invoke ipcRenderer "choose-file")
-      (.then (fn [[file-path contents]]
-               (open-file! *ui-state file-path contents)))
-      (.catch #(js/console.log %))))
+(defn on-open! []
+  (.send ipcRenderer "choose-file"))
 
 (defn on-save-as!
   [serialized-history]

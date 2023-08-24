@@ -7,25 +7,20 @@
             ["path" :as path]
             [cljs.core.async :as async :refer [chan <! >!] :refer-macros [go go-loop]]
             [cljs.core.async.interop :refer-macros [<p!]]
-            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc]]))
+            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc read-persisted! write-persisted! log]]))
 
-(js/console.log "Evaluating main electron file...")
+(log "Evaluating main electron file...")
 
 (goog-define DEV true)
 (def is-dev? DEV)
 
 (declare init-window!)
 
-(def *main-window (atom nil))
+(def main-window-info-default {:window nil
+                               :renderer-ipc-handlers-initialized? false
+                               :file-opened-from-os? false})
 
-(def *all-windows-closed? (atom false))
-(def *slate-ready? (atom false))
-(def *file-opened-from-os-check-done? (atom false))
-
-(def window-ready-chan (chan))
-(def slate-ready-chan (chan))
-(def opened-file-chan (chan))
-(def file-opened-from-os-chan (chan))
+(def *main-window-info (atom main-window-info-default))
 
 (def file-formats-info {"rtf" {:file-type-name "RTF"
                                :file-extension ".rtf"}
@@ -38,7 +33,7 @@
   [file-type]
   (go
     (let [{:keys [file-type-name file-extension]} (get file-formats-info file-type)
-          main-window @*main-window
+          main-window (:window @*main-window-info)
           result (<p! (.showOpenDialog dialog main-window
                                        (clj->js {:title (str "Open ." file-extension " file")
                                                  :filters [{:name file-type-name
@@ -53,14 +48,13 @@
   (go
     (try
       (let [{:keys [file-type-name file-extension]} (get file-formats-info file-type)
-            result (<p! (.showSaveDialog dialog @*main-window
+            result (<p! (.showSaveDialog dialog @*main-window-info
                                          (clj->js {:title "Export As..."
                                                    :defaultPath (str suggested-file-name file-extension)
                                                    :filters [{:name file-type-name
                                                               :extensions [file-extension]}]})))]
         (when-not ^js (.-canceled result)
-          (<p! (writeFile (.-filePath result) data "utf8"))
-          #_(.. main-window -webContents (send "export-file-successful" "html"))))
+          (<p! (writeFile (.-filePath result) data "utf8"))))
       (catch js/Error e
         (js/console.log e)))))
 
@@ -71,21 +65,56 @@
                                                      :buttons ["Confirm", "Cancel"]}))]
     (= 0 result)))
 
-(defn listen-for-file-open-events! []
-  (go-loop []
-    (let [[path contents] (<! opened-file-chan)]
-      (when-not @*main-window ; window either not finished opening, or closed but app running (macOS)
-        (when @*all-windows-closed? (init-window!)) ; reinitialize window if closed (macOS)
-        (<! window-ready-chan)) ; wait for window to be ready
+(defn wait-for-renderer-ipc-handlers!
+  "Returns a Promise that will not resolve until the renderer process's IPC handlers
+   have been initialized. May resolve immediately."
+  []
+  (js/Promise.
+   (fn [resolve-promise _reject-promise]
+     (log (:renderer-ipc-handlers-initialized? @*main-window-info))
+     (if (:renderer-ipc-handlers-initialized? @*main-window-info)
+       (resolve-promise)
+       (.once ipcMain "renderer-ipc-handlers-initialized"
+              (fn []
+                (swap! *main-window-info assoc :renderer-ipc-handlers-initialized? true)
+                (resolve-promise)))))))
 
-      (if @*file-opened-from-os-check-done?
-        (do
-          (when-not @*slate-ready? (<! slate-ready-chan)) ; wait for slate to be ready
-          (.. @*main-window -webContents (send "open-file" path contents))) ; send open client event to renderer
-        ; Initial check from renderer for if a file was opened from Finder not done yet, place
-        ; onto chan so that the listener for that IPC event can take and pass to renderer proc.
-        (>! file-opened-from-os-chan [path contents]))
-      (recur))))
+(defn save-drop-file!
+  [file-path file-contents]
+  (fs/writeFile file-path file-contents
+                (fn [err]
+                  (if err
+                    (js/console.error err)
+                    (write-persisted! "current-file" {:path file-path})))))
+
+(defn open-file-in-slate!
+  "Reads the data from the file and sends it to the render process to be loaded into the Slate editor.
+   Saves the file path as the last file opened."
+  [path]
+  (log "Called open-file-in-slate!")
+  (go
+    ;; Initialize new-window if not already done
+    (<p! (init-window!))
+    (log "After init-window!")
+    (<p! (wait-for-renderer-ipc-handlers!))
+    (log "After wait-for-renderer-ipc-handlers!")
+    (fs/readFile path "utf8" (fn [err, contents]
+                               (when-not err
+                                 (log (str "Read file " path " from disk, sending to renderer process\n"))
+                                 ;; TODO: ensure that this is only done after channel is set up
+                                 (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
+                                 (write-persisted! "current-file" {:path path}))))))
+
+(defn choose-file-from-fs! []
+  (-> (.showOpenDialog dialog (:window @*main-window-info)
+                       (clj->js {:title "Open .drop"
+                                 :filters [{:name "Droplet File"
+                                            :extensions [".drop"]}]
+                                 :properties ["openFile"]}))
+      (.then (fn [result]
+               (when-not ^js (.-canceled result)
+                 (open-file-in-slate! (nth ^js (.-filePaths result) 0)))))
+      (.catch #(js/console.log %))))
 
 (defn reg-ipc-handlers! []
   (on-ipc "show-error-dialog"
@@ -94,77 +123,38 @@
 
   (on-ipc "save-file"
     (fn [_ file-path file-contents]
-      ;; #p "save-file"
-      (fs/writeFile file-path file-contents
-                    (fn [err] (when err (js/console.error err))))))
+      (save-drop-file! file-path file-contents)))
 
   (handle-ipc "save-file-as"
     (fn [_ file-contents]
-      ;; #p "save-file-as"
       (js/Promise.
-       (fn [resolve, reject]
-         (-> (.showSaveDialog dialog @*main-window
+       (fn [resolve-promise, reject-promise]
+         (-> (.showSaveDialog dialog (:window @*main-window-info)
                               (clj->js {:title "Save As..."
                                         :filters [{:name "Droplet File"
                                                    :extensions [".drop"]}]}))
              (.then (fn [result]
-                      (if ^js (.-canceled result)
-                        (reject "canceled")
-                        (do
-                          (fs/writeFileSync ^js (.-filePath result) file-contents)
-                          (resolve ^js (.-filePath result))))))
+                      (let [canceled? ^js (.-canceled result)
+                            file-path ^js (.-filePath result)]
+                        (if canceled?
+                          (reject-promise "canceled")
+                          (do
+                            (save-drop-file! file-path file-contents)
+                            (resolve-promise file-path))))))
              (.catch #(js/console.log %)))))))
-
-  (handle-ipc "file-opened-from-os?"
-    ;; On startup, the renderer process queries the main process if an OS 'open-file' event has occurred.
-    (fn [_]
-      (js/Promise.
-        (fn [resolve, _reject]
-          (let [[path, content :as opened-file] (async/poll! file-opened-from-os-chan)]
-            (if opened-file
-              (resolve #js [true, path, content])
-              (resolve #js [false, nil, nil]))
-            (reset! *file-opened-from-os-check-done? true))))))
 
   (on-ipc "save-exported-file-as"
           (fn [_ exported-file exported-file-type suggested-file-name]
             (launch-export-dialog! exported-file exported-file-type suggested-file-name)))
 
-  (handle-ipc "choose-file"
-    (fn [_]
-      ;; #p "choose-file"
-      (js/Promise.
-       (fn [resolve, reject]
-         (-> (.showOpenDialog dialog @*main-window
-                              (clj->js {:title "Open .drop"
-                                        :filters [{:name "Droplet File"
-                                                   :extensions [".drop"]}]
-                                        :properties ["openFile"]}))
-             (.then (fn [result]
-                      (if-not ^js (.-canceled result)
-                        (let [file-path (nth ^js (.-filePaths result) 0)]
-                          (fs/readFile file-path "utf8" #(resolve #js [file-path %2])))
-                        (reject "canceled"))))
-             (.catch #()))))))
-
-  (on-ipc "read-file"
-    (fn [e file-path]
-      ;; #p "read-file"
-      (try
-        (let [file-contents (fs/readFileSync file-path "utf8")]
-          (set! (.-returnValue e) #js [false, file-contents]))
-        (catch js/Error _
-          (set! (.-returnValue e) #js [true, ""])))))
+  (on-ipc "choose-file"
+    (fn []
+      (choose-file-from-fs!)))
 
   (on-ipc "new-file-confirmation-dialog"
     (fn [e]
-      (set! (.-returnValue e) (show-new-file-confirmation-dialog!))))
-
-  (on-ipc "slate-ready"
-          (fn [_e]
-            ;; Listen for open-file events (macOS only)
-            (reset! *slate-ready? true)
-            (go (>! slate-ready-chan true)))))
+      ;; Generic method for showing confirmation dialogs
+      (set! (.-returnValue e) (show-new-file-confirmation-dialog!)))))
 
 (defn init-app-menu [window]
   (let [template (clj->js [{:label (.-name app)
@@ -183,7 +173,7 @@
                                        :click #(.. window -webContents (send "file-menu-item-clicked" "new"))}
                                       {:label "Open..."
                                        :accelerator "CmdOrCtrl+O"
-                                       :click #(.. window -webContents (send "file-menu-item-clicked" "open"))}
+                                       :click #(choose-file-from-fs!)}
                                       {:label "Save"
                                        :accelerator "CmdOrCtrl+S"
                                        :click #(.. window -webContents (send "file-menu-item-clicked" "save"))}
@@ -234,45 +224,68 @@
                                           {:role "toggledevtools"}]})))
     (.setApplicationMenu Menu (.buildFromTemplate Menu template))))
 
-(defn init-window! []
-  (let [window-state (window-state-keeper #js {:defaultWidth 1200
-                                               :defaultHeight 900})
-        window (BrowserWindow.
-                #js {:x (.-x window-state)
-                     :y (.-y window-state)
-                     :width (.-width window-state)
-                     :height (.-height window-state)
-                     :minWidth 500
-                     :minHeight 500
-                     :webPreferences #js {:nodeIntegration true
-                                          :contextIsolation false
-                                          ;; Enabled to get support for :has() selector in CSS.
-                                          ;; Can be disabled whenever support for that is mainlined in Chrome
-                                          :experimentalFeatures true
-                                          #_#_:preload (path/join js/__dirname "preload.js")}})
-        source-path (if is-dev?
-                      "http://localhost:8080"
-                      (str "file://" js/__dirname "/../index.html"))]
+(defn init-window!
+  "Initializes the main Droplet window. Returns a Promise that resolves whenever the
+   window has been initialized."
+  []
+  (js/Promise.
+   (fn [resolve-promise _reject-promise]
+     (if (:window @*main-window-info)
+       (resolve-promise) ;; window already exists, resolve immediately
+       (do
+         (log "Initializing Electron browser window")
+         (let [window-state (window-state-keeper #js {:defaultWidth 1200
+                                                      :defaultHeight 900})
+               window (BrowserWindow.
+                       #js {:x (.-x window-state)
+                            :y (.-y window-state)
+                            :width (.-width window-state)
+                            :height (.-height window-state)
+                            :minWidth 500
+                            :minHeight 500
+                            :webPreferences #js {:nodeIntegration true
+                                                 :contextIsolation false
+                                                 ;; Enabled to get support for :has() selector in CSS.
+                                                 ;; Can be disabled whenever support for that is mainlined in Chrome
+                                                 :experimentalFeatures true
+                                                 #_#_:preload (path/join js/__dirname "preload.js")}})
+               source-path (if is-dev?
+                             "http://localhost:8080"
+                             (str "file://" js/__dirname "/../index.html"))]
+           (when is-dev?
+             (.. window -webContents (openDevTools #js {:activate false})))
+           (swap! *main-window-info merge {:window window
+                                           :renderer-ipc-handlers-initialized? false})
+           (.manage window-state window)
+           (.loadURL ^js/electron.BrowserWindow window source-path)
 
-    (when is-dev?
-      (.. window -webContents (openDevTools)))
-    (reset! *main-window window)
-    (.manage window-state window)
-    (.loadURL ^js/electron.BrowserWindow window source-path)
+           (.on ^js/electron.BrowserWindow window "closed"
+                #(reset! *main-window-info nil))
+           (.on ^js/electron.BrowserWindow window "enter-full-screen"
+                #(.. window -webContents (send "change-full-screen-status", true)))
+           (.on ^js/electron.BrowserWindow window "leave-full-screen"
+                #(.. window -webContents (send "change-full-screen-status", false)))
 
-    (.on ^js/electron.BrowserWindow window "closed"
-         #(reset! *main-window nil))
-    (.on ^js/electron.BrowserWindow window "enter-full-screen"
-         #(.. window -webContents (send "change-full-screen-status", true)))
-    (.on ^js/electron.BrowserWindow window "leave-full-screen"
-         #(.. window -webContents (send "change-full-screen-status", false)))
+           (init-app-menu window)
 
-    (init-app-menu window)
+           (read-persisted! "current-file"
+                            {:path nil}
+                            (fn [{:keys [path]}]
+                              ;; On macOS, if an "open-file" event has occurred, that means a .drop file
+                              ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
+                              ;; or with the `open -a ...` command. MacOS implements it this way rather than
+                              ;; using ARGV because the application may stick around even if the window closes
+                              ;; in, in contrast to Windows where the window and application instance are
+                              ;; synonymous.
+                              ;;
+                              ;; Anyway, if the "open-file" event already happened for this window, then the
+                              ;; user is opening a new file, and there is no need to reopen the last file modified.
+                              (when (and path (not (:file-opened-from-os? @*main-window-info)))
+                                (log (str "Opening last file modified from current-file.edn: " path))
+                                (open-file-in-slate! path))))
 
-    (go (>! window-ready-chan true))
-    (reset! *all-windows-closed? false)
-
-    (js/console.log "Initialized Electron browser window")))
+           (log "Electron browser window initialized")
+           (resolve-promise)))))))
 
 (defn main []
   ; CrashReporter can just be omitted
@@ -284,15 +297,12 @@
 
   (.on app "open-file"
        (fn [_event path]
-         (fs/readFile path "utf8" (fn [err, contents]
-                                    (when-not err
-                                      (go (>! opened-file-chan [path contents])))))))
+         (log "\"open-file\" event triggered from OS")
+         (open-file-in-slate! path)
+         (swap! *main-window-info assoc :file-opened-from-os? true)))
 
   (.on app "window-all-closed" #(if (= js/process.platform "darwin")
-                                  (do
-                                    (reset! *all-windows-closed? true)
-                                    (reset! *slate-ready? false)
-                                    (reset! *file-opened-from-os-check-done? true))
+                                  (reset! *main-window-info main-window-info-default)
                                   (.quit app)))
   (.on app "ready" init-window!)
 
@@ -300,5 +310,4 @@
                         (when (zero? (.. BrowserWindow (getAllWindows) -length))
                           (init-window!))))
 
-  (reg-ipc-handlers!)
-  (listen-for-file-open-events!))
+  (reg-ipc-handlers!))

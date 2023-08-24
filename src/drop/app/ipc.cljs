@@ -21,7 +21,6 @@
              "new" (file-handling/on-new! *slate-instance)
              "save" (file-handling/on-save! (slate-serialization/serialize @*slate-instance))
              "save-as" (file-handling/on-save-as! (slate-serialization/serialize @*slate-instance))
-             "open" (file-handling/on-open! *slate-instance)
              "initiate-file-export" (apply file-handling/on-export! @*slate-instance args)))))
 
   (.on ipcRenderer "selection-menu-item-clicked"
@@ -35,10 +34,10 @@
              "next-paragraph" (slate-api/next-paragraph! *slate-instance)
              "prev-paragraph" (slate-api/prev-paragraph! *slate-instance)))))
 
-  (.on ipcRenderer "open-file"
+  (.on ipcRenderer "load-file"
        (fn [_e, file-path, file-contents]
          (try
-           #(dispatch [:opened-file-from-os file-path file-contents])
+           (dispatch [:open-file file-path file-contents])
            (catch :default e
              (app-utils/show-error-dialog! "Failed to open file" "File failed to open")
              (js/console.log "Error thrown in ipcRenderer open-file:" e)))))
@@ -50,4 +49,6 @@
              (file-handling/open-doc! *slate-instance (filetypes/import file-type file-contents)))
            (catch :default e
              (app-utils/show-error-dialog! "Import Failure" "Failed to import file.")
-             (js/console.log "Error thrown in ipcRenderer import-file:" e))))))
+             (js/console.log "Error thrown in ipcRenderer import-file:" e)))))
+
+  (.send ipcRenderer "renderer-ipc-handlers-initialized"))

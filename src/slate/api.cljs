@@ -24,9 +24,9 @@
 (defn when-ready
   "Executes a provided function when the Slate editor is ready."
   [*ui-state f]
-  (let [watch-key (rand-int 100000000)]
-    (if (:ready? @*ui-state)
-      (f)
+  (if (:ready? @*ui-state)
+    (f)
+    (let [watch-key (rand-int 100000000)]
       (add-watch *ui-state watch-key
                  (fn [_ _ _ new-state]
                    (when (:ready? new-state)
