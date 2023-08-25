@@ -14,9 +14,9 @@ However, the rich text editor is _mostly_ complete and stable. It supports:
 - Common text editing shortcuts: ⌥+→ / ⌥+← to jump between words, ⌘+→ / ⌘+← to jump to start/end of line, etc.
 - Full undo and redo
 - Copy and paste (plain text supported to and from Droplet to other apps; rich text currently only supported Droplet-to-Droplet)
-- Find and replace (currently no UI)
+- Find and replace
 - A rich "interceptor" system for handling shortcuts and editor actions in an easily-extensible manner
-- A fully-immutable document models, which means __tests__! Rich text editors are finnicky and full of edges cases, and being able to trivially unit test any editor action in isolation is a life saver.
+- A fully-immutable document model, which means __tests__! Rich text editors are finnicky and full of edges cases, and being able to trivially unit test any editor action in isolation is a life saver.
 - Some fancy-pants completions, like completing -- to an em dash and auto-surrounding parens and quotations.
 
 More details on the structure of the editor in `src/slate/README.md`. -->
@@ -29,7 +29,7 @@ More details on the structure of the editor in `src/slate/README.md`. -->
 npm run dev-watch
 ```
 
-Then, **start up Electron**/. Normally this should be done in a separate terminal so that the main Electron process can be restarted as needed.
+Then, **start up Electron**. Normally this should be done in a separate terminal so that the main Electron process can be restarted as needed.
 
 ```
 electron .
@@ -123,9 +123,10 @@ The AWS CLI must be configured in order for this to work.
 - Fix bug where cut action was not added to editor history
 - Implement double click to select a word, and triple click to select a paragraph
 - Don't grey out editor surface when losing focus to another window, only when losing focus to something else inside Droplet
-- Removed editor history from .drop file; this is regrettable but the price of serializing and deserializing all that data was getting steep, with 5+ second load times for files with significant history. Files sizes were also blooming to ~45MB for a ~3500 word document.
+- Removed editor history from .drop file; this is regrettable but the price of serializing and deserializing all that data was getting steep, with 5+ second load times for files with significant history. Files sizes were also balooning to ~45MB for a ~3500 word document.
 - Fixed "click on file to open it in Droplet" behavior on macOS
 - Fixed bug where double and triple click were not getting selection formatting set correctly
 - Fixed bug where find and replace popover was not appearing
 - Minor tweaks to colors
 - Word count will display word count of selection when selection is range
+- Open file when passed in ARGV

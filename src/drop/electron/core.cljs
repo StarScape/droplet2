@@ -17,6 +17,7 @@
 (declare init-window!)
 
 (def main-window-info-default {:window nil
+                               :promise nil
                                :renderer-ipc-handlers-initialized? false
                                :file-opened-from-os? false})
 
@@ -71,11 +72,11 @@
   []
   (js/Promise.
    (fn [resolve-promise _reject-promise]
-     (log (:renderer-ipc-handlers-initialized? @*main-window-info))
      (if (:renderer-ipc-handlers-initialized? @*main-window-info)
        (resolve-promise)
        (.once ipcMain "renderer-ipc-handlers-initialized"
               (fn []
+                (log "Renderer IPC handlers initialized.")
                 (swap! *main-window-info assoc :renderer-ipc-handlers-initialized? true)
                 (resolve-promise)))))))
 
@@ -95,9 +96,9 @@
   (go
     ;; Initialize new-window if not already done
     (<p! (init-window!))
-    (log "After init-window!")
+    #_(log "After init-window!")
     (<p! (wait-for-renderer-ipc-handlers!))
-    (log "After wait-for-renderer-ipc-handlers!")
+    #_(log "After wait-for-renderer-ipc-handlers!")
     (fs/readFile path "utf8" (fn [err, contents]
                                (when-not err
                                  (log (str "Read file " path " from disk, sending to renderer process\n"))
@@ -224,68 +225,75 @@
                                           {:role "toggledevtools"}]})))
     (.setApplicationMenu Menu (.buildFromTemplate Menu template))))
 
+(defn- -init-window! []
+  (log "Initializing Electron browser window")
+  (let [window-state (window-state-keeper #js {:defaultWidth 1200
+                                               :defaultHeight 900})
+        window (BrowserWindow.
+                #js {:x (.-x window-state)
+                     :y (.-y window-state)
+                     :width (.-width window-state)
+                     :height (.-height window-state)
+                     :minWidth 500
+                     :minHeight 500
+                     :webPreferences #js {:nodeIntegration true
+                                          :contextIsolation false
+                                          ;; Enabled to get support for :has() selector in CSS.
+                                          ;; Can be disabled whenever support for that is mainlined in Chrome
+                                          :experimentalFeatures true
+                                          #_#_:preload (path/join js/__dirname "preload.js")}})
+        source-path (if is-dev?
+                      "http://localhost:8080"
+                      (str "file://" js/__dirname "/../index.html"))]
+    (when is-dev?
+      (.. window -webContents (openDevTools #js {:activate false})))
+    (swap! *main-window-info merge {:window window
+                                    :renderer-ipc-handlers-initialized? false})
+    (.manage window-state window)
+    (.loadURL ^js/electron.BrowserWindow window source-path)
+    (.on ^js/electron.BrowserWindow window "closed"
+         #(reset! *main-window-info nil))
+    (.on ^js/electron.BrowserWindow window "enter-full-screen"
+         #(.. window -webContents (send "change-full-screen-status", true)))
+    (.on ^js/electron.BrowserWindow window "leave-full-screen"
+         #(.. window -webContents (send "change-full-screen-status", false)))
+
+    (init-app-menu window)
+
+    (read-persisted! "current-file"
+                     {:path nil}
+                     (fn [{:keys [path]}]
+                       ;; On macOS, if an "open-file" event has occurred, that means a .drop file
+                       ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
+                       ;; or with the `open -a ...` command. MacOS implements it this way rather than
+                       ;; using ARGV because the application may stick around even if the window closes
+                       ;; in, in contrast to Windows where the window and application instance are
+                       ;; synonymous.
+                       ;;
+                       ;; Anyway, if the "open-file" event already happened for this window, then the
+                       ;; user is opening a new file, and there is no need to reopen the last file modified.
+                       (when (and path (not (:file-opened-from-os? @*main-window-info)))
+                         (log "Opening last file modified from current-file.edn: " path)
+                         (open-file-in-slate! path))))
+
+    (log "Electron browser window initialized")
+    #_(resolve-promise)))
+
 (defn init-window!
-  "Initializes the main Droplet window. Returns a Promise that resolves whenever the
-   window has been initialized."
+  "Initializes the main Droplet window.
+   Returns a Promise that resolves whenever the window has been created."
   []
-  (js/Promise.
-   (fn [resolve-promise _reject-promise]
-     (if (:window @*main-window-info)
-       (resolve-promise) ;; window already exists, resolve immediately
-       (do
-         (log "Initializing Electron browser window")
-         (let [window-state (window-state-keeper #js {:defaultWidth 1200
-                                                      :defaultHeight 900})
-               window (BrowserWindow.
-                       #js {:x (.-x window-state)
-                            :y (.-y window-state)
-                            :width (.-width window-state)
-                            :height (.-height window-state)
-                            :minWidth 500
-                            :minHeight 500
-                            :webPreferences #js {:nodeIntegration true
-                                                 :contextIsolation false
-                                                 ;; Enabled to get support for :has() selector in CSS.
-                                                 ;; Can be disabled whenever support for that is mainlined in Chrome
-                                                 :experimentalFeatures true
-                                                 #_#_:preload (path/join js/__dirname "preload.js")}})
-               source-path (if is-dev?
-                             "http://localhost:8080"
-                             (str "file://" js/__dirname "/../index.html"))]
-           (when is-dev?
-             (.. window -webContents (openDevTools #js {:activate false})))
-           (swap! *main-window-info merge {:window window
-                                           :renderer-ipc-handlers-initialized? false})
-           (.manage window-state window)
-           (.loadURL ^js/electron.BrowserWindow window source-path)
-
-           (.on ^js/electron.BrowserWindow window "closed"
-                #(reset! *main-window-info nil))
-           (.on ^js/electron.BrowserWindow window "enter-full-screen"
-                #(.. window -webContents (send "change-full-screen-status", true)))
-           (.on ^js/electron.BrowserWindow window "leave-full-screen"
-                #(.. window -webContents (send "change-full-screen-status", false)))
-
-           (init-app-menu window)
-
-           (read-persisted! "current-file"
-                            {:path nil}
-                            (fn [{:keys [path]}]
-                              ;; On macOS, if an "open-file" event has occurred, that means a .drop file
-                              ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
-                              ;; or with the `open -a ...` command. MacOS implements it this way rather than
-                              ;; using ARGV because the application may stick around even if the window closes
-                              ;; in, in contrast to Windows where the window and application instance are
-                              ;; synonymous.
-                              ;;
-                              ;; Anyway, if the "open-file" event already happened for this window, then the
-                              ;; user is opening a new file, and there is no need to reopen the last file modified.
-                              (when (and path (not (:file-opened-from-os? @*main-window-info)))
-                                (log (str "Opening last file modified from current-file.edn: " path))
-                                (open-file-in-slate! path))))
-
-           (log "Electron browser window initialized")
-           (resolve-promise)))))))
+  (-> (.whenReady app)
+      (.then #(or (:promise @*main-window-info)
+                  (-> (swap! *main-window-info assoc :promise
+                             (js/Promise. (fn [resolve _]
+                                            (try
+                                              (-init-window!)
+                                              (catch js/Object e
+                                                (js/console.log "Error initializing window" e)))
+                                            (resolve))))
+                      ; get promise prop of returned main-window-info
+                      :promise)))))
 
 (defn main []
   ; CrashReporter can just be omitted
@@ -294,6 +302,22 @@
                :productName "Droplet"
                :submitURL "https://example.com/submit-url"
                :autoSubmit false})
+
+  ;; Check for file to open passed as cmd line argument
+  (when (and (not is-dev?) ; in development the args will be those passed to the `electron` binary
+             (> (count (.-argv js/process)) 1))
+    (let [file-path (nth (.-argv js/process) 1)]
+      (log "File passed to ARGV: " (.-argv js/process))
+
+      ;; Check if file exits
+      (if (and (fs/existsSync file-path)
+               (.. (fs/lstatSync file-path) (isFile)))
+        (do
+          (open-file-in-slate! file-path)
+          (swap! *main-window-info assoc :file-opened-from-os? true))
+        (do
+          (js/console.log (str "File " file-path " does not exist or is not a file."))
+          (.exit js/process 1)))))
 
   (.on app "open-file"
        (fn [_event path]
