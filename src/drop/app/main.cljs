@@ -19,9 +19,6 @@
 ;; TODO: The find and replace popup is ass-ugly. Do something about that.
 ;; TODO: Experiment with different fonts
 
-;; TODO: move word-count and active-formats to re-frame db
-;; TODO: test file opening from Finder
-;; TODO: possibly clean up common before around setting localstorage val and title w/ a re-frame interceptor
 ;; TODO: implement loading spinner
 
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line

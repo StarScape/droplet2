@@ -134,8 +134,14 @@
 
 (defn prev-occurrence
   [{:keys [occurrences current-occurrence-idx] :as find-and-replace-state}]
-  (if (zero? current-occurrence-idx)
+  (cond
+    (empty? occurrences)
+    find-and-replace-state
+
+    (zero? current-occurrence-idx)
     (assoc find-and-replace-state :current-occurrence-idx (dec (count occurrences)))
+
+    :else
     (update find-and-replace-state :current-occurrence-idx dec)))
 
 (defn replace-current-selection
