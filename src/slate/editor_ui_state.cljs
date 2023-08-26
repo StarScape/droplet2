@@ -205,7 +205,8 @@
 
 (defn handle-focus-out!
   [*ui-state]
-  (style/lose-focus! (:shadow-root @*ui-state)))
+  (when ((:should-lose-focus? @*ui-state))
+    (style/lose-focus! (:shadow-root @*ui-state))))
 
 (defn set-font-size!
   [*ui-state new-size]
@@ -681,8 +682,9 @@
    :save-file-contents - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom save-file-contents dom-elem on-ready on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed]
-      :or {*atom (atom nil), on-ready nop, on-new nop, on-save nop, on-save-as nop, on-open nop, on-focus-find nop, on-doc-changed nop, on-selection-changed nop}}]
+  [& {:keys [*atom save-file-contents dom-elem on-ready on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed should-lose-focus?]
+      :or {*atom (atom nil), on-ready nop, on-new nop, on-save nop, on-save-as nop, on-open nop, on-focus-find nop, on-doc-changed nop, on-selection-changed nop,
+           should-lose-focus? (constantly true)}}]
   ;; Load global styles if not already loaded
   (style/install-global-styles!)
   ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
@@ -725,6 +727,7 @@
                               :on-focus-find on-focus-find
                               :on-doc-changed on-doc-changed
                               :on-selection-changed on-selection-changed
+                              :should-lose-focus? should-lose-focus?
                               :ready? false})
                (init-event-handlers! *atom)
                (full-dom-render! *atom)

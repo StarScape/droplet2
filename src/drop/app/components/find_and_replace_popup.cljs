@@ -62,6 +62,8 @@
            on-click-exit
            on-toggle-ignore-case
            on-key-down
+           on-focus
+           on-blur
            search-input-ref]}]
   (r/with-let [debounced-on-find (debounce 500 on-find)
                *replace-text (r/atom "")
@@ -71,6 +73,9 @@
       [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
+             :style {:z-index 2}
+             :on-focus on-focus
+             :on-blur on-blur
              :on-key-down (fn [e]
                             (on-key-down ^js/Event (.-nativeEvent e))
                             (cond

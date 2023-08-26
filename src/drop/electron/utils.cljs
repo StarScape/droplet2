@@ -2,7 +2,8 @@
   (:require ["electron" :refer [ipcMain app]]
             ["path" :as path]
             ["fs" :as fs]
-            [clojure.edn :as edn]))
+            [clojure.edn :as edn]
+            [clojure.spec.alpha :as s]))
 
 (defn on-ipc [channel handler]
   (.on ipcMain channel handler))
@@ -46,6 +47,15 @@
                                    (write-persisted! file-name default-val)
                                    (callback default-val))
                                  (callback (edn/read-string contents)))))))
+
+(comment
+  (persisted/declare-file ::current-file
+    :default {:path nil}
+    :spec (s/or 1 2))
+  (persisted/write! ::current-file {:path "~/foo.drop"})
+  (persisted/read! ::current-file (fn [read-val]
+                                    ...)))
+
 
 (defn log [& msg]
   (js/console.log (str "> " (apply str msg))))

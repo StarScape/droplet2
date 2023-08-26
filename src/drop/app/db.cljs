@@ -13,4 +13,5 @@
    :fullscreen? false
    :actionbar-transparent? false
    :active-formats #{}
-   :word-count 0})
+   :word-count 0
+   :find-and-replace-focused? false})

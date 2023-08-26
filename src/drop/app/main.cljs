@@ -10,9 +10,9 @@
             [re-frame.core :as rf]
             [orchestra-cljs.spec.test :as st]))
 
+;; BUG: Open F+R, no search, press the 'prev' button--number will become negative
 ;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
 ;;       Deliberately induce some errors.
-;; TODO: Don't cause selection to grey out if find and replace is what is currently focused
 ;; TODO: cmd+w should close main window on macOS
 
 ;; TODO: The find and replace popup is ass-ugly. Do something about that.

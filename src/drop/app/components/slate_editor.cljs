@@ -38,6 +38,8 @@
                                                         (= ui-state/redo! matching-interceptor))
                                                 (ui-state/fire-interceptor! *slate-instance matching-interceptor nil)
                                                 (focus-find-popup!))))
+                             :on-focus #(dispatch [:set-find-and-replace-focused true])
+                             :on-blur #(dispatch [:set-find-and-replace-focused false])
                              :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}]))
 
 (defn slate-editor [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed on-ready]}]
@@ -58,6 +60,7 @@
                        :on-focus-find on-focus-find
                        :on-doc-changed on-doc-changed
                        :on-selection-changed on-selection-changed
+                       :should-lose-focus? #(not @(subscribe [:find-and-replace-focused?]))
                        :on-ready (fn []
                                    (on-ready)))
 

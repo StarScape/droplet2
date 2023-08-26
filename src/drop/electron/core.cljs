@@ -13,13 +13,14 @@
 
 (goog-define DEV true)
 (def is-dev? DEV)
-
 (declare init-window!)
 
 (def main-window-info-default {:window nil
                                :promise nil
                                :renderer-ipc-handlers-initialized? false
                                :file-opened-from-os? false})
+
+(def current-file-default-val {:path nil})
 
 (def *main-window-info (atom main-window-info-default))
 
@@ -100,11 +101,13 @@
     (<p! (wait-for-renderer-ipc-handlers!))
     #_(log "After wait-for-renderer-ipc-handlers!")
     (fs/readFile path "utf8" (fn [err, contents]
-                               (when-not err
-                                 (log (str "Read file " path " from disk, sending to renderer process\n"))
-                                 ;; TODO: ensure that this is only done after channel is set up
-                                 (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
-                                 (write-persisted! "current-file" {:path path}))))))
+                               (if err
+                                 (log "Error reading file " path ": \n" err)
+                                 (do
+                                   (log (str "Read file " path " from disk, sending to renderer process\n"))
+                                   ;; TODO: ensure that this is only done after channel is set up
+                                   (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
+                                   (write-persisted! "current-file" {:path path})))))))
 
 (defn choose-file-from-fs! []
   (-> (.showOpenDialog dialog (:window @*main-window-info)
@@ -261,7 +264,7 @@
     (init-app-menu window)
 
     (read-persisted! "current-file"
-                     {:path nil}
+                     current-file-default-val
                      (fn [{:keys [path]}]
                        ;; On macOS, if an "open-file" event has occurred, that means a .drop file
                        ;; has been opened from Finder, by dropping into onto Droplet on the Dock,

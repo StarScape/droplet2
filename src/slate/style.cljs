@@ -72,7 +72,7 @@
    [:.line::after {:content "\" \""}]
    [:.span {:display "inline-block"}]
    [:.slate-range-selection {:background-color "var(--range-selection-color)"
-                             :z-index 1000}]
+                             :z-index 1}]
    ;; Selected elements whose previous sibling is a .slate-range-selection (all but first)
    ;;  [(keyword ".slate-range-selection + .slate-range-selection") {:border-top-left-radius 0
    ;;                                                                :border-bottom-left-radius 0}]
