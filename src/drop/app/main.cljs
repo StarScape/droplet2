@@ -8,7 +8,8 @@
             [drop.utils :as utils]
             [reagent.dom :as rdom]
             [re-frame.core :as rf]
-            [orchestra-cljs.spec.test :as st]))
+            [orchestra-cljs.spec.test :as st]
+            ["electron" :refer [ipcRenderer]]))
 
 ;; BUG: Open F+R, no search, press the 'prev' button--number will become negative
 ;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
@@ -100,4 +101,5 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn ^:dev/after-load reload []
+  (.send ipcRenderer "-reload-last-file")
   (mount-main-component))

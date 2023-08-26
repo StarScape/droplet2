@@ -109,6 +109,24 @@
                                    (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
                                    (write-persisted! "current-file" {:path path})))))))
 
+(defn open-last-file!
+  "Opens the last opened file by Droplet."
+  []
+  (read-persisted! "current-file" current-file-default-val
+                   (fn [{:keys [path]}]
+                     ;; On macOS, if an "open-file" event has occurred, that means a .drop file
+                     ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
+                     ;; or with the `open -a ...` command. MacOS implements it this way rather than
+                     ;; using ARGV because the application may stick around even if the window closes
+                     ;; in, in contrast to Windows where the window and application instance are
+                     ;; synonymous.
+                     ;;
+                     ;; Anyway, if the "open-file" event already happened for this window, then the
+                     ;; user is opening a new file, and there is no need to reopen the last file modified.
+                     (when (and path (not (:file-opened-from-os? @*main-window-info)))
+                       (log "Opening last file modified from current-file.edn: " path)
+                       (open-file-in-slate! path)))))
+
 (defn choose-file-from-fs! []
   (-> (.showOpenDialog dialog (:window @*main-window-info)
                        (clj->js {:title "Open .drop"
@@ -158,7 +176,10 @@
   (on-ipc "new-file-confirmation-dialog"
     (fn [e]
       ;; Generic method for showing confirmation dialogs
-      (set! (.-returnValue e) (show-new-file-confirmation-dialog!)))))
+      (set! (.-returnValue e) (show-new-file-confirmation-dialog!))))
+
+  ;; DEV ONLY: used when hot-reloading to trigger reopen of last file modified
+  (on-ipc "-reload-last-file" #(open-last-file!)))
 
 (defn init-app-menu [window]
   (let [template (clj->js [{:label (.-name app)
@@ -263,24 +284,9 @@
 
     (init-app-menu window)
 
-    (read-persisted! "current-file"
-                     current-file-default-val
-                     (fn [{:keys [path]}]
-                       ;; On macOS, if an "open-file" event has occurred, that means a .drop file
-                       ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
-                       ;; or with the `open -a ...` command. MacOS implements it this way rather than
-                       ;; using ARGV because the application may stick around even if the window closes
-                       ;; in, in contrast to Windows where the window and application instance are
-                       ;; synonymous.
-                       ;;
-                       ;; Anyway, if the "open-file" event already happened for this window, then the
-                       ;; user is opening a new file, and there is no need to reopen the last file modified.
-                       (when (and path (not (:file-opened-from-os? @*main-window-info)))
-                         (log "Opening last file modified from current-file.edn: " path)
-                         (open-file-in-slate! path))))
+    (open-last-file!)
 
-    (log "Electron browser window initialized")
-    #_(resolve-promise)))
+    (log "Electron browser window initialized")))
 
 (defn init-window!
   "Initializes the main Droplet window.
