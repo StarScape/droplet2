@@ -11,7 +11,6 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer]]))
 
-;; BUG: Open F+R, no search, press the 'prev' button--number will become negative
 ;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
 ;;       Deliberately induce some errors.
 ;; TODO: cmd+w should close main window on macOS
@@ -19,12 +18,9 @@
 ;; TODO: The find and replace popup is ass-ugly. Do something about that.
 ;; TODO: Experiment with different fonts
 
-;; TODO: implement loading spinner
-
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
-;; TODO: consider not changing focus when switched windows
-;; TODO: selected words counter
+;; TODO: implement loading spinner?
 
 ;; CORE CLEANUP
 
@@ -35,7 +31,13 @@
 ;; FEATURES
 
 ;; PROG: Test with large documents (100 pages)
-;; PROG: Test with large documents (100 pages)
+;; PROG: Test with large documents (1,000 pages)
+;; TODO: Tabs
+;; TODO: File browser
+;; TODO: Dark mode
+;; TODO: Right-click context menu
+;; TODO: Drag n drog files
+;; TODO: Rewrite render engine with Canvas approach?
 ;; TODO: Add auto-updates capability
 ;; TODO: Add automated crash reporting
 ;; TODO: Add payment system
@@ -43,13 +45,7 @@
 ;; TODO: Add ⌃F/Alt+F/Hold shortcut button to display all shortcuts in actionbar
 ;; TODO: Add Command Palette
 ;; TODO: Make work with IME (https://w3c.github.io/uievents/#events-compositionevents)
-;; TODO: Rewrite render engine with Canvas approach
-;; TODO: Tabs
-;; TODO: File browser
-;; TODO: Right-click context menu
-;; TODO: Drag n drog files
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
-;; TODO: Dark mode
 ;; TODO: Bug - pressing fn+f to go to fullscreen still enters an 'f' inside the document
 ;; TODO: Implement highlight part of find and replace
 ;; TODO: Change tab rendering from em space to <span> so that width can be styled

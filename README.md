@@ -94,7 +94,7 @@ An `afterSign` script is registered with `electron-builder` to notarize the macO
 ## Deploying to S3 and Cloudfront
 __After building the installers, they can be deployed with `npm run deploy-installers`__, which will upload them to their S3 bucket, generate a JSON file with their URLs, and then copy that file to the `../droplet-website` folder. The website will then have to be redeployed from its own repo in order for the change to take affect.
 
-The AWS CLI must be configured in order for this to work.
+The AWS CLI must be installed and configured in order for this to work.
 
 ## Output/other directories
 
@@ -128,5 +128,9 @@ The AWS CLI must be configured in order for this to work.
 - Fixed bug where double and triple click were not getting selection formatting set correctly
 - Fixed bug where find and replace popover was not appearing
 - Minor tweaks to colors
-- Word count will display word count of selection when selection is range
+- Word count displays word count of selection when selection is range
 - Open file when passed in ARGV
+- Fixed bug where index in find and replace popup could become negative
+- Focus is no longer lost on editor pane when find and replace popup is selected
+
+### 0.0.3
