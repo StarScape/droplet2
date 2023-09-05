@@ -38,8 +38,12 @@
                                                         (= ui-state/redo! matching-interceptor))
                                                 (ui-state/fire-interceptor! *slate-instance matching-interceptor nil)
                                                 (focus-find-popup!))))
-                             ;; :on-focus #(dispatch [:set-find-and-replace-focused true])
-                             ;; :on-blur #(dispatch [:set-find-and-replace-focused false])
+                             ;; Consider the following sequence: editor is focused, F+R is focused (editor will not visually lose
+                             ;; focus by changing colors, though of course the actual focused element in the DOM will change), then
+                             ;; something else that is neither is focused. handle-focus-out! must be called here to account for that.
+                             :on-blur #(when-not (some-> (.-relatedTarget %)
+                                                         (.matches ui-state/wrapper-elem-class))
+                                         (ui-state/handle-focus-out! *slate-instance %))
                              :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}]))
 
 (defn slate-editor [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed on-ready]}]

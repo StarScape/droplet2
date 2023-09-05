@@ -630,6 +630,8 @@
      :ctrl+shift+s save-as!
      :ctrl+f activate-find!}))
 
+(def wrapper-elem-class "slate-shadow-dom-wrapper")
+
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
    and creates and returns the [editor element within shadow dom, shadowRoot]"
@@ -637,7 +639,7 @@
   (set! (.-innerHTML slate-top-level-elem) "")
   (let [shadow-dom-wrapper (js/document.createElement "div")
         shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
-    (set! (.-className shadow-dom-wrapper) "slate-shadow-dom-wrapper")
+    (set! (.-className shadow-dom-wrapper) wrapper-elem-class)
     (set! (.-maxWidth shadow-dom-wrapper-style) "700px")
     (set! (.-minWidth shadow-dom-wrapper-style) "300px")
     (set! (.-margin shadow-dom-wrapper-style) "0 auto")
