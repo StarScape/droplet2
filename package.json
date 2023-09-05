@@ -1,7 +1,7 @@
 {
   "name": "droplet",
   "productName": "Droplet",
-  "version": "0.0.2-SNAPSHOT",
+  "version": "0.0.2",
   "author": "Jack Arrignton",
   "description": "Minimalist prose editor.",
   "license": "Proprietary",

@@ -204,8 +204,8 @@
   (style/gain-focus! (:shadow-root @*ui-state)))
 
 (defn handle-focus-out!
-  [*ui-state]
-  (when ((:should-lose-focus? @*ui-state))
+  [*ui-state e]
+  (when ((:should-lose-focus? @*ui-state) e)
     (style/lose-focus! (:shadow-root @*ui-state))))
 
 (defn set-font-size!
@@ -601,7 +601,7 @@
         (let [{:keys [hidden-input shadow-root]} @*ui-state]
           (when (not= hidden-input (.-activeElement shadow-root))
             (.preventDefault e)
-            (handle-focus-out! *ui-state)))))
+            (handle-focus-out! *ui-state e)))))
 
     (bind-hidden-input-event! "focusin"
       (fn [e]

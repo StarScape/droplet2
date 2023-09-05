@@ -76,12 +76,14 @@ That build is set to autorun `:autorun true`, so there is no need for any additi
 Build installers for all platforms:
 
 ```bash
-build-releases
+npm run build-releases
 ```
 
 Installers and binaries will be outputted to `dist/`.
 
 It's a good idea not to have a dev instance of Droplet running before building the installers, as building a release will output JS files to the same directory that a developer session uses, and you want to make sure that the minified, production JS files are used.
+
+**Before making a release, remember to also bump the version in `package.json`.**
 
 ## Signing Mac Apps
 

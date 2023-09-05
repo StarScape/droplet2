@@ -11,12 +11,15 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer]]))
 
+;; BUG: CMD+Z undo event can be sent to both editor and 'Replace'/'Find' <input> when f+r is open
+
+;; TODO: Dark mode
+;; TODO: Experiment with different fonts
 ;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
 ;;       Deliberately induce some errors.
 ;; TODO: cmd+w should close main window on macOS
 
 ;; TODO: The find and replace popup is ass-ugly. Do something about that.
-;; TODO: Experiment with different fonts
 
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
@@ -34,7 +37,6 @@
 ;; PROG: Test with large documents (1,000 pages)
 ;; TODO: Tabs
 ;; TODO: File browser
-;; TODO: Dark mode
 ;; TODO: Right-click context menu
 ;; TODO: Drag n drog files
 ;; TODO: Rewrite render engine with Canvas approach?

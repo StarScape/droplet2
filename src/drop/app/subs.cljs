@@ -30,7 +30,3 @@
  :word-count
  (fn [db _]
    (-> db :word-count)))
-
-(rf/reg-sub
- :find-and-replace-focused?
- (fn [db _] (-> db :find-and-replace-focused?)))

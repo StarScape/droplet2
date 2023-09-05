@@ -70,8 +70,3 @@
  :set-active-formats
  (fn [db [_ new-active-formats]]
    (assoc db :active-formats new-active-formats)))
-
-(reg-event-db
- :set-find-and-replace-focused
- (fn [db [_ focused?]]
-   (assoc db :find-and-replace-focused? focused?)))

@@ -5,6 +5,8 @@
             [reagent.core :as r :refer-macros [with-let]]
             [slate.utils :as slate-utils :refer [is-mac?]]))
 
+(def element-id "find-and-replace-popup")
+
 (defn- input-row
   [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref value autofocus?]
     :or {on-key-down #() on-change #() ref #() value (r/atom "")}}]
@@ -70,7 +72,8 @@
                replace! #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))
                replace-all! #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))]
     (when activated?
-      [:div {:class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
+      [:div {:id element-id
+             :class "fixed top-0 right-5 px-2.5 py-2.5 bg-white
                    border-l border-r border-b rounded-b-sm shadow-sm
                    flex flex-col"
              :style {:z-index 2}

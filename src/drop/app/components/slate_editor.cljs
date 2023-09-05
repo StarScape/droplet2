@@ -1,7 +1,7 @@
 (ns drop.app.components.slate-editor
   (:require [clojure.pprint :as pprint]
             [drop.app.components.actionbar :refer [actionbar]]
-            [drop.app.components.find-and-replace-popup :refer [find-and-replace-popup]]
+            [drop.app.components.find-and-replace-popup :as f+r :refer [find-and-replace-popup]]
             [drop.app.file-handling :as file-handling]
             [drop.utils :as utils]
             [slate.default-interceptors :as ints]
@@ -38,8 +38,8 @@
                                                         (= ui-state/redo! matching-interceptor))
                                                 (ui-state/fire-interceptor! *slate-instance matching-interceptor nil)
                                                 (focus-find-popup!))))
-                             :on-focus #(dispatch [:set-find-and-replace-focused true])
-                             :on-blur #(dispatch [:set-find-and-replace-focused false])
+                             ;; :on-focus #(dispatch [:set-find-and-replace-focused true])
+                             ;; :on-blur #(dispatch [:set-find-and-replace-focused false])
                              :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}]))
 
 (defn slate-editor [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed on-ready]}]
@@ -60,7 +60,7 @@
                        :on-focus-find on-focus-find
                        :on-doc-changed on-doc-changed
                        :on-selection-changed on-selection-changed
-                       :should-lose-focus? #(not @(subscribe [:find-and-replace-focused?]))
+                       :should-lose-focus? #(nil? (some-> (.-relatedTarget %) (.closest (str "#" f+r/element-id))))
                        :on-ready (fn []
                                    (on-ready)))
 
