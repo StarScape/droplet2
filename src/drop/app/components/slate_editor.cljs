@@ -36,6 +36,7 @@
                                                   matching-interceptor (ui-state/find-interceptor ui-state e)]
                                               (when (or (= ui-state/undo! matching-interceptor)
                                                         (= ui-state/redo! matching-interceptor))
+                                                (.preventDefault e)
                                                 (ui-state/fire-interceptor! *slate-instance matching-interceptor nil)
                                                 (focus-find-popup!))))
                              ;; Consider the following sequence: editor is focused, F+R is focused (editor will not visually lose

@@ -20,6 +20,11 @@
 ;; TODO: cmd+w should close main window on macOS
 
 ;; TODO: The find and replace popup is ass-ugly. Do something about that.
+;; Would also like to change it s.t. replace is not showed by default.
+;; Instead make it so that you can make the replace part of the pane slide down
+;; on a key stroke. The key here will be making the UI sufficiently nice that I can
+;; incoporate the text indicating the keyboard shortcut without it being completely
+;; hideous.
 
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
