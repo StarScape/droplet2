@@ -57,7 +57,7 @@
                     :margin 0
                     :padding-top "20px"
                     :padding-bottom "70vh"
-                    :font-size "16px"
+                    :font-size "17px"
                     :font-family (str font-family ", serif") ;"Merriweather, serif"
                     :user-select "none"
                     :color "var(--text-color)"}
@@ -93,8 +93,8 @@
                              :margin-left "1.25em"}]
    [:.ul-format {:list-style-type "disc"}]
    [:.ol-format {:list-style-type "decimal"}]
-   [:.h1-format {:font-size "2em"}]
-   [:.h2-format {:font-size "1.25em"}]
+   [:.h1-format {:font-size "1.9em"}]
+   [:.h2-format {:font-size "1.4em"}]
    [:.italic-format {:font-style "italic !important"}]
    [:.strikethrough-format {:text-decoration "line-through"}]
    [:.bold-format {:font-weight "bold !important"}]
