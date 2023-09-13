@@ -282,6 +282,11 @@
     (.on ^js/electron.BrowserWindow window "leave-full-screen"
          #(.. window -webContents (send "change-full-screen-status", false)))
 
+    ;; Open last file on manual refreshes (useful when developing)
+    (.once (.-webContents window) "did-finish-load" (fn []
+                                                      (.on (.-webContents window) "did-finish-load"
+                                                           ;; this will only fire for subsequent loads
+                                                           #(open-last-file!))))
     (init-app-menu window)
 
     (open-last-file!)
