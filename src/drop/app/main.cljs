@@ -11,6 +11,10 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer]]))
 
+;; BUG: setting innerHTML without escpaing, typing for example '<b>' inserts a <b> tag into the document:
+;; https://developer.mozilla.org/en-US/docs/Web/API/Document/createTextNode
+;; https://stackoverflow.com/questions/6234773/can-i-escape-html-special-chars-in-javascript
+
 ;; BUG: CMD+Z undo event can be sent to both editor and 'Replace'/'Find' <input> when f+r is open
 
 ;; TODO: Dark mode

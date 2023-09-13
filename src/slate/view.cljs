@@ -8,7 +8,8 @@
             [slate.model.navigation :as nav]
             [slate.dll :as dll]
             [slate.viewmodel :as vm]
-            [slate.utils :refer [paragraph-type->css-class formats->css-classes]]))
+            [slate.utils :refer [paragraph-type->css-class formats->css-classes]]
+            [dev.performance-utils :refer-macros [measure-time-and-print!]]))
 
 ;; Utility functions
 (defn paragraph-uuid->dom-id
@@ -105,6 +106,20 @@
          (>= caret span-start)
          (< caret span-end))))
 
+(defn escape-html
+  [text]
+  (.. text
+      (replaceAll "&", "&amp;")
+      (replaceAll "<", "&lt;")
+      (replaceAll ">", "&gt;")
+      (replaceAll "\"", "&quot;")
+      (replaceAll "'", "&#039;")))
+
+(comment
+  (escape-html "Hello!")
+  (escape-html "<b>Hello!</b>")
+  )
+
 (defn- <span>
   "Returns a DOM string of a <span> element with `text` inside it.
    Will return an empty string if text is nil. Used as a helper function
@@ -115,7 +130,7 @@
     (str "<span class='span " (str/join " " classes) "'>"
          ;; If text is an empty string, add a space.
          ;; This will only ever happen in the case of an empty paragraph.
-         (or (not-empty text) " ")
+         (escape-html (or (not-empty text) " "))
          "</span>")))
 
 (defn split-span
