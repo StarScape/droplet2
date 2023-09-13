@@ -8,8 +8,7 @@
             [slate.model.navigation :as nav]
             [slate.dll :as dll]
             [slate.viewmodel :as vm]
-            [slate.utils :refer [paragraph-type->css-class formats->css-classes]]
-            [dev.performance-utils :refer-macros [measure-time-and-print!]]))
+            [slate.utils :refer [paragraph-type->css-class formats->css-classes]]))
 
 ;; Utility functions
 (defn paragraph-uuid->dom-id

@@ -635,7 +635,7 @@
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
    and creates and returns the [editor element within shadow dom, shadowRoot]"
-  [slate-top-level-elem]
+  [slate-top-level-elem font-family]
   (set! (.-innerHTML slate-top-level-elem) "")
   (let [shadow-dom-wrapper (js/document.createElement "div")
         shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
@@ -648,7 +648,7 @@
 
     (.attachShadow shadow-dom-wrapper #js {:mode "open"})
     (set! (.. shadow-dom-wrapper -shadowRoot -innerHTML)
-          (str "<style>" style/shadow-elem-css-rendered "</style>"))
+          (str "<style>" (style/get-rendered-shadow-elem-css font-family) "</style>"))
 
     ;; There are some things you cannot do (like set outerHTML on elements, among other
     ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
@@ -660,11 +660,11 @@
 
 (defn load-fonts!
   "Returns a Promise that resolves when the necessary fonts for rendering the document are loaded."
-  []
-  (js/Promise.all #js [(js/document.fonts.load "16px Merriweather")
-                       (js/document.fonts.load "italic 16px Merriweather")
-                       (js/document.fonts.load "bold 16px Merriweather")
-                       (js/document.fonts.load "bold italic 16px Merriweather")]))
+  [font-family-name]
+  (js/Promise.all #js [(js/document.fonts.load (str "16px " font-family-name))
+                       (js/document.fonts.load (str "italic 16px " font-family-name))
+                       (js/document.fonts.load (str "bold 16px " font-family-name))
+                       (js/document.fonts.load (str "bold italic 16px " font-family-name))]))
 
 (defn- nop [])
 
@@ -684,17 +684,37 @@
    :save-file-contents - The restored, deserialized history object.
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
-  [& {:keys [*atom save-file-contents dom-elem on-ready on-new on-save on-save-as on-open on-focus-find on-doc-changed on-selection-changed should-lose-focus?]
-      :or {*atom (atom nil), on-ready nop, on-new nop, on-save nop, on-save-as nop, on-open nop, on-focus-find nop, on-doc-changed nop, on-selection-changed nop,
+  [& {:keys [*atom
+             font-family
+             save-file-contents
+             dom-elem
+             on-ready
+             on-new
+             on-save
+             on-save-as
+             on-open
+             on-focus-find
+             on-doc-changed
+             on-selection-changed
+             should-lose-focus?]
+      :or {*atom (atom nil)
+           on-ready nop
+           on-new nop
+           on-save nop
+           on-save-as nop
+           on-open nop
+           on-focus-find nop
+           on-doc-changed nop
+           on-selection-changed nop
            should-lose-focus? (constantly true)}}]
   ;; Load global styles if not already loaded
   (style/install-global-styles!)
   ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
-  (.. (load-fonts!)
+  (.. (load-fonts! font-family)
       ;; TODO: use core-async or something to clean this up?
       (then #(let [uuid (random-uuid)
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem)
+                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family)
                    available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)
                    editor-state (if save-file-contents

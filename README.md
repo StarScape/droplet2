@@ -136,3 +136,6 @@ The AWS CLI must be installed and configured in order for this to work.
 - Focus is no longer lost on editor pane when find and replace popup is selected
 
 ### 0.0.3
+
+- Fixed issue where undo/redo events could fire both for the find and replace inputs and the main editor pane simultaneously
+- All text is escaped before being entered into the document

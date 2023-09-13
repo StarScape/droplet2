@@ -30,7 +30,7 @@
   [:50%
    {:opacity 0}])
 
-(def shadow-elem-style
+(defn get-shadow-elem-style [font-family]
   [blink-anim
    [(keyword ":host") {:--text-color "#202124"
 
@@ -58,7 +58,7 @@
                     :padding-top "20px"
                     :padding-bottom "70vh"
                     :font-size "16px"
-                    :font-family "Merriweather, serif"
+                    :font-family (str font-family ", serif") ;"Merriweather, serif"
                     :user-select "none"
                     :color "var(--text-color)"}
     [:&:hover {:cursor "text"}]]
@@ -105,7 +105,9 @@
   (println (apply css shadow-elem-style))
   )
 
-(def shadow-elem-css-rendered (apply css shadow-elem-style))
+(defn get-rendered-shadow-elem-css
+  [font-family]
+  (apply css (get-shadow-elem-style font-family)))
 
 (defn set-css-prop! [shadow-root prop val]
   (.. shadow-root -host -style (setProperty prop val)))
