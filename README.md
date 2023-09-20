@@ -139,3 +139,4 @@ The AWS CLI must be installed and configured in order for this to work.
 
 - Fixed issue where undo/redo events could fire both for the find and replace inputs and the main editor pane simultaneously
 - All text is escaped before being entered into the document
+- Changes to fonts

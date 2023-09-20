@@ -11,6 +11,8 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer]]))
 
+;; BUG: Current-style and word-count are not set on initial load
+;; PERF: When going to fullscreen/resizing window, reflowing the doc is taking a LONG time. Is this font related?
 ;; TODO: Dark mode
 ;; TODO: Experiment with different fonts
 ;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
