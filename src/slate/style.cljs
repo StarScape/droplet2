@@ -32,7 +32,7 @@
 
 (defn get-shadow-elem-style [font-family]
   [blink-anim
-   [(keyword ":host") {:--text-color "#202124"
+   [(keyword ":host") {:--text-color "#202124" ;"#1a1a1a"
 
                        :--caret-color-focused "#0085f2"
                        :--caret-colored-unfocused "#4496da"
@@ -57,14 +57,16 @@
                     :margin 0
                     :padding-top "20px"
                     :padding-bottom "70vh"
-                    :font-size "17px"
-                    :font-family (str font-family ", serif") ;"Merriweather, serif"
+                    :font-size "16px"
+                    :font-family (str font-family ", serif")
+                    :line-height "30px"
+                    ;; :letter-spacing "0.5px"
                     :user-select "none"
                     :color "var(--text-color)"}
     [:&:hover {:cursor "text"}]]
    [:.paragraph {:margin "0px"
                  :padding 0
-                 :padding-bottom "5px"
+                 :padding-bottom "7px"
                  :min-height "1em"}]
    ;; When there is an empty paragraph with just a caret in it, we need to render a _bit_
    ;; of text, so that the height of the paragraph is set to the same as any other ('font height' is
@@ -79,10 +81,11 @@
    ;;  ;; Selected elements whose next sibling is a .slate-range-selection (all but last)
    ;;  [(keyword ".slate-range-selection:has(+ .slate-range-selection)") {:border-top-right-radius 0
    ;;                                                                     :border-bottom-right-radius 0}]
-   [:.slate-text-caret {:position "relative"}
+   [:.slate-text-caret {:position "relative"
+                        :width 0}
     [:&::after {:position "absolute"
                 :content "\" \""
-                :width "2px"
+                :width "3px"
                 ;;:border-radius "2px"
                 :background-color "var(--caret-color)"
                 :animation "blink-anim 1.2s infinite"

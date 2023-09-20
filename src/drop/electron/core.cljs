@@ -270,6 +270,7 @@
                       "http://localhost:8080"
                       (str "file://" js/__dirname "/../index.html"))]
     (when is-dev?
+      (log "Opening devtools")
       (.. window -webContents (openDevTools #js {:activate false})))
     (swap! *main-window-info merge {:window window
                                     :renderer-ipc-handlers-initialized? false})

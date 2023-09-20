@@ -640,7 +640,7 @@
   (let [shadow-dom-wrapper (js/document.createElement "div")
         shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
     (set! (.-className shadow-dom-wrapper) wrapper-elem-class)
-    (set! (.-maxWidth shadow-dom-wrapper-style) "675px")
+    (set! (.-maxWidth shadow-dom-wrapper-style) "650px")
     (set! (.-minWidth shadow-dom-wrapper-style) "300px")
     (set! (.-margin shadow-dom-wrapper-style) "0 auto")
 

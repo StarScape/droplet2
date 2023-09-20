@@ -56,7 +56,7 @@
      (fn [_this]
        ;; Call init only once, when component initialized
        (ui-state/init! :*atom *ui-state
-                       :font-family "Merriweather"
+                       :font-family "Noto Serif"
                        :save-file-contents file-contents
                        :dom-elem @*editor-elem-ref
                        :on-new file-handling/on-new!
