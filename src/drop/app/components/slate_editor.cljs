@@ -47,7 +47,8 @@
                                          (ui-state/handle-focus-out! *slate-instance %))
                              :search-input-ref (fn [elem] (reset! *find-and-replace-ref elem))}]))
 
-(defn slate-editor [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed on-ready]}]
+(defn slate-editor
+  [{:keys [file-contents *ui-state on-focus-find on-doc-changed on-selection-changed on-ready]}]
   (let [*editor-elem-ref (atom nil)]
    (r/create-class
     {:display-name "slate-editor"
@@ -92,15 +93,13 @@
                   (reset! *editor-elem-ref elem)))}])})))
 
 (defn main-editor []
-  (let [#_#_#_#_*active-formats (r/atom #{})
-        *word-count (r/atom 0)
-        *slate-instance @(subscribe [:slate-instance])
+  (let [*slate-instance @(subscribe [:slate-instance])
         *find-and-replace-ref (r/atom nil)
         focus-find-ref! (fn []
                           (when-let [elem @*find-and-replace-ref]
                             (.focus elem)))]
     (fn []
-      [:div {:class "h-screen flex flex-row justify-center"}
+      [:div {:class "w-full flex flex-row justify-center"}
        ;; Find and replace outside of div with editor and actionbar bc it needs separate focus
        [find-and-replace *slate-instance *find-and-replace-ref focus-find-ref!]
 
