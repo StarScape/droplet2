@@ -116,6 +116,7 @@
                                    (dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)]))
                        :on-doc-changed (fn []
                                          (dispatch [:set-word-count (:word-count @*slate-instance)])
+                                         (dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)])
                                          (dispatch [:doc-changed]))
                        :on-selection-changed (fn [_new-selection]
                                                (dispatch [:set-active-formats (ui-state/active-formats @*slate-instance)])

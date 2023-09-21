@@ -175,7 +175,8 @@
   (swap! *ui-state merge {:history (history/init editor-state)
                           :word-count (word-count/init editor-state)
                           :input-history []})
-  (full-dom-render! *ui-state))
+  (full-dom-render! *ui-state)
+  ((:on-doc-changed @*ui-state)))
 
 (defn load-file!
   "Loads a serialized .drop file into the editor, discarding current document and history."
