@@ -176,7 +176,7 @@
                           :word-count (word-count/init editor-state)
                           :input-history []})
   (full-dom-render! *ui-state)
-  ((:on-doc-changed @*ui-state)))
+  ((:on-ready @*ui-state)))
 
 (defn load-file!
   "Loads a serialized .drop file into the editor, discarding current document and history."
@@ -743,6 +743,7 @@
                               :dom-elem editor-elem
                               :shadow-root shadow-root
                               :measure-fn measure-fn
+                              :on-ready on-ready
                               :on-new on-new
                               :on-save on-save
                               :on-save-as on-save-as
