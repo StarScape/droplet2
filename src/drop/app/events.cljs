@@ -18,8 +18,7 @@
  :open-file
  (fn [{:keys [db]} [_ file-path file-contents]]
    (let [{:keys [*slate-instance]} db]
-     {:db (assoc db :open-file {:path file-path
-                                :loading? false})
+     {:db (assoc db :open-file {:path file-path})
       :fx [[:open-file [*slate-instance file-contents]]
            [:set-title [file-path true]]]})))
 

@@ -20,6 +20,7 @@
                                :renderer-ipc-handlers-initialized? false
                                :file-opened-from-os? false})
 
+(def current-file-fname "current-file")
 (def current-file-default-val {:path nil})
 
 (def *main-window-info (atom main-window-info-default))
@@ -74,12 +75,15 @@
   (js/Promise.
    (fn [resolve-promise _reject-promise]
      (if (:renderer-ipc-handlers-initialized? @*main-window-info)
-       (resolve-promise)
-       (.once ipcMain "renderer-ipc-handlers-initialized"
-              (fn []
-                (log "Renderer IPC handlers initialized.")
-                (swap! *main-window-info assoc :renderer-ipc-handlers-initialized? true)
-                (resolve-promise)))))))
+       (do
+         (log "IPC handlers already initialized, resolving (wait-for-renderer-ipc-handlers!) promise immediately.")
+         (resolve-promise))
+       (do
+         (log "IPC handlers not yet initialized, waiting for signal...")
+         (.once ipcMain "renderer-ipc-handlers-initialized"
+                (fn []
+                  (log "Resolving hanging (wait-for-renderer-ipc-handlers!) promise.")
+                  (resolve-promise))))))))
 
 (defn save-drop-file!
   [file-path file-contents]
@@ -87,32 +91,32 @@
                 (fn [err]
                   (if err
                     (js/console.error err)
-                    (write-persisted! "current-file" {:path file-path})))))
+
+                    (write-persisted! current-file-fname {:path file-path})))))
 
 (defn open-file-in-slate!
   "Reads the data from the file and sends it to the render process to be loaded into the Slate editor.
    Saves the file path as the last file opened."
   [path]
-  (log "Called open-file-in-slate!")
+  (log "Called open-file-in-slate! for path '" path "'")
   (go
     ;; Initialize new-window if not already done
     (<p! (init-window!))
-    #_(log "After init-window!")
+    (log "After init-window!")
     (<p! (wait-for-renderer-ipc-handlers!))
-    #_(log "After wait-for-renderer-ipc-handlers!")
+    (log "After wait-for-renderer-ipc-handlers!")
     (fs/readFile path "utf8" (fn [err, contents]
                                (if err
                                  (log "Error reading file " path ": \n" err)
                                  (do
                                    (log (str "Read file " path " from disk, sending to renderer process\n"))
-                                   ;; TODO: ensure that this is only done after channel is set up
                                    (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
-                                   (write-persisted! "current-file" {:path path})))))))
+                                   (write-persisted! current-file-fname {:path path})))))))
 
 (defn open-last-file!
   "Opens the last opened file by Droplet."
   []
-  (read-persisted! "current-file" current-file-default-val
+  (read-persisted! current-file-fname current-file-default-val
                    (fn [{:keys [path]}]
                      ;; On macOS, if an "open-file" event has occurred, that means a .drop file
                      ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
@@ -139,6 +143,11 @@
       (.catch #(js/console.log %))))
 
 (defn reg-ipc-handlers! []
+  (on-ipc "renderer-ipc-handlers-initialized"
+    (fn []
+      (log "Renderer IPC handlers initialized.")
+      (swap! *main-window-info assoc :renderer-ipc-handlers-initialized? true)))
+
   (on-ipc "show-error-dialog"
           (fn [_ title dialog-text]
             (.showErrorBox dialog title dialog-text)))
@@ -251,6 +260,7 @@
 
 (defn- -init-window! []
   (log "Initializing Electron browser window")
+  (swap! *main-window-info assoc :renderer-ipc-handlers-initialized? false)
   (let [window-state (window-state-keeper #js {:defaultWidth 1200
                                                :defaultHeight 900})
         window (BrowserWindow.
@@ -272,8 +282,7 @@
     (when is-dev?
       (log "Opening devtools")
       (.. window -webContents (openDevTools #js {:activate false})))
-    (swap! *main-window-info merge {:window window
-                                    :renderer-ipc-handlers-initialized? false})
+    (swap! *main-window-info merge {:window window})
     (.manage window-state window)
     (.loadURL ^js/electron.BrowserWindow window source-path)
     (.on ^js/electron.BrowserWindow window "closed"
@@ -286,13 +295,13 @@
     ;; Open last file on manual refreshes (useful when developing)
     (.once (.-webContents window) "did-finish-load" (fn []
                                                       (.on (.-webContents window) "did-finish-load"
-                                                           ;; this will only fire for subsequent loads
-                                                           #(open-last-file!))))
+                                                           ;; This will only fire for subsequent loads
+                                                           (fn []
+                                                             (log "Renderer process has auto-reloaded, calling open-last-file! again")
+                                                             (open-last-file!)))))
     (init-app-menu window)
-
-    (open-last-file!)
-
-    (log "Electron browser window initialized")))
+    (log "Electron browser window initialized, calling open-last-file!")
+    (open-last-file!)))
 
 (defn init-window!
   "Initializes the main Droplet window.

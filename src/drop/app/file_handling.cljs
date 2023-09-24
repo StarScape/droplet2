@@ -19,7 +19,7 @@
   (ui-state/load-document! *ui-state doc)
   (dispatch [:set-open-file-path nil]))
 
-(defn open-file!
+#_(defn open-file!
   [*ui-state file-path contents]
   (ui-state/load-file! *ui-state contents)
   (dispatch [:set-open-file-path file-path]))

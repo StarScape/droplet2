@@ -7,8 +7,7 @@
 (defn get-ls-key [key] (str "ls-" key))
 
 (def default-db
-  {:open-file {:path nil,
-               :loading? true}
+  {:open-file {:path nil}
    :*slate-instance (r/atom nil)
    :fullscreen? false
    :actionbar-transparent? false

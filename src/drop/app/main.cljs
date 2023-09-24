@@ -8,6 +8,7 @@
             [drop.utils :as utils]
             [reagent.dom :as rdom]
             [re-frame.core :as rf]
+            [re-frame.db :as db]
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer]]))
 
