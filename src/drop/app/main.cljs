@@ -11,19 +11,21 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer]]))
 
-;; BUG: Initial load/reload shows the file as unsaved.
-;; PERF: When going to fullscreen/resizing window, reflowing the doc is taking a LONG time. Is this font related?
-;; TODO: Dark mode
-;; TODO: Experiment with different fonts
-;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
-;;       Deliberately induce some errors.
-;; TODO: cmd+w should close main window on macOS
-
+;; TODO: Fix actionbar disappear in fullscreen
 ;; BUG: Enter "This looks like the right alleyway...most likely" and position caret before first '.' will cause the characters after to bump over a bit
 ;; This actually appears to be an artifact of splitting the spans at that point, not the text caret pushing the other element over--even if you get rid
 ;; of the caret entirely in devtools, it still happens. I think the solution is to change the way we are rendering the caret. Rather than splitting a span
 ;; at that point, calculate the px offset (which we already do anyway since the paragraph gets rerendered every time we move the caret), and render an absolutely
 ;; positioned element at that point.
+;; TODO: Dark mode
+;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
+;;       Deliberately induce some errors.
+;; TODO: cmd+w should close main window on macOS
+
+;; TODO: Write release script that automates running tests, checking if there is a tag for existing release version in package.json (prompting
+;; to create one if not, or to roll the tag version if so), building new release version for each platform, record new marketing videos using
+;; automated process, pushing those to the S3 repo, and pushing a new version of the website.
+
 
 ;; TODO: The find and replace popup is ass-ugly. Do something about that.
 ;; Would also like to change it s.t. replace is not showed by default.

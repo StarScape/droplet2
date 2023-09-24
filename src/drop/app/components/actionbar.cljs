@@ -9,6 +9,8 @@
             [re-frame.db :as db]
             ["@headlessui/react" :refer [Transition]]))
 
+;; (def bg-color "bg-[rgb(246,247,249)]")
+;; (def bg-color "bg-gray-100")
 (def bg-color "bg-gray-50")
 
 (defn- shortcut-for [formatting-command]
@@ -30,14 +32,14 @@
       :ol "Ctrl+Shift+O"
       :ul "Ctrl+Shift+U")))
 
+
+;; solution here: https://jsfiddle.net/7o6q5c1v/1/
 (defn format-button [{:keys [img-url active? transparent-mode? on-click mouseover-text]}]
   [:> Transition {:show (boolean (or active? (not transparent-mode?)))
-                  :enter "transition-opacity duration-150"
                   :enterFrom "opacity-0"
                   :enterTo "opacity-100"
-                  :leave "transition-opacity duration-150"
                   :leaveFrom "opacity-100"
-                  :leaveTo "opacity-0"}
+                  :leaveTo "opacity-0 w-0"}
    [components/toggleable-button {:on-click on-click
                                   :toggled? active?
                                   :class "rounded-md"
@@ -61,12 +63,10 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          base-classes "fixed bottom-2 rounded-md px-1 py-1 flex place-content-between transition-all duration-150 "
-          visible-classes (str bg-color " border border-light-blue shadow-xl ")]
-      [:div {:class (str base-classes (if transparent?
-                                        "bg-transparent"
-                                        visible-classes))
-             :style {:min-width "calc(100vw - 15rem)"}}
+          base-classes "fixed px-1 py-1 flex place-content-between transition-all duration-150 "
+          visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
+          transparent-classes "inset-x-0 bottom-0 bg-transparent"]
+      [:div {:class (str base-classes (if transparent? transparent-classes visible-classes))}
        [:div.flex
         [format-button {:img-url "icons/italic.svg"
                         :active? (active-formats :italic)
