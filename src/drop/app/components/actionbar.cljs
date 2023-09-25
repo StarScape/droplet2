@@ -7,7 +7,12 @@
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [slate.utils :as slate-utils]
             [re-frame.db :as db]
-            ["@headlessui/react" :refer [Transition]]))
+            ["tailwind-merge" :refer [twMerge]]))
+
+(defn- find-first-index
+  "Returns the index of the first item matching `pred`."
+  [pred coll]
+  (ffirst (filter (comp pred second) (map-indexed list coll))))
 
 ;; (def bg-color "bg-[rgb(246,247,249)]")
 ;; (def bg-color "bg-gray-100")
@@ -32,20 +37,30 @@
       :ol "Ctrl+Shift+O"
       :ul "Ctrl+Shift+U")))
 
+;; DONE: Buttons to left of first active should animate opacity, then width, when going into transparent mode
+;; TODO: Buttons to left of first active should animate WIDTH, THEN opacity, when *leaving* transparent mode
+;; TODO: After transition INTO transparent mode, kill all transitions on buttons
+;; TODO: When transparent mode is disengaged, re-enable all transitions
+;; TODO: Put spacers back in (can just use margin instead, but remember to animate it)
 
-;; solution here: https://jsfiddle.net/7o6q5c1v/1/
-(defn format-button [{:keys [img-url active? transparent-mode? on-click mouseover-text]}]
-  [:> Transition {:show (boolean (or active? (not transparent-mode?)))
-                  :enterFrom "opacity-0"
-                  :enterTo "opacity-100"
-                  :leaveFrom "opacity-100"
-                  :leaveTo "opacity-0 w-0"}
-   [components/toggleable-button {:on-click on-click
-                                  :toggled? active?
-                                  :class "rounded-md"
-                                  :title mouseover-text}
-    [:img {:src img-url
-           :style {:width "15px"}}]]])
+(defn format-button [{:keys [img-url]}]
+  (r/create-class
+   {:component-will-unmount (fn [] (js/console.log (str "component unmounting! " img-url)))
+    :reagent-render (fn [{:keys [img-url active? transparent-mode? left-of-first-active? on-click mouseover-text]}]
+                      (let [hidden? (and transparent-mode? (not active?))]
+                        [components/toggleable-button {:on-click on-click
+                                                       :toggled? active?
+                                                       :on-transition-end (fn [e]
+                                                                            ;; (.-target e) ; elem
+                                                                            (js/console.log (.-propertyName e)))
+                                                       :class (twMerge "rounded-md [transition:opacity_1s,max-width_1s_1s,padding_1s_1s]"
+                                                                       (if hidden?
+                                                                         (twMerge "opacity-0"
+                                                                                  (when left-of-first-active? "max-w-0 px-0"))
+                                                                         "opacity-1 max-w-[35px]"))
+                                                       :title mouseover-text}
+                         [:img {:src img-url
+                                :style {:width "15px"}}]]))}))
 
 (defn- invisible-button []
   [:div.invisible [format-button "icons/italic.svg" false false #()]])
@@ -63,55 +78,73 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          base-classes "fixed px-1 py-1 flex place-content-between transition-all duration-150 "
+          base-classes "fixed px-1 py-1 flex place-content-between " ;;transition-all duration-150 
           visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
-          transparent-classes "inset-x-0 bottom-0 bg-transparent"]
-      [:div {:class (str base-classes (if transparent? transparent-classes visible-classes))}
+          transparent-classes "inset-x-0 bottom-0 bg-transparent"
+          buttons-info [{:img-url "icons/italic.svg"
+                         :active? (contains? active-formats :italic)
+                         :transparent-mode? transparent?
+                         :left-of-first-active? false
+                         :on-click #(on-format-toggle :italic)
+                         :mouseover-text (str "Italic (" (shortcut-for :italic) ")")}
+                        {:img-url "icons/bold.svg"
+                         :active? (contains? active-formats :bold)
+                         :transparent-mode? transparent?
+                         :left-of-first-active? false
+                         :on-click #(on-format-toggle :bold)
+                         :mouseover-text (str "Bold (" (shortcut-for :bold) ")")}
+                        {:img-url "icons/strikethrough.svg"
+                         :active? (contains? active-formats :strikethrough)
+                         :transparent-mode? transparent?
+                         :left-of-first-active? false
+                         :on-click #(on-format-toggle :strikethrough)
+                         :mouseover-text (str "Strikethrough (" (shortcut-for :strikethrough) ")")}
+
+                        ;; :spacer
+
+                        {:img-url "icons/h1.svg"
+                         :active? (contains? active-formats :h1)
+                         :transparent-mode? transparent?
+                         :left-of-first-active? false
+                         :on-click #(on-format-toggle :h1)
+                         :mouseover-text (str "Heading 1 (" (shortcut-for :h1) ")")}
+                        {:img-url "icons/h2.svg"
+                         :active? (contains? active-formats :h2)
+                         :transparent-mode? transparent?
+                         :left-of-first-active? false
+                         :on-click #(on-format-toggle :h2)
+                         :mouseover-text (str "Heading 2 (" (shortcut-for :h2) ")")}
+
+                        ;; :spacer
+
+                        {:img-url "icons/numbered.svg"
+                         :active? (contains? active-formats :ol)
+                         :transparent-mode? transparent?
+                         :left-of-first-active? false
+                         :on-click #(on-format-toggle :ol)
+                         :mouseover-text (str "Ordered List (" (shortcut-for :ol) ")")}
+                        {:img-url "icons/bulleted.svg"
+                         :active? (contains? active-formats :ul)
+                         :transparent-mode? transparent?
+                         :left-of-first-active? false
+                         :on-click #(on-format-toggle :ul)
+                         :mouseover-text (str "Unordered List (" (shortcut-for :ul) ")")}]
+          idx-first-active (find-first-index :active? buttons-info)
+          buttons-info (if idx-first-active
+                         (map-indexed (fn [idx info]
+                                        (if (< idx idx-first-active)
+                                          (assoc info :left-of-first-active? true)
+                                          info))
+                                      buttons-info)
+                         buttons-info)
+          buttons-info (into [] buttons-info)]
+      [:div {:class (twMerge base-classes (if transparent? transparent-classes visible-classes))}
        [:div.flex
-        [format-button {:img-url "icons/italic.svg"
-                        :active? (active-formats :italic)
-                        :transparent-mode? transparent?
-                        :on-click #(on-format-toggle :italic)
-                        :mouseover-text (str "Italic (" (shortcut-for :italic) ")")}]
-        [format-button {:img-url "icons/bold.svg"
-                        :active? (active-formats :bold)
-                        :transparent-mode? transparent?
-                        :on-click #(on-format-toggle :bold)
-                        :mouseover-text (str "Bold (" (shortcut-for :bold) ")")}]
-        [format-button {:img-url "icons/strikethrough.svg"
-                        :active? (active-formats :strikethrough)
-                        :transparent-mode? transparent?
-                        :on-click #(on-format-toggle :strikethrough)
-                        :mouseover-text (str "Strikethrough (" (shortcut-for :strikethrough) ")")}]
-
-        [h-spacer-sm]
-
-        [format-button {:img-url "icons/h1.svg"
-                        :active? (active-formats :h1)
-                        :transparent-mode? transparent?
-                        :on-click #(on-format-toggle :h1)
-                        :mouseover-text (str "Heading 1 (" (shortcut-for :h1) ")")}]
-        [format-button {:img-url "icons/h2.svg"
-                        :active? (active-formats :h2)
-                        :transparent-mode? transparent?
-                        :on-click #(on-format-toggle :h2)
-                        :mouseover-text (str "Heading 2 (" (shortcut-for :h2) ")")}]
-
-        [h-spacer-sm]
-
-        [format-button {:img-url "icons/numbered.svg"
-                        :active? (active-formats :ol)
-                        :transparent-mode? transparent?
-                        :on-click #(on-format-toggle :ol)
-                        :mouseover-text (str "Ordered List (" (shortcut-for :ol) ")")}]
-        [format-button {:img-url "icons/bulleted.svg"
-                        :active? (active-formats :ul)
-                        :transparent-mode? transparent?
-                        :on-click #(on-format-toggle :ul)
-                        :mouseover-text (str "Unordered List (" (shortcut-for :ul) ")")}]
+        (for [info buttons-info]
+            ^{:key (:img-url info)} [format-button info])
 
         ;; Invisible button so that element maintains its height
         ;; Even when all the others are hidden in fullscreen mode
-        [invisible-button]]
+        #_[invisible-button]]
        #_[:span {:class "flex items-center text-sm mr-2"} word-count " words"]
        [word-count-display (or (:selection word-count) (:total word-count))]])))
