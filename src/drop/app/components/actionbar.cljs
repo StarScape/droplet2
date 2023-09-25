@@ -1,5 +1,6 @@
 (ns drop.app.components.actionbar
-  (:require [drop.app.consts :as consts]
+  (:require [clojure.string :as str]
+            [drop.app.consts :as consts]
             [drop.app.components.library :as components]
             [drop.app.components.layout :refer [h-spacer-sm]]
             [drop.utils :refer [debounce]]
@@ -38,29 +39,40 @@
       :ul "Ctrl+Shift+U")))
 
 ;; DONE: Buttons to left of first active should animate opacity, then width, when going into transparent mode
-;; TODO: Buttons to left of first active should animate WIDTH, THEN opacity, when *leaving* transparent mode
+;; DONE: Buttons to left of first active should animate WIDTH, THEN opacity, when *leaving* transparent mode
 ;; TODO: After transition INTO transparent mode, kill all transitions on buttons
 ;; TODO: When transparent mode is disengaged, re-enable all transitions
 ;; TODO: Put spacers back in (can just use margin instead, but remember to animate it)
 
-(defn format-button [{:keys [img-url]}]
-  (r/create-class
-   {:component-will-unmount (fn [] (js/console.log (str "component unmounting! " img-url)))
-    :reagent-render (fn [{:keys [img-url active? transparent-mode? left-of-first-active? on-click mouseover-text]}]
-                      (let [hidden? (and transparent-mode? (not active?))]
-                        [components/toggleable-button {:on-click on-click
-                                                       :toggled? active?
-                                                       :on-transition-end (fn [e]
-                                                                            ;; (.-target e) ; elem
-                                                                            (js/console.log (.-propertyName e)))
-                                                       :class (twMerge "rounded-md [transition:opacity_1s,max-width_1s_1s,padding_1s_1s]"
-                                                                       (if hidden?
-                                                                         (twMerge "opacity-0"
-                                                                                  (when left-of-first-active? "max-w-0 px-0"))
-                                                                         "opacity-1 max-w-[35px]"))
-                                                       :title mouseover-text}
-                         [:img {:src img-url
-                                :style {:width "15px"}}]]))}))
+(defn format-button [{:keys [img-url active? transparent-mode? left-of-first-active? duration-ms on-click mouseover-text]}]
+  (r/with-let [#_#_is-hidden? (fn [transparent-mode? active?] (and transparent-mode? (not active?)))
+               #_#_get-transition (fn [transparent-mode? active? left-of-first-active?]
+                                (if left-of-first-active?
+                                  (if (is-hidden? transparent-mode? active?)
+                                    "[transition:max-width_1s,padding_1s,opacity_1s_1s]"
+                                    "[transition:opacity_1s,max-width_1s_1s,padding_1s_1s]")
+                                  "[transition:opacity_1s"))
+               ;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
+               into-hidden "[transition:opacity_100ms,max-width_100ms_100ms,padding_100ms_100ms]"
+               ;; When *leave* transparent mode, first transition width/padding back to normal and then opacity to 1
+               from-hidden "[transition:max-width_100ms,padding_100ms,opacity_100ms_100ms]"
+               *transition (r/atom into-hidden)]
+    (let [hidden? (and transparent-mode? (not active?))]
+      [components/toggleable-button {:on-click on-click
+                                     :toggled? active?
+                                     :on-transition-end (fn [e]
+                                                          (reset! *transition (if hidden? from-hidden into-hidden))
+                                                          #_ (get-transition transparent-mode? active? left-of-first-active?)
+                                                          #_(js/console.log (.-propertyName e)))
+                                     :class (twMerge "rounded-md"
+                                                     @*transition
+                                                     (if hidden?
+                                                       (twMerge "opacity-0"
+                                                                (when left-of-first-active? "max-w-0 px-0"))
+                                                       "opacity-1 max-w-[35px]"))
+                                     :title mouseover-text}
+       [:img {:src img-url
+              :style {:width "15px"}}]])))
 
 (defn- invisible-button []
   [:div.invisible [format-button "icons/italic.svg" false false #()]])
@@ -78,7 +90,7 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          base-classes "fixed px-1 py-1 flex place-content-between " ;;transition-all duration-150 
+          base-classes "fixed px-1 py-1 flex place-content-between transition-all duration-200 " ;;transition-all duration-150
           visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
           transparent-classes "inset-x-0 bottom-0 bg-transparent"
           buttons-info [{:img-url "icons/italic.svg"
