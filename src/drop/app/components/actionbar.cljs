@@ -1,5 +1,7 @@
 (ns drop.app.components.actionbar
   (:require [clojure.string :as str]
+            [goog.string :as gstring :refer [format]]
+            [goog.string.format]
             [drop.app.consts :as consts]
             [drop.app.components.library :as components]
             [drop.app.components.layout :refer [h-spacer-sm]]
@@ -44,11 +46,12 @@
 ;; DONE: When transparent mode is disengaged, re-enable all transitions
 ;; TODO: Put spacers back in (can just use margin instead, but remember to animate it)
 
-(defn format-button [props]
-  (let [;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
-        transition-hide "[transition:opacity_1000ms,max-width_1000ms_1000ms,padding_1000ms_1000ms]"
+(defn format-button [{:keys [duration-ms] :as props}]
+  (let [half-duration (/ duration-ms 2)
+        ;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
+        transition-hide (format "[transition:opacity_%ims,max-width_%ims_%ims,padding_%ims_%ims]" half-duration half-duration half-duration half-duration half-duration)
         ;; When *leaving* transparent mode, first transition width/padding back to normal and then opacity to 1
-        transition-show "[transition:max-width_1000ms,margin_1000ms,padding_1000ms,opacity_1000ms_1000ms]"
+        transition-show (format "[transition:max-width_%ims,margin_%ims,padding_%ims,opacity_%ims_%ims]" half-duration half-duration half-duration half-duration half-duration)
         transition-none "transition-none"
         *transition (r/atom transition-hide)
         *transparent-mode? (subscribe [:actionbar-transparent?])]
@@ -68,13 +71,22 @@
                (fn [_ _ old new]
                  (cond
                    (and (= old false) (= new true))
-                   (reset! *transition transition-hide)
+                   (do
+                     (reset! *transition transition-hide)
+                     ;; Hack. Situation: transition to transparent-mode with some button active (bold, say).
+                     ;; The below :on-transition-end event is never called, because active buttons have nothing to transition
+                     ;; Therefore, the active button gets set to transition-hide, and when we then go and click on some text
+                     ;; with a different format, the active button has to transition out rather than just immediately show the
+                     ;; new one
+                     (js/setTimeout #(reset! *transition transition-none) duration-ms))
 
                    (and (= old true) (= new false))
                    (reset! *transition transition-show))))
 
     (fn [{:keys [img-url active? transparent-mode? left-of-first-active? on-click mouseover-text]}]
-      (let [hidden? (and transparent-mode? (not active?))]
+      (let [hidden? (and transparent-mode? (not active?))
+            transition @*transition]
+        ;; (reset! *hidden? hidden?) ;; this and the above timeouts are hideous, odious hacks. Look into transitiongroup or similar to fix
         [components/toggleable-button {:on-click on-click
                                        :toggled? active?
                                        :on-transition-end (fn [e]
@@ -82,7 +94,7 @@
                                                                        (or (and hidden? (= "max-width" (.-propertyName e)))
                                                                            (and (not hidden?) (= "opacity" (.-propertyName e)))))
                                                               (reset! *transition transition-none)))
-                                       :class (twMerge "rounded-md" @*transition
+                                       :class (twMerge "rounded-md" transition
                                                        (if hidden?
                                                          "opacity-0 mx-0 max-w-0 px-0"
                                                          "opacity-1 max-w-[35px] mx-0.5"))
@@ -106,6 +118,7 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
+          show-hide-duration 2000
           base-classes "fixed px-1 py-1 flex place-content-between " ;;transition-all duration-150
           visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
           transparent-classes "inset-x-0 bottom-0 bg-transparent"
@@ -114,19 +127,22 @@
                          :transparent-mode? transparent?
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :italic)
-                         :mouseover-text (str "Italic (" (shortcut-for :italic) ")")}
+                         :mouseover-text (str "Italic (" (shortcut-for :italic) ")")
+                         :duration-ms show-hide-duration}
                         {:img-url "icons/bold.svg"
                          :active? (contains? active-formats :bold)
                          :transparent-mode? transparent?
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :bold)
-                         :mouseover-text (str "Bold (" (shortcut-for :bold) ")")}
+                         :mouseover-text (str "Bold (" (shortcut-for :bold) ")")
+                         :duration-ms show-hide-duration}
                         {:img-url "icons/strikethrough.svg"
                          :active? (contains? active-formats :strikethrough)
                          :transparent-mode? transparent?
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :strikethrough)
-                         :mouseover-text (str "Strikethrough (" (shortcut-for :strikethrough) ")")}
+                         :mouseover-text (str "Strikethrough (" (shortcut-for :strikethrough) ")")
+                         :duration-ms 2000}
 
                         ;; :spacer
 
@@ -135,13 +151,15 @@
                          :transparent-mode? transparent?
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :h1)
-                         :mouseover-text (str "Heading 1 (" (shortcut-for :h1) ")")}
+                         :mouseover-text (str "Heading 1 (" (shortcut-for :h1) ")")
+                         :duration-ms show-hide-duration}
                         {:img-url "icons/h2.svg"
                          :active? (contains? active-formats :h2)
                          :transparent-mode? transparent?
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :h2)
-                         :mouseover-text (str "Heading 2 (" (shortcut-for :h2) ")")}
+                         :mouseover-text (str "Heading 2 (" (shortcut-for :h2) ")")
+                         :duration-ms show-hide-duration}
 
                         ;; :spacer
 
@@ -150,13 +168,15 @@
                          :transparent-mode? transparent?
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :ol)
-                         :mouseover-text (str "Ordered List (" (shortcut-for :ol) ")")}
+                         :mouseover-text (str "Ordered List (" (shortcut-for :ol) ")")
+                         :duration-ms show-hide-duration}
                         {:img-url "icons/bulleted.svg"
                          :active? (contains? active-formats :ul)
                          :transparent-mode? transparent?
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :ul)
-                         :mouseover-text (str "Unordered List (" (shortcut-for :ul) ")")}]
+                         :mouseover-text (str "Unordered List (" (shortcut-for :ul) ")")
+                         :duration-ms show-hide-duration}]
           idx-first-active (find-first-index :active? buttons-info)
           buttons-info (if idx-first-active
                          (map-indexed (fn [idx info]
