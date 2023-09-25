@@ -49,9 +49,11 @@
 (defn format-button [{:keys [duration-ms] :as props}]
   (let [half-duration (/ duration-ms 2)
         ;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
-        transition-hide (format "[transition:opacity_%ims,max-width_%ims_%ims,padding_%ims_%ims]" half-duration half-duration half-duration half-duration half-duration)
+        transition-hide (format "[transition:opacity_%ims,max-width_%ims_%ims,padding_%ims_%ims]"
+                                half-duration half-duration half-duration half-duration half-duration)
         ;; When *leaving* transparent mode, first transition width/padding back to normal and then opacity to 1
-        transition-show (format "[transition:max-width_%ims,margin_%ims,padding_%ims,opacity_%ims_%ims]" half-duration half-duration half-duration half-duration half-duration)
+        transition-show (format "[transition:max-width_%ims,margin_%ims,padding_%ims,opacity_%ims_%ims]"
+                                half-duration half-duration half-duration half-duration half-duration)
         transition-none "transition-none"
         *transition (r/atom transition-hide)
         *transparent-mode? (subscribe [:actionbar-transparent?])]
@@ -97,7 +99,7 @@
                                        :class (twMerge "rounded-md" transition
                                                        (if hidden?
                                                          "opacity-0 mx-0 max-w-0 px-0"
-                                                         "opacity-1 max-w-[35px] mx-0.5"))
+                                                         "opacity-1 max-w-[35px]"))
                                        :title mouseover-text}
          [:img {:src img-url
                 :style {:width "15px"}}]]))))
@@ -118,8 +120,8 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          show-hide-duration 2000
-          base-classes "fixed px-1 py-1 flex place-content-between " ;;transition-all duration-150
+          show-hide-duration 200
+          base-classes (twMerge "fixed px-1 py-1 flex place-content-between transition-all" (str "duration-[" show-hide-duration "]"))
           visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
           transparent-classes "inset-x-0 bottom-0 bg-transparent"
           buttons-info [{:img-url "icons/italic.svg"
@@ -142,7 +144,7 @@
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :strikethrough)
                          :mouseover-text (str "Strikethrough (" (shortcut-for :strikethrough) ")")
-                         :duration-ms 2000}
+                         :duration-ms show-hide-duration}
 
                         ;; :spacer
 
