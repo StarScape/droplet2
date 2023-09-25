@@ -40,39 +40,55 @@
 
 ;; DONE: Buttons to left of first active should animate opacity, then width, when going into transparent mode
 ;; DONE: Buttons to left of first active should animate WIDTH, THEN opacity, when *leaving* transparent mode
-;; TODO: After transition INTO transparent mode, kill all transitions on buttons
-;; TODO: When transparent mode is disengaged, re-enable all transitions
+;; DONE: After transition INTO transparent mode, kill all transitions on buttons
+;; DONE: When transparent mode is disengaged, re-enable all transitions
 ;; TODO: Put spacers back in (can just use margin instead, but remember to animate it)
 
-(defn format-button [{:keys [img-url active? transparent-mode? left-of-first-active? duration-ms on-click mouseover-text]}]
-  (r/with-let [#_#_is-hidden? (fn [transparent-mode? active?] (and transparent-mode? (not active?)))
-               #_#_get-transition (fn [transparent-mode? active? left-of-first-active?]
-                                (if left-of-first-active?
-                                  (if (is-hidden? transparent-mode? active?)
-                                    "[transition:max-width_1s,padding_1s,opacity_1s_1s]"
-                                    "[transition:opacity_1s,max-width_1s_1s,padding_1s_1s]")
-                                  "[transition:opacity_1s"))
-               ;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
-               into-hidden "[transition:opacity_100ms,max-width_100ms_100ms,padding_100ms_100ms]"
-               ;; When *leave* transparent mode, first transition width/padding back to normal and then opacity to 1
-               from-hidden "[transition:max-width_100ms,padding_100ms,opacity_100ms_100ms]"
-               *transition (r/atom into-hidden)]
-    (let [hidden? (and transparent-mode? (not active?))]
-      [components/toggleable-button {:on-click on-click
-                                     :toggled? active?
-                                     :on-transition-end (fn [e]
-                                                          (reset! *transition (if hidden? from-hidden into-hidden))
-                                                          #_ (get-transition transparent-mode? active? left-of-first-active?)
-                                                          #_(js/console.log (.-propertyName e)))
-                                     :class (twMerge "rounded-md"
-                                                     @*transition
-                                                     (if hidden?
-                                                       (twMerge "opacity-0"
-                                                                (when left-of-first-active? "max-w-0 px-0"))
-                                                       "opacity-1 max-w-[35px]"))
-                                     :title mouseover-text}
-       [:img {:src img-url
-              :style {:width "15px"}}]])))
+(defn format-button [props]
+  (let [;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
+        transition-hide "[transition:opacity_1000ms,max-width_1000ms_1000ms,padding_1000ms_1000ms]"
+        ;; When *leaving* transparent mode, first transition width/padding back to normal and then opacity to 1
+        transition-show "[transition:max-width_1000ms,margin_1000ms,padding_1000ms,opacity_1000ms_1000ms]"
+        transition-none "transition-none"
+        *transition (r/atom transition-hide)
+        *transparent-mode? (subscribe [:actionbar-transparent?])]
+    
+    ;; Transition logic:
+    ;; =================
+    ;; 1. When `transparent-mode?` false -> true && `hidden?`: enable HIDE transition
+    ;; 2. When `transparent-mode?` already true && `hidden?` _or_ visible: disable ALL transitions [1]
+    ;; 3. When `transparent-mode?` true -> false && `hidden?`: enable SHOW transition
+    ;;
+    ;; [1] This is to prevent jerky movement when transitioning from e.g. an italic word to a bold word
+    ;; via a click--we want the italic button to _immediately_ be replaced by the bold one, no animation.
+    ;;
+    ;; It would be cool to eventually figure out a way to have an enter animation still play when toggling a format
+    ;; via the keyboard (and only then), but that's a bit fiddly for now and far from strictly necessary.
+    (add-watch *transparent-mode? (keyword (str (:img-url props) "-watch"))
+               (fn [_ _ old new]
+                 (cond
+                   (and (= old false) (= new true))
+                   (reset! *transition transition-hide)
+
+                   (and (= old true) (= new false))
+                   (reset! *transition transition-show))))
+
+    (fn [{:keys [img-url active? transparent-mode? left-of-first-active? on-click mouseover-text]}]
+      (let [hidden? (and transparent-mode? (not active?))]
+        [components/toggleable-button {:on-click on-click
+                                       :toggled? active?
+                                       :on-transition-end (fn [e]
+                                                            (when (and transparent-mode?
+                                                                       (or (and hidden? (= "max-width" (.-propertyName e)))
+                                                                           (and (not hidden?) (= "opacity" (.-propertyName e)))))
+                                                              (reset! *transition transition-none)))
+                                       :class (twMerge "rounded-md" @*transition
+                                                       (if hidden?
+                                                         "opacity-0 mx-0 max-w-0 px-0"
+                                                         "opacity-1 max-w-[35px] mx-0.5"))
+                                       :title mouseover-text}
+         [:img {:src img-url
+                :style {:width "15px"}}]]))))
 
 (defn- invisible-button []
   [:div.invisible [format-button "icons/italic.svg" false false #()]])
@@ -90,7 +106,7 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          base-classes "fixed px-1 py-1 flex place-content-between transition-all duration-200 " ;;transition-all duration-150
+          base-classes "fixed px-1 py-1 flex place-content-between " ;;transition-all duration-150
           visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
           transparent-classes "inset-x-0 bottom-0 bg-transparent"
           buttons-info [{:img-url "icons/italic.svg"
