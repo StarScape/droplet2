@@ -85,7 +85,7 @@
                    (and (= old true) (= new false))
                    (reset! *transition transition-show))))
 
-    (fn [{:keys [img-url active? transparent-mode? left-of-first-active? on-click mouseover-text]}]
+    (fn [{:keys [img-url active? transparent-mode? left-of-first-active? space-after? on-click mouseover-text]}]
       (let [hidden? (and transparent-mode? (not active?))
             transition @*transition]
         ;; (reset! *hidden? hidden?) ;; this and the above timeouts are hideous, odious hacks. Look into transitiongroup or similar to fix
@@ -96,7 +96,7 @@
                                                                        (or (and hidden? (= "max-width" (.-propertyName e)))
                                                                            (and (not hidden?) (= "opacity" (.-propertyName e)))))
                                                               (reset! *transition transition-none)))
-                                       :class (twMerge "rounded-md" transition
+                                       :class (twMerge "rounded-md" transition (when space-after? "mr-1.5")
                                                        (if hidden?
                                                          "opacity-0 mx-0 max-w-0 px-0"
                                                          "opacity-1 max-w-[35px]"))
@@ -120,7 +120,7 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          show-hide-duration 200
+          show-hide-duration 2000
           base-classes (twMerge "fixed px-1 py-1 flex place-content-between transition-all" (str "duration-[" show-hide-duration "]"))
           visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
           transparent-classes "inset-x-0 bottom-0 bg-transparent"
@@ -144,7 +144,8 @@
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :strikethrough)
                          :mouseover-text (str "Strikethrough (" (shortcut-for :strikethrough) ")")
-                         :duration-ms show-hide-duration}
+                         :duration-ms show-hide-duration
+                         :space-after? true}
 
                         ;; :spacer
 
@@ -161,7 +162,8 @@
                          :left-of-first-active? false
                          :on-click #(on-format-toggle :h2)
                          :mouseover-text (str "Heading 2 (" (shortcut-for :h2) ")")
-                         :duration-ms show-hide-duration}
+                         :duration-ms show-hide-duration
+                         :space-after? true}
 
                         ;; :spacer
 
