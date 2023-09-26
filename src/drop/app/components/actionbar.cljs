@@ -40,12 +40,6 @@
       :ol "Ctrl+Shift+O"
       :ul "Ctrl+Shift+U")))
 
-;; DONE: Buttons to left of first active should animate opacity, then width, when going into transparent mode
-;; DONE: Buttons to left of first active should animate WIDTH, THEN opacity, when *leaving* transparent mode
-;; DONE: After transition INTO transparent mode, kill all transitions on buttons
-;; DONE: When transparent mode is disengaged, re-enable all transitions
-;; TODO: Put spacers back in (can just use margin instead, but remember to animate it)
-
 (defn format-button [{:keys [duration-ms] :as props}]
   (let [half-duration (/ duration-ms 2)
         ;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
@@ -58,6 +52,7 @@
         *transition (r/atom transition-hide)
         *transparent-mode? (subscribe [:actionbar-transparent?])]
     
+    ;; TODO: Is this comment out of date or still relevant?
     ;; Transition logic:
     ;; =================
     ;; 1. When `transparent-mode?` false -> true && `hidden?`: enable HIDE transition
@@ -85,10 +80,9 @@
                    (and (= old true) (= new false))
                    (reset! *transition transition-show))))
 
-    (fn [{:keys [img-url active? transparent-mode? left-of-first-active? space-after? on-click mouseover-text]}]
+    (fn [{:keys [img-url active? transparent-mode? space-after? on-click mouseover-text]}]
       (let [hidden? (and transparent-mode? (not active?))
             transition @*transition]
-        ;; (reset! *hidden? hidden?) ;; this and the above timeouts are hideous, odious hacks. Look into transitiongroup or similar to fix
         [components/toggleable-button {:on-click on-click
                                        :toggled? active?
                                        :on-transition-end (fn [e]
@@ -104,7 +98,7 @@
          [:img {:src img-url
                 :style {:width "15px"}}]]))))
 
-(defn- invisible-button []
+#_(defn- invisible-button []
   [:div.invisible [format-button "icons/italic.svg" false false #()]])
 
 (defn word-count-display [num-words]
@@ -120,7 +114,7 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          show-hide-duration 2000
+          show-hide-duration 200
           base-classes (twMerge "fixed px-1 py-1 flex place-content-between transition-all" (str "duration-[" show-hide-duration "]"))
           visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
           transparent-classes "inset-x-0 bottom-0 bg-transparent"
@@ -147,8 +141,6 @@
                          :duration-ms show-hide-duration
                          :space-after? true}
 
-                        ;; :spacer
-
                         {:img-url "icons/h1.svg"
                          :active? (contains? active-formats :h1)
                          :transparent-mode? transparent?
@@ -165,8 +157,6 @@
                          :duration-ms show-hide-duration
                          :space-after? true}
 
-                        ;; :spacer
-
                         {:img-url "icons/numbered.svg"
                          :active? (contains? active-formats :ol)
                          :transparent-mode? transparent?
@@ -181,7 +171,7 @@
                          :on-click #(on-format-toggle :ul)
                          :mouseover-text (str "Unordered List (" (shortcut-for :ul) ")")
                          :duration-ms show-hide-duration}]
-          idx-first-active (find-first-index :active? buttons-info)
+          #_#_#_#_#_#_idx-first-active (find-first-index :active? buttons-info)
           buttons-info (if idx-first-active
                          (map-indexed (fn [idx info]
                                         (if (< idx idx-first-active)
