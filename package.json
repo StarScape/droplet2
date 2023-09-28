@@ -1,7 +1,7 @@
 {
   "name": "droplet",
   "productName": "Droplet",
-  "version": "0.0.2",
+  "version": "0.0.3-SNAPSHOT",
   "author": "Jack Arrignton",
   "description": "Minimalist prose editor.",
   "license": "Proprietary",
@@ -22,7 +22,8 @@
     "build-release-mac": "npm run build-release-files && npm run build-release-installer-mac",
     "build-snapshot-mac": "SNAPSHOT=true npm run build-release-mac",
     "build-releases": "npm run build-release-files && npm run build-release-installers",
-    "deploy-installers": "./scripts/deploy_installers.sh $npm_package_version \"../droplet-website/json\" || true"
+    "deploy-installers": "./scripts/deploy_installers.sh $npm_package_version \"../droplet-website/json\" || true",
+    "record-demo-video": "./scripts/record_demo_video.sh"
   },
   "devDependencies": {
     "@electron/notarize": "^1.2.3",

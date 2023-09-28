@@ -1,5 +1,5 @@
 (ns drop.electron.core
-  (:require ["electron" :refer [app BrowserWindow Menu crashReporter ipcMain dialog]]
+  (:require ["electron" :refer [app BrowserWindow Menu crashReporter ipcMain dialog desktopCapturer]]
             ["electron-is-dev" :as is-dev?]
             ["electron-window-state" :as window-state-keeper]
             ["fs" :as fs]
@@ -7,7 +7,10 @@
             ["path" :as path]
             [cljs.core.async :as async :refer [chan <! >!] :refer-macros [go go-loop]]
             [cljs.core.async.interop :refer-macros [<p!]]
-            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc read-persisted! write-persisted! log]]))
+            [promesa.core :as p]
+            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc read-persisted! write-persisted! log]]
+            [drop.electron.screen-recording :as screen-recording])
+  (:require-macros [promesa.core]))
 
 (log "Evaluating main electron file...")
 
@@ -102,9 +105,9 @@
   (go
     ;; Initialize new-window if not already done
     (<p! (init-window!))
-    (log "After init-window!")
+    #_(log "After init-window!")
     (<p! (wait-for-renderer-ipc-handlers!))
-    (log "After wait-for-renderer-ipc-handlers!")
+    #_(log "After wait-for-renderer-ipc-handlers!")
     (fs/readFile path "utf8" (fn [err, contents]
                                (if err
                                  (log "Error reading file " path ": \n" err)
@@ -255,7 +258,9 @@
       (.push template (clj->js {:label "Dev"
                                 :submenu [{:role "reload"}
                                           {:role "forcereload"}
-                                          {:role "toggledevtools"}]})))
+                                          {:role "toggledevtools"}
+                                          {:label "Start screen recording"
+                                           :click #(screen-recording/start-demo-recording! window)}]})))
     (.setApplicationMenu Menu (.buildFromTemplate Menu template))))
 
 (defn- -init-window! []
@@ -301,7 +306,13 @@
                                                              (open-last-file!)))))
     (init-app-menu window)
     (log "Electron browser window initialized, calling open-last-file!")
-    (open-last-file!)))
+    (open-last-file!)
+
+    (when (= "true" (.. js/process -env -RECORD_DEMO))
+      (log "Demo recording mode initiated from ENV variable")
+      (go
+        (<p! (wait-for-renderer-ipc-handlers!))
+        (screen-recording/start-demo-recording! window)))))
 
 (defn init-window!
   "Initializes the main Droplet window.

@@ -93,3 +93,8 @@
   [v new-val]
   {:pre [(vector? v)]}
   (assoc v (dec (count v)) new-val))
+
+(defn- find-first-index
+  "Returns the index of the first item matching `pred`."
+  [pred coll]
+  (ffirst (filter (comp pred second) (map-indexed list coll))))

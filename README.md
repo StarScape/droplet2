@@ -94,9 +94,19 @@ If a valid Developer ID Application certificate and a Developer ID Installer cer
 An `afterSign` script is registered with `electron-builder` to notarize the macOS releases. The env variables `APPLE_ID` (Apple ID email) and `APPLE_ID_PASSWORD` (app-specific password tied to my Apple ID for Droplet) need to be set, and can be done by creating a `.env` file as the `dotenv` package is installed.
 
 ## Deploying to S3 and Cloudfront
-__After building the installers, they can be deployed with `npm run deploy-installers`__, which will upload them to their S3 bucket, generate a JSON file with their URLs, and then copy that file to the `../droplet-website` folder. The website will then have to be redeployed from its own repo in order for the change to take affect.
+__After building the installers, they can be deployed with__ `npm run deploy-installers`, which will upload them to their S3 bucket, generate a JSON file with their URLs, and then copy that file to the `../droplet-website` folder. The website will then have to be redeployed from its own repo in order for the change to take affect.
 
 The AWS CLI must be installed and configured in order for this to work.
+
+## Demo video auto-recording
+
+There is a script to automatically record the hero video seen on the [Droplet website](https://dropletwriter.com):
+
+```bash
+npm run record-demo-video
+```
+
+This will launch a pupeteered version of Droplet, play through the demo script, and save a `demo.mp4` video in the root directory. This capability may be expanded to automatically record other demo videos in the future.
 
 ## Output/other directories
 

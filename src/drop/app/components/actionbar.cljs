@@ -12,11 +12,6 @@
             [re-frame.db :as db]
             ["tailwind-merge" :refer [twMerge]]))
 
-(defn- find-first-index
-  "Returns the index of the first item matching `pred`."
-  [pred coll]
-  (ffirst (filter (comp pred second) (map-indexed list coll))))
-
 ;; (def bg-color "bg-[rgb(246,247,249)]")
 ;; (def bg-color "bg-gray-100")
 (def bg-color "bg-gray-50")

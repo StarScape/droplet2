@@ -66,7 +66,7 @@
     [:&:hover {:cursor "text"}]]
    [:.paragraph {:margin "0px"
                  :padding 0
-                 :padding-bottom "7px"
+                 :padding-bottom "6px"
                  :min-height "1em"}]
    ;; When there is an empty paragraph with just a caret in it, we need to render a _bit_
    ;; of text, so that the height of the paragraph is set to the same as any other ('font height' is

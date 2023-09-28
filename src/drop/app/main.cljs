@@ -10,14 +10,15 @@
             [re-frame.core :as rf]
             [re-frame.db :as db]
             [orchestra-cljs.spec.test :as st]
-            ["electron" :refer [ipcRenderer]]))
+            ["electron" :refer [ipcRenderer #_desktopCapturer]]))
 
-;; TODO: Fix actionbar disappear in fullscreen
+;; BUG: When document height is expanded to a certain point the scroll bar appears and pushes the doc over to the left a bit.
 ;; BUG: Enter "This looks like the right alleyway...most likely" and position caret before first '.' will cause the characters after to bump over a bit
 ;; This actually appears to be an artifact of splitting the spans at that point, not the text caret pushing the other element over--even if you get rid
 ;; of the caret entirely in devtools, it still happens. I think the solution is to change the way we are rendering the caret. Rather than splitting a span
 ;; at that point, calculate the px offset (which we already do anyway since the paragraph gets rerendered every time we move the caret), and render an absolutely
 ;; positioned element at that point.
+;; TODO: Right-click menu
 ;; TODO: Dark mode
 ;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
 ;;       Deliberately induce some errors.
@@ -27,23 +28,8 @@
 ;; to create one if not, or to roll the tag version if so), building new release version for each platform, record new marketing videos using
 ;; automated process, pushing those to the S3 repo, and pushing a new version of the website.
 
-
-;; TODO: The find and replace popup is ass-ugly. Do something about that.
-;; Would also like to change it s.t. replace is not showed by default.
-;; Instead make it so that you can make the replace part of the pane slide down
-;; on a key stroke. The key here will be making the UI sufficiently nice that I can
-;; incoporate the text indicating the keyboard shortcut without it being completely
-;; hideous.
-
 ;; TODO: Clicking off to the left/right side of text should be equivalent to clicking start/end of line
 ;; TODO: going to start of sentence that is at the beginning of an indented paragraph should not select the leading tab
-;; TODO: implement loading spinner?
-
-;; CORE CLEANUP
-
-;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively (don't for now)
-;; TODO: Possibly remove Selectable protocol in common.cljs
-;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
 
 ;; FEATURES
 
@@ -64,7 +50,6 @@
 ;; TODO: Fullscreen for Windows and Linux, plus shortcuts for entering and exiting fullscreen
 ;; TODO: Bug - pressing fn+f to go to fullscreen still enters an 'f' inside the document
 ;; TODO: Implement highlight part of find and replace
-;; TODO: Change tab rendering from em space to <span> so that width can be styled
 ;; TODO: Further polish criteria for history getting added to the backstack
 
 
@@ -74,7 +59,6 @@
 ;; TODO: Right click on Dock Icon -> open file
 ;; TODO: When merging two paragraphs, the merged paragraph has the :type of the first. Make it have the type of the second **iff** the first is blank.
 ;; TODO: Select from end of one paragraph down into the next/multiple, there should be a "nub" at the end of the first one
-;; TODO: Double/triple click should select word/paragraph
 ;; TODO: When a paragraph is already an h1/h2, "1. " autocomplete should not make it a list para
 ;; TODO: when cursor is at or near the bottom of the screen, auto-scroll down to it.
 ;; Or, an alternative, have a 'locked-on' mode where, when enter is hit, the app always
@@ -89,6 +73,12 @@
 ;; TODO: bug in manual interceptors when upgrading to lastest shadow-cljs; to repro, upgrade shadow-cljs and then fire the save interceptor with cmd+
 ;; TODO: Graphemes - make grapheme-at and grapheme-before functions; this can wait for now
 ;; TODO: Make so that cmd+i, cmd+b, etc only get added to history when done with a range selection (how much do I care?)
+
+;; CORE CLEANUP
+
+;; TODO: Evaluate the wisdom of changing ParagraphFragment and DocumentFragment to just Paragraph and Document, respectively (don't for now)
+;; TODO: Possibly remove Selectable protocol in common.cljs
+;; TODO: Remove all multimethods and protocols in common.cljs that don't have a consistent interface across ALL types, or have no need for polymorphism
 
 ;; LEARNING
 

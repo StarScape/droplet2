@@ -7,7 +7,10 @@
             [slate.filetypes.core :as filetypes]
             [drop.app.file-handling :as file-handling]
             [drop.app.utils :as app-utils]
-            ["electron" :refer [ipcRenderer]]))
+            [drop.app.demo :as demo]
+            [promesa.core :as p]
+            ["electron" :refer [ipcRenderer]])
+  (:require-macros [promesa.core :as p]))
 
 (defn init-handlers! []
   (.on ipcRenderer "change-full-screen-status"
@@ -50,5 +53,9 @@
            (catch :default e
              (app-utils/show-error-dialog! "Import Failure" "Failed to import file.")
              (js/console.log "Error thrown in ipcRenderer import-file:" e)))))
+
+  (.on ipcRenderer "start-screen-recording"
+       (fn [_e, source-id]
+         (demo/record-main-demo! source-id)))
 
   (.send ipcRenderer "renderer-ipc-handlers-initialized"))
