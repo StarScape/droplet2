@@ -150,3 +150,4 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 - Fixed issue where undo/redo events could fire both for the find and replace inputs and the main editor pane simultaneously
 - All text is escaped before being entered into the document
 - Changes to fonts
+- Added ability to auto-record demo video
