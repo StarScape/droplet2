@@ -56,7 +56,7 @@ let config = {
 // include signing and notarizing, as that takes an annoying
 // amount of time.
 if (process.env.SNAPSHOT !== "true") {
-  console.log("💧Droplet: building SNAPSHOT version...");
+  console.log("\n💧Droplet: packaging RELEASE version...\n");
 
   config = {
     ...config,
@@ -73,6 +73,8 @@ if (process.env.SNAPSHOT !== "true") {
     // Notarizing
     afterSign: "scripts/notarize.js",
   }
+} else {
+  console.log("\n💧Droplet: packaging SNAPSHOT version...\n");
 }
 
 module.exports = config;

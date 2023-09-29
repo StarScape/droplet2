@@ -81,9 +81,19 @@ npm run build-releases
 
 Installers and binaries will be outputted to `dist/`.
 
-It's a good idea not to have a dev instance of Droplet running before building the installers, as building a release will output JS files to the same directory that a developer session uses, and you want to make sure that the minified, production JS files are used.
+It's a good idea to close any dev instances of Droplet and stop watched compilation before building the installers, as building a release will output JS files to the same directory that a developer session uses, and you want to make sure that the minified, production JS files are used.
 
 **Before making a release, remember to also bump the version in `package.json`.**
+
+### Building a snapshot for Mac
+
+To build a snapshot version of _only_ the macOS executable (not for final release, just for local testing):
+
+```bash
+npm run build-snapshot-mac
+```
+
+This will skip signing and notarizing the app.
 
 ## Signing Mac Apps
 
