@@ -481,7 +481,7 @@
 (definterceptor new-file!
   {:manual? true}
   [*ui-state _]
-  ((:on-new @*ui-state)))
+  ((:on-new @*ui-state) *ui-state))
 
 (definterceptor save!
   {:manual? true}

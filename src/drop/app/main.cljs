@@ -12,7 +12,6 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer #_desktopCapturer]]))
 
-;; BUG: newfile is broken (but only when invoked via shortcut)
 ;; BUG: Enter "This looks like the right alleyway...most likely" and position caret before first '.' will cause the characters after to bump over a bit
 ;; This actually appears to be an artifact of splitting the spans at that point, not the text caret pushing the other element over--even if you get rid
 ;; of the caret entirely in devtools, it still happens. I think the solution is to change the way we are rendering the caret. Rather than splitting a span
