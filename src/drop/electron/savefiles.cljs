@@ -31,7 +31,7 @@
 
 (defn declare!
   [& {:keys [default spec name]}]
-  {:pre [(keyword? #p name)]}
+  {:pre [(keyword? name)]}
   (if (and (contains? @*saved-files name) (.-isPackaged app)) ; only in prod because in dev file will be reevaluated
     (throw (js/Error. (str "Savefile already registered for " name)))
     (swap! *saved-files assoc name {:default-val default

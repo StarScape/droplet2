@@ -18,6 +18,7 @@
 (goog-define DEV true)
 (def is-dev? DEV)
 (declare init-window!)
+(declare init-app-menu!)
 
 (def main-window-info-default {:window nil
                                :promise nil
@@ -35,7 +36,7 @@
                     :default {:path nil}
                     :spec any?)
 
-#_#_(savefiles/declare! :name :recently-opened
+(savefiles/declare! :name :recently-opened
                     :default []
                     :spec any?)
 
@@ -44,11 +45,18 @@
   (as-> recently-opened $
     (filter #(not= (:file-path %) file-path) $)
     (conj $ {:file-path file-path, :time-opened now-ms})
-    (sort-by :time-opened #p $)
+    (sort-by :time-opened $)
     (if (<= (count $) 5)
       $
       (drop 1 $))
     (reverse $)))
+
+(defn update-recently-opened!
+  [opened-file-path]
+  (p/let [recently-opened (savefiles/read! :recently-opened)
+          new-recently-opened (update-recently-opened recently-opened opened-file-path (js/Date.now))]
+    (savefiles/write! :recently-opened new-recently-opened)
+    (init-app-menu! @*main-window-info)))
 
 (defn launch-import-dialog!
   "Launches an file dialog to import the specified format type.
@@ -127,7 +135,8 @@
                          (p/catch #(log "Error reading file " path ": \n" %)))]
       (log (str "Read file " path " from disk, sending to renderer process\n"))
       (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
-      (savefiles/write! :current-file {:path path}))))
+      (savefiles/write! :current-file {:path path})
+      (update-recently-opened! path))))
 
 (defn open-last-file!
   "Opens the last opened file by Droplet."
@@ -206,67 +215,79 @@
   ;; DEV ONLY: used when hot-reloading to trigger reopen of last file modified
   (on-ipc "-reload-last-file" #(open-last-file!)))
 
-(defn init-app-menu [window]
-  (let [template (clj->js [{:label (.-name app)
-                            :submenu [{:role "about"}
-                                      {:type "separator"}
-                                      {:role "services"}
-                                      {:type "separator"}
-                                      {:role "hide"}
-                                      {:role "hideOthers"}
-                                      {:role "unhide"}
-                                      {:type "separator"}
-                                      {:role "quit"}]}
-                           {:label "File",
-                            :submenu [{:label "New..."
-                                       :accelerator "CmdOrCtrl+N"
-                                       :click #(.. window -webContents (send "file-menu-item-clicked" "new"))}
-                                      {:label "Open..."
-                                       :accelerator "CmdOrCtrl+O"
-                                       :click #(choose-file-from-fs!)}
-                                      {:label "Save"
-                                       :accelerator "CmdOrCtrl+S"
-                                       :click #(.. window -webContents (send "file-menu-item-clicked" "save"))}
-                                      {:label "Save As..."
-                                       :accelerator "CmdOrCtrl+Shift+S"
-                                       :click #(.. window -webContents (send "file-menu-item-clicked" "save-as"))}
-                                      {:label "Import..."
-                                       :submenu [{:label "HTML"
-                                                  :click #(launch-import-dialog! "html")}
-                                                 {:label "RTF"
-                                                  :click #(launch-import-dialog! "rtf")}]}
-                                      {:label "Export As..."
-                                       :submenu [{:label "HTML"
-                                                  :click #(.. window -webContents (send "file-menu-item-clicked" "initiate-file-export" "html"))}
-                                                 {:label "RTF"
-                                                  :click #(.. window -webContents (send "file-menu-item-clicked" "initiate-file-export" "rtf"))}]}]}
-                           {:role "editMenu"}
-                           {:label "View",
-                            :submenu [{:role "togglefullscreen"}]}
-                           {:label "Selection",
-                            :submenu [{:label "Next Clause"
-                                       :accelerator "CmdOrCtrl+."
-                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "next-clause"))}
-                                      {:label "Prev Clause"
-                                       :accelerator "CmdOrCtrl+,"
-                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-clause"))}
-                                      {:label "Next Sentence"
-                                       :accelerator "CmdOrCtrl+]"
-                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "next-sentence"))}
-                                      {:label "Prev Sentence"
-                                       :accelerator "CmdOrCtrl+["
-                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-sentence"))}
-                                      {:label "Next Paragraph"
-                                       :accelerator "CmdOrCtrl+0"
-                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "next-paragraph"))}
-                                      {:label "Prev Paragraph"
-                                       :accelerator "CmdOrCtrl+9"
-                                       :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-paragraph"))}]}
-                           {:role "windowMenu"}
-                           {:label "Help"
-                            :role "help"
-                            :submenu [{:label "View Droplet Version",
-                                       :click #(.showMessageBox dialog #js {:message (str "Droplet Version: " (.getVersion app))})}]}])]
+(defn init-app-menu! [window]
+  (p/let [recently-opened (savefiles/read! :recently-opened)
+          recently-opened-path-frequencies (set (map :file-path recently-opened))
+          dedupe-recently-opened-file-path (fn [file-path]
+                                             (if (< 1 (get recently-opened-path-frequencies file-path))
+                                               file-path
+                                               (path/basename file-path)))
+
+          template (clj->js [{:label (.-name app)
+                              :submenu [{:role "about"}
+                                        {:type "separator"}
+                                        {:role "services"}
+                                        {:type "separator"}
+                                        {:role "hide"}
+                                        {:role "hideOthers"}
+                                        {:role "unhide"}
+                                        {:type "separator"}
+                                        {:role "quit"}]}
+                             {:label "File",
+                              :submenu [{:label "New..."
+                                         :accelerator "CmdOrCtrl+N"
+                                         :click #(.. window -webContents (send "file-menu-item-clicked" "new"))}
+                                        {:label "Open..."
+                                         :accelerator "CmdOrCtrl+O"
+                                         :click #(choose-file-from-fs!)}
+                                        {:label "Open Recent"
+                                         :submenu (map (fn [{:keys [file-path]}]
+                                                         {:label (dedupe-recently-opened-file-path file-path)
+                                                          :click #(open-file-in-slate! file-path)})
+                                                       recently-opened)}
+                                        {:label "Save"
+                                         :accelerator "CmdOrCtrl+S"
+                                         :click #(.. window -webContents (send "file-menu-item-clicked" "save"))}
+                                        {:label "Save As..."
+                                         :accelerator "CmdOrCtrl+Shift+S"
+                                         :click #(.. window -webContents (send "file-menu-item-clicked" "save-as"))}
+                                        {:label "Import..."
+                                         :submenu [{:label "HTML"
+                                                    :click #(launch-import-dialog! "html")}
+                                                   {:label "RTF"
+                                                    :click #(launch-import-dialog! "rtf")}]}
+                                        {:label "Export As..."
+                                         :submenu [{:label "HTML"
+                                                    :click #(.. window -webContents (send "file-menu-item-clicked" "initiate-file-export" "html"))}
+                                                   {:label "RTF"
+                                                    :click #(.. window -webContents (send "file-menu-item-clicked" "initiate-file-export" "rtf"))}]}]}
+                             {:role "editMenu"}
+                             {:label "View",
+                              :submenu [{:role "togglefullscreen"}]}
+                             {:label "Selection",
+                              :submenu [{:label "Next Clause"
+                                         :accelerator "CmdOrCtrl+."
+                                         :click #(.. window -webContents (send "selection-menu-item-clicked" "next-clause"))}
+                                        {:label "Prev Clause"
+                                         :accelerator "CmdOrCtrl+,"
+                                         :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-clause"))}
+                                        {:label "Next Sentence"
+                                         :accelerator "CmdOrCtrl+]"
+                                         :click #(.. window -webContents (send "selection-menu-item-clicked" "next-sentence"))}
+                                        {:label "Prev Sentence"
+                                         :accelerator "CmdOrCtrl+["
+                                         :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-sentence"))}
+                                        {:label "Next Paragraph"
+                                         :accelerator "CmdOrCtrl+0"
+                                         :click #(.. window -webContents (send "selection-menu-item-clicked" "next-paragraph"))}
+                                        {:label "Prev Paragraph"
+                                         :accelerator "CmdOrCtrl+9"
+                                         :click #(.. window -webContents (send "selection-menu-item-clicked" "prev-paragraph"))}]}
+                             {:role "windowMenu"}
+                             {:label "Help"
+                              :role "help"
+                              :submenu [{:label "View Droplet Version",
+                                         :click #(.showMessageBox dialog #js {:message (str "Droplet Version: " (.getVersion app))})}]}])]
     (when is-dev?
       (.push template (clj->js {:label "Dev"
                                 :submenu [{:role "reload"}
@@ -317,7 +338,7 @@
                                                            (fn []
                                                              (log "Renderer process has auto-reloaded, calling open-last-file! again")
                                                              (open-last-file!)))))
-    (init-app-menu window)
+    (init-app-menu! window)
     (log "Electron browser window initialized, calling open-last-file!")
     (open-last-file!)
 
