@@ -1,7 +1,7 @@
 (ns drop.electron.screen-recording
   (:require ["electron" :refer [app desktopCapturer]]
             ["node:fs/promises" :refer [writeFile]]
-            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc read-persisted! write-persisted! log]]
+            [drop.electron.utils :refer [on-ipc on-ipc-once log]]
             [promesa.core :as p])
   (:require-macros [promesa.core :as p]))
 

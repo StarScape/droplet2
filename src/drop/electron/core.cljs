@@ -8,7 +8,8 @@
             [cljs.core.async :as async :refer [chan <! >!] :refer-macros [go go-loop]]
             [cljs.core.async.interop :refer-macros [<p!]]
             [promesa.core :as p]
-            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc read-persisted! write-persisted! log]]
+            [drop.electron.utils :refer [on-ipc on-ipc-once handle-ipc log]]
+            [drop.electron.savefiles :as savefiles]
             [drop.electron.screen-recording :as screen-recording])
   (:require-macros [promesa.core]))
 
@@ -23,15 +24,31 @@
                                :renderer-ipc-handlers-initialized? false
                                :file-opened-from-os? false})
 
-(def current-file-fname "current-file")
-(def current-file-default-val {:path nil})
-
 (def *main-window-info (atom main-window-info-default))
 
 (def file-formats-info {"rtf" {:file-type-name "RTF"
                                :file-extension ".rtf"}
                         "html" {:file-type-name "HTML"
                                 :file-extension ".html"}})
+
+(savefiles/declare! :name :current-file
+                    :default {:path nil}
+                    :spec any?)
+
+#_#_(savefiles/declare! :name :recently-opened
+                    :default []
+                    :spec any?)
+
+(defn update-recently-opened
+  [recently-opened file-path now-ms]
+  (as-> recently-opened $
+    (filter #(not= (:file-path %) file-path) $)
+    (conj $ {:file-path file-path, :time-opened now-ms})
+    (sort-by :time-opened #p $)
+    (if (<= (count $) 5)
+      $
+      (drop 1 $))
+    (reverse $)))
 
 (defn launch-import-dialog!
   "Launches an file dialog to import the specified format type.
@@ -94,45 +111,41 @@
                 (fn [err]
                   (if err
                     (js/console.error err)
-
-                    (write-persisted! current-file-fname {:path file-path})))))
+                    (savefiles/write! :current-file {:path file-path})))))
 
 (defn open-file-in-slate!
   "Reads the data from the file and sends it to the render process to be loaded into the Slate editor.
    Saves the file path as the last file opened."
   [path]
   (log "Called open-file-in-slate! for path '" path "'")
-  (go
-    ;; Initialize new-window if not already done
-    (<p! (init-window!))
-    #_(log "After init-window!")
-    (<p! (wait-for-renderer-ipc-handlers!))
-    #_(log "After wait-for-renderer-ipc-handlers!")
-    (fs/readFile path "utf8" (fn [err, contents]
-                               (if err
-                                 (log "Error reading file " path ": \n" err)
-                                 (do
-                                   (log (str "Read file " path " from disk, sending to renderer process\n"))
-                                   (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
-                                   (write-persisted! current-file-fname {:path path})))))))
+  (p/do
+    ;; Initialize new window if not already done (on macOS,
+    ;; the app can be open without the window being open)
+    (init-window!)
+    (wait-for-renderer-ipc-handlers!)
+    (p/let [contents (-> (readFile path "utf8")
+                         (p/catch #(log "Error reading file " path ": \n" %)))]
+      (log (str "Read file " path " from disk, sending to renderer process\n"))
+      (.. (:window @*main-window-info) -webContents (send "load-file" path contents))
+      (savefiles/write! :current-file {:path path}))))
 
 (defn open-last-file!
   "Opens the last opened file by Droplet."
   []
-  (read-persisted! current-file-fname current-file-default-val
-                   (fn [{:keys [path]}]
-                     ;; On macOS, if an "open-file" event has occurred, that means a .drop file
-                     ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
-                     ;; or with the `open -a ...` command. MacOS implements it this way rather than
-                     ;; using ARGV because the application may stick around even if the window closes
-                     ;; in, in contrast to Windows where the window and application instance are
-                     ;; synonymous.
-                     ;;
-                     ;; Anyway, if the "open-file" event already happened for this window, then the
-                     ;; user is opening a new file, and there is no need to reopen the last file modified.
-                     (when (and path (not (:file-opened-from-os? @*main-window-info)))
-                       (log "Opening last file modified from current-file.edn: " path)
-                       (open-file-in-slate! path)))))
+  (-> (savefiles/read! :current-file)
+      (p/then (fn [{:keys [path]}]
+                ;; On macOS, if an "open-file" event has occurred, that means a .drop file
+                ;; has been opened from Finder, by dropping into onto Droplet on the Dock,
+                ;; or with the `open -a ...` command. MacOS implements it this way rather than
+                ;; using ARGV because the application may stick around even if the window closes
+                ;; in, in contrast to Windows where the window and application instance are
+                ;; synonymous.
+                ;;
+                ;; Anyway, if the "open-file" event already happened for this window, then the
+                ;; user is opening a new file, and there is no need to reopen the last file modified.
+                (when (and path (not (:file-opened-from-os? @*main-window-info)))
+                  (log "Opening last file modified from current-file.edn: " path)
+                  (open-file-in-slate! path))))))
 
 (defn choose-file-from-fs! []
   (-> (.showOpenDialog dialog (:window @*main-window-info)

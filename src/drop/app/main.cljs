@@ -12,6 +12,7 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer #_desktopCapturer]]))
 
+;; TODO: File -> Open Recent menu
 ;; BUG: Enter "This looks like the right alleyway...most likely" and position caret before first '.' will cause the characters after to bump over a bit
 ;; This actually appears to be an artifact of splitting the spans at that point, not the text caret pushing the other element over--even if you get rid
 ;; of the caret entirely in devtools, it still happens. I think the solution is to change the way we are rendering the caret. Rather than splitting a span
@@ -54,7 +55,6 @@
 
 ;; USABILITY/POLISH
 
-;; TODO: File -> Open Recent menu
 ;; TODO: Right click on Dock Icon -> open file
 ;; TODO: When merging two paragraphs, the merged paragraph has the :type of the first. Make it have the type of the second **iff** the first is blank.
 ;; TODO: Select from end of one paragraph down into the next/multiple, there should be a "nub" at the end of the first one

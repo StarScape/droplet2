@@ -2,13 +2,8 @@
 
 Source code for the Droplet app.
 
+<!-- TODO: would be good to update the below with a feature-list, or better yet a list of what makes Droplet a technically interesting project. -->
 <!-- # Status
-
-https://user-images.githubusercontent.com/4681820/168147023-92a1065a-1467-45d1-b1f0-dc04c96760ca.mov
-
-Droplet is under heavy development and should be considered in the pre-alpha stage. No UI work has been done yet, and Electron integration, file saving and loading, import/export, etc, are all still `TODO`™.
-
-However, the rich text editor is _mostly_ complete and stable. It supports:
 
 - Rich text formatting: _italics_, __bold__, `h1` and `h2` headings, bulleted and numbered lists. In place but not yet implemented: <ins>underlining</ins>, ~~strikethrough~~.
 - Common text editing shortcuts: ⌥+→ / ⌥+← to jump between words, ⌘+→ / ⌘+← to jump to start/end of line, etc.
