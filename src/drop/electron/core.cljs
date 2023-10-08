@@ -56,7 +56,7 @@
   (p/let [recently-opened (savefiles/read! :recently-opened)
           new-recently-opened (update-recently-opened recently-opened opened-file-path (js/Date.now))]
     (savefiles/write! :recently-opened new-recently-opened)
-    (init-app-menu! @*main-window-info)))
+    (init-app-menu! (:window @*main-window-info))))
 
 (defn launch-import-dialog!
   "Launches an file dialog to import the specified format type.
@@ -263,7 +263,10 @@
                                                     :click #(.. window -webContents (send "file-menu-item-clicked" "initiate-file-export" "rtf"))}]}]}
                              {:role "editMenu"}
                              {:label "View",
-                              :submenu [{:role "togglefullscreen"}]}
+                              :submenu [{:role "togglefullscreen"}
+                                        {:label "Toggle Light/Dark Mode"
+                                         :accelerator "Ctrl+Cmd+N"
+                                         :click #(.. window -webContents (send "toggle-light-or-dark-mode"))}]}
                              {:label "Selection",
                               :submenu [{:label "Next Clause"
                                          :accelerator "CmdOrCtrl+."

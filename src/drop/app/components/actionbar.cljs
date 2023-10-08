@@ -15,6 +15,7 @@
 ;; (def bg-color "bg-[rgb(246,247,249)]")
 ;; (def bg-color "bg-gray-100")
 (def bg-color "bg-gray-50")
+(def bg-color-dark "dark:bg-zinc-800")
 
 (defn- shortcut-for [formatting-command]
   (if slate-utils/is-mac?
@@ -91,15 +92,16 @@
                                                          "opacity-1 max-w-[35px]"))
                                        :title mouseover-text}
          [:img {:src img-url
+                :class "dark:invert"
                 :style {:width "15px"}}]]))))
 
 #_(defn- invisible-button []
   [:div.invisible [format-button "icons/italic.svg" false false #()]])
 
 (defn word-count-display [num-words]
-  [:span {:class "flex text-slate-800 items-center text-sm mr-2"}
+  [:span {:class "flex text-slate-800 dark:text-slate-100 items-center text-sm mr-2"}
    num-words
-   [:span {:class "text-xs text-slate-600 ml-1"} (if (= 1 num-words) "word" "words")]])
+   [:span {:class "text-xs text-slate-600 dark:text-slate-400 ml-1"} (if (= 1 num-words) "word" "words")]])
 
 (defn actionbar [{:keys [active-formats word-count on-format-toggle]}]
   (r/with-let [move-handler (fn [e]
@@ -111,8 +113,9 @@
     (let [transparent? @(subscribe [:actionbar-transparent?])
           show-hide-duration 200
           base-classes (twMerge "fixed px-1 py-1 flex place-content-between transition-all" (str "duration-[" show-hide-duration "]"))
-          visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
-          transparent-classes "inset-x-0 bottom-0 bg-transparent"
+          visible-classes (twMerge bg-color  bg-color-dark
+                                   "bottom-2.5 rounded-md inset-x-10 border border-light-blue dark:border-zinc-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
+          transparent-classes "inset-x-0 bottom-0 bg-transparent pr-3.5"
           buttons-info [{:img-url "icons/italic.svg"
                          :active? (contains? active-formats :italic)
                          :transparent-mode? transparent?

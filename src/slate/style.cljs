@@ -30,20 +30,21 @@
   [:50%
    {:opacity 0}])
 
-(defn get-shadow-elem-style [font-family]
+(defn get-shadow-elem-style [font-family dark-mode?]
   [blink-anim
-   [(keyword ":host") {:--text-color "#202124" ;"#1a1a1a"
+   [(keyword ":host") {:--text-color (if dark-mode? "rgb(204 204 204)" "#202124") ;"#1a1a1a"
 
                        :--caret-color-focused "#0085f2"
                        :--caret-colored-unfocused "#4496da"
                        :--caret-color "var(--caret-color-focused)"
 
-                       :--range-selection-color-focused "#b4ddff"
-                       :--range-selection-color-unfocused "#bdcddb"
+                       :--range-selection-color-focused (if dark-mode? "#003560" "#b4ddff")
+                       :--range-selection-color-unfocused (if dark-mode? "#4B5257" "#bdcddb")
                        :--range-selection-color "var(--range-selection-color-focused)"
 
-                       :--find-highlight-color "#d1d5db"}]
-   [:body {:font-kerning "none !important"}]
+                       :--find-highlight-color "#d1d5db"
+
+                       :font-kerning "none !important"}]
    [:.hidden-input {:opacity 0
                     :position "absolute"
                     :right "10000px"
@@ -109,8 +110,8 @@
   )
 
 (defn get-rendered-shadow-elem-css
-  [font-family]
-  (apply css (get-shadow-elem-style font-family)))
+  [font-family dark-mode?]
+  (apply css (get-shadow-elem-style font-family dark-mode?)))
 
 (defn set-css-prop! [shadow-root prop val]
   (.. shadow-root -host -style (setProperty prop val)))

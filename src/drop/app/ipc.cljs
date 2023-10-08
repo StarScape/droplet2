@@ -9,7 +9,8 @@
             [drop.app.utils :as app-utils]
             [drop.app.demo :as demo]
             [promesa.core :as p]
-            ["electron" :refer [ipcRenderer]])
+            ["electron" :refer [ipcRenderer]]
+            [slate.editor-ui-state :as ui-state])
   (:require-macros [promesa.core :as p]))
 
 (defn init-handlers! []
@@ -53,6 +54,11 @@
            (catch :default e
              (app-utils/show-error-dialog! "Import Failure" "Failed to import file.")
              (js/console.log "Error thrown in ipcRenderer import-file:" e)))))
+
+  (.on ipcRenderer "toggle-light-or-dark-mode"
+       (fn []
+         (.. js/document -documentElement -classList (toggle "dark"))
+         (ui-state/toggle-theme! (:*slate-instance @re-frame.db/app-db))))
 
   (.on ipcRenderer "start-screen-recording"
        (fn [_e, source-id]

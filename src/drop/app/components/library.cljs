@@ -13,7 +13,7 @@
 
 (defn button [opts children]
   [:button (merge-opts {:on-mouse-down #(.preventDefault %)
-                        :class ["m-0.5" "p-2" "rounded-md" "rounded-sm" "hover:bg-light-blue" "active:bg-slate-400"]}
+                        :class ["m-0.5" "p-2" "rounded-md" "rounded-sm" "hover:bg-light-blue" "dark:hover:bg-dark-blue" "active:bg-slate-400"]}
                        opts)
    children])
 
@@ -25,6 +25,6 @@
   ;;   ;; inside this block, toggled is destructured but opts = (dissoc opts :toggled)
   ;;   )
   ;; ```
-  [button (merge-opts {:class [(when toggled? "bg-light-blue")]}
+  [button (merge-opts {:class [(when toggled? "bg-light-blue dark:bg-dark-blue")]}
                       (dissoc opts :toggled?))
    children])

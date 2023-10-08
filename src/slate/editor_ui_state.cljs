@@ -632,11 +632,20 @@
      :ctrl+f activate-find!}))
 
 (def wrapper-elem-class "slate-shadow-dom-wrapper")
+(def style-elem-id "slate-style")
+
+(defn toggle-theme!
+  "Switch from light to dark mode or vice versa."
+  [*slate-instance]
+  (let [{:keys [shadow-root font-family dark-mode?]} @*slate-instance]
+    (set! (.. shadow-root (querySelector (str "#" style-elem-id)) -innerHTML)
+          (style/get-rendered-shadow-elem-css font-family (not dark-mode?)))
+    (swap! *slate-instance update :dark-mode? not)))
 
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
    and creates and returns the [editor element within shadow dom, shadowRoot]"
-  [slate-top-level-elem font-family]
+  [slate-top-level-elem font-family dark-mode?]
   (set! (.-innerHTML slate-top-level-elem) "")
   (let [shadow-dom-wrapper (js/document.createElement "div")
         shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
@@ -649,7 +658,7 @@
 
     (.attachShadow shadow-dom-wrapper #js {:mode "open"})
     (set! (.. shadow-dom-wrapper -shadowRoot -innerHTML)
-          (str "<style>" (style/get-rendered-shadow-elem-css font-family) "</style>"))
+          (str "<style id='" style-elem-id "'>" (style/get-rendered-shadow-elem-css font-family dark-mode?) "</style>"))
 
     ;; There are some things you cannot do (like set outerHTML on elements, among other
     ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
@@ -714,8 +723,9 @@
   (.. (load-fonts! font-family)
       ;; TODO: use core-async or something to clean this up?
       (then #(let [uuid (random-uuid)
+                   dark-mode? false
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family)
+                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
                    available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)
                    editor-state (if save-file-contents
@@ -731,6 +741,7 @@
                ;; Focus hidden input without scrolling to it (it will be at the bottom)
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
+                              :dark-mode? dark-mode?
                               :viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :history history
                               :word-count (word-count/init editor-state)
@@ -741,6 +752,7 @@
                               :add-tip-to-backstack-timer-id nil
                               :outer-dom-elem dom-elem
                               :dom-elem editor-elem
+                              :font-family font-family
                               :shadow-root shadow-root
                               :measure-fn measure-fn
                               :on-ready on-ready
