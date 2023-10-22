@@ -115,7 +115,7 @@
           base-classes (twMerge "fixed px-1 py-1 flex place-content-between transition-all" (str "duration-[" show-hide-duration "]"))
           visible-classes (twMerge bg-color  bg-color-dark
                                    "bottom-2.5 rounded-md inset-x-10 border border-light-blue dark:border-zinc-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
-          transparent-classes "inset-x-0 bottom-0 bg-transparent pr-3.5"
+          transparent-classes "inset-x-0 bottom-0 bg-transparent pr-2.5 pb-3.5"
           buttons-info [{:img-url "icons/italic.svg"
                          :active? (contains? active-formats :italic)
                          :transparent-mode? transparent?
