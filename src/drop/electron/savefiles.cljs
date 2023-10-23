@@ -64,3 +64,19 @@
         (p/catch (fn [_err]
                    (write! name default-val)
                    default-val)))))
+
+(defn read-sync!
+  "Reads the savefile (previously registered with `declare!`) SYNCHRONOUSLY and returns its value in a Promise."
+  [name]
+  (let [{:keys [default-val spec file-path]} (get-or-throw name)]
+    (try
+      (let [contents (fs/readFileSync file-path "utf8")
+            deserialized (edn/read-string contents)]
+        (if-not (s/valid? spec deserialized)
+          (do
+            (write! name default-val)
+            default-val)
+          deserialized))
+      (catch js/Object err
+        (write! name default-val)
+        default-val))))

@@ -13,6 +13,9 @@
             [slate.editor-ui-state :as ui-state])
   (:require-macros [promesa.core :as p]))
 
+(defn get-theme-sync []
+  (keyword (.sendSync ipcRenderer "get-theme")))
+
 (defn init-handlers! []
   (.on ipcRenderer "change-full-screen-status"
        (fn [_e, message-contents]

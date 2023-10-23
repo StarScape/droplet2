@@ -40,6 +40,10 @@
                     :default []
                     :spec any?)
 
+(savefiles/declare! :name :theme
+                    :default :light
+                    :spec any?)
+
 (defn update-recently-opened
   [recently-opened file-path now-ms]
   (as-> recently-opened $
@@ -168,6 +172,8 @@
       (.catch #(js/console.log %))))
 
 (defn reg-ipc-handlers! []
+  (log "Registering main process IPC handlers")
+
   (on-ipc "renderer-ipc-handlers-initialized"
     (fn []
       (log "Renderer IPC handlers initialized.")
@@ -211,6 +217,10 @@
     (fn [e]
       ;; Generic method for showing confirmation dialogs
       (set! (.-returnValue e) (show-new-file-confirmation-dialog!))))
+
+  (.on ipcMain "get-theme"
+       (fn [e]
+         (set! (.-returnValue e) (name (savefiles/read-sync! :theme)))))
 
   ;; DEV ONLY: used when hot-reloading to trigger reopen of last file modified
   (on-ipc "-reload-last-file" #(open-last-file!)))
@@ -266,7 +276,13 @@
                               :submenu [{:role "togglefullscreen"}
                                         {:label "Toggle Light/Dark Mode"
                                          :accelerator "Ctrl+Cmd+N"
-                                         :click #(.. window -webContents (send "toggle-light-or-dark-mode"))}]}
+                                         :click (fn []
+                                                  (.. window -webContents (send "toggle-light-or-dark-mode"))
+                                                  (-> (savefiles/read! :theme)
+                                                      (p/then (fn [current-theme]
+                                                                (savefiles/write! :theme (if (= current-theme :light)
+                                                                                           :dark
+                                                                                           :light))))))}]}
                              {:label "Selection",
                               :submenu [{:label "Next Clause"
                                          :accelerator "CmdOrCtrl+."

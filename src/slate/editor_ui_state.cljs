@@ -696,6 +696,7 @@
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
   [& {:keys [*atom
              font-family
+             theme
              save-file-contents
              dom-elem
              on-ready
@@ -723,7 +724,7 @@
   (.. (load-fonts! font-family)
       ;; TODO: use core-async or something to clean this up?
       (then #(let [uuid (random-uuid)
-                   dark-mode? false
+                   dark-mode? (= theme :dark)
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
                    [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
                    available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
