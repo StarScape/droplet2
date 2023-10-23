@@ -12,8 +12,12 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer #_desktopCapturer]]))
 
+;; TODO: Add ability for page break
+;; TODO: Add print
+;; TODO: Change actionbar to shut off once user starts typing
+;; TODO: I would like it if the paragraph automatically cleaned itself up s.t. spaces that are between unstyled text,
+;; or hanging off the front/end of it, cannot be italic/bold/whatever
 ;; TODO: Right-click menu -- copy, paste, cut
-;; TODO: Dark mode
 ;; TODO: Improve error handling for opening files. Add a case that catches any errors opening the file and automatically backs up the file to a private folder.
 ;;       Deliberately induce some errors.
 ;; TODO: cmd+w should close main window on macOS
