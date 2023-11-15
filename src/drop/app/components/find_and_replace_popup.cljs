@@ -71,11 +71,11 @@
                replace! #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))
                replace-all! #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))]
     (when activated?
-      [:div {:class "fixed w-screen top-3 flex flex-row justify-center"}
+      [:div {:class "fixed w-screen top-3 flex flex-row justify-center"
+             :style {:z-index 2}}
        [:div {:id element-id
              ;; drop-shadow-[0_0_13px_rgba(0,0,0,0.15)]
               :class "flex flex-col rounded-md p-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-gray-700 drop-shadow-[0_0_13px_rgba(0,0,0,0.15)]"
-              :style {:z-index 2}
               :on-focus on-focus
               :on-blur on-blur
               :on-key-down (fn [e]
@@ -154,4 +154,10 @@
                               [text-button {:text "Replace All"
                                             :tab-index "4"
                                             :hover-text (if (is-mac?) "⌘⇧R" "Ctrl+Shift+R")
-                                            :on-click replace-all!}]]}]]])))
+                                            :on-click replace-all!}]]}]
+        (when (and (not (or (= find-text "")
+                            (nil? find-text)))
+                   (zero? total-occurrences))
+          [:<>
+           [v-spacer-m]
+           [:p {:class "text-red-500 text-center"} "No results found"]])]])))
