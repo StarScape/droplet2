@@ -156,3 +156,5 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 - All text is escaped before being entered into the document
 - Changes to fonts
 - Added ability to auto-record demo video
+- "Open Recent" in File menu
+- Myriad UI improvements
