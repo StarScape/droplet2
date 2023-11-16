@@ -29,24 +29,33 @@
 (defn- input-row
   [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref value autofocus?]
     :or {on-key-down #() on-change #() ref #() value (r/atom "")}}]
-  [:div {:class "flex flex-row"
-         :on-key-down #(on-key-down % value)}
-   [:div {:class "p-1 mr-1 border bg-slate-100 dark:bg-zinc-900 border-gray-200 dark:border-gray-700 flex flex-row rounded-sm
+  (r/with-let [*mousedown? (r/atom false)]
+    [:div {:class "flex flex-row"
+           :on-key-down #(on-key-down % value)}
+     [:div {:class "p-1 mr-1 border bg-slate-100 dark:bg-zinc-900 border-gray-200 dark:border-gray-700 flex flex-row rounded-sm
                   focus-within:border focus-within:border-dark-blue dark:focus-within:border-dark-blue"}
-    [:input {:class "outline-none bg-transparent"
-             :type "text"
-             :ref #(when ref (ref %))
-             :tabIndex tab-index
-             :spellCheck "false"
-             :size "30"
-             :placeholder placeholder
-             :autoComplete "off"
-             :autoFocus autofocus?
-             :value value
-             :on-change (fn [e] (on-change (.. e -target -value)))}]
-    [:div {:class "w-16 flex flex-row justify-end items-center"}
-     input-tray]]
-   buttons])
+      [:input {:class "outline-none bg-transparent"
+               :type "text"
+               :ref #(when ref (ref %))
+               :tabIndex tab-index
+               :spellCheck "false"
+               :size "30"
+               :placeholder placeholder
+               :autoComplete "off"
+               :autoFocus autofocus?
+               :value value
+               :on-change (fn [e] (on-change (.. e -target -value)))
+               ;; This ⬇️ is so that all text in the input will be selected when the find and replace dialog
+               ;; is first called up, as well as when tabbing between them. However, we don't want to select
+               ;; all when the user clicks on somewhere specific in the text.
+               :on-mouse-down #(reset! *mousedown? true)
+               :on-mouse-up #(reset! *mousedown? false)
+               :on-focus (fn [e]
+                           (when-not @*mousedown?
+                             (.. e -target (select))))}]
+      [:div {:class "w-16 flex flex-row justify-end items-center"}
+       input-tray]]
+     buttons]))
 
 (defn find-and-replace-popup
   [{:keys [activated?
