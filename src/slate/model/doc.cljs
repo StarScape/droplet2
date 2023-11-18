@@ -60,7 +60,7 @@
   "Splits the selected paragraph at the (single) selection and returns the two halves in a vector.
    The first paragraph will keep the UUID of the paragraph it was split from, the second will be assigned
    a random UUID, unless one is provided as the third parameter."
-  ([doc sel new-uuid]
+  ([doc sel new-index]
    {:pre [(sel/single? sel)]}
   ;; TODO: the two new halves are assigned 2 new UUIDs, should that happen?
   ;; TODO: no, keep the UUID on the first and then assigna random to the second
@@ -70,8 +70,8 @@
          [left-runs, right-runs] (-> target-paragraph
                                      (get :runs)
                                      (p/split-runs (sel/caret sel)))]
-     [(p/paragraph (:uuid target-paragraph) paragraph-type left-runs)
-      (p/paragraph new-uuid paragraph-type right-runs)]))
+     [(p/paragraph (:index target-paragraph) paragraph-type left-runs)
+      (p/paragraph new-index paragraph-type right-runs)]))
   ([doc sel]
    (split-paragraph doc sel (random-uuid))))
 
@@ -83,7 +83,7 @@
         para (get children para-uuid)
         prev (dll/prev children para-uuid)
         merged (p/insert-end prev (p/fragment (:runs para)))
-        new-children (-> children (dissoc para-uuid) (assoc (:uuid prev) merged))]
+        new-children (-> children (dissoc para-uuid) (assoc (:index prev) merged))]
     (assoc doc :children new-children)))
 
 (defn- replace-paragraph-with
@@ -125,7 +125,7 @@
         last-paragraph (-> target-para
                            (p/delete-before sel-caret)
                            (p/insert-start last-paragraph-in-list)
-                           (assoc :uuid (:uuid last-paragraph-in-list)))
+                           (assoc :index (:index last-paragraph-in-list)))
         ;; TODO: optimize for case where `paragraphs` is DLL?
         in-between-paragraphs (->> paragraphs (drop 1) (drop-last 1))
         ;; New paragraphs taking the place of target-para
@@ -143,7 +143,7 @@
   (if (sel/single? sel)
     (let [para-uuid (sel/start-para sel)]
       (if (zero? (sel/caret sel))
-        (if (= para-uuid (-> doc :children dll/first :uuid))
+        (if (= para-uuid (-> doc :children dll/first :index))
           ; First char of first paragraph, do nothing
           doc
           ; First char of a different paragraph, merge with previous
@@ -213,7 +213,7 @@
   "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.
    Optionally takes a UUID to assign to the new paragraph. Returns a new document."
   ([doc uuid new-para-uuid type]
-   (replace-paragraph-with doc uuid [(assoc (p/paragraph) :uuid new-para-uuid :type type),
+   (replace-paragraph-with doc uuid [(assoc (p/paragraph) :index new-para-uuid :type type),
                                      (get (:children doc) uuid)]))
   ([doc uuid]
    (insert-paragraph-before doc uuid (random-uuid) :body)))
@@ -223,7 +223,7 @@
    Optionally takes a UUID to assign to the new paragraph. Returns a new document."
   ([doc uuid new-para-uuid type]
    (replace-paragraph-with doc uuid [((:children doc) uuid),
-                                     (assoc (p/paragraph) :uuid new-para-uuid :type type)]))
+                                     (assoc (p/paragraph) :index new-para-uuid :type type)]))
   ([doc uuid]
    (insert-paragraph-after doc uuid (random-uuid) :body)))
 
@@ -232,7 +232,7 @@
    Creates a new paragraph in the appropriate position in the doc.
    Optionally takes a UUID to assign to the new paragraph, otherwise
    a random one will be used."
-  ([doc sel new-uuid]
+  ([doc sel new-index]
    {:pre [(sel/single? sel)]}
    (let [caret (sel/caret sel)
          uuid (-> sel :start :paragraph)
@@ -242,13 +242,13 @@
                          :body)]
      (cond
        (= caret 0)
-       (insert-paragraph-before doc uuid new-uuid new-para-type)
+       (insert-paragraph-before doc uuid new-index new-para-type)
 
        (= caret (len para))
-       (insert-paragraph-after doc uuid new-uuid new-para-type)
+       (insert-paragraph-after doc uuid new-index new-para-type)
 
        :else
-       (let [[para1 para2] (split-paragraph doc sel new-uuid)]
+       (let [[para1 para2] (split-paragraph doc sel new-index)]
          (replace-paragraph-with doc uuid [para1 para2])))))
   ([doc sel]
    (enter doc sel (random-uuid))))
@@ -308,12 +308,12 @@
 
           start-para-uuid (-> sel :start :paragraph)
           start-para (children start-para-uuid)
-          start-para-sel (sel/selection [(:uuid start-para) (-> sel :start :offset)] [(:uuid start-para) (len start-para)])
+          start-para-sel (sel/selection [(:index start-para) (-> sel :start :offset)] [(:index start-para) (len start-para)])
           new-start-para (format-fn start-para start-para-sel format)
 
           end-para-uuid (-> sel :end :paragraph)
           end-para (children end-para-uuid)
-          end-para-sel (sel/selection [(:uuid end-para) 0] [(:uuid end-para) (-> sel :end :offset)])
+          end-para-sel (sel/selection [(:index end-para) 0] [(:index end-para) (-> sel :end :offset)])
           new-end-para (format-fn end-para end-para-sel format)
 
           in-between-paras (dll/between (:children doc) start-para-uuid end-para-uuid)

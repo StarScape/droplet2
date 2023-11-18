@@ -358,10 +358,10 @@
 (extend-type Paragraph
   Navigable
   (start [para]
-    (autoset-formats para (selection [(:uuid para) 0])))
+    (autoset-formats para (selection [(:index para) 0])))
 
   (end [para]
-    (autoset-formats para (selection [(:uuid para) (m/len para)])))
+    (autoset-formats para (selection [(:index para) (m/len para)])))
 
   (next-char [para sel]
     (cond
@@ -429,7 +429,7 @@
         para ((:children doc) para-uuid)]
     (if (and (= (sel/caret collapsed) (m/len para))
              (not= para (dll/last (:children doc))))
-      (start (dll/next (:children doc) para))
+      (start (dll/next-index (:children doc) para))
       (paragraph-fn ((:children doc) (sel/start-para collapsed)) collapsed))))
 
 (defn prev-method [doc sel paragraph-fn]
@@ -457,7 +457,7 @@
           (if (doc/last-para? doc para)
             sel
             ;; At end of different paragraph, goto start of next one
-            (start (dll/next (:children doc) para)))
+            (start (dll/next-index (:children doc) para)))
           ;; Not at end of paragraph, defer to Paragraph's next-char impl
           (next-char para sel)))))
 
@@ -503,12 +503,12 @@
      (let [caret-offset (sel/caret sel)
            para ((:children doc) (sel/caret-para sel))
            para-length (m/len para)
-           next-para (dll/next (:children doc) para)]
+           next-para (dll/next-index (:children doc) para)]
        (if (and (:backwards? sel) (sel/range? sel))
          (cond
            (= caret-offset para-length)
            (-> sel
-               (assoc :start {:offset 0, :paragraph (:uuid next-para)})
+               (assoc :start {:offset 0, :paragraph (:index next-para)})
                ;; We just moved the caret from p1 to p2, removing p1 from the selection
                ;; and making p2 the new start. Remove p2 from :between if it's present.
                (sel/remove-ends-from-between))
@@ -522,9 +522,9 @@
 
            (= caret-offset para-length)
            (-> sel
-               (assoc :end {:offset 0, :paragraph (:uuid next-para)})
+               (assoc :end {:offset 0, :paragraph (:index next-para)})
               ;; We just shift+right'd from p1 to p2, so add p1 to :between IF it's not also :start
-               (sel/add-to-between (:uuid para)))
+               (sel/add-to-between (:index para)))
 
            :else
            (sel/shift-caret sel (- (next-grapheme para caret-offset) caret-offset)))))))
@@ -544,7 +544,7 @@
 
            (zero? caret-offset)
            (-> sel
-               (assoc :start {:paragraph (:uuid prev-para)
+               (assoc :start {:paragraph (:index prev-para)
                               :offset (m/len prev-para)}
                       :backwards? true))
               ;; No need to update :between because this is operating on a single selection
@@ -562,14 +562,14 @@
            (if (:backwards? sel)
              (-> sel
                  (assoc :start {:offset (m/len prev-para)
-                                :paragraph (:uuid prev-para)})
+                                :paragraph (:index prev-para)})
                  ;; Add what was previously the :start paragraph to the :between,
                  ;; as long as it is not also the :end paragraph (i.e. if the selection
                  ;; only spanned a single paragraph).
-                 (sel/add-to-between (:uuid para)))
+                 (sel/add-to-between (:index para)))
              (-> sel
                  (assoc :end {:offset (m/len prev-para)
-                              :paragraph (:uuid prev-para)})
+                              :paragraph (:index prev-para)})
                 ;; Previous paragraph was either in :between or the :start para. It's
                 ;; now the new :end paragraph, so make sure it's removed from :between.
                  (sel/remove-ends-from-between)))

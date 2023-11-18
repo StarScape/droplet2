@@ -201,9 +201,9 @@
                             (run "bizz" #{:italic})
                             (run "buzz" #{:bold})]))
       (is (= para3 p2))
-      (is (= (-> result :editor-state :selection) (selection [(:uuid para2) 9])))
+      (is (= (-> result :editor-state :selection) (selection [(:index para2) 9])))
       (is (= (:changelist result) {:changed-uuids #{"p1"}
-                                   :inserted-uuids #{(:uuid para2)}
+                                   :inserted-uuids #{(:index para2)}
                                    :deleted-uuids #{}}))))
 
   (testing "when given a range-selection, deletes before inserting"
@@ -324,7 +324,7 @@
     ;; and gives it the UUID of the first.
     (is (= (es/delete (editor-state doc (selection ["p1" 0] ["p2" 0])))
            (->EditorUpdate
-            (map->EditorState {:doc (document [(assoc p2 :uuid "p1")])
+            (map->EditorState {:doc (document [(assoc p2 :index "p1")])
                                :selection (selection ["p1" 0])})
             {:changed-uuids #{"p1"}
              :deleted-uuids #{"p2"}

@@ -33,7 +33,7 @@
   )
 
 (defn paragraph-find [paragraph text ignore-case?]
-  (let [uuid (:uuid paragraph)
+  (let [uuid (:index paragraph)
         paragraph-text (m/text paragraph)
         offsets (find-all-occurrences paragraph-text text ignore-case?)]
     (map #(selection [uuid %] [uuid (+ % (.-length text))]) offsets)))

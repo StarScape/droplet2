@@ -79,11 +79,11 @@
     {:doc doc
      :selection selection}))
   ([doc]
-   (let [first-paragraph-uuid (-> doc :children dll/first :uuid)]
+   (let [first-paragraph-uuid (-> doc :children dll/first :index)]
      (editor-state doc (sel/selection [first-paragraph-uuid 0]))))
   ([]
    (let [p (p/paragraph)]
-     (editor-state (doc/document [p]) (sel/selection [(:uuid p) 0])))))
+     (editor-state (doc/document [p]) (sel/selection [(:index p) 0])))))
 
 (defn delete
   "Deletes the current selection. Returns an EditorUpdate."
@@ -93,17 +93,17 @@
     (if (sel/single? selection)
       ;; Single selection
       (if (zero? (sel/caret selection))
-        (if (= startp-uuid (-> doc :children dll/first :uuid))
+        (if (= startp-uuid (-> doc :children dll/first :index))
           ; First char of first paragraph, do nothing
           (identity-update editor-state)
           ; First char of a different paragraph, merge with previous
           (let [prev-para (dll/prev (:children doc) startp-uuid)
-                new-selection (->> (sel/selection [(:uuid prev-para), (len prev-para)])
+                new-selection (->> (sel/selection [(:index prev-para), (len prev-para)])
                                    (nav/autoset-formats prev-para))]
             (->EditorUpdate (assoc editor-state
                                    :doc new-doc
                                    :selection new-selection)
-                            (changelist :changed-uuids #{(:uuid prev-para)}
+                            (changelist :changed-uuids #{(:index prev-para)}
                                         :deleted-uuids #{startp-uuid}))))
         ; Not the first char of the selected paragraph, normal backspace
         (->EditorUpdate (assoc editor-state
@@ -115,7 +115,7 @@
             endp-uuid (-> selection :end :paragraph)
             new-changelist (changelist :changed-uuids #{startp-uuid}
                                        :deleted-uuids (when-not (= startp-uuid endp-uuid)
-                                                        (-> (dll/uuids-range (:children doc) startp-uuid endp-uuid)
+                                                        (-> (dll/indices-range (:children doc) startp-uuid endp-uuid)
                                                             (rest)
                                                             (set))))]
         (->EditorUpdate (assoc editor-state
@@ -179,19 +179,19 @@
       (if (sel/range? selection)
         (-> (delete editor-state) (>>= insert paragraphs))
         (let [dedupe-para-uuid (fn [p]
-                                 (if (contains? (:children doc) (:uuid p))
-                                   (assoc p :uuid (random-uuid))
+                                 (if (contains? (:children doc) (:index p))
+                                   (assoc p :index (random-uuid))
                                    p))
               paragraphs (map dedupe-para-uuid paragraphs)
               new-doc (doc/insert doc selection (doc/fragment paragraphs))
               last-paragraph (last paragraphs)
-              new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
+              new-selection (->> (sel/selection [(:index last-paragraph) (len last-paragraph)])
                                  (nav/autoset-formats last-paragraph))]
           (->EditorUpdate (assoc editor-state
                                  :doc new-doc
                                  :selection new-selection)
                           (changelist :changed-uuids #{(sel/start-para selection)}
-                                      :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))))
+                                      :inserted-uuids (set (map :index (drop 1 paragraphs))))))))))
 
 (defmethod insert
   js/String
@@ -207,17 +207,17 @@
    Creates a new paragraph in the appropriate position in the doc.
    Optionally takes a UUID to assign to the new paragraph, otherwise
    a random one will be used."
-  ([{:keys [doc selection] :as editor-state} new-uuid]
+  ([{:keys [doc selection] :as editor-state} new-index]
    (if (sel/range? selection)
      (-> (delete editor-state)
-         (>>= enter new-uuid))
+         (>>= enter new-index))
      (let [uuid (-> selection :start :paragraph)
            caret (sel/caret selection)
-           new-doc (doc/enter doc selection new-uuid)
-           new-paragraph (get (:children new-doc) new-uuid)
+           new-doc (doc/enter doc selection new-index)
+           new-paragraph (get (:children new-doc) new-index)
            new-selection (if (= caret 0)
                            (sel/selection [(sel/caret-para selection) 0])
-                           (sel/selection [new-uuid 0] [new-uuid 0]))
+                           (sel/selection [new-index 0] [new-index 0]))
            ;; If inserting a new (empty) paragraph, then the selection should inherit the :formats
            ;; of the current selection. If splitting an existing paragraph into two using enter, the
            ;; now-2nd paragraph's should just set its :formats based on whatever formats are active
@@ -229,7 +229,7 @@
        (->EditorUpdate (assoc editor-state
                               :doc new-doc
                               :selection new-selection)
-                       (changelist :inserted-uuids #{new-uuid}
+                       (changelist :inserted-uuids #{new-index}
                                    :changed-uuids #{uuid})))))
   ([editor-state]
    (enter editor-state (random-uuid))))
@@ -241,13 +241,13 @@
   (get (:children doc) (sel/caret-para selection)))
 
 (defn replace-paragraph
-  "Returns an editor-update replacing the paragraph with uuid `:uuid` with `new-paragraph`.
+  "Returns an editor-update replacing the paragraph with uuid `:index` with `new-paragraph`.
    If the selection is inside the paragraph replaced, and its offset is invalidated (i.e.
    the new paragraph is shorter than the one previously there, and the selection's start or
    end offset is greater than the new paragraph's length), it will be reset to the end of the
    paragraph."
   [{:keys [doc selection] :as _editor-state} uuid new-paragraph]
-  (let [new-doc (assoc-in doc [:children uuid] (assoc new-paragraph :uuid uuid))
+  (let [new-doc (assoc-in doc [:children uuid] (assoc new-paragraph :index uuid))
         adjust-side (fn [{:keys [paragraph offset] :as side}]
                       (if (and (= paragraph uuid)
                                (> offset (m/len new-paragraph)))
@@ -277,7 +277,7 @@
   [{:keys [selection doc] :as editor-state}]
   (let [start-side (:start (nav/start doc))
         end-side (:end (nav/end doc))
-        between (-> doc :children (dll/uuids-between (:paragraph start-side) (:paragraph end-side)) (set))
+        between (-> doc :children (dll/indices-between (:paragraph start-side) (:paragraph end-side)) (set))
         new-selection (assoc selection
                              :start start-side
                              :end end-side
@@ -307,8 +307,8 @@
                                                           (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace]
                                                           :else [(fn [_ i] i), (fn [_ i] i)])
                               para-text (m/text para)]
-                          (sel/selection [(:uuid para) (backward-fn para-text (sel/caret selection))]
-                                         [(:uuid para) (forward-fn para-text (sel/caret selection))])))
+                          (sel/selection [(:index para) (backward-fn para-text (sel/caret selection))]
+                                         [(:index para) (forward-fn para-text (sel/caret selection))])))
         new-selection (nav/autoset-formats para raw-selection)]
     (set-selection editor-state new-selection)))
 
@@ -317,7 +317,7 @@
   {:pre [(sel/single? selection)]}
   ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
-        raw-selection (sel/selection [(:uuid para) 0] [(:uuid para) (m/len para)])
+        raw-selection (sel/selection [(:index para) 0] [(:index para) (m/len para)])
         new-selection (nav/autoset-formats para raw-selection)]
     (set-selection editor-state new-selection)))
 
@@ -343,7 +343,7 @@
     (let [doc-children (:children doc)
           start-para-uuid (-> selection :start :paragraph)
           end-para-uuid (-> selection :end :paragraph)
-          changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)
+          changed-uuids (dll/indices-range doc-children start-para-uuid end-para-uuid)
           common-formats (m/formatting doc selection)
           format-modify-fn (if (contains? common-formats format) disj conj)
           new-selection (update selection :formats format-modify-fn format)]
@@ -507,7 +507,7 @@
   (next-paragraph [{:keys [doc selection] :as editor-state}]
     (let [caret-uuid (sel/caret-para selection)
           paragraph (get (:children doc) caret-uuid)
-          next-paragraph (dll/next (:children doc) (sel/caret-para selection))]
+          next-paragraph (dll/next-index (:children doc) (sel/caret-para selection))]
       (if (= (m/len paragraph) (sel/caret selection))
         (->EditorUpdate (assoc editor-state :selection (nav/start next-paragraph)) (changelist))
         (->EditorUpdate (assoc editor-state :selection (nav/end paragraph)) (changelist)))))

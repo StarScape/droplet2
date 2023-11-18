@@ -212,4 +212,4 @@
              (set/union uuids (conj (:between sel) (-> sel :start :paragraph) (-> sel :end :paragraph))))
            #{} sels)))
 
-;; TODO: change :paragraph in :start and :end to :uuid
+;; TODO: change :paragraph in :start and :end to :index

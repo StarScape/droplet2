@@ -37,64 +37,104 @@
    other than paragraphs inside a DLL, though it's doubtful you'd need those incredibly specific set of
    properties for any other use (but hey, weirder things have happened).
 
-   The only catch is that every item inserted MUST have a :uuid property. So `(dll {:uuid \"123\" :val 1})`
+   The only catch is that every item inserted MUST have a :index property. So `(dll {:index \"123\" :val 1})`
    will work, but `(dll {:val 1})` will throw an error."
-  (:refer-clojure :exclude [first last next remove range]))
+  (:refer-clojure :exclude [first last next remove range list])
+  (:require ["decimal.js" :refer [Decimal]]
+            [hashp.core]))
+
+;; Indices will always be > 0. If a DLL is created, the first item inserted will be given index 1 by default.
+;; If a new item is inserted before that, it will be given index 0.5. If another before that, its index will
+;; be 0.25, then 0.125, 0.0625, etc.
+
+;; TODO: implement (keys)
+;; TODO: would be nice to be able to use plain numbers in place of big-decimals and have them auto-convert
+
+(set! *warn-on-infer* false)
+
+;; TODO: remove when crashing over and emergency debug facility no longer needed :)
+(defn dbg
+  ([prefix arg]
+   (println (str prefix ": ") arg)
+   arg)
+  ([arg]
+   (println arg)
+   arg))
+
+(defn big-dec "Construct new Decimal object." [n] (Decimal. n))
 
 ;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 (declare first)
+(declare first-index)
+
 (declare last)
+(declare last-index)
+
+(declare next-node)
+(declare next-index)
 (declare next)
+
+(declare prev-node)
+(declare prev-index)
 (declare prev)
+
 (declare remove)
-(declare insert-after)
 (declare insert-before)
+(declare insert-after)
 (declare replace-range)
 (declare dll)
 
 (declare make-seq)
 (declare assoc-node)
 
-(deftype Node [^obj value ^string prev-uuid ^string next-uuid]
+;; IEquiv must be implemented for Decimal type in order
+;; for Decimal to work as the key in a Clojure map.
+(extend-type Decimal
+  IEquiv
+  (-equiv [d1 d2]
+    ;; Decimal .eq method will throw error on null arg.
+    (if (nil? d2)
+      false
+      (.eq d1 d2))))
+
+(deftype Node [^obj value ^obj index ^obj prev-index ^obj next-index]
   IEquiv
   (-equiv [^Node node other]
     (if (instance? Node other)
       (and
        (= value (.-value ^Node other))
-       (= prev-uuid (.-prev-uuid ^Node other))
-       (= next-uuid (.-next-uuid ^Node other)))
+       (= index (.-index ^Node other))
+       (= prev-index (.-prev-index ^Node other))
+       (= next-index (.-next-index ^Node other)))
       false))
 
   ;; Implement pretty-printing for easier debugging
   IPrintWithWriter
   (-pr-writer [n writer opts]
    (-write writer "#Node{value: ") (-write writer value)
-   (-write writer ", prev-uuid: ") (-write writer prev-uuid)
-   (-write writer ", next-uuid: ") (-write writer next-uuid)
+   (-write writer ", prev-index: ") (-write writer prev-index)
+   (-write writer ", next-index: ") (-write writer next-index)
    (-write writer "}")))
 
 ;; TODO: this blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
-(deftype DoublyLinkedList [entries-map ; map of (UUID -> DLLEntry)
-                           first-uuid
-                           last-uuid]
+(deftype DoublyLinkedList [entries-map ; map of (index -> DLLEntry)
+                           first-index
+                           last-index]
   ISequential
 
   IEquiv
-  (-equiv [^DoublyLinkedList _dll other]
-    (if (instance? DoublyLinkedList other)
-      (and
-       (= entries-map (.-entries-map ^DoublyLinkedList other))
-       (= first-uuid (.-first-uuid ^DoublyLinkedList other))
-       (= last-uuid (.-last-uuid ^DoublyLinkedList other)))
+  (-equiv [^DoublyLinkedList dll other]
+    (if (seqable? other)
+      (= (seq dll) (seq other))
       false))
 
   ISeq
   (-first [^DoublyLinkedList dll] (first dll))
   (-rest [^DoublyLinkedList dll]
     (if (seq entries-map)
-      (make-seq dll (.-next-uuid (get entries-map first-uuid)))
+      (make-seq dll (.-next-index (get entries-map first-index)))
       ()))
 
   ISeqable
@@ -104,39 +144,38 @@
   (-count [_dll] (count entries-map))
 
   ICollection
-  (-conj [^DoublyLinkedList dll val]
+  (-conj [^DoublyLinkedList dll value]
     (if (empty? entries-map)
-      (let [uuid (:uuid val), node (Node. val nil nil)]
-        (DoublyLinkedList. {(:uuid val) node} uuid uuid))
-      (insert-after dll last-uuid val)))
+      (let [index (big-dec 1)
+            node (Node. value index nil nil)]
+        (DoublyLinkedList. {index node} index index))
+      (insert-after dll (.-last-index dll) value)))
 
   IMap
-  (-dissoc [^DoublyLinkedList dll uuid] (remove dll uuid))
+  (-dissoc [^DoublyLinkedList dll index] (remove dll index))
 
   IAssociative
-  (-assoc [^DoublyLinkedList _dll k v]
-    (if (= k (:uuid v))
-      (if (contains? entries-map k)
-        (DoublyLinkedList. (update entries-map k #(assoc-node % :value v)) first-uuid last-uuid)
-        (throw (js/Error. "Attempting (assoc) a DLL key that does not exist.")))
-      (throw (js/Error. "Attempting to change the UUID of an item in the DLL with (assoc)! This will break things!"))))
+  (-assoc [^DoublyLinkedList _dll index v]
+    (if (contains? entries-map index)
+      (DoublyLinkedList. (update entries-map index #(assoc-node % :value v)) first-index last-index)
+      (throw (js/Error. "Attempting (assoc) a DLL key that does not exist."))))
   (-contains-key? [^DoublyLinkedList _dll k]
     (contains? entries-map k))
 
   ILookup
-  (-lookup [^DoublyLinkedList dll uuid] (-lookup dll uuid nil))
-  (-lookup [^DoublyLinkedList _dll uuid not-found]
-    (if-let [entry ^Node (get entries-map uuid)]
+  (-lookup [^DoublyLinkedList dll index] (-lookup dll index nil))
+  (-lookup [^DoublyLinkedList _dll index not-found]
+    (if-let [entry ^Node (get entries-map index)]
       (.-value entry)
       not-found))
 
   IStack
   (-peek [^DoublyLinkedList dll] (last dll))
-  (-pop [^DoublyLinkedList dll] (remove dll (:uuid (last dll))))
+  (-pop [^DoublyLinkedList dll] (remove dll (.-last-index dll)))
 
   IFn
-  (-invoke [^DoublyLinkedList dll uuid] (-lookup dll uuid))
-  (-invoke [^DoublyLinkedList dll uuid not-found] (-lookup dll uuid not-found))
+  (-invoke [^DoublyLinkedList dll index] (-lookup dll index))
+  (-invoke [^DoublyLinkedList dll index not-found] (-lookup dll index not-found))
 
   IPrintWithWriter
   (-pr-writer [dll writer opts]
@@ -144,19 +183,9 @@
     (-write writer (vec dll)))
   #_(-pr-writer [dll writer opts]
                 (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
-                (-write writer ", first-uuid: ") (-write writer (.-first-uuid dll))
-                (-write writer ", last-uuid: ") (-write writer (.-last-uuid dll))
+                (-write writer ", first-index: ") (-write writer (.-first-index dll))
+                (-write writer ", last-index: ") (-write writer (.-last-index dll))
                 (-write writer "}")))
-
-(defn node-uuid [node] (:uuid (.-value node)))
-
-(defn- dedupe-val-uuid
-  "If `val`'s UUID already exists in `dll`, returns `val` with a new UUID.
-   Otherwise returns `val` as-is."
-  [val dll]
-  (if (contains? dll (:uuid val))
-    (assoc val :uuid (random-uuid))
-    val))
 
 (defn- assoc-node
   "Helper function for creating a new [[Node]] based on the value of an old one.
@@ -164,267 +193,335 @@
    on a normal map, for example:
    ```
    ; creates a new Node with identical to some-node
-   ; but with the value of prev-uuid set to 12
-   (assoc-node some-node :prev-uuid \"12\")
+   ; but with the value of prev-index set to 12
+   (assoc-node some-node :prev-index \"12\")
    ```"
   [^Node node & kvs]
   (reduce (fn [^Node new-node [k v]]
             (case k
-              :value (Node. v (.-prev-uuid new-node) (.-next-uuid new-node))
-              :prev-uuid (Node. (.-value new-node) v (.-next-uuid new-node))
-              :next-uuid (Node. (.-value new-node) (.-prev-uuid new-node) v)))
+              :value (Node. v (.-index new-node) (.-prev-index new-node) (.-next-index new-node))
+              :index (Node. (.-value new-node) v (.-prev-index new-node) (.-next-index new-node))
+              :prev-index (Node. (.-value new-node) (.-index new-node) v (.-next-index new-node))
+              :next-index (Node. (.-value new-node) (.-index new-node) (.-prev-index new-node) v)))
           node (partition 2 kvs)))
-
-(defn- insert-between
-  "Inserts `val` into the map of `entries` immediately between `prev-uuid` and `next-uuid`.
-   If you call this with values of `prev-uuid` and `next-uuid` that are not adjacent, you
-   will die a horrible death.
-
-   Also note that this function operates on the entries-map, NOT the DLL itself."
-  [entries {new-uuid :uuid :as val} prev-uuid next-uuid]
-  (cond-> entries
-    (some? prev-uuid) (update prev-uuid assoc-node :next-uuid new-uuid)
-    (some? next-uuid) (update next-uuid assoc-node :prev-uuid new-uuid)
-    :always (assoc new-uuid (Node. val prev-uuid next-uuid))))
 
 (defn- make-seq
   "Makes a DLL into a seq."
   ([^DoublyLinkedList dll]
    (if (empty? (.-entries-map dll))
      nil
-     (make-seq dll ^str (.-first-uuid dll))))
-  ([^DoublyLinkedList dll uuid]
+     (make-seq dll ^str (.-first-index dll))))
+  ([^DoublyLinkedList dll index]
    (lazy-seq
-    (when-let [entry ^Node (get (.-entries-map dll) uuid)]
-      (cons (.-value entry) (make-seq dll (.-next-uuid entry)))))))
+    (when-let [node ^Node (get (.-entries-map dll) index)]
+      (cons (.-value node) (make-seq dll (.-next-index node)))))))
 
-;; TODO: add condition to both these that dll cannot be empty.
-;; TODO: add condition to all insert methods that the UUID cannot already exist
+(defn- insert-between
+  "Inserts `val` into the map of `entries` immediately between `prev-index` and `next-index`.
+   If you call this with values of `prev-index` and `next-index` that are not adjacent, you
+   will die a horrible death.
+
+   Also note that this function operates on the entries-map, NOT the DLL itself."
+  [entries value prev-idx next-idx]
+  {:pre [(instance? Decimal prev-idx)
+         (instance? Decimal next-idx)]}
+  (let [new-idx (cond
+                  (and prev-idx next-idx)
+                  (.. prev-idx (add next-idx) (div 2))
+
+                  prev-idx
+                  (.add prev-idx 1)
+
+                  next-idx
+                  (if (.greaterThan next-idx 1)
+                    (.sub next-idx 1)
+                    (.. (Decimal. 0) (add next-idx) (div 2))))]
+    (cond-> entries
+      (some? prev-idx) (update prev-idx assoc-node :next-index new-idx)
+      (some? next-idx) (update next-idx assoc-node :prev-index new-idx)
+      :always (assoc new-idx (Node. value new-idx prev-idx next-idx)))))
+
 (defn insert-before
-  "Inserts `val` into the double-linked list `dll` immediately before the node with uuid = `next-uuid`."
-  [^DoublyLinkedList dll next-uuid val]
-  {:pre [(seq dll) (contains? dll next-uuid)]}
-  (let [val (dedupe-val-uuid val dll)
-        prev-uuid (.-prev-uuid (get (.-entries-map dll) next-uuid))
-        new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
-        new-first-uuid (if (= (.-first-uuid dll) next-uuid)
-                         (:uuid val)
-                         (.-first-uuid dll))]
-    (DoublyLinkedList. new-entries new-first-uuid (.-last-uuid dll))))
+  "Inserts `val` into the double-linked list `dll` immediately before index `next-index`."
+  [^DoublyLinkedList dll next-index value]
+  {:pre [(seq dll) (contains? dll next-index)]}
+  (let [prev-idx (.-prev-index (get (.-entries-map dll) next-index))
+        new-entries (if prev-idx
+                      (insert-between (.-entries-map dll) value prev-idx next-index)
+                      (let [first-idx (.-first-index dll)
+                            new-idx (.. first-idx (div 2))]
+                        (-> (.-entries-map dll)
+                            (assoc new-idx (Node. value new-idx nil first-idx))
+                            (update first-idx assoc-node :prev-index new-idx))))
+        new-first-index (if (= (.-first-index dll) next-index)
+                          (.-prev-index (get new-entries (.-first-index dll)))
+                          (.-first-index dll))]
+    (DoublyLinkedList. new-entries new-first-index (.-last-index dll))))
 
 (defn insert-after
-  "Inserts `val` into the double-linked list `dll` immediately after the node with uuid = `prev-uuid`."
-  [^DoublyLinkedList dll prev-uuid val]
-  {:pre [(seq dll) (contains? dll prev-uuid)]}
-  (let [val (dedupe-val-uuid val dll)
-        next-uuid (.-next-uuid (get (.-entries-map dll) prev-uuid))
-        new-entries (insert-between (.-entries-map dll) val prev-uuid next-uuid)
-        new-last-uuid (if (= (.-last-uuid dll) prev-uuid)
-                        (:uuid val)
-                        (.-last-uuid dll))]
-    (DoublyLinkedList. new-entries (.-first-uuid dll) new-last-uuid)))
+  "Inserts `val` into the double-linked list `dll` immediately after the node with index = `prev-index`."
+  [^DoublyLinkedList dll prev-idx value]
+  {:pre [(seq dll) (contains? dll prev-idx)]}
+  (let [next-index (.-next-index (get (.-entries-map dll) prev-idx))
+
+        new-entries (if next-index
+                      (insert-between (.-entries-map dll) value prev-idx next-index)
+                      (let [last-idx (.-last-index dll)
+                            new-idx (.. last-idx (add 1))]
+                        (-> (.-entries-map dll)
+                            (assoc new-idx (Node. value new-idx last-idx nil))
+                            (update last-idx assoc-node :next-index new-idx))))
+        new-last-index (if (= (.-last-index dll) prev-idx)
+                         (.-next-index (get new-entries prev-idx))
+                         (.-last-index dll))]
+    (DoublyLinkedList. new-entries (.-first-index dll) new-last-index)))
+
+(comment
+  (let [d (dll {:content "first"})]
+    (insert-after d (.-last-index d) {:content "second"}))
+  )
 
 ;; TODO: is this needed?
 #_(defn insert-all-before
-  "Inserts all items in list `xs` directly before the node with uuid == `next-uuid`"
-  [dll next-uuid xs]
+  "Inserts all items in list `xs` directly before the node with uuid == `next-index`"
+  [dll next-index xs]
   {:pre [(seq dll)
-         (contains? dll next-uuid)
+         (contains? dll next-index)
          (sequential? xs)]}
   (if (empty? xs)
     dll
     (let [x (clojure.core/first xs)]
-      (recur (insert-before dll next-uuid x) (:uuid x) (rest xs)))))
+      (recur (insert-before dll next-index x) (:index x) (rest xs)))))
 
-(defn insert-all-after
-  "Inserts all items in list `xs` directly after the node with uuid == `prev-uuid`"
-  [dll prev-uuid xs]
+#_(defn insert-all-after
+  "Inserts all items in list `xs` directly after the node with index == `prev-index`"
+  [dll prev-index xs]
   {:pre [(seq dll)
-         (contains? dll prev-uuid)
+         (contains? dll prev-index)
          (sequential? xs)]}
   (if (empty? xs)
     dll
-    (let [x (clojure.core/first xs)]
-      (recur (insert-after dll prev-uuid x) (:uuid x) (rest xs)))))
+    (let [x (clojure.core/first xs)
+          insert (if-let [ni (next-index dll prev-index)]
+                   #())]
+      (loop [new-dll dll]
+        (recur (insert-before dll insert x) (:index x) (rest xs))))))
 
 (defn prepend
   "Inserts `val` into `dll` at the beginning of the list."
   [dll val]
   (if (empty? dll)
     (conj dll val)
-    (insert-before dll (:uuid (first dll)) val)))
+    (insert-before dll (first-index dll) val)))
 
 (defn remove
-  "Removes the node with `uuid` from the list. Calling (dissoc) on the DLL works identically"
-  [^DoublyLinkedList dll uuid]
-  (if-let [node ^Node (get (.-entries-map dll) uuid)]
+  "Removes the node with `index` from the list. Calling (dissoc) on the DLL works identically"
+  [^DoublyLinkedList dll index]
+  (if-let [node ^Node (get (.-entries-map dll) index)]
     (let [entries (.-entries-map dll)
-          first ^Node (get entries (.-first-uuid dll))
-          last ^Node (get entries (.-last-uuid dll))
+          first-node ^Node (get entries (.-first-index dll))
+          last-node ^Node (get entries (.-last-index dll))
           new-entries (cond-> entries
-                        true (dissoc uuid)
-                        (some? (.-prev-uuid node)) (update (.-prev-uuid node) assoc-node :next-uuid (.-next-uuid node))
-                        (some? (.-next-uuid node)) (update (.-next-uuid node) assoc-node :prev-uuid (.-prev-uuid node)))
+                        true (dissoc index)
+                        (some? (.-prev-index node)) (update (.-prev-index node) assoc-node :next-index (.-next-index node))
+                        (some? (.-next-index node)) (update (.-next-index node) assoc-node :prev-index (.-prev-index node)))
           new-first (cond
                       (empty? new-entries) nil
-                      (= uuid (.-first-uuid dll)) (node-uuid (get new-entries (.-next-uuid first)))
-                      :else (node-uuid first))
+                      (= index (.-first-index dll)) (.-next-index first-node)
+                      :else (.-first-index dll))
           new-last (cond
                      (empty? new-entries) nil
-                     (= uuid (:uuid (.-value last))) (node-uuid (get new-entries (.-prev-uuid last)))
-                     :else (node-uuid last))]
+                     (= index (.-last-index dll)) (.-prev-index last-node)
+                     :else (.-last-index dll))]
       (DoublyLinkedList. new-entries new-first new-last))
     dll))
 
 (defn remove-range
-  "Removes all the items between the nodes with uuid1 and uuid2 (both **inclusive**)."
-  [dll uuid1 uuid2]
-  {:pre [(contains? dll uuid1) (contains? dll uuid2)]}
-  (let [first-removed (remove dll uuid1)]
-    (if (= uuid1 uuid2)
+  "Removes all the items between the nodes with index1 and index2 (both __inclusive__)."
+  [dll index1 index2]
+  {:pre [(contains? dll index1) (contains? dll index2)]}
+  (let [first-removed (remove dll index1)]
+    (if (= index1 index2)
       first-removed
-      (recur first-removed (:uuid (next dll uuid1)) uuid2))))
+      (recur first-removed (next-index dll index1) index2))))
 
 (defn replace-range
-  "Replaces all the nodes between uuid1 and uuid2 (both inclusive) with
+  "Replaces all the nodes between index1 and index2 (both inclusive) with
    the supplied item or list of items. Example:
    ```
-   (def lst (dll {:uuid 1, :val :a} {:uuid 2, :val :b} {:uuid 3, :val :c } {:uuid 4, :val :d}))
-   (replace-range lst 2 3 {:uuid 12, :val :e})
+   (def lst (dll {:val :a} {:val :b} {:val :c} {:val :d}))
+   (replace-range lst 2 3 {:val :e})
+   ; => (dll {:val :a} {:val :e} :val :d})
 
-   => (dll {:uuid 1, :val :a} {:uuid 12, :val :e} {:uuid 4, :val :d})
-   (replace-range lst 2 3 [{:uuid 12, :val :e} {:uuid 13 :val :f}])
-
-   => (dll {:uuid 1, :val :a} {:uuid 12, :val :e} {:uuid 13, :val :f} {:uuid 4, :val :d})
+   (replace-range lst 2 3 [{:val :e} {:val :f}])
+   ; => (dll {:val :a} {:val :e} {:val :f} {:val :d})
    ```"
-  [dll uuid1 uuid2 to-insert]
-  (let [removed (remove-range dll uuid1 uuid2)
-        node-before (prev dll uuid1)
-        node-after (next dll uuid2)
+  [list index1 index2 to-insert]
+  (let [removed (remove-range list index1 index2)
+        node-before (prev list index1)
+        node-after (next list index2)
         insert (cond
-                 node-before #(insert-after removed (:uuid node-before) %)
-                 node-after #(insert-before removed (:uuid node-after) %)
+                 node-after #(insert-before removed (next-index list index2) %)
+                 node-before #(insert-after removed (prev-index list index1) %)
                  :else #(conj removed %))]
     (if (sequential? to-insert)
-      (let [first (clojure.core/first to-insert)]
-        (-> (insert first)
-            (insert-all-after (:uuid first) (rest to-insert))))
+      (cond
+        node-after (reduce (fn [new-dll next-element]
+                             (insert-before new-dll (next-index list index2) next-element))
+                           removed to-insert)
+        :else (apply conj removed to-insert))
       (insert to-insert))))
 
 ;; TODO: TESTME!
 (defn replace-between
   "Same as `replace-range`, but **not** inclusive for either end."
-  [dll uuid1 uuid2 to-insert]
-  ;; TODO: clean...
-  (let [first-uuid (:uuid (next dll uuid1))]
-    (if (= first-uuid uuid2)
-      dll
-      (replace-range dll (:uuid (next dll uuid1)) (:uuid (prev dll uuid2)) to-insert))))
+  [list index1 index2 to-insert]
+  (let [first-index (next-index list index1)]
+    (if (= first-index index2)
+      list
+      (replace-range list (next-index list index1) (prev-index list index2) to-insert))))
+
+(defn indices-between
+  "Returns a sequence of all the indices between `index1` and `index2`"
+  [list index1 index2]
+  {:pre [(contains? list index1)
+         (contains? list index2)]}
+  (if (= index1 index2)
+    []
+    (loop [index (next-index list index1), indices []]
+      (if (= index index2)
+        indices
+        (recur (next-index list index)
+               (conj indices index))))))
+
+(defn indices-range
+  "Returns a sequence of all the indices between `index1` and `index2` (including both `index1` and `index2`)"
+  [list index1 index2]
+  {:pre [(contains? list index1)
+         (contains? list index2)]}
+  (let [index-after-index2 (next-index list index2)]
+    (loop [index index1, indices []]
+      (if (= index index-after-index2)
+        indices
+        (recur (next-index list index)
+               (conj indices index))))))
 
 (defn between
-  "Returns a sub-list of all the nodes between (but not including) `uuid1` and `uuid2`."
-  [list uuid1 uuid2]
-  (if (= uuid1 uuid2)
-    (dll)
-    (loop [item (next list uuid1), items (dll)]
-      (if (= (:uuid item) uuid2)
-        items
-        (recur (next list item) (conj items item))))))
+  "Returns a sub-list of all the nodes between (but not including) `index1` and `index2`."
+  [list index1 index2]
+  (map #(get list %) (indices-between list index1 index2)))
 
 (defn range
-  "Returns a sub-list of all the nodes between (and including) `uuid1` and `uuid2`."
-  [list uuid1 uuid2]
-  (let [uuid-after-uuid2 (:uuid (next list uuid2))]
-    (loop [item (get list uuid1), items (dll)]
-      (if (= (:uuid item) uuid-after-uuid2)
-        items
-        (recur (next list item) (conj items item))))))
+  "Returns a sub-list of all the nodes between (and including) `index1` and `index2`."
+  [list index1 index2]
+  (map #(get list %) (indices-range list index1 index2)))
 
-(defn uuids-between
-  "Returns a lazy sequence of all the UUIDs between `uuid1` and `uuid2`"
-  [dll uuid1 uuid2]
-  (map :uuid (between dll uuid1 uuid2)))
+(defn- get-node
+  "Get node at given index. Returns `nil` if there is no such node."
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (get (.-entries-map list) index))
 
-(defn uuids-range
-  "Returns a lazy sequence of all the UUIDs between `uuid1` and `uuid2` (including both `uuid1` and `uuid2`)"
-  [dll uuid1 uuid2]
-  (map :uuid (range dll uuid1 uuid2)))
+(defn- next-node
+  "Get successive node in the list given either an index.
+   Returns `nil` if there is no next element."
+  [^DoublyLinkedList dll index]
+  {:pre [(instance? DoublyLinkedList dll)]}
+  (if-let [node (get (.-entries-map dll) index)]
+    (when-let [next-index ^Node (.-next-index node)]
+      (get (.-entries-map dll) next-index))
+    (throw (js/Error. (str "There is no element with index " index)))))
+
+(defn next-index
+  "Get successive index in the doubly-linked list given an index.
+   Returns `nil` if there is no next element."
+  [^DoublyLinkedList dll index]
+  {:pre [(instance? DoublyLinkedList dll)
+         (contains? dll index)]}
+  (when-let [n (get-node dll index)]
+    (.-next-index n)))
 
 (defn next
-  "Get successive item in the doubly-linked list given either a UUID of a
-   node or the value at that node. For example:
-   ```
-   ;; Both these work equivalently:
-   (let [val1 {:uuid \"1\" :val :foo}, val2 {:uuid \"2\" :val :bar}]
-     (next (dll val1 val2) \"1\")    ; => {:uuid \"2\" :val :bar}
-     (next (dll val2 val2) val1))  ; => {:uuid \"2\" :val :bar}
-   ```
+  "Get successive item in the doubly-linked list given an index.
    Returns `nil` if there is no next element."
-  [^DoublyLinkedList dll uuid-or-elem]
+  [^DoublyLinkedList dll index]
   {:pre [(instance? DoublyLinkedList dll)]}
-  (if-let [uuid (:uuid uuid-or-elem)]
-    (next dll uuid)
-    (if-let [node (get (.-entries-map dll) uuid-or-elem)]
-      (when-let [next-uuid ^Node (.-next-uuid node)]
-        (.-value (get (.-entries-map dll) next-uuid)))
-      (throw (js/Error. (str "There is no element with UUID " uuid-or-elem))))))
+  (when-let [nn (next-node dll index)]
+    (.-value nn)))
+
+(defn- prev-node
+  "Get previous node in the doubly-linked list given an index.
+   Returns `nil` if there is no previous element."
+  [^DoublyLinkedList dll index]
+  {:pre [(instance? DoublyLinkedList dll)]}
+  (if-let [node (get (.-entries-map dll) index)]
+    (when-let [prev-index ^Node (.-prev-index node)]
+      (get (.-entries-map dll) prev-index))
+    (throw (js/Error. (str "There is no element with index " index)))))
+
+(defn prev-index
+  "Get previous index in the doubly-linked list given an index.
+   Returns `nil` if there is no previous element."
+  [^DoublyLinkedList dll index]
+  {:pre [(instance? DoublyLinkedList dll)]}
+  (when-let [n (get-node dll index)]
+    (.-prev-index n)))
 
 (defn prev
-  "Get previous item in the doubly-linked list given either a UUID of a
-   node or the value at that node. For example:
-   ```
-   ;; Both these work equivalently:
-   (let [val1 {:uuid \"1\" :val :foo}, val2 {:uuid \"2\" :val :bar}]
-     (prev (dll val1 val2) \"2\")    ; => {:uuid \"1\" :val :foo}
-     (prev (dll val2 val2) val2))  ; => {:uuid \"1\" :val :foo}
-   ```
+  "Get previous item in the doubly-linked list given an index.
    Returns `nil` if there is no previous element."
-  [^DoublyLinkedList dll uuid-or-elem]
+  [^DoublyLinkedList dll index]
   {:pre [(instance? DoublyLinkedList dll)]}
-  (if-let [uuid (:uuid uuid-or-elem)]
-    (prev dll uuid)
-    (if-let [node (get (.-entries-map dll) uuid-or-elem)]
-      (when-let [prev-uuid ^Node (.-prev-uuid node)]
-        (.-value (get (.-entries-map dll) prev-uuid)))
-      (throw (js/Error. (str "There is no element with UUID " uuid-or-elem))))))
+  (when-let [pn (prev-node dll index)]
+    (.-value pn)))
 
 (defn first
   "Returns first element in DLL."
   [^DoublyLinkedList dll]
   {:pre [(instance? DoublyLinkedList dll)]}
-  (when-let [first-node ^Node (get (.-entries-map dll) (.-first-uuid dll))]
+  (when-let [first-node ^Node (get (.-entries-map dll) (.-first-index dll))]
     (.-value first-node)))
+
+(defn first-index
+  "Returns index of first element in DLL."
+  [^DoublyLinkedList dll]
+  {:pre [(instance? DoublyLinkedList dll)]}
+  (.-first-index dll))
 
 (defn last
   "Returns last element in DLL."
   [^DoublyLinkedList dll]
   {:pre [(instance? DoublyLinkedList dll)]}
-  (when-let [first-node ^Node (get (.-entries-map dll) (.-last-uuid dll))]
-    (.-value first-node)))
+  (when-let [last-node ^Node (get (.-entries-map dll) (.-last-index dll))]
+    (.-value last-node)))
 
-;; TODO: make invariant that items must have UUID property
+(defn last-index
+  "Returns last element in DLL."
+  [^DoublyLinkedList dll]
+  {:pre [(instance? DoublyLinkedList dll)]}
+  (.-last-index dll))
+
 (defn dll
-  "Constructor for a doubly-linked-list, optionally taking a list of
-   items to insert. Note each item must have a :uuid property."
+  "Constructor for a doubly-linked-list, optionally taking a list of items to insert."
   ([]
    (DoublyLinkedList. {} nil nil))
   ([& xs]
    (reduce (fn [dll x] (conj dll x)) (dll) xs)))
 
 (comment
-  (def val1 {:uuid "1" :content "foo"})
-  (def l (dll val1 {:uuid "2" :content "bar"} {:uuid "3" :content "bizz"} {:uuid "5" :content "bang"}))
+  (def val1 {:content "foo"})
+  (def l (dll val1 {:content "bar"} {:content "bizz"} {:content "bang"}))
 
   (empty? (between l "1" "2"))
-  (def l1 (insert-before l "5" {:uuid "4" :content "bar"}))
-  (def l2 (insert-before l "1" {:uuid "-1" :content "pre"}))
-  (def mine (filter #(not= "-1" (:uuid %)) l2))
+  (def l1 (insert-before l "5" {:content "bar"}))
+  (def l2 (insert-before l "1" {:content "pre"}))
+  (def mine (filter #(not= "-1" (:index %)) l2))
 
-  (def a (dll {:uuid "#1" :content "CHANGED"} {:uuid "#2" :content "CHANGED"}))
+  (def a (dll {:index "#1" :content "CHANGED"} {:index "#2" :content "CHANGED"}))
   (replace-range l "1" "5" a)
 
-  (.-entries-map (assoc l "2" {:uuid "2" :content "oyeah"}))
-  (.-entries-map (update l "2" (fn [x] {:uuid (:uuid x) :content "baybee"})))
+  (.-entries-map (assoc l "2" {:index "2" :content "oyeah"}))
+  (.-entries-map (update l "2" (fn [x] {:index (:index x) :content "baybee"})))
 
   (rest (dll))
   (rest l)
@@ -441,13 +538,13 @@
   (empty? (dll))
 
   (next l2 "1")
-  (next l2 {:uuid "1"})
-  (next l2 {:uuid "5"})
+  (next l2 {:index "1"})
+  (next l2 {:index "5"})
   (next l2 "doesntexist")
 
   (prev l2 "2")
-  (prev l2 {:uuid "2"})
-  (prev l2 {:uuid "-1"})
+  (prev l2 {:index "2"})
+  (prev l2 {:index "-1"})
   (prev l2 "doesntexist")
 
   (get l2 "2")

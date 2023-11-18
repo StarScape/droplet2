@@ -142,7 +142,7 @@
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         viewmodels (vm/from-doc doc dom-elem-width measure-fn)
         new-ui-state (assoc ui-state :viewmodels viewmodels)
-        viewmodels (map #(get viewmodels (:uuid %)) (:children doc))]
+        viewmodels (map #(get viewmodels (:index %)) (:children doc))]
     (view/insert-all! dom-elem viewmodels editor-state)
     (view/relocate-hidden-input! shadow-root hidden-input)
     (reset! *ui-state new-ui-state)))

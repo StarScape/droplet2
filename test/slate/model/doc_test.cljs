@@ -84,7 +84,7 @@
       (is (= 3 (count children)))
       (is (= p1 (first children)))
       (is (= (:runs (second children)) (:runs p1)))
-      (is (not= (:uuid (second children)) (:uuid p1)))
+      (is (not= (:index (second children)) (:index p1)))
       (is (= (:runs (nth children 2)) [(run "aaabbbcccdddaaabbbcccddd")]))))
 
   (testing "multi-paragraph insert at the end of a paragraph"
@@ -158,8 +158,8 @@
 
 
 ;; TODO: weirdly, a test seems to be failing below because delete is returning a plain map instead of a Document
-;; {:children #DoublyLinkedList [(#slate.model.paragraph.Paragraph{:uuid "p1", :runs [#slate.model.run.Run{:text "bar", :formats #{:bold :italic}} #slate.model.run.Run{:text "bizz", :formats #{:italic}} #slate.model.run.Run{:text "buzz", :formats #{:bold}}]} #slate.model.paragraph.Paragraph{:uuid "p2", :runs [#slate.model.run.Run{:text "aaabbbcccddd", :formats #{}}]})]}
-;; {:children #DoublyLinkedList [(#slate.model.paragraph.Paragraph{:uuid "p1", :runs [#slate.model.run.Run{:text "bar", :formats #{:bold :italic}} #slate.model.run.Run{:text "bizz", :formats #{:italic}} #slate.model.run.Run{:text "buzz", :formats #{:bold}}]} #slate.model.paragraph.Paragraph{:uuid "p2", :runs [#slate.model.run.Run{:text "aaabbbcccddd", :formats #{}}]})]}
+;; {:children #DoublyLinkedList [(#slate.model.paragraph.Paragraph{:index "p1", :runs [#slate.model.run.Run{:text "bar", :formats #{:bold :italic}} #slate.model.run.Run{:text "bizz", :formats #{:italic}} #slate.model.run.Run{:text "buzz", :formats #{:bold}}]} #slate.model.paragraph.Paragraph{:index "p2", :runs [#slate.model.run.Run{:text "aaabbbcccddd", :formats #{}}]})]}
+;; {:children #DoublyLinkedList [(#slate.model.paragraph.Paragraph{:index "p1", :runs [#slate.model.run.Run{:text "bar", :formats #{:bold :italic}} #slate.model.run.Run{:text "bizz", :formats #{:italic}} #slate.model.run.Run{:text "buzz", :formats #{:bold}}]} #slate.model.paragraph.Paragraph{:index "p2", :runs [#slate.model.run.Run{:text "aaabbbcccddd", :formats #{}}]})]}
 
 (deftest delete-range-test
   (testing "deletes from start of paragraph"
@@ -186,7 +186,7 @@
     ;; of the range selection with the paragraph at the beginning of the range selection,
     ;; and gives it the UUID of the first.
     (is (= (doc/delete test-doc (selection ["p1" 0] ["p2" 0]))
-           (document [(assoc p2 :uuid "p1")]))))
+           (document [(assoc p2 :index "p1")]))))
 
   (testing "merges start and ending paragraphs when deleting across paragraphs"
     (is (= (doc/delete test-doc (selection ["p1" 3] ["p2" 3]))

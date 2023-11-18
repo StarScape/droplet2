@@ -189,7 +189,7 @@
         ol-regex (js/RegExp. "^\\s*[0-9]*\\.\\s?" "g")
         ul-regex (js/RegExp. "^\\s*[●·•⁃◦ ]\\s?" "g")
         delete-first-n-chars (fn [paragraph n]
-                               (p/delete paragraph (sel/selection [(:uuid paragraph) 0] [(:uuid paragraph) n])))]
+                               (p/delete paragraph (sel/selection [(:index paragraph) 0] [(:index paragraph) n])))]
     (cond
       (.test ol-regex text)
       (assoc (delete-first-n-chars paragraph (.-lastIndex ol-regex)) :type :ol)
@@ -204,7 +204,7 @@
 ;;   [paragraph]
 ;;   (if (.startsWith (m/text paragraph) "\t")
 ;;     (-> paragraph
-;;         (p/delete (sel/selection [(:uuid paragraph) 1]))
+;;         (p/delete (sel/selection [(:index paragraph) 1]))
 ;;         (p/insert-start "\t"))
 ;;     paragraph))
 

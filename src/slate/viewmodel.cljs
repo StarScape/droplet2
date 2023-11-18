@@ -205,7 +205,7 @@
       uuids->vms
       (let [p (first paragraphs)
             vm (from-para p width measure-fn)]
-        (recur (rest paragraphs) (assoc uuids->vms (:uuid p) vm))))))
+        (recur (rest paragraphs) (assoc uuids->vms (:index p) vm))))))
 
 (defn update-viewmodels
   [viewmodels doc elem-width measure-fn changelist]

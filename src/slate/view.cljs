@@ -21,7 +21,7 @@
 
 (defn get-paragraph-elem
   [editor-elem paragraph-or-uuid]
-  (let [dom-id (paragraph-uuid->dom-id (or (:uuid paragraph-or-uuid) paragraph-or-uuid))]
+  (let [dom-id (paragraph-uuid->dom-id (or (:index paragraph-or-uuid) paragraph-or-uuid))]
     (.querySelector editor-elem (str "#" dom-id))))
 
 (defn match-elem-in-path
@@ -216,7 +216,7 @@
   "Convert viewmodel to DOM element. Returns HTML string."
   [viewmodel selection]
   (let [lines (:lines viewmodel)
-        pid (-> viewmodel :paragraph :uuid)
+        pid (-> viewmodel :paragraph :index)
         para (:paragraph viewmodel)
         classes ["paragraph" (paragraph-type->css-class (:type para))]]
     (binding [*selection-ongoing?* (contains? (:between selection) pid)]
@@ -236,13 +236,13 @@
   "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom.
    If no paragraphs are found at all, returns `nil`."
   [editor-elem uuid paragraphs-dll]
-  (loop [node (dll/next paragraphs-dll uuid)]
+  (loop [node (dll/next-index paragraphs-dll uuid)]
     (if (nil? node)
       nil
       (let [elem (get-paragraph-elem editor-elem node)]
         (if (some? elem)
           elem
-          (recur (dll/next paragraphs-dll node)))))))
+          (recur (dll/next-index paragraphs-dll node)))))))
 
 (defn- next-dom-paragraph-before
   "Returns the next paragraph before the one with UUID `uuid` that currently has a node in the dom.
@@ -410,7 +410,7 @@
   [editor-elem vm-paras editor-state]
   (set! (.-innerHTML editor-elem) "")
   (doseq [vm (reverse vm-paras)]
-    (insert-para! editor-elem (-> vm :paragraph :uuid) vm editor-state)))
+    (insert-para! editor-elem (-> vm :paragraph :index) vm editor-state)))
 
 ;; up/down nonsense
 ;; up/down have to be handled a little differently than other events because they
@@ -546,25 +546,25 @@
         caret-line (line-with-caret viewmodels collapsed-sel)
         ;; Caret on last line in paragraph?
         caret-in-last-line? (= caret-line (peek (:lines viewmodel)))
-        last-para? (= para-uuid (:uuid (dll/last (:children doc))))]
+        last-para? (= para-uuid (:index (dll/last (:children doc))))]
     (if (and caret-in-last-line? last-para?)
       collapsed-sel
       (let [destination-para (if (or last-para? (not caret-in-last-line?))
                                para
-                               (dll/next (:children doc) para-uuid))
+                               (dll/next-index (:children doc) para-uuid))
             next-line (if (not caret-in-last-line?)
                         (line-below-caret viewmodels collapsed-sel)
                         (->> destination-para
-                             (:uuid)
+                             (:index)
                              (get viewmodels)
                              (:lines)
                              (first)))
             next-line-vm-paragraph (if (not caret-in-last-line?)
                                      viewmodel
-                                     (-> (:children doc) (dll/next para-uuid) (:uuid) (viewmodels)))
-            new-uuid (:uuid destination-para)
+                                     (-> (:children doc) (dll/next-index para-uuid) (:index) (viewmodels)))
+            new-index (:index destination-para)
             initial-para-margin (:left (margins (get-paragraph-elem editor-elem para-uuid)))
-            dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:uuid destination-para))))
+            dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:index destination-para))))
             caret-offset-px (or horizontal-start-pos
                                 (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
             next-line-offset (nearest-line-offset-to-pixel :line next-line
@@ -573,7 +573,7 @@
                                                                                        (peek (:lines next-line-vm-paragraph)))
                                                            :measure-fn measure-fn
                                                            :paragraph-type (:type destination-para))]
-        (nav/autoset-formats doc (sel/selection [new-uuid next-line-offset]))))))
+        (nav/autoset-formats doc (sel/selection [new-index next-line-offset]))))))
 
 (defn down
   "Move the caret down into the next line. Returns an EditorUpdate.
@@ -593,19 +593,19 @@
         caret-line (line-with-caret viewmodels collapsed-sel)
         ;; Caret in first line in paragraph?
         caret-in-first-line? (= caret-line (first (:lines viewmodel)))
-        first-para? (= para-uuid (:uuid (dll/first (:children doc))))
+        first-para? (= para-uuid (:index (dll/first (:children doc))))
         destination-para (if (or first-para? (not caret-in-first-line?))
                            para
                            (dll/prev (:children doc) para-uuid))
-        destination-para-lines (-> destination-para (:uuid) (viewmodels) (:lines))
+        destination-para-lines (-> destination-para (:index) (viewmodels) (:lines))
         prev-line (if caret-in-first-line?
                     (if first-para?
                       (first destination-para-lines)
                       (peek destination-para-lines))
                     (line-above-caret viewmodels collapsed-sel))
-        new-uuid (:uuid destination-para)
+        new-index (:index destination-para)
         initial-para-margin (:left (margins (get-paragraph-elem editor-elem para-uuid)))
-        dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:uuid destination-para))))
+        dest-para-margin (:left (margins (get-paragraph-elem editor-elem (:index destination-para))))
         caret-offset-px (or horizontal-start-pos
                             (+ initial-para-margin (caret-px collapsed-sel caret-line (:type para) measure-fn)))
         prev-line-offset (nearest-line-offset-to-pixel :line prev-line
@@ -613,7 +613,7 @@
                                                        :last-line-in-paragraph? caret-in-first-line?
                                                        :measure-fn measure-fn
                                                        :paragraph-type (:type destination-para))]
-    (nav/autoset-formats doc (sel/selection [new-uuid prev-line-offset]))))
+    (nav/autoset-formats doc (sel/selection [new-index prev-line-offset]))))
 
 (defn up
   "Move the caret up into the next line. Returns an EditorUpdate.
@@ -688,7 +688,7 @@
         new-offset (if (= end-offset (sl/len paragraph))
                      end-offset
                      (dec end-offset))]
-    (sel/selection [(:uuid paragraph) new-offset])))
+    (sel/selection [(:index paragraph) new-offset])))
 
 (defn end-of-line
   "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
@@ -738,7 +738,7 @@
                                                      :last-line-in-paragraph? (= line (peek lines))
                                                      :measure-fn measure-fn
                                                      :paragraph-type (:type paragraph)))]
-    (nav/autoset-formats paragraph (sel/selection [(:uuid paragraph) offset]))))
+    (nav/autoset-formats paragraph (sel/selection [(:index paragraph) offset]))))
 
 
 
@@ -754,11 +754,11 @@
     (cond
       ;; Above first paragraph
       (< client-y (:top first-para-bounds))
-      (-> paragraphs-dll first :uuid)
+      (-> paragraphs-dll first :index)
 
       ;; Below last paragraph
       (> client-y (:bottom last-para-bounds))
-      (-> paragraphs-dll peek :uuid)
+      (-> paragraphs-dll peek :index)
 
       ;; Find paragraph that client-y is overlapping with in the y axis
       :else
@@ -822,11 +822,11 @@
         raw-selection (if (= dir :forward)
                         (sel/selection [started-uuid started-offset]
                                        [current-uuid current-offset]
-                                       :between (set (dll/uuids-between (:children doc) started-uuid current-uuid)))
+                                       :between (set (dll/indices-between (:children doc) started-uuid current-uuid)))
                         (sel/selection [current-uuid current-offset]
                                        [started-uuid started-offset]
                                        :backwards? true
-                                       :between (set (dll/uuids-between (:children doc) current-uuid started-uuid))))]
+                                       :between (set (dll/indices-between (:children doc) current-uuid started-uuid))))]
     (nav/autoset-formats doc raw-selection)))
 
 (defn create-hidden-input!

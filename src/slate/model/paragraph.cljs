@@ -196,12 +196,12 @@
   (let [para-len (len para)]
     (if (= offset para-len)
       para
-      (delete para (selection [(:uuid para) offset] [(:uuid para) para-len])))))
+      (delete para (selection [(:index para) offset] [(:index para) para-len])))))
 
 (defn delete-before
   "Removes everything in paragraph `para` before the provided offset."
   [para offset]
-  (delete para (selection [(:uuid para) 0] [(:uuid para) offset])))
+  (delete para (selection [(:index para) 0] [(:index para) offset])))
 
 (defmulti insert "Inserts into the paragraph."
   {:arglists '([paragraph selection content-to-insert])}
@@ -242,7 +242,7 @@
 (defmethod insert-start
   ParagraphFragment
   [para runs]
-  (insert para (selection [(:uuid para) 0]) runs))
+  (insert para (selection [(:index para) 0]) runs))
 
 (defmethod insert-start
   r/Run
@@ -252,27 +252,27 @@
 (defmethod insert-start
   js/String
   [para text]
-  (insert para (selection [(:uuid para) 0]) (r/run text)))
+  (insert para (selection [(:index para) 0]) (r/run text)))
 
 (defmethod insert-start
   Paragraph
   [para para-to-insert]
-  (insert para (selection [(:uuid para) 0]) para-to-insert))
+  (insert para (selection [(:index para) 0]) para-to-insert))
 
 (defmethod insert-end
   ParagraphFragment
   [para fragment]
-  (insert para (selection [(:uuid para) (len para)]) fragment))
+  (insert para (selection [(:index para) (len para)]) fragment))
 
 (defmethod insert-end
   r/Run
   [para run]
-  (insert para (selection [(:uuid para) (len para)]) run))
+  (insert para (selection [(:index para) (len para)]) run))
 
 (defmethod insert-end
   Paragraph
   [para para-to-insert]
-  (insert para (selection [(:uuid para) (len para)]) para-to-insert))
+  (insert para (selection [(:index para) (len para)]) para-to-insert))
 
 (defn update-selected-runs
   "Returns a new paragraph with f applied to each run inside the selection."
@@ -294,8 +294,8 @@
 (defn whole-paragraph-selected?
   "Returns true if the selection encompasses the whole paragraph."
   [paragraph sel]
-  (and (= (:start sel) {:offset 0, :paragraph (:uuid paragraph)})
-       (= (:end sel) {:offset (len paragraph), :paragraph (:uuid paragraph)})))
+  (and (= (:start sel) {:offset 0, :paragraph (:index paragraph)})
+       (= (:end sel) {:offset (len paragraph), :paragraph (:index paragraph)})))
 
 (defn indented?
   "Returns true if there is a tab at the start of the paragraph."
@@ -364,10 +364,10 @@
     (fragment (second (separate-selected (:runs para) sel))))
 
   (formatting
-    ([para] (formatting para (selection [(:uuid para) 0]
-                                        [(:uuid para) (len para)])))
+    ([para] (formatting para (selection [(:index para) 0]
+                                        [(:index para) (len para)])))
     ([para sel]
-     (if (contains? (:between sel) (:uuid para))
+     (if (contains? (:between sel) (:index para))
        (formatting para)
        (if (sel/single? sel)
          (if (zero? (sel/caret sel)) (formatting-at para sel) (formatting-before para sel))
@@ -387,4 +387,4 @@
   ([p1 p2 uuid]
    (paragraph uuid (:type p1) (vec (concat (:runs p1) (:runs p2)))))
   ([p1 p2]
-   (merge-paragraphs p1 p2 (:uuid p1))))
+   (merge-paragraphs p1 p2 (:index p1))))
