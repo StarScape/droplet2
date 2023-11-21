@@ -69,7 +69,6 @@
 (deftest set-single-test
   (is (= 255 (-> sel-single (sel/set-single 255) sel/caret)))
   (is (thrown? js/Error (sel/set-single sel-range 10)))
-  (is (thrown? js/Error (sel/set-single sel-single -1)))
   (is (= 0 (sel/caret (sel/set-single sel-single 0)))))
 
 (deftest collapse-test

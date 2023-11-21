@@ -44,7 +44,7 @@
      (->Document (into (dll) children))
 
      :else
-     (throw "Error: non-sequence type supplied as `children` to `document` constructor.")))
+     (throw (js/Error. "Error: non-sequence type supplied as `children` to `document` constructor."))))
   ([]
    (->Document (dll))))
 
@@ -57,49 +57,45 @@
 
 ;; Document helper functions
 (defn- split-paragraph
-  "Splits the selected paragraph at the (single) selection and returns the two halves in a vector.
-   The first paragraph will keep the UUID of the paragraph it was split from, the second will be assigned
-   a random UUID, unless one is provided as the third parameter."
-  ([doc sel new-index]
-   {:pre [(sel/single? sel)]}
-  ;; TODO: the two new halves are assigned 2 new UUIDs, should that happen?
-  ;; TODO: no, keep the UUID on the first and then assigna random to the second
-   (let [target-paragraph (-> (:children doc)
-                              (get (-> sel :start :paragraph)))
-         paragraph-type (:type target-paragraph)
-         [left-runs, right-runs] (-> target-paragraph
-                                     (get :runs)
-                                     (p/split-runs (sel/caret sel)))]
-     [(p/paragraph (:index target-paragraph) paragraph-type left-runs)
-      (p/paragraph new-index paragraph-type right-runs)]))
-  ([doc sel]
-   (split-paragraph doc sel (random-uuid))))
+  "Splits the selected paragraph at the (single) selection and returns the two halves in a vector."
+  [doc sel]
+  {:pre [(sel/single? sel)]}
+  (let [target-paragraph (-> (:children doc)
+                             (get (-> sel :start :paragraph)))
+        paragraph-type (:type target-paragraph)
+        [left-runs, right-runs] (-> target-paragraph
+                                    (get :runs)
+                                    (p/split-runs (sel/caret sel)))]
+    [(p/paragraph paragraph-type left-runs)
+     (p/paragraph paragraph-type right-runs)]))
 
 (defn- merge-paragraph-with-previous
-  "Returns a new doc with the paragraph at `para-idx` merged into the one before it.
-   The resulting paragraph will have the UUID of the previous paragraph, *not* `para-uuid`."
-  [doc para-uuid]
+  "Returns a new doc with the paragraph at `para-idx` merged into the one before it."
+  [doc para-idx]
   (let [children (:children doc)
-        para (get children para-uuid)
-        prev (dll/prev children para-uuid)
+        para (get children para-idx)
+        prev-idx (dll/prev-index children para-idx)
+        prev (dll/prev children para-idx)
         merged (p/insert-end prev (p/fragment (:runs para)))
-        new-children (-> children (dissoc para-uuid) (assoc (:index prev) merged))]
+        new-children (-> children
+                         (dissoc para-idx)
+                         (assoc prev-idx merged))]
     (assoc doc :children new-children)))
 
 (defn- replace-paragraph-with
-  "Returns a new doc with the paragraph having UUID `uuid` replaced with
+  "Returns a new doc with the paragraph at index `idx replaced with
    `content`, which can be either a paragraph or a list of paragraphs."
-  [doc uuid content]
-  (update doc :children #(dll/replace-range % uuid uuid content)))
+  [doc idx content]
+  (update doc :children #(dll/replace-range % idx idx content)))
 
 (defn- insert-into-single-paragraph
   "Helper function. For document inserts where we only have to worry about a single paragraph,
    meaning we can basically just delegate to the paragraph insert function and replace the paragraph."
   [doc sel content]
-  (let [target-uuid (-> sel :start :paragraph)
-        target-para (get (:children doc) target-uuid)
+  (let [target-idx (-> sel :start :paragraph)
+        target-para (get (:children doc) target-idx)
         new-para (p/insert target-para sel content)]
-    (assoc-in doc [:children target-uuid] new-para)))
+    (assoc-in doc [:children target-idx] new-para)))
 
 (defn- insert-paragraphs-into-doc
   "Helper function. Inserts multiple paragraphs into the document.
@@ -109,8 +105,8 @@
   {:pre [(sel/single? sel)
          (sequential? paragraphs)
          #_(> (count paragraphs) 1)]}
-  (let [target-para-uuid (-> sel :start :paragraph)
-        target-para (get (:children doc) target-para-uuid)
+  (let [target-para-idx (-> sel :start :paragraph)
+        target-para (get (:children doc) target-para-idx)
         sel-caret (sel/caret sel)
         first-paragraph-in-list (first paragraphs)
         first-paragraph (-> target-para
@@ -124,15 +120,14 @@
                                  (last paragraphs))
         last-paragraph (-> target-para
                            (p/delete-before sel-caret)
-                           (p/insert-start last-paragraph-in-list)
-                           (assoc :index (:index last-paragraph-in-list)))
+                           (p/insert-start last-paragraph-in-list))
         ;; TODO: optimize for case where `paragraphs` is DLL?
         in-between-paragraphs (->> paragraphs (drop 1) (drop-last 1))
         ;; New paragraphs taking the place of target-para
         all-modified-paragraphs (flatten [first-paragraph in-between-paragraphs last-paragraph])
         new-children (dll/replace-range (:children doc)
-                                        target-para-uuid
-                                        target-para-uuid
+                                        target-para-idx
+                                        target-para-idx
                                         all-modified-paragraphs)]
     (assoc doc :children new-children)))
 
@@ -141,25 +136,24 @@
   "Deletes the selection from the Document. If single selection, acts as backspace."
   [doc sel]
   (if (sel/single? sel)
-    (let [para-uuid (sel/start-para sel)]
+    (let [para-idx (sel/start-para sel)]
       (if (zero? (sel/caret sel))
-        (if (= para-uuid (-> doc :children dll/first :index))
+        (if (= para-idx (dll/first-index (:children doc)))
           ; First char of first paragraph, do nothing
           doc
           ; First char of a different paragraph, merge with previous
-          (merge-paragraph-with-previous doc para-uuid))
+          (merge-paragraph-with-previous doc para-idx))
         ; Not the first char of the selected paragraph, normal backspace
-        (update-in doc [:children para-uuid] p/delete sel)))
+        (update-in doc [:children para-idx] p/delete sel)))
     (let [children (:children doc)
-          startp-uuid (-> sel :start :paragraph)
-          endp-uuid (-> sel :end :paragraph)
+          start-para-idx (-> sel :start :paragraph)
+          end-para-idx (-> sel :end :paragraph)
           ;; Replace one paragraph if start and end are in the same paragraph, or all of them if not.
-          new-para (if (= startp-uuid endp-uuid)
-                     (p/delete (children startp-uuid) sel)
-                     (p/merge-paragraphs
-                      (p/delete-after (children startp-uuid) (-> sel :start :offset))
-                      (p/delete-before (children endp-uuid) (-> sel :end :offset))))
-          new-children (dll/replace-range children startp-uuid endp-uuid new-para)]
+          new-para (if (= start-para-idx end-para-idx)
+                     (p/delete (children start-para-idx) sel)
+                     (p/merge-paragraphs (p/delete-after (children start-para-idx) (-> sel :start :offset))
+                                         (p/delete-before (children end-para-idx) (-> sel :end :offset))))
+          new-children (dll/replace-range children start-para-idx end-para-idx new-para)]
       (assoc doc :children new-children))))
 
 (defmulti insert "Inserts into the Document."
@@ -210,62 +204,55 @@
         (insert (sel/collapse-start sel) text))))
 
 (defn insert-paragraph-before
-  "Inserts an empty paragraph into the document immediately before the paragraph with UUID `uuid`.
-   Optionally takes a UUID to assign to the new paragraph. Returns a new document."
-  ([doc uuid new-para-uuid type]
-   (replace-paragraph-with doc uuid [(assoc (p/paragraph) :index new-para-uuid :type type),
-                                     (get (:children doc) uuid)]))
-  ([doc uuid]
-   (insert-paragraph-before doc uuid (random-uuid) :body)))
+  "Inserts an empty paragraph into the document immediately before the paragraph at index `idx`."
+  ([doc idx type]
+   (replace-paragraph-with doc idx [(assoc (p/paragraph) :type type), (get (:children doc) idx)]))
+  ([doc idx]
+   (insert-paragraph-before doc idx :body)))
 
 (defn insert-paragraph-after
-  "Inserts an empty paragraph into the document immediately after the paragraph with UUID `uuid`.
+  "Inserts an empty paragraph into the document immediately after the paragraph at index `idx`.
    Optionally takes a UUID to assign to the new paragraph. Returns a new document."
-  ([doc uuid new-para-uuid type]
-   (replace-paragraph-with doc uuid [((:children doc) uuid),
-                                     (assoc (p/paragraph) :index new-para-uuid :type type)]))
-  ([doc uuid]
-   (insert-paragraph-after doc uuid (random-uuid) :body)))
+  ([doc idx type]
+   (replace-paragraph-with doc idx [((:children doc) idx), (assoc (p/paragraph) :type type)]))
+  ([doc idx]
+   (insert-paragraph-after doc idx :body)))
 
 (defn enter
   "Equivalent to what happens when the user hits the enter button.
-   Creates a new paragraph in the appropriate position in the doc.
-   Optionally takes a UUID to assign to the new paragraph, otherwise
-   a random one will be used."
-  ([doc sel new-index]
+   Creates a new paragraph in the appropriate position in the doc."
+  ([doc sel]
    {:pre [(sel/single? sel)]}
    (let [caret (sel/caret sel)
-         uuid (-> sel :start :paragraph)
-         para ((:children doc) uuid)
+         para-idx (-> sel :start :paragraph)
+         para ((:children doc) para-idx)
          new-para-type (if (contains? types-preserved-on-enter (:type para))
                          (:type para)
                          :body)]
      (cond
        (= caret 0)
-       (insert-paragraph-before doc uuid new-index new-para-type)
+       (insert-paragraph-before doc para-idx new-para-type)
 
        (= caret (len para))
-       (insert-paragraph-after doc uuid new-index new-para-type)
+       (insert-paragraph-after doc para-idx new-para-type)
 
        :else
-       (let [[para1 para2] (split-paragraph doc sel new-index)]
-         (replace-paragraph-with doc uuid [para1 para2])))))
-  ([doc sel]
-   (enter doc sel (random-uuid))))
+       (let [[para1 para2] (split-paragraph doc sel)]
+         (replace-paragraph-with doc para-idx [para1 para2]))))))
 
 (defn doc-selected-content
   [doc sel]
-  (let [start-para-uuid (-> sel :start :paragraph)
-        start-para ((:children doc) start-para-uuid)
-        end-para-uuid (-> sel :end :paragraph)
-        end-para ((:children doc) end-para-uuid)]
+  (let [start-para-idx (-> sel :start :paragraph)
+        start-para ((:children doc) start-para-idx)
+        end-para-idx (-> sel :end :paragraph)
+        end-para ((:children doc) end-para-idx)]
     (if (sel/single-paragraph? sel)
       (if (p/whole-paragraph-selected? start-para sel)
         (fragment start-para)
         (selected-content start-para sel))
       (let [start-offset (-> sel :start :offset)
             end-offset (-> sel :end :offset)
-            fragment-paragraphs (-> (dll/between (:children doc) start-para-uuid end-para-uuid)
+            fragment-paragraphs (-> (dll/between (:children doc) start-para-idx end-para-idx)
                                     (dll/prepend (p/delete-before start-para start-offset))
                                     (conj (p/delete-after end-para end-offset)))]
         (fragment fragment-paragraphs)))))
@@ -306,23 +293,23 @@
           common-formats (formatting doc sel)
           format-fn (if (contains? common-formats format) p/remove-format p/apply-format)
 
-          start-para-uuid (-> sel :start :paragraph)
-          start-para (children start-para-uuid)
-          start-para-sel (sel/selection [(:index start-para) (-> sel :start :offset)] [(:index start-para) (len start-para)])
+          start-para-idx (-> sel :start :paragraph)
+          start-para (children start-para-idx)
+          start-para-sel (sel/selection [start-para-idx (-> sel :start :offset)] [start-para-idx (len start-para)])
           new-start-para (format-fn start-para start-para-sel format)
 
-          end-para-uuid (-> sel :end :paragraph)
-          end-para (children end-para-uuid)
-          end-para-sel (sel/selection [(:index end-para) 0] [(:index end-para) (-> sel :end :offset)])
+          end-para-idx (-> sel :end :paragraph)
+          end-para (children end-para-idx)
+          end-para-sel (sel/selection [end-para-idx 0] [end-para-idx (-> sel :end :offset)])
           new-end-para (format-fn end-para end-para-sel format)
 
-          in-between-paras (dll/between (:children doc) start-para-uuid end-para-uuid)
+          in-between-paras (dll/between (:children doc) start-para-idx end-para-idx)
           new-in-between-paras (map #(format-fn % format) in-between-paras)
 
           new-children (-> children
-                           (assoc start-para-uuid new-start-para)
-                           (assoc end-para-uuid new-end-para)
-                           (dll/replace-between start-para-uuid end-para-uuid new-in-between-paras))]
+                           (assoc start-para-idx new-start-para)
+                           (assoc end-para-idx new-end-para)
+                           (dll/replace-between start-para-idx end-para-idx new-in-between-paras))]
       (assoc doc :children new-children))))
 
 (defn first-para?

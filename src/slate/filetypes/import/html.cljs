@@ -229,11 +229,11 @@
               *paragraph-type* (update-paragraph-type node)]
       (cond
         (br? node)
-        (p/empty-paragraph)
+        (p/paragraph)
 
         (and (or (block-elem? node) (li? node))
              (no-block-level-children? node))
-        (let [paragraph (paragraph (random-uuid) *paragraph-type* (map-child-nodes convert-node node))
+        (let [paragraph (paragraph *paragraph-type* (map-child-nodes convert-node node))
               paragraph (if (indented? node)
                           (p/indent paragraph)
                           paragraph)

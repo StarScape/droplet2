@@ -401,7 +401,7 @@
   (testing "works with range selection"
     (is (= (es/enter (editor-state doc (selection ["p2" 0] ["p2" 12])) "e1")
            (->EditorUpdate
-            (map->EditorState {:doc (document [p1, (p/empty-paragraph "e1"), (p/empty-paragraph "p2")])
+            (map->EditorState {:doc (document [p1, (p/paragraph), (p/paragraph)])
                                :selection (selection ["p2" 0])})
             {:inserted-uuids #{"e1"}
              :changed-uuids #{"p2"}

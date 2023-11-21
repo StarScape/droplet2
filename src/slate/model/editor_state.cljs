@@ -178,7 +178,7 @@
       ;; Insert multiple paragraphs
       (if (sel/range? selection)
         (-> (delete editor-state) (>>= insert paragraphs))
-        (let [dedupe-para-uuid (fn [p]
+        (let [#_#_#_#_dedupe-para-uuid (fn [p]
                                  (if (contains? (:children doc) (:index p))
                                    (assoc p :index (random-uuid))
                                    p))

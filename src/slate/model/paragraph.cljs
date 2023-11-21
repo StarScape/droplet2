@@ -18,7 +18,7 @@
 
 (declare optimize-runs)
 
-(defrecord Paragraph [uuid runs type]
+(defrecord Paragraph [runs type]
   TextContainer
   (text [p] (reduce str (map text (:runs p))))
   (len [p] (reduce #(+ %1 (len %2)) 0 (:runs p)))
@@ -54,28 +54,17 @@
     (->ParagraphFragment [run-or-runs])))
 
 (defn paragraph
-  "Creates a new paragraph. If no UUID is supplied a random one is created.
+  "Creates a new paragraph.
 
    Paragraph fields:
-   - `uuid`: Unique ID for paragraph
    - `runs`: vector of runs within the paragraph (never empty, always at least 1 empty run)
    - `type`: The type of paragraph -- either :h1, :h2, :ul, :ol or :body (default)."
   ([]
-   (->Paragraph (random-uuid) [(r/empty-run)] :body))
+   (->Paragraph [(r/empty-run)] :body))
   ([runs]
-   (->Paragraph (random-uuid) (optimize-runs runs) :body))
-  ;; This arity is mostly for testing (to make it easier to track that the UUID remains what it should)
-  ([uuid runs]
-   (->Paragraph uuid (optimize-runs runs) :body))
-  ([uuid type runs]
-   (->Paragraph uuid (optimize-runs runs) type)))
-
-(defn empty-paragraph
-  "Creates an empty paragraph, optionally taking a UUID to assign to it."
-  ([uuid]
-   (paragraph uuid [(r/run)]))
-  ([]
-   (paragraph [(r/run)])))
+   (->Paragraph (optimize-runs runs) :body))
+  ([type runs]
+   (->Paragraph (optimize-runs runs) type)))
 
 ;; Paragraph helper functions
 (defn optimize-runs
@@ -196,12 +185,12 @@
   (let [para-len (len para)]
     (if (= offset para-len)
       para
-      (delete para (selection [(:index para) offset] [(:index para) para-len])))))
+      (delete para (selection [nil offset] [nil para-len])))))
 
 (defn delete-before
   "Removes everything in paragraph `para` before the provided offset."
   [para offset]
-  (delete para (selection [(:index para) 0] [(:index para) offset])))
+  (delete para (selection [nil 0] [nil offset])))
 
 (defmulti insert "Inserts into the paragraph."
   {:arglists '([paragraph selection content-to-insert])}
@@ -210,12 +199,12 @@
 (defmethod insert
   ParagraphFragment
   [para sel {:keys [runs]}]
-  (if (sel/single? sel)
+  (if (sel/range? sel)
+    (let [selection-removed (delete para sel)]
+      (insert selection-removed (sel/collapse-start sel) runs))
     (let [[before after] (split-runs (:runs para) (sel/caret sel))
           new-runs (concat before runs after)]
-      (assoc para :runs (optimize-runs new-runs)))
-    (let [selection-removed (delete para sel)]
-      (insert selection-removed (sel/collapse-start sel) runs))))
+      (assoc para :runs (optimize-runs new-runs)))))
 
 (defmethod insert
   r/Run
@@ -242,7 +231,7 @@
 (defmethod insert-start
   ParagraphFragment
   [para runs]
-  (insert para (selection [(:index para) 0]) runs))
+  (insert para (selection [nil 0]) runs))
 
 (defmethod insert-start
   r/Run
@@ -252,27 +241,27 @@
 (defmethod insert-start
   js/String
   [para text]
-  (insert para (selection [(:index para) 0]) (r/run text)))
+  (insert para (selection [nil 0]) (r/run text)))
 
 (defmethod insert-start
   Paragraph
   [para para-to-insert]
-  (insert para (selection [(:index para) 0]) para-to-insert))
+  (insert para (selection [nil 0]) para-to-insert))
 
 (defmethod insert-end
   ParagraphFragment
   [para fragment]
-  (insert para (selection [(:index para) (len para)]) fragment))
+  (insert para (selection [nil (len para)]) fragment))
 
 (defmethod insert-end
   r/Run
   [para run]
-  (insert para (selection [(:index para) (len para)]) run))
+  (insert para (selection [nil (len para)]) run))
 
 (defmethod insert-end
   Paragraph
   [para para-to-insert]
-  (insert para (selection [(:index para) (len para)]) para-to-insert))
+  (insert para (selection [nil (len para)]) para-to-insert))
 
 (defn update-selected-runs
   "Returns a new paragraph with f applied to each run inside the selection."
@@ -288,14 +277,14 @@
 
 (defn formatting-before [para sel]
   (if (zero? (sel/caret sel))
-    (throw "This should never happen, check formatting-before function.")
+    (throw (js/Error. "This should never happen, check formatting-before function."))
     (formatting-at para (sel/shift-single sel -1))))
 
 (defn whole-paragraph-selected?
   "Returns true if the selection encompasses the whole paragraph."
   [paragraph sel]
-  (and (= (:start sel) {:offset 0, :paragraph (:index paragraph)})
-       (= (:end sel) {:offset (len paragraph), :paragraph (:index paragraph)})))
+  (and (= (-> sel :start :offset) 0)
+       (= (-> sel :end :offset) (len paragraph))))
 
 (defn indented?
   "Returns true if there is a tab at the start of the paragraph."
@@ -364,27 +353,21 @@
     (fragment (second (separate-selected (:runs para) sel))))
 
   (formatting
-    ([para] (formatting para (selection [(:index para) 0]
-                                        [(:index para) (len para)])))
+    ([para] (formatting para (selection [nil 0]
+                                        [nil (len para)])))
     ([para sel]
-     (if (contains? (:between sel) (:index para))
-       (formatting para)
-       (if (sel/single? sel)
-         (if (zero? (sel/caret sel)) (formatting-at para sel) (formatting-before para sel))
-         (let [runs (:runs para)
-               [start-run-idx _] (at-offset runs (-> sel :start :offset))
-               [end-run-idx _] (before-offset runs (-> sel :end :offset))
-               selected-runs (subvec runs start-run-idx (inc end-run-idx))]
-           (->> selected-runs
-                (map :formats)
-                (apply set/intersection))))))))
+     (if (sel/single? sel)
+       (if (zero? (sel/caret sel)) (formatting-at para sel) (formatting-before para sel))
+       (let [runs (:runs para)
+             [start-run-idx _] (at-offset runs (-> sel :start :offset))
+             [end-run-idx _] (before-offset runs (-> sel :end :offset))
+             selected-runs (subvec runs start-run-idx (inc end-run-idx))]
+         (->> selected-runs
+              (map :formats)
+              (apply set/intersection)))))))
 
 ;; Operations on multiple paragraphs ;;
 (defn merge-paragraphs
-  "Merges the two paragraphs. By default new paragraph will have the UUID of `p1`.
-   Optionally takes a third parameter to set the UUID to whatever you want. New paragraph
-   will have the type of the __first__ paragraph."
-  ([p1 p2 uuid]
-   (paragraph uuid (:type p1) (vec (concat (:runs p1) (:runs p2)))))
-  ([p1 p2]
-   (merge-paragraphs p1 p2 (:index p1))))
+  "Merges the two paragraphs. New paragraph will have the type of the __first__ paragraph."
+  [p1 p2]
+  (paragraph (:type p1) (vec (concat (:runs p1) (:runs p2)))))

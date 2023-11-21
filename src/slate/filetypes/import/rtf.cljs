@@ -222,7 +222,7 @@
       ;; Add current working paragraph to Document
       (update-in [:document :children] conj (adjust-paragraph? paragraph))
       ;; ...and create new one. No runs, run will be added when first subsequent group with text ends
-      (assoc :paragraph (p/paragraph (random-uuid) (:type paragraph) []))))
+      (assoc :paragraph (p/paragraph (:type paragraph) []))))
 
 (defn- add-paragraph-to-doc?
   [{:keys [paragraph] :as parser-state}]

@@ -309,41 +309,42 @@
 
 (defn prepend
   "Inserts `val` into `dll` at the beginning of the list."
-  [dll val]
-  (if (empty? dll)
-    (conj dll val)
-    (insert-before dll (first-index dll) val)))
+  [list val]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (if (empty? list)
+    (conj list val)
+    (insert-before list (first-index list) val)))
 
 (defn remove
   "Removes the node with `index` from the list. Calling (dissoc) on the DLL works identically"
-  [^DoublyLinkedList dll index]
-  (if-let [node ^Node (get (.-entries-map dll) index)]
-    (let [entries (.-entries-map dll)
-          first-node ^Node (get entries (.-first-index dll))
-          last-node ^Node (get entries (.-last-index dll))
+  [^DoublyLinkedList list index]
+  (if-let [node ^Node (get (.-entries-map list) index)]
+    (let [entries (.-entries-map list)
+          first-node ^Node (get entries (.-first-index list))
+          last-node ^Node (get entries (.-last-index list))
           new-entries (cond-> entries
                         true (dissoc index)
                         (some? (.-prev-index node)) (update (.-prev-index node) assoc-node :next-index (.-next-index node))
                         (some? (.-next-index node)) (update (.-next-index node) assoc-node :prev-index (.-prev-index node)))
           new-first (cond
                       (empty? new-entries) nil
-                      (= index (.-first-index dll)) (.-next-index first-node)
-                      :else (.-first-index dll))
+                      (= index (.-first-index list)) (.-next-index first-node)
+                      :else (.-first-index list))
           new-last (cond
                      (empty? new-entries) nil
-                     (= index (.-last-index dll)) (.-prev-index last-node)
-                     :else (.-last-index dll))]
+                     (= index (.-last-index list)) (.-prev-index last-node)
+                     :else (.-last-index list))]
       (DoublyLinkedList. new-entries new-first new-last))
-    dll))
+    list))
 
 (defn remove-range
   "Removes all the items between the nodes with index1 and index2 (both __inclusive__)."
-  [dll index1 index2]
-  {:pre [(contains? dll index1) (contains? dll index2)]}
-  (let [first-removed (remove dll index1)]
+  [list index1 index2]
+  {:pre [(contains? list index1) (contains? list index2)]}
+  (let [first-removed (remove list index1)]
     (if (= index1 index2)
       first-removed
-      (recur first-removed (next-index dll index1) index2))))
+      (recur first-removed (next-index list index1) index2))))
 
 (defn replace-range
   "Replaces all the nodes between index1 and index2 (both inclusive) with
@@ -409,12 +410,16 @@
 (defn between
   "Returns a sub-list of all the nodes between (but not including) `index1` and `index2`."
   [list index1 index2]
-  (map #(get list %) (indices-between list index1 index2)))
+  {:pre [(instance? DoublyLinkedList list)]
+   :post [(instance? DoublyLinkedList %)]}
+  (apply dll (map #(get list %) (indices-between list index1 index2))))
 
 (defn range
   "Returns a sub-list of all the nodes between (and including) `index1` and `index2`."
   [list index1 index2]
-  (map #(get list %) (indices-range list index1 index2)))
+  {:pre [(instance? DoublyLinkedList list)]
+   :post [(instance? DoublyLinkedList %)]}
+  (apply dll (map #(get list %) (indices-range list index1 index2))))
 
 (defn- get-node
   "Get node at given index. Returns `nil` if there is no such node."
@@ -425,81 +430,81 @@
 (defn- next-node
   "Get successive node in the list given either an index.
    Returns `nil` if there is no next element."
-  [^DoublyLinkedList dll index]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (if-let [node (get (.-entries-map dll) index)]
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (if-let [node (get (.-entries-map list) index)]
     (when-let [next-index ^Node (.-next-index node)]
-      (get (.-entries-map dll) next-index))
+      (get (.-entries-map list) next-index))
     (throw (js/Error. (str "There is no element with index " index)))))
 
 (defn next-index
   "Get successive index in the doubly-linked list given an index.
    Returns `nil` if there is no next element."
-  [^DoublyLinkedList dll index]
-  {:pre [(instance? DoublyLinkedList dll)
-         (contains? dll index)]}
-  (when-let [n (get-node dll index)]
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)
+         (contains? list index)]}
+  (when-let [n (get-node list index)]
     (.-next-index n)))
 
 (defn next
   "Get successive item in the doubly-linked list given an index.
    Returns `nil` if there is no next element."
-  [^DoublyLinkedList dll index]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (when-let [nn (next-node dll index)]
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (when-let [nn (next-node list index)]
     (.-value nn)))
 
 (defn- prev-node
   "Get previous node in the doubly-linked list given an index.
    Returns `nil` if there is no previous element."
-  [^DoublyLinkedList dll index]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (if-let [node (get (.-entries-map dll) index)]
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (if-let [node (get (.-entries-map list) index)]
     (when-let [prev-index ^Node (.-prev-index node)]
-      (get (.-entries-map dll) prev-index))
+      (get (.-entries-map list) prev-index))
     (throw (js/Error. (str "There is no element with index " index)))))
 
 (defn prev-index
   "Get previous index in the doubly-linked list given an index.
    Returns `nil` if there is no previous element."
-  [^DoublyLinkedList dll index]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (when-let [n (get-node dll index)]
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (when-let [n (get-node list index)]
     (.-prev-index n)))
 
 (defn prev
   "Get previous item in the doubly-linked list given an index.
    Returns `nil` if there is no previous element."
-  [^DoublyLinkedList dll index]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (when-let [pn (prev-node dll index)]
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (when-let [pn (prev-node list index)]
     (.-value pn)))
 
 (defn first
   "Returns first element in DLL."
-  [^DoublyLinkedList dll]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (when-let [first-node ^Node (get (.-entries-map dll) (.-first-index dll))]
+  [^DoublyLinkedList list]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (when-let [first-node ^Node (get (.-entries-map list) (.-first-index list))]
     (.-value first-node)))
 
 (defn first-index
   "Returns index of first element in DLL."
-  [^DoublyLinkedList dll]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (.-first-index dll))
+  [^DoublyLinkedList list]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (.-first-index list))
 
 (defn last
   "Returns last element in DLL."
-  [^DoublyLinkedList dll]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (when-let [last-node ^Node (get (.-entries-map dll) (.-last-index dll))]
+  [^DoublyLinkedList list]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (when-let [last-node ^Node (get (.-entries-map list) (.-last-index list))]
     (.-value last-node)))
 
 (defn last-index
   "Returns last element in DLL."
-  [^DoublyLinkedList dll]
-  {:pre [(instance? DoublyLinkedList dll)]}
-  (.-last-index dll))
+  [^DoublyLinkedList list]
+  {:pre [(instance? DoublyLinkedList list)]}
+  (.-last-index list))
 
 (defn dll
   "Constructor for a doubly-linked-list, optionally taking a list of items to insert."
