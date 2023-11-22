@@ -53,7 +53,7 @@
                                                                      (run "hoo") (run "bar" #{:underline})])
                                                     (paragraph "p2" [(run "one a one, and a foo, and a bar!")])])
                                          (selection ["p1" 0] ["p1" 20]))
-                           (changelist :changed-uuids #{"p1"}))))))
+                           (changelist :changed-indices #{"p1"}))))))
 
 (deftest replace-all-test
   (testing "single location"
@@ -64,7 +64,7 @@
                                                                      (run "goo") (run "bar" #{:bold})
                                                                      (run "hoo") (run "bar" #{:underline})])
                                                     (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
-                           (changelist :changed-uuids #{"p1"})))))
+                           (changelist :changed-indices #{"p1"})))))
   (testing "multiple locations"
     (is (= (replace-all (editor-state doc)
                         [(selection ["p1" 0] ["p1" 3])
@@ -74,7 +74,7 @@
                                                                      (run "123") (run "bar" #{:bold})
                                                                      (run "hoo") (run "bar" #{:underline})])
                                                     (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
-                           (changelist :changed-uuids #{"p1"})))))
+                           (changelist :changed-indices #{"p1"})))))
   (testing "multiple locations across 2 paragraphs"
     (is (= (replace-all (editor-state doc)
                         [(selection ["p1" 0] ["p1" 3])
@@ -85,7 +85,7 @@
                                                                      (run "123") (run "bar" #{:bold})
                                                                      (run "hoo") (run "bar" #{:underline})])
                                                     (paragraph "p2" [(run "o123 a one, and a foo, and a bar!")])]))
-                           (changelist :changed-uuids #{"p1" "p2"})))))
+                           (changelist :changed-indices #{"p1" "p2"})))))
   (testing "shifts selection appropriately when needed"
     (is (= (replace-all (editor-state doc (selection ["p1" 17]))
                         [(selection ["p1" 12] ["p1" 18])]
@@ -95,4 +95,4 @@
                                                                      (run "bizz")])
                                                     (paragraph "p2" [(run "one a one, and a foo, and a bar!")])])
                                          (selection ["p1" 16]))
-                           (changelist :changed-uuids #{"p1"}))))))
+                           (changelist :changed-indices #{"p1"}))))))

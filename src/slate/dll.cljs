@@ -61,8 +61,6 @@
    (println arg)
    arg))
 
-(defn big-dec "Construct new Decimal object." [n] (Decimal. n))
-
 ;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 (declare first)
 (declare first-index)
@@ -93,9 +91,15 @@
   IEquiv
   (-equiv [d1 d2]
     ;; Decimal .eq method will throw error on null arg.
-    (if (nil? d2)
-      false
-      (.eq d1 d2))))
+    (if (instance? Decimal d2)
+      (.eq d1 d2)
+      false))
+
+  IPrintWithWriter
+  (-pr-writer [decimal writer opts]
+    (-write writer (str "Decimal{" decimal "}"))))
+
+(defn big-dec "Construct new Decimal object." [n] (Decimal. n))
 
 (deftype Node [^obj value ^obj index ^obj prev-index ^obj next-index]
   IEquiv
@@ -446,6 +450,15 @@
   (when-let [n (get-node list index)]
     (.-next-index n)))
 
+(defn safe-next-index
+  "Get successive index in the doubly-linked list given an index.
+   Returns the last element if there is no next element."
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)
+         (contains? list index)]
+   :post [(some? %)]}
+  (or (.-next-index (get-node list index)) (.-last-index list)))
+
 (defn next
   "Get successive item in the doubly-linked list given an index.
    Returns `nil` if there is no next element."
@@ -471,6 +484,15 @@
   {:pre [(instance? DoublyLinkedList list)]}
   (when-let [n (get-node list index)]
     (.-prev-index n)))
+
+(defn safe-prev-index
+  "Get previous index in the doubly-linked list given an index.
+   Returns the first index if there is no previous element."
+  [^DoublyLinkedList list index]
+  {:pre [(instance? DoublyLinkedList list)
+         (contains? list index)]
+   :post [(some? %)]}
+  (or (.-prev-index (get-node list index)) (.-first-index list)))
 
 (defn prev
   "Get previous item in the doubly-linked list given an index.

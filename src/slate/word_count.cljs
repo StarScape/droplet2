@@ -30,11 +30,11 @@
           0 paragraphs))
 
 (defn update-total-count
-  [total-word-count prev-doc new-doc {:keys [inserted-uuids changed-uuids deleted-uuids] :as _changelist}]
-  (let [deleted-paragraphs (map #(get (:children prev-doc) %) deleted-uuids)
-        inserted-paragraphs (map #(get (:children new-doc) %) inserted-uuids)
-        old-changed-paragraphs (map #(get (:children prev-doc) %) changed-uuids)
-        new-changed-paragraphs (map #(get (:children new-doc) %) changed-uuids)]
+  [total-word-count prev-doc new-doc {:keys [inserted-indices changed-indices deleted-indices] :as _changelist}]
+  (let [deleted-paragraphs (map #(get (:children prev-doc) %) deleted-indices)
+        inserted-paragraphs (map #(get (:children new-doc) %) inserted-indices)
+        old-changed-paragraphs (map #(get (:children prev-doc) %) changed-indices)
+        new-changed-paragraphs (map #(get (:children new-doc) %) changed-indices)]
     (-> total-word-count
         (+ (paragraphs-word-count inserted-paragraphs))
         (- (paragraphs-word-count deleted-paragraphs))

@@ -209,13 +209,13 @@
 
 (defn update-viewmodels
   [viewmodels doc elem-width measure-fn changelist]
-  (let [{:keys [changed-uuids inserted-uuids deleted-uuids]} changelist
+  (let [{:keys [changed-indices inserted-indices deleted-indices]} changelist
         get-para (partial get (:children doc))
         updated-vms (as-> viewmodels vms
-                      (apply dissoc vms deleted-uuids)
+                      (apply dissoc vms deleted-indices)
                       (reduce (fn [new-vms uuid]
                                 (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn)))
-                              vms (concat inserted-uuids changed-uuids)))]
+                              vms (concat inserted-indices changed-indices)))]
     updated-vms))
 
 (defn formats-at

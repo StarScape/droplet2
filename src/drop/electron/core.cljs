@@ -15,6 +15,8 @@
 
 (log "Evaluating main electron file...")
 
+(set! *warn-on-infer* false)
+
 (goog-define DEV true)
 (def is-dev? DEV)
 (declare init-window!)

@@ -83,10 +83,10 @@
 
 (defn modifies-doc?
   "Returns true if the `EditorUpdate` makes changes to the Document."
-  [{{:keys [inserted-uuids changed-uuids deleted-uuids]} :changelist :as _editor-update}]
-  (or (seq inserted-uuids)
-      (seq changed-uuids)
-      (seq deleted-uuids)))
+  [{{:keys [inserted-indices changed-indices deleted-indices]} :changelist :as _editor-update}]
+  (or (seq inserted-indices)
+      (seq changed-indices)
+      (seq deleted-indices)))
 
 (def does-not-modify-doc?
   "Returns true if the `EditorUpdate` does not make changes to the Document."
@@ -153,16 +153,16 @@
   [& {:keys [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist focus? scroll-to-caret?]
       :or {focus? true, scroll-to-caret? false}}]
   (let [{:keys [doc selection]} editor-state
-        {:keys [deleted-uuids changed-uuids inserted-uuids]} changelist
+        {:keys [deleted-indices changed-indices inserted-indices]} changelist
         rerender-uuids (set/difference (set/union (sel/all-uuids (:selection prev-state))
                                                   (sel/all-uuids selection))
-                                       deleted-uuids
-                                       inserted-uuids)]
-    (doseq [uuid inserted-uuids]
+                                       deleted-indices
+                                       inserted-indices)]
+    (doseq [uuid inserted-indices]
       (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
-    (doseq [uuid deleted-uuids]
+    (doseq [uuid deleted-indices]
       (view/remove-para! dom-elem uuid editor-state prev-state))
-    (doseq [uuid (set/union changed-uuids rerender-uuids)]
+    (doseq [uuid (set/union changed-indices rerender-uuids)]
       (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))
 
     (view/relocate-hidden-input! shadow-root hidden-input focus?)

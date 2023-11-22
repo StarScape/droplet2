@@ -28,9 +28,9 @@
 
 (defn pretty-editor-update [{:keys [editor-state changelist]}]
   (let [{:keys [doc]} editor-state
-        changed-paras (map #(get (:children doc) %) (:changed-uuids changelist))
-        inserted-paras (map #(get (:children doc) %) (:inserted-uuids changelist))
-        deleted-paras (map #(get (:children doc) %) (:deleted-uuids changelist))
+        changed-paras (map #(get (:children doc) %) (:changed-indices changelist))
+        inserted-paras (map #(get (:children doc) %) (:inserted-indices changelist))
+        deleted-paras (map #(get (:children doc) %) (:deleted-indices changelist))
         pretty-paras (fn [paras] (str/join ", " (map pretty-paragraph #_(fn [p] (pretty-paragraph p)) paras)))
         render-paras (fn [title paras]
                        (if (seq paras)

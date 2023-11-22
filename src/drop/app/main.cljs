@@ -12,6 +12,13 @@
             [orchestra-cljs.spec.test :as st]
             ["electron" :refer [ipcRenderer #_desktopCapturer]]))
 
+;; Globally print any errors with stacktrace.
+;; CLJS, unfuriatingly, does not print a stacktrace automatically.
+#_(set! (.. js/window -onerror)
+      (fn [msg url line col err]
+        (println msg)
+        (println (str "\at: " line ":" col "\n"))))
+
 #_#_(when utils/DEV
   (st/instrument))
 
