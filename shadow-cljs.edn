@@ -44,7 +44,7 @@
              :autorun true}
   ;; TODO: this is temporary, DELETEME
   :test-current {:target :node-test
-                 :ns-regexp "slate.model.editor-state-test"
+                 :ns-regexp "slate.model.navigation-test"
                  :output-to "dev_out/test_current.js"
                  :autorun true}
   ;; Storybook stories
