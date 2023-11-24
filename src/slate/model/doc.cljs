@@ -55,7 +55,7 @@
     (->DocumentFragment [paragraph-or-paragraphs])))
 
 ;; Document helper functions
-(defn- split-paragraph
+(defn split-paragraph
   "Splits the selected paragraph at the (single) selection and returns the two halves in a vector."
   [doc sel]
   {:pre [(sel/single? sel)]}
@@ -81,7 +81,7 @@
                          (assoc prev-idx merged))]
     (assoc doc :children new-children)))
 
-(defn- replace-paragraph-with
+(defn replace-paragraph-with
   "Returns a new doc with the paragraph at index `idx replaced with
    `content`, which can be either a paragraph or a list of paragraphs."
   [doc idx content]
@@ -204,20 +204,20 @@
 
 (defn insert-paragraph-before
   "Inserts an empty paragraph into the document immediately before the paragraph at index `idx`."
-  ([doc idx type]
-   (replace-paragraph-with doc idx [(assoc (p/paragraph) :type type), (get (:children doc) idx)]))
+  ([doc idx new-paragraph-type]
+   (update doc :children dll/insert-before idx (assoc (p/paragraph) :type new-paragraph-type)))
   ([doc idx]
    (insert-paragraph-before doc idx :body)))
 
 (defn insert-paragraph-after
   "Inserts an empty paragraph into the document immediately after the paragraph at index `idx`.
    Optionally takes a UUID to assign to the new paragraph. Returns a new document."
-  ([doc idx type]
-   (replace-paragraph-with doc idx [((:children doc) idx), (assoc (p/paragraph) :type type)]))
+  ([doc idx new-paragraph-type]
+   (update doc :children dll/insert-after idx (assoc (p/paragraph) :type new-paragraph-type)))
   ([doc idx]
    (insert-paragraph-after doc idx :body)))
 
-(defn enter
+#_(defn enter
   "Equivalent to what happens when the user hits the enter button.
    Creates a new paragraph in the appropriate position in the doc."
   ([doc sel]

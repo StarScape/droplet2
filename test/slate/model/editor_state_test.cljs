@@ -170,9 +170,9 @@
                                                (paragraph [(run "inserted paragraph 2")])
                                                (paragraph [(run "inserted paragraph 3")])
                                                p2])
-                               :selection (selection ["i3" 20])})
+                               :selection (selection [(big-dec 1.75) 20])})
             {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{"i2" "i3"}
+             :inserted-indices #{(big-dec 1.5) (big-dec 1.75)}
              :deleted-indices #{}}))))
 
   (testing "inserting a plain string"
@@ -190,6 +190,7 @@
              :deleted-indices #{}}))))
 
   (testing "inserting a plain string with newlines produces new paragraphs"
+    ;; 1, 1.5
     (let [result (es/insert (editor-state doc (selection [(big-dec 1) 3])) "inserted\ninserted2")
           children (-> result :editor-state :doc :children)
           para1 (nth children 0)
@@ -204,7 +205,7 @@
       (is (= para3 p2))
       (is (= (-> result :editor-state :selection) (selection [(:index para2) 9])))
       (is (= (:changelist result) {:changed-indices #{(big-dec 1)}
-                                   :inserted-indices #{(:index para2)}
+                                   :inserted-indices #{(big-dec 1.5)}
                                    :deleted-indices #{}}))))
 
   (testing "when given a range-selection, deletes before inserting"
@@ -325,7 +326,7 @@
     ;; and gives it the UUID of the first.
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 0])))
            (->EditorUpdate
-            (map->EditorState {:doc (document [(assoc p2 :index (big-dec 1))])
+            (map->EditorState {:doc (document [p2])
                                :selection (selection [(big-dec 1) 0])})
             {:changed-indices #{(big-dec 1)}
              :deleted-indices #{(big-dec 2)}
@@ -360,51 +361,51 @@
 
 (deftest enter-test
   (testing "works at start of paragraph"
-    (is (= (es/enter (editor-state doc (selection [(big-dec 1) 0])) "e1")
+    (is (= (es/enter (editor-state doc (selection [(big-dec 1) 0])))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph [(run)]), p1, p2])
                                :selection (selection [(big-dec 1) 0])})
-            {:inserted-indices #{"e1"}
+            {:inserted-indices #{(big-dec 0.5)}
              :deleted-indices #{}
              :changed-indices #{(big-dec 1)}}))))
 
   (testing "works at end of paragraph"
-    (is (= (es/enter (editor-state doc (selection [(big-dec 1) 14])) "e1")
+    (is (= (es/enter (editor-state doc (selection [(big-dec 1) 14])))
            (->EditorUpdate
             (map->EditorState {:doc (document [p1, (paragraph [(run)]), p2])
-                               :selection (selection ["e1" 0])})
-            {:inserted-indices #{"e1"}
+                               :selection (selection [(big-dec 1.5) 0])})
+            {:inserted-indices #{(big-dec 1.5)}
              :changed-indices #{(big-dec 1)}
              :deleted-indices #{}}))))
 
   (testing "works in middle of paragraph"
-    (is (= (es/enter (editor-state doc (selection [(big-dec 1) 3])) "e1")
+    (is (= (es/enter (editor-state doc (selection [(big-dec 1) 3])))
            (->EditorUpdate
             (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})])
                                                (paragraph [(run "bar" #{:bold :italic})
                                                            (run "bizz" #{:italic})
                                                            (run "buzz" #{:bold})])
                                                p2])
-                               :selection (selection ["e1" 0] ["e1" 0] :formats #{:bold :italic})})
+                               :selection (selection [(big-dec 1.5) 0] [(big-dec 1.5) 0] :formats #{:bold :italic})})
             {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{"e1"}
+             :inserted-indices #{(big-dec 1.5)}
              :deleted-indices #{}}))))
 
   (testing "works at end of doc"
-    (is (= (es/enter (editor-state doc (selection [(big-dec 2) 12])) "e1")
+    (is (= (es/enter (editor-state doc (selection [(big-dec 2) 12])))
            (->EditorUpdate
             (map->EditorState {:doc (document [p1, p2, (paragraph [(run)])])
-                               :selection (selection ["e1" 0])})
-            {:inserted-indices #{"e1"}
+                               :selection (selection [(big-dec 3) 0])})
+            {:inserted-indices #{(big-dec 3)}
              :changed-indices #{(big-dec 2)}
              :deleted-indices #{}}))))
 
   (testing "works with range selection"
-    (is (= (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12])) "e1")
+    (is (= (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12])))
            (->EditorUpdate
             (map->EditorState {:doc (document [p1, (p/paragraph), (p/paragraph)])
                                :selection (selection [(big-dec 2) 0])})
-            {:inserted-indices #{"e1"}
+            {:inserted-indices #{(big-dec 1.5)}
              :changed-indices #{(big-dec 2)}
              :deleted-indices #{}})))))
 

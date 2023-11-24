@@ -179,8 +179,8 @@
         (-> (delete editor-state) (>>= insert paragraphs))
         (let [new-doc (doc/insert doc selection (doc/fragment paragraphs))
               sel-para-idx (sel/start-para selection)
-              para-after-sel-idx (dll/safe-next-index (:children doc) sel-para-idx)
-              last-inserted-para-idx (if (= para-after-sel-idx (dll/last-index (:children doc)))
+              para-after-sel-idx (dll/next-index (:children doc) sel-para-idx)
+              last-inserted-para-idx (if (nil? para-after-sel-idx)
                                        (dll/last-index (:children new-doc))
                                        (dll/prev-index (:children new-doc) para-after-sel-idx))
               last-paragraph (last paragraphs)
@@ -207,20 +207,34 @@
 
 (defn enter
   "Equivalent to what happens when the user hits the enter button.
-   Creates a new paragraph in the appropriate position in the doc.
-   Optionally takes a UUID to assign to the new paragraph, otherwise
-   a random one will be used."
-  ([{:keys [doc selection] :as editor-state} new-index]
+   Creates a new paragraph in the appropriate position in the doc."
+  ([{:keys [doc selection] :as editor-state}]
    (if (sel/range? selection)
      (-> (delete editor-state)
-         (>>= enter new-index))
-     (let [uuid (-> selection :start :paragraph)
-           caret (sel/caret selection)
-           new-doc (doc/enter doc selection)
+         (>>= enter))
+     (let [caret (sel/caret selection)
+           paragraph-idx (-> selection :start :paragraph)
+           paragraph ((:children doc) paragraph-idx)
+           new-para-type (if (contains? doc/types-preserved-on-enter (:type paragraph))
+                           (:type paragraph)
+                           :body)
+           new-doc (cond
+                     (= caret 0)
+                     (doc/insert-paragraph-before doc paragraph-idx new-para-type)
+
+                     (= caret (len paragraph))
+                     (doc/insert-paragraph-after doc paragraph-idx new-para-type)
+
+                     :else
+                     (let [[para1 para2] (doc/split-paragraph doc selection)]
+                       (doc/replace-paragraph-with doc paragraph-idx [para1 para2])))
+           new-index (if (= caret 0)
+                       (dll/prev-index (:children new-doc) paragraph-idx)
+                       (dll/next-index (:children new-doc) paragraph-idx))
            new-paragraph (get (:children new-doc) new-index)
            new-selection (if (= caret 0)
                            (sel/selection [(sel/caret-para selection) 0])
-                           (sel/selection [new-index 0] [new-index 0]))
+                           (sel/selection [#p new-index 0] [new-index 0]))
            ;; If inserting a new (empty) paragraph, then the selection should inherit the :formats
            ;; of the current selection. If splitting an existing paragraph into two using enter, the
            ;; now-2nd paragraph's should just set its :formats based on whatever formats are active
@@ -233,9 +247,7 @@
                               :doc new-doc
                               :selection new-selection)
                        (changelist :inserted-indices #{new-index}
-                                   :changed-indices #{uuid})))))
-  ([editor-state]
-   (enter editor-state (random-uuid))))
+                                   :changed-indices #{paragraph-idx}))))))
 
 (defn current-paragraph
   "Returns current paragraph if selection is a single selection."

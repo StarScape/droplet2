@@ -14,10 +14,10 @@
 
 ;; Globally print any errors with stacktrace.
 ;; CLJS, unfuriatingly, does not print a stacktrace automatically.
-#_(set! (.. js/window -onerror)
-      (fn [msg url line col err]
-        (println msg)
-        (println (str "\at: " line ":" col "\n"))))
+;; (set! (.. js/window -onerror)
+;;       (fn [msg url line col err]
+;;         (println msg)
+;;         (println (str "\nat: " line ":" col "\n"))))
 
 #_#_(when utils/DEV
   (st/instrument))

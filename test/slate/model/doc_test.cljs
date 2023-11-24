@@ -194,7 +194,7 @@
     (is (= (doc/delete test-doc (selection [(big-dec 1) 0] [(big-dec 2) 12]))
            (document [(paragraph [(run)])])))))
 
-(deftest enter-test
+#_(deftest enter-test
   (testing "works at start of paragraph"
     (is (= (doc/enter test-doc (selection [(big-dec 1) 0]))
            (document [(paragraph), p1, p2]))))

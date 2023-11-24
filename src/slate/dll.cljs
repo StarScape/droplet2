@@ -411,6 +411,10 @@
         (recur (next-index list index)
                (conj indices index))))))
 
+(defn all-indices
+  [list]
+  (indices-range list (first-index list) (last-index list)))
+
 (defn between
   "Returns a sub-list of all the nodes between (but not including) `index1` and `index2`."
   [list index1 index2]
