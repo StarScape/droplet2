@@ -234,7 +234,7 @@
            new-paragraph (get (:children new-doc) new-index)
            new-selection (if (= caret 0)
                            (sel/selection [(sel/caret-para selection) 0])
-                           (sel/selection [#p new-index 0] [new-index 0]))
+                           (sel/selection [new-index 0] [new-index 0]))
            ;; If inserting a new (empty) paragraph, then the selection should inherit the :formats
            ;; of the current selection. If splitting an existing paragraph into two using enter, the
            ;; now-2nd paragraph's should just set its :formats based on whatever formats are active

@@ -142,7 +142,7 @@
                                                (paragraph [(run "inserted paragraph 3")
                                                            (run "buzz" #{:bold})])
                                                p2])
-                               :selection (selection [(big-dec 1) 20])})
+                               :selection (selection [(big-dec 1.75) 20])})
             {:changed-indices #{(big-dec 1)}
              :inserted-indices #{(big-dec 1.5), (big-dec 1.75)}
              :deleted-indices #{}}))))
@@ -203,7 +203,7 @@
                             (run "bizz" #{:italic})
                             (run "buzz" #{:bold})]))
       (is (= para3 p2))
-      (is (= (-> result :editor-state :selection) (selection [(:index para2) 9])))
+      (is (= (-> result :editor-state :selection) (selection [(big-dec 1.5) 9])))
       (is (= (:changelist result) {:changed-indices #{(big-dec 1)}
                                    :inserted-indices #{(big-dec 1.5)}
                                    :deleted-indices #{}}))))
