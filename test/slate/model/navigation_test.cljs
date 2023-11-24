@@ -207,8 +207,8 @@
   (testing "works with backwards range selections across paragraphs"
     (is (= (nav/shift+right doc (selection [(big-dec 1) (m/len para)] [(big-dec 2) 5] :backwards? true))
            (selection [(big-dec 2) 0] [(big-dec 2) 5] :backwards? true)))
-    (is (= (nav/shift+right doc2 (selection [(big-dec 1) (m/len para)] [(big-dec 3) 5], :backwards? true, :between #{(big-dec 2)}))
-           (selection [(big-dec 2) 0] [(big-dec 3) 5] :backwards? true :between #{})))
+    (is (= (nav/shift+right doc2 (selection [(big-dec 1) (m/len para)] [(big-dec 3) 5], :backwards? true))
+           (selection [(big-dec 2) 0] [(big-dec 3) 5] :backwards? true)))
     (is (= (nav/shift+right doc (selection [(big-dec 1) 9] [(big-dec 2) 5] :backwards? true))
            (selection [(big-dec 1) 10] [(big-dec 2) 5] :backwards? true)))))
 
@@ -217,18 +217,15 @@
     (is (= (nav/ctrl+shift+right doc2 (selection [(big-dec 1) 0]))
            (selection [(big-dec 1) 0] [(big-dec 1) 5])))
     (is (= (nav/ctrl+shift+right doc2 (selection [(big-dec 1) 0] [(big-dec 2) (m/len para2)]))
-           (selection [(big-dec 1) 0] [(big-dec 3) 0] :between #{(big-dec 2)}))))
+           (selection [(big-dec 1) 0] [(big-dec 3) 0]))))
   (testing "works backwards"
     (is (= (nav/ctrl+shift+right doc2 (selection [(big-dec 1) 0] [(big-dec 3) 0]
-                                                 :between #{(big-dec 2)}
                                                  :backwards? true))
            (selection [(big-dec 1) 5] [(big-dec 3) 0]
-                      :between #{(big-dec 2)}
                       :backwards? true)))
     (is (= (nav/ctrl+shift+right doc2 (selection [(big-dec 1) (m/len para)] [(big-dec 3) 0]
-                                                 :between #{(big-dec 2)}
                                                  :backwards? true))
-           (selection [(big-dec 2) 0] [(big-dec 3) 0] :between #{} :backwards? true)))
+           (selection [(big-dec 2) 0] [(big-dec 3) 0] :backwards? true)))
     (is (= (nav/ctrl+shift+right doc2 (selection [(big-dec 1) 0] [(big-dec 1) 2] :backwards? true))
            (selection [(big-dec 1) 2] [(big-dec 1) 5] :backwards? false)))))
 
@@ -259,7 +256,7 @@
            (selection [(big-dec 1) 10] [(big-dec 1) (m/len para)])))
     (is (= (nav/shift+left doc (selection [(big-dec 1) 10] [(big-dec 2) 5]))
            (selection [(big-dec 1) 10] [(big-dec 2) 4])))
-    (is (= (nav/shift+left doc2 (selection [(big-dec 1) 0] [(big-dec 3) 0] :between #{(big-dec 2)}))
+    (is (= (nav/shift+left doc2 (selection [(big-dec 1) 0] [(big-dec 3) 0]))
            (selection [(big-dec 1) 0] [(big-dec 2) (m/len para2)]))))
 
   ;; Backwards selection
@@ -277,24 +274,21 @@
 
 (deftest ctrl+shift+left
   (testing "works forwards"
-    (is (= (nav/ctrl+shift+left doc2 (selection [(big-dec 1) 0] [(big-dec 3) 0] :between #{(big-dec 2)}))
-           (selection [(big-dec 1) 0] [(big-dec 2) (m/len para2)] :between #{})))
+    (is (= (nav/ctrl+shift+left doc2 (selection [(big-dec 1) 0] [(big-dec 3) 0]))
+           (selection [(big-dec 1) 0] [(big-dec 2) (m/len para2)])))
     (is (= (nav/ctrl+shift+left doc2 (selection [(big-dec 1) 1] [(big-dec 1) 5]))
            (selection [(big-dec 1) 0] [(big-dec 1) 1] :backwards? true))))
   (testing "works backwards or as single selection"
     (is (= (nav/ctrl+shift+left doc2 (selection [(big-dec 1) 5]))
            (selection [(big-dec 1) 0] [(big-dec 1) 5] :backwards? true)))
     (is (= (nav/ctrl+shift+left doc2 (selection [(big-dec 1) 5] [(big-dec 3) 0]
-                                                :backwards? true
-                                                :between #{(big-dec 2)}))
+                                                :backwards? true))
            (selection [(big-dec 1) 0] [(big-dec 3) 0]
-                      :backwards? true
-                      :between #{(big-dec 2)})))
+                      :backwards? true)))
     (is (= (nav/ctrl+shift+left doc2 (selection [(big-dec 2) 0] [(big-dec 3) 5]
                                                 :backwards? true))
            (selection [(big-dec 1) (m/len para)] [(big-dec 3) 5]
-                      :backwards? true
-                      :between #{(big-dec 2)})))
+                      :backwards? true)))
     (is (= (nav/ctrl+shift+left doc2 (selection [(big-dec 2) 2] [(big-dec 3) 5] :backwards? true))
            (selection [(big-dec 2) 0] [(big-dec 3) 5] :backwards? true)))))
 
