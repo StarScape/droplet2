@@ -79,11 +79,10 @@
     {:doc doc
      :selection selection}))
   ([doc]
-   (let [first-paragraph-uuid (-> doc :children dll/first :index)]
+   (let [first-paragraph-uuid (-> doc :children dll/first-index)]
      (editor-state doc (sel/selection [first-paragraph-uuid 0]))))
   ([]
-   (let [p (p/paragraph)]
-     (editor-state (doc/document [p]) (sel/selection [(:index p) 0])))))
+   (editor-state (doc/document) (sel/selection [(dll/big-dec 1) 0]))))
 
 (defn delete
   "Deletes the current selection. Returns an EditorUpdate."
@@ -256,15 +255,15 @@
   (get (:children doc) (sel/caret-para selection)))
 
 (defn replace-paragraph
-  "Returns an editor-update replacing the paragraph with uuid `:index` with `new-paragraph`.
+  "Returns an editor-update replacing the paragraph at index `index` with `new-paragraph`.
    If the selection is inside the paragraph replaced, and its offset is invalidated (i.e.
    the new paragraph is shorter than the one previously there, and the selection's start or
    end offset is greater than the new paragraph's length), it will be reset to the end of the
    paragraph."
-  [{:keys [doc selection] :as _editor-state} uuid new-paragraph]
-  (let [new-doc (assoc-in doc [:children uuid] (assoc new-paragraph :index uuid))
+  [{:keys [doc selection] :as _editor-state} index new-paragraph]
+  (let [new-doc (assoc-in doc [:children index] new-paragraph)
         adjust-side (fn [{:keys [paragraph offset] :as side}]
-                      (if (and (= paragraph uuid)
+                      (if (and (= paragraph index)
                                (> offset (m/len new-paragraph)))
                         {:paragraph paragraph, :offset (m/len new-paragraph)}
                         side))
@@ -272,7 +271,7 @@
                           (update :start adjust-side)
                           (update :end adjust-side))]
     (->EditorUpdate (editor-state new-doc new-selection)
-                    (changelist :changed-indices #{uuid}))))
+                    (changelist :changed-indices #{index}))))
 
 (defn update-paragraph
   "Passes the paragraph with UUID `uuid` to function f and replaces the paragraph with the value returned.
@@ -304,6 +303,7 @@
   {:pre [(sel/single? selection)]}
   ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
+        para-idx (sel/caret-para selection)
         raw-selection (cond
                         (nav/inside-word? para selection)
                         (sel/from-singles (nav/prev-word para selection) (nav/next-word para selection))
@@ -322,8 +322,8 @@
                                                           (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace]
                                                           :else [(fn [_ i] i), (fn [_ i] i)])
                               para-text (m/text para)]
-                          (sel/selection [(:index para) (backward-fn para-text (sel/caret selection))]
-                                         [(:index para) (forward-fn para-text (sel/caret selection))])))
+                          (sel/selection [para-idx (backward-fn para-text (sel/caret selection))]
+                                         [para-idx (forward-fn para-text (sel/caret selection))])))
         new-selection (nav/autoset-formats para raw-selection)]
     (set-selection editor-state new-selection)))
 
@@ -332,7 +332,8 @@
   {:pre [(sel/single? selection)]}
   ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
-        raw-selection (sel/selection [(:index para) 0] [(:index para) (m/len para)])
+        para-idx (sel/caret-para selection)
+        raw-selection (sel/selection [para-idx 0] [para-idx (m/len para)])
         new-selection (nav/autoset-formats para raw-selection)]
     (set-selection editor-state new-selection)))
 

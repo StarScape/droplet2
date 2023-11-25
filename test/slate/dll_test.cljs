@@ -197,23 +197,7 @@
            (dll val1 {:content "baybee"} val3 val4))))
 
   (testing "fails when trying to assoc an element that doesn't exist"
-    (is (thrown? js/Error (assoc l "55" {:index "55" :content "nope"})))))
-
-#_(deftest insert-all-after-test
-    (is (= (dll/insert-all-after l (big-dec 5) [{:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"}])
-           (dll val1 val2 val3 val4 {:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"})))
-    (is (= (dll/insert-all-after l (big-dec 3) [{:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"}])
-           (dll val1 val2 val3 {:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"} val4)))
-    (is (= (dll/insert-all-after l (big-dec 1) [{:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"}])
-           (dll val1 {:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"} val2 val3 val4))))
-
-#_(deftest insert-all-before-test
-    (is (= (dll/insert-all-after l (big-dec 5) [{:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"}])
-           (dll val1 val2 val3 val4 {:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"})))
-    (is (= (dll/insert-all-after l (big-dec 3) [{:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"}])
-           (dll val1 val2 val3 {:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"} val4)))
-    (is (= (dll/insert-all-after l (big-dec 1) [{:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"}])
-           (dll val1 {:index (big-dec 6) :content "post1"} {:index (big-dec 7) :content "post2"} val2 val3 val4))))
+    (is (thrown? js/Error (assoc l "55" {:content "nope"})))))
 
 (deftest remove-range-test
   (is (= (dll/remove-range l (big-dec 1) (big-dec 4)) (dll)))

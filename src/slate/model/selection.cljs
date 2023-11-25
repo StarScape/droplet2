@@ -180,7 +180,3 @@
   (assoc sel :formats (if (contains? formats f)
                         (disj formats f)
                         (conj formats f))))
-
-
-
-;; TODO: change :paragraph in :start and :end to :index

@@ -20,7 +20,7 @@
             (apply set/intersection (map (comp set keys) freqs)))))
 
 (defn pretty-paragraph [para]
-  (str "|(" (-> (:index para) (str) (.substring 0 5)) ", " (:type para) "), \""
+  (str "|(" "P " (:type para) "), \""
        (->> (:runs para)
             (map :text)
             (flatten)

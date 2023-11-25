@@ -1,5 +1,6 @@
 (ns slate.model.find-and-replace
-  (:require [slate.model.common :as m]
+  (:require [slate.dll :as dll]
+            [slate.model.common :as m]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.run :as r]
             [slate.model.paragraph :as p]
@@ -32,11 +33,10 @@
   (find-all-occurrences "foobarfoobarfoobar" "bizz")
   )
 
-(defn paragraph-find [paragraph text ignore-case?]
-  (let [uuid (:index paragraph)
-        paragraph-text (m/text paragraph)
+(defn paragraph-find [paragraph paragraph-idx text ignore-case?]
+  (let [paragraph-text (m/text paragraph)
         offsets (find-all-occurrences paragraph-text text ignore-case?)]
-    (map #(selection [uuid %] [uuid (+ % (.-length text))]) offsets)))
+    (map #(selection [paragraph-idx %] [paragraph-idx (+ % (.-length text))]) offsets)))
 
 (comment
   (def p (p/paragraph "p1" [(r/run "foo") (r/run "bar" #{:italic})
@@ -48,9 +48,10 @@
 (defn find
   "Returns a list of locations where the text occurrences in the document."
   ([editor-state text ignore-case?]
-   (->> (-> editor-state :doc :children)
-        (map #(paragraph-find % text ignore-case?))
-        (flatten)))
+   (let [children (-> editor-state :doc :children)]
+     (->> (dll/all-indices children)
+          (map (fn [idx] (paragraph-find (get children idx) idx text ignore-case?)))
+          (flatten))))
   ([editor-state text] (find editor-state text false)))
 
 (comment
