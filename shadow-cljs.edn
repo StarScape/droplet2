@@ -42,12 +42,8 @@
              :ns-regexp "slate.dll-test$"
              :output-to "dev_out/dll_test.js"
              :autorun true}
-  ;; TODO: this is temporary, DELETEME
-  :test-current {:target :node-test
-                 :ns-regexp "slate.model.find-and-replace-test"
-                 :output-to "dev_out/test_current.js"
-                 :autorun true}
   ;; Storybook stories
+  ;; TODO: I never actually use Storybook, can remove at some point
   :stories  {:target :npm-module
              :ns-regexp  "drop.stories.*-story$"
              :output-dir "dev_out/js/stories"}}}
