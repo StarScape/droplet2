@@ -1,5 +1,5 @@
 (ns drop.app.main
-  #_(:require [drop.app.events] ;; These two are only required to make the compiler
+  (:require [drop.app.events]
             [drop.app.subs]
             [drop.app.effects]
             [drop.app.ipc :as ipc]
@@ -10,7 +10,7 @@
             [re-frame.core :as rf]
             [re-frame.db :as db]
             [orchestra-cljs.spec.test :as st]
-            ["electron" :refer [ipcRenderer #_desktopCapturer]]))
+            ["electron" :refer [ipcRenderer]]))
 
 ;; Globally print any errors with stacktrace.
 ;; CLJS, unfuriatingly, does not print a stacktrace automatically.
@@ -19,7 +19,7 @@
 ;;         (println msg)
 ;;         (println (str "\nat: " line ":" col "\n"))))
 
-#_#_(when utils/DEV
+(when utils/DEV
   (st/instrument))
 
 (defn mount-main-component []
@@ -28,11 +28,11 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn main []
-  #_#_#_(rf/dispatch-sync [:boot])
+  (rf/dispatch-sync [:boot])
   (ipc/init-handlers!)
   (mount-main-component))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
-#_(defn ^:dev/after-load reload []
+(defn ^:dev/after-load reload []
   (.send ipcRenderer "-reload-last-file")
   (mount-main-component))

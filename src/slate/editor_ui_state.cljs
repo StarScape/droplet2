@@ -14,7 +14,7 @@
             [slate.model.paragraph]
             [slate.model.run]
             [slate.model.selection :as sel]
-            [slate.dll]
+            [slate.dll :as dll]
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
@@ -141,8 +141,7 @@
         {:keys [doc] :as editor-state} (history/current-state history)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         viewmodels (vm/from-doc doc dom-elem-width measure-fn)
-        new-ui-state (assoc ui-state :viewmodels viewmodels)
-        viewmodels (map #(get viewmodels (:index %)) (:children doc))]
+        new-ui-state (assoc ui-state :viewmodels viewmodels)]
     (view/insert-all! dom-elem viewmodels editor-state)
     (view/relocate-hidden-input! shadow-root hidden-input)
     (reset! *ui-state new-ui-state)))
@@ -154,16 +153,19 @@
       :or {focus? true, scroll-to-caret? false}}]
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-indices changed-indices inserted-indices]} changelist
-        rerender-uuids (set/difference (set/union (sel/all-uuids (:selection prev-state))
-                                                  (sel/all-uuids selection))
-                                       deleted-indices
-                                       inserted-indices)]
-    (doseq [uuid inserted-indices]
-      (view/insert-para! dom-elem uuid (get viewmodels uuid) editor-state))
-    (doseq [uuid deleted-indices]
-      (view/remove-para! dom-elem uuid editor-state prev-state))
-    (doseq [uuid (set/union changed-indices rerender-uuids)]
-      (view/update-para! dom-elem uuid (get viewmodels uuid) editor-state prev-state))
+        rerender-indices (set/difference (set/union (dll/indices-range (-> prev-state :doc :children)
+                                                                       (-> prev-state :selection :start :paragraph)
+                                                                       (-> prev-state :selection :end :paragraph))
+                                                    (dll/indices-range (:children doc)
+                                                                       (-> selection :start :paragraph)
+                                                                       (-> selection :end :paragraph)))
+                                         deleted-indices
+                                         inserted-indices)]
+    (doseq [idx deleted-indices]
+      (view/remove-para! dom-elem idx editor-state prev-state))
+    (view/insert-all! dom-elem (sort inserted-indices) viewmodels editor-state)
+    (doseq [idx (set/union changed-indices rerender-indices)]
+      (view/update-para! dom-elem idx (get viewmodels idx) editor-state prev-state))
 
     (view/relocate-hidden-input! shadow-root hidden-input focus?)
     (when scroll-to-caret? (view/scroll-to-caret! shadow-root))))
@@ -712,13 +714,12 @@
   (style/install-global-styles!)
   ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
   (.. (load-fonts! font-family)
-      ;; TODO: use core-async or something to clean this up?
       (then #(let [uuid (random-uuid)
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
                    [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family)
-                   available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
+                   #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)
-                   editor-state (if save-file-contents
+                   editor-state (if save-file-contents ;; TODO: this is no longer used
                                   (:editor-state (deserialize save-file-contents))
                                   (es/editor-state))
                    history (history/init editor-state)
@@ -726,12 +727,12 @@
                                         (interceptors/reg-interceptors default-interceptors)
                                         (interceptors/reg-interceptors manual-interceptors))
                    hidden-input (view/create-hidden-input! shadow-root)
-                   current-state (history/current-state history)
-                   current-doc (:doc current-state)]
+                   #_#_current-state (history/current-state history)
+                   #_#_current-doc (:doc current-state)]
                ;; Focus hidden input without scrolling to it (it will be at the bottom)
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
-                              :viewmodels (vm/from-doc current-doc available-width measure-fn)
+                              #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :history history
                               :word-count (word-count/init editor-state)
                               :input-history []

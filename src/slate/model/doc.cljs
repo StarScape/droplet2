@@ -45,7 +45,7 @@
      :else
      (throw (js/Error. "Error: non-sequence type supplied as `children` to `document` constructor."))))
   ([]
-   (->Document (dll))))
+   (->Document (dll (p/paragraph)))))
 
 (defn fragment
   "Creates a new DocumentFragment."

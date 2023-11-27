@@ -20,19 +20,23 @@
    representation between the model and the view, not because it's directly inspired by any of the MVC/psuedo-MVC
    frameworks that also happen to use that term."
   (:require [clojure.string :as str]
+            [slate.model.common :as m]
             [slate.model.run :as r]
             [slate.measurement :refer [fake-measure-fn ruler]]
-            [dev.performance-utils :as perf-utils :refer-macros [inside-time-measurement!]]))
+            [hashp.core]
+            #_[dev.performance-utils :as perf-utils :refer-macros [inside-time-measurement!]]
+            [slate.dll :as dll]))
 
-;; It is worth noting that this is some of my least favorite code in the whole project.
+;; It is worth noting that this is some of my least favorite code in the whole app.
 ;; I don't even like having this layer of indirection _here_, and I would gladly get rid
 ;; of it, only there's not another solution that doesn't wind up being even more nasty.
 ;; The good news is the nastiness is __largely__ contained here.
 
 ;; (defrecord DocumentViewModel [paragraphs container-width])
-(defrecord ParagraphViewModel [lines paragraph container-width])
+(defrecord ParagraphViewModel [lines length paragraph-type paragraph-index container-width])
 
 (defrecord Line [spans ;; vector of spans contained in line
+                 ;; TODO: can I remove start-offset? Isn't it always 0?
                  start-offset ;; starting paragraph offset of the text within Line
                  end-offset ;; last paragraph offset of the text within line
                  width]) ;; width of the line, in pixels
@@ -72,7 +76,10 @@
   "Adds a new empty line to the vector of lines, returning the new list."
   [lines]
   (let [prev-line (or (peek lines) (empty-line))]
-    (conj lines (->Line [] (:end-offset prev-line) (:end-offset prev-line) 0))))
+    (conj lines (map->Line {:spans []
+                            :start-offset (:end-offset prev-line)
+                            :end-offset (:end-offset prev-line)
+                            :width 0}))))
 
 (defn max-chars-from-word
   "Takes the maximum number of chars from string `word` without exceeding
@@ -131,7 +138,10 @@
   (let [{:keys [text-fit
                 text-fit-width
                 text-not-fit]} (max-words (get-words (:text run)) (:formats run) paragraph-type initial-width-left total-line-width measure-fn)]
-    [(->Span text-fit (:formats run) 0 text-fit-width)
+    [(map->Span {:text text-fit
+                 :formats (:formats run)
+                 :start-offset 0
+                 :width text-fit-width})
      (r/run text-not-fit (:formats run))]))
 
 (comment
@@ -192,20 +202,27 @@
 
 (defn from-para
   "Converts a [[Paragraph]] to a ParagraphViewModel."
-  [para width measure-fn]
-  (->ParagraphViewModel (lineify (:runs para) (:type para) width measure-fn) para width))
+  [paragraph paragraph-idx width measure-fn]
+  (map->ParagraphViewModel {:lines (lineify (:runs paragraph) (:type paragraph) width measure-fn)
+                            :length (m/len paragraph)
+                            :paragraph-type (:type paragraph)
+                            :paragraph-index paragraph-idx
+                            :container-width width}))
 
 ;; TODO: testme
 (defn from-doc
-  "Takes a [[Document]], converts each of its [[Paragraph]]s to [[ParagraphViewModel]]s,
-   and returns a map of UUIDs -> ParagraphViewModels."
+  "Takes a `Document`, converts each of its `Paragraph`s to `ParagraphViewModel`s,
+   and returns a map of indices -> `ParagraphViewModel`s."
   [doc width measure-fn]
-  (loop [paragraphs (:children doc), uuids->vms {}]
-    (if (empty? paragraphs)
-      uuids->vms
-      (let [p (first paragraphs)
-            vm (from-para p width measure-fn)]
-        (recur (rest paragraphs) (assoc uuids->vms (:index p) vm))))))
+  (let [paragraphs (:children doc)]
+    (loop [indices (dll/all-indices paragraphs)
+           indices->vms {}]
+      (if (empty? indices)
+        indices->vms
+        (let [idx (first indices)
+              paragraph (get paragraphs idx)
+              vm-paragraph (from-para paragraph idx width measure-fn)]
+          (recur (rest indices) (assoc indices->vms idx vm-paragraph)))))))
 
 (defn update-viewmodels
   [viewmodels doc elem-width measure-fn changelist]
@@ -213,8 +230,11 @@
         get-para (partial get (:children doc))
         updated-vms (as-> viewmodels vms
                       (apply dissoc vms deleted-indices)
-                      (reduce (fn [new-vms uuid]
-                                (assoc new-vms uuid (from-para (get-para uuid) elem-width measure-fn)))
+                      (reduce (fn [new-vms idx-to-update]
+                                (assoc new-vms idx-to-update (from-para (get-para idx-to-update)
+                                                                        idx-to-update
+                                                                        elem-width
+                                                                        measure-fn)))
                               vms (concat inserted-indices changed-indices)))]
     updated-vms))
 

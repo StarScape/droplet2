@@ -95,6 +95,10 @@
       (.eq d1 d2)
       false))
 
+  IComparable
+  (-compare [d1 d2]
+    (.comparedTo d1 d2))
+
   IPrintWithWriter
   (-pr-writer [decimal writer opts]
     (-write writer (str "Decimal{" decimal "}"))))
@@ -280,37 +284,6 @@
                          (.-last-index dll))]
     (DoublyLinkedList. new-entries (.-first-index dll) new-last-index)))
 
-(comment
-  (let [d (dll {:content "first"})]
-    (insert-after d (.-last-index d) {:content "second"}))
-  )
-
-;; TODO: is this needed?
-#_(defn insert-all-before
-  "Inserts all items in list `xs` directly before the node with uuid == `next-index`"
-  [dll next-index xs]
-  {:pre [(seq dll)
-         (contains? dll next-index)
-         (sequential? xs)]}
-  (if (empty? xs)
-    dll
-    (let [x (clojure.core/first xs)]
-      (recur (insert-before dll next-index x) (:index x) (rest xs)))))
-
-#_(defn insert-all-after
-  "Inserts all items in list `xs` directly after the node with index == `prev-index`"
-  [dll prev-index xs]
-  {:pre [(seq dll)
-         (contains? dll prev-index)
-         (sequential? xs)]}
-  (if (empty? xs)
-    dll
-    (let [x (clojure.core/first xs)
-          insert (if-let [ni (next-index dll prev-index)]
-                   #())]
-      (loop [new-dll dll]
-        (recur (insert-before dll insert x) (:index x) (rest xs))))))
-
 (defn prepend
   "Inserts `val` into `dll` at the beginning of the list."
   [list val]
@@ -413,7 +386,9 @@
 
 (defn all-indices
   [list]
-  (indices-range list (first-index list) (last-index list)))
+  (if (empty? list)
+    []
+    (indices-range list (first-index list) (last-index list))))
 
 (defn between
   "Returns a sub-list of all the nodes between (but not including) `index1` and `index2`."
@@ -537,4 +512,4 @@
   ([]
    (DoublyLinkedList. {} nil nil))
   ([& xs]
-   (reduce (fn [dll x] (conj dll x)) (dll) xs)))
+   (reduce (fn [list x] (conj list x)) (dll) xs)))
