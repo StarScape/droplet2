@@ -89,12 +89,6 @@
      :left (js/parseFloat (.-marginLeft style))
      :right (js/parseFloat (.-marginRight style))}))
 
-;; Dynamic var to indicate whether the selection is still ongoing.
-;; This is something we need to keep track of between paragraphs so it winds up a little
-;; more elegant to make careful use of a dynamic var, rather than returning a selection-ongoing?
-;; value up and down a bunch of different cycles of the callstack.
-(declare ^:dynamic *selection-ongoing?*)
-
 (def caret-elem "<span class='slate-text-caret'></span>")
 
 (defn- caret-in-span? [span pid selection]
@@ -133,28 +127,40 @@
    Returns a map of each with keys :before-sel, :inside-sel, :after-sel.
    If any of those don't make sense (i.e. the whole span is inside the selection, or
    none of it is), those fields will be nil."
-  [span paragraph-idx selection selection-ongoing?]
+  [span paragraph-idx selection]
   ;; Maybe get rid of this if-not and add an explicit case in vm-span->dom for whether
   ;; or not the span interesects with any part of the selection? The "fall-through" here
   ;; is nice I guess, but it feels a lot like writing a special case implicitly but still
   ;; actually depending on it in practice.
-  (if-not (or (= paragraph-idx (-> selection :start :paragraph))
-              (= paragraph-idx (-> selection :end :paragraph)))
-    (if selection-ongoing?
-      {:inside-sel (:text span)}
-      {:after-sel (:text span)})
-    (let [text (:text span)
-          start-para (-> selection :start :paragraph)
-          end-para (-> selection :end :paragraph)
-          start (if (and (= paragraph-idx start-para) (not selection-ongoing?))
-                  (- (-> selection :start :offset) (:start-offset span))
-                  0)
-          end (if (= paragraph-idx end-para)
-                (- (-> selection :end :offset) (:start-offset span))
-                (count text))]
-      {:before-sel (not-empty (.substring text 0 start))
-       :inside-sel (not-empty (.substring text start end))
-       :after-sel (not-empty (.substring text end))})))
+  (let [start-para (-> selection :start :paragraph)
+        start-offset (-> selection :start :offset)
+        end-para (-> selection :end :paragraph)
+        end-offset (-> selection :end :offset)]
+    (if-not (or (= paragraph-idx start-para)
+                (= paragraph-idx end-para))
+    ;; Neither start or end of selection is in the paragraph containing this span
+      (if (and (> paragraph-idx start-para)
+               (< paragraph-idx end-para))
+      ;; Paragraph containing span is between the start and
+      ;; end paragraphs of the selection, i.e. wholly inside
+      ;; of it, and therefore the whole span is too.
+        {:inside-sel (:text span)}
+      ;; Paragraph is not within selection at all. The use of :after-sel
+      ;; to return the whole text of the span here is arbitrary. We could
+      ;; just as well use :before-sel.
+        {:after-sel (:text span)})
+    ;; Start or end of selection is in the paragraph containing this span
+      (let [text (:text span)
+            inside-start (if (and (= paragraph-idx start-para)
+                                  (>= start-offset (:start-offset span)))
+                           (- start-offset (:start-offset span))
+                           0)
+            inside-end (if (= paragraph-idx end-para)
+                         (- end-offset (:start-offset span))
+                         (count text))]
+        {:before-sel (not-empty (.substring text 0 inside-start))
+         :inside-sel (not-empty (.substring text inside-start inside-end))
+         :after-sel (not-empty (.substring text inside-end))}))))
 
 (defn- vm-span->dom
   "Convert slate.viewmodel/Span to a DOM element. Also responsible for rendering caret and range selection background.
@@ -164,26 +170,10 @@
         (formats->css-classes (:formats span))
 
         {:keys [before-sel, inside-sel, after-sel]}
-        (split-span span paragraph-idx selection *selection-ongoing?*) ;; TODO: get rid of *selection-ongoing?*
+        (split-span span paragraph-idx selection)
 
         span-end-offset
-        (+ (:start-offset span) (count (:text span)))
-
-        start-in-span?
-        (and (= paragraph-idx (-> selection :start :paragraph))
-             (>= (-> selection :start :offset) (:start-offset span))
-             (< (-> selection :start :offset) span-end-offset))
-
-        end-in-span?
-        (or (and (= paragraph-idx (-> selection :end :paragraph))
-                 (< (-> selection :end :offset) span-end-offset))
-            (and (= paragraph-idx (-> selection :end :paragraph))
-                 (= span-end-offset (-> selection :end :offset) para-length)))
-
-        still-ongoing?
-        (or (and *selection-ongoing?* (not end-in-span?))
-            (and start-in-span? (not end-in-span?)))]
-    (set! *selection-ongoing?* still-ongoing?)
+        (+ (:start-offset span) (count (:text span)))]
     (str (<span> before-sel format-classes)
 
          (when (and (:backwards? selection) (caret-in-span? span paragraph-idx selection))
@@ -211,11 +201,9 @@
   "Convert ParagraphViewModel to DOM element. Returns HTML string."
   [{:keys [lines paragraph-type paragraph-index] :as paragraph-vm} selection]
   (let [classes ["paragraph" (paragraph-type->css-class paragraph-type)]]
-    (binding [*selection-ongoing?* (and (> paragraph-index (-> selection :start :paragraph))
-                                        (< paragraph-index (-> selection :end :paragraph)))]
-      (str "<div class='" (str/join " " classes) "' id='p-" paragraph-index "'>"
-           (apply str (map #(vm-line->dom % selection paragraph-index (:length paragraph-vm)) lines))
-           "</div>"))))
+    (str "<div class='" (str/join " " classes) "' id='p-" paragraph-index "'>"
+         (apply str (map #(vm-line->dom % selection paragraph-index (:length paragraph-vm)) lines))
+         "</div>")))
 
 (defn- next-dom-paragraph-after
   "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom.
@@ -478,7 +466,7 @@
          caret-line (line-with-caret viewmodels (sel/smart-collapse selection))]
      (caret-px selection caret-line (:type caret-paragraph) measure-fn))))
 
-(defn chars-and-formats [span] (map #(hash-map :grapheme %, :formats (:formats span)) (:text span)))
+#_(defn chars-and-formats [span] (map #(hash-map :grapheme %, :formats (:formats span)) (:text span)))
 
 (defn nearest-line-offset-to-pixel
   "Takes a viewmodel Line and a distance from the left side of the editor-elem in pixels,

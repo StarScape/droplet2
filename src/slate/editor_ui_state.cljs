@@ -151,8 +151,7 @@
   all paragraphs that have been inserted/changed/removed."
   [& {:keys [shadow-root dom-elem hidden-input editor-state prev-state viewmodels changelist focus? scroll-to-caret?]
       :or {focus? true, scroll-to-caret? false}}]
-  (let [{:keys [doc selection]} editor-state
-        {:keys [deleted-indices changed-indices inserted-indices]} changelist
+  (let [{:keys [deleted-indices changed-indices inserted-indices]} changelist
         rerender-indices (set/difference (set/union (es/all-selected-indices prev-state)
                                                     (es/all-selected-indices editor-state))
                                          deleted-indices
