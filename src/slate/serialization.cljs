@@ -6,7 +6,7 @@
             [slate.model.paragraph :refer [map->Paragraph]]
             [slate.model.run :refer [map->Run]]
             [slate.model.selection :as sel :refer [map->Selection]]
-            [slate.dll :refer [dll]]))
+            [slate.model.dll :refer [dll]]))
 
 (def current-version
   "Current version of Droplet's .drop file format. If you open an older versioned
@@ -22,6 +22,7 @@
    'slate.model.editor-state.EditorUpdate map->EditorUpdate
    'DoublyLinkedList #(apply dll %)})
 
+;; TODO: write unit tests for migrations
 (def migrations
   "Map of migration funcs, where each key is the version that we are migrating to,
    from the previous version.
@@ -44,8 +45,10 @@
               deserialized-data migrations))))
 
 (defn serialize
-  "Serializes the history object to EDN, to be saved in a .drop file."
+  "Serializes the editor-state object to EDN, to be saved in a .drop file."
   [{:keys [history] :as _ui-state}]
+  ; previously was saving whole history (and eventually will be again),
+  ; hence why it is passed the history object instead of just editor-state
   (prn-str {:version current-version, :editor-state (history/current-state history)}))
 
 (defn deserialize

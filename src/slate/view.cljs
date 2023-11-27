@@ -2,11 +2,11 @@
   "Functions for converting from viewmodels to DOM elements (in the form of strings),
    as well as some utilities for dealing with the editor's DOM layer in general."
   (:require [clojure.string :as str]
+            [slate.model.dll :as dll]
             [slate.model.selection :as sel]
             [slate.model.common :as sl]
             [slate.model.editor-state :as es]
             [slate.model.navigation :as nav]
-            [slate.dll :as dll]
             [slate.viewmodel :as vm]
             [slate.utils :refer [paragraph-type->css-class formats->css-classes]]))
 
@@ -133,23 +133,23 @@
    Returns a map of each with keys :before-sel, :inside-sel, :after-sel.
    If any of those don't make sense (i.e. the whole span is inside the selection, or
    none of it is), those fields will be nil."
-  [span pid selection selection-ongoing?]
+  [span paragraph-idx selection selection-ongoing?]
   ;; Maybe get rid of this if-not and add an explicit case in vm-span->dom for whether
   ;; or not the span interesects with any part of the selection? The "fall-through" here
   ;; is nice I guess, but it feels a lot like writing a special case implicitly but still
   ;; actually depending on it in practice.
-  (if-not (or (= pid (-> selection :start :paragraph))
-              (= pid (-> selection :end :paragraph)))
+  (if-not (or (= paragraph-idx (-> selection :start :paragraph))
+              (= paragraph-idx (-> selection :end :paragraph)))
     (if selection-ongoing?
       {:inside-sel (:text span)}
       {:after-sel (:text span)})
     (let [text (:text span)
           start-para (-> selection :start :paragraph)
           end-para (-> selection :end :paragraph)
-          start (if (and (= pid start-para) (not selection-ongoing?))
+          start (if (and (= paragraph-idx start-para) (not selection-ongoing?))
                   (- (-> selection :start :offset) (:start-offset span))
                   0)
-          end (if (= pid end-para)
+          end (if (= paragraph-idx end-para)
                 (- (-> selection :end :offset) (:start-offset span))
                 (count text))]
       {:before-sel (not-empty (.substring text 0 start))
@@ -157,27 +157,27 @@
        :after-sel (not-empty (.substring text end))})))
 
 (defn- vm-span->dom
-  "Convert viewmodel span to DOM element. Also responsible for rendering caret and range selection background.
+  "Convert slate.viewmodel/Span to a DOM element. Also responsible for rendering caret and range selection background.
    Returns HTML string."
-  [span selection pid para-length]
+  [span selection paragraph-idx para-length]
   (let [format-classes
         (formats->css-classes (:formats span))
 
         {:keys [before-sel, inside-sel, after-sel]}
-        (split-span span pid selection *selection-ongoing?*)
+        (split-span span paragraph-idx selection *selection-ongoing?*) ;; TODO: get rid of *selection-ongoing?*
 
         span-end-offset
         (+ (:start-offset span) (count (:text span)))
 
         start-in-span?
-        (and (= pid (-> selection :start :paragraph))
+        (and (= paragraph-idx (-> selection :start :paragraph))
              (>= (-> selection :start :offset) (:start-offset span))
              (< (-> selection :start :offset) span-end-offset))
 
         end-in-span?
-        (or (and (= pid (-> selection :end :paragraph))
+        (or (and (= paragraph-idx (-> selection :end :paragraph))
                  (< (-> selection :end :offset) span-end-offset))
-            (and (= pid (-> selection :end :paragraph))
+            (and (= paragraph-idx (-> selection :end :paragraph))
                  (= span-end-offset (-> selection :end :offset) para-length)))
 
         still-ongoing?
@@ -186,25 +186,25 @@
     (set! *selection-ongoing?* still-ongoing?)
     (str (<span> before-sel format-classes)
 
-         (when (and (:backwards? selection) (caret-in-span? span pid selection))
+         (when (and (:backwards? selection) (caret-in-span? span paragraph-idx selection))
            caret-elem)
 
          (<span> inside-sel (conj format-classes "slate-range-selection"))
 
-         (when (or (and (caret-in-span? span pid selection)
+         (when (or (and (caret-in-span? span paragraph-idx selection)
                         (not (:backwards? selection)))
                     ;; Handle case where caret is at the end of para (caret == len of paragraph)
                    (and (= (sel/caret selection) para-length span-end-offset)
-                        (= (sel/caret-para selection) pid)))
+                        (= (sel/caret-para selection) paragraph-idx)))
            caret-elem)
 
          (<span> after-sel format-classes))))
 
 (defn- vm-line->dom
   "Convert viewmodel line to DOM element. Returns HTML string."
-  [line selection pid para-length]
+  [line selection paragraph-idx para-length]
   (str "<div class='line'>"
-       (apply str (map #(vm-span->dom % selection pid para-length) (:spans line)))
+       (apply str (map #(vm-span->dom % selection paragraph-idx para-length) (:spans line)))
        "</div>"))
 
 (defn- vm-para->dom
@@ -268,6 +268,8 @@
    containing element, either <ul> or <ol>). Automatically wraps the element in <ul>/<ol> IF there is not already
    one present for the current run of list paragraphs, otherwise will insert into that <ul>/<ol>"
   [list-type editor-elem uuid viewmodel {:keys [doc selection] :as _es}]
+  {:pre [(or (= list-type :ol)
+             (= list-type :ul))]}
   (let [tag-name (name list-type)
         rendered-paragraph (vm-para->dom viewmodel selection)
         p-elem (js/document.createElement "p")
@@ -313,13 +315,14 @@
 
 (defmethod insert-para! :default
   [editor-elem paragraph-idx viewmodel {:keys [doc selection] :as _editor-state}]
+  (prn "insert default")
   (let [rendered-paragraph (vm-para->dom viewmodel selection)
         paragraph-elem (js/document.createElement "p")
-        elem-to-insert-after (when-let [next-para-idx (dll/next-index (:children doc) paragraph-idx)]
+        elem-to-insert-after (when-let [next-para-idx (dll/prev-index (:children doc) paragraph-idx)]
                                (get-paragraph-dom-elem editor-elem next-para-idx))]
     (if elem-to-insert-after
       (.insertAdjacentElement elem-to-insert-after "afterend" paragraph-elem)
-      (.append editor-elem paragraph-elem))
+      (.insertAdjacentElement editor-elem "afterbegin" paragraph-elem))
     (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
 
 (defmethod insert-para! :ul
@@ -430,9 +433,9 @@
   [viewmodels selection]
   {:pre [(sel/single? selection)]}
   (let [caret (sel/caret selection)
-        vm (viewmodels (-> selection :start :paragraph)) ;; TODO: should arg be (sel/caret-para selection) instead?
+        vm (get viewmodels (sel/caret-para selection)) ;; TODO: should arg be (sel/caret-para selection) instead?
         within-line? #(and (>= caret (:start-offset %)) (< caret (:end-offset %)))
-        at-para-end? #(and (= caret (:end-offset %)) (= caret (sl/len (:paragraph vm))))
+        at-para-end? #(and (= caret (:end-offset %)) (= caret (:length vm)))
         lines (:lines vm)]
     (loop [i 0]
       (when (> i (count lines)) (throw (js/Error. "Did not find line with caret inside it!")))
@@ -713,12 +716,12 @@
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its index."
   [paragraphs-dll editor-elem client-y shadow-root]
-  (let [para->bounds (fn [{:keys [uuid]}]
-                       (let [bounding-rect (.getBoundingClientRect (get-paragraph-dom-elem editor-elem uuid))]
-                         {:top (.-top bounding-rect)
-                          :bottom (.-bottom bounding-rect)}))
-        first-para-bounds (-> paragraphs-dll first para->bounds)
-        last-para-bounds (-> paragraphs-dll peek para->bounds)]
+  (let [idx->bounds (fn [paragraph-idx]
+                      (let [bounding-rect (.getBoundingClientRect (get-paragraph-dom-elem editor-elem paragraph-idx))]
+                        {:top (.-top bounding-rect)
+                         :bottom (.-bottom bounding-rect)}))
+        first-para-bounds (-> paragraphs-dll dll/first-index idx->bounds)
+        last-para-bounds (-> paragraphs-dll dll/last-index idx->bounds)]
     (cond
       ;; Above first paragraph
       (< client-y (:top first-para-bounds))
@@ -783,12 +786,10 @@
         dir (drag-direction started-at currently-at *last-mousedown-event* mousemove-event)
         raw-selection (if (= dir :forward)
                         (sel/selection [started-uuid started-offset]
-                                       [current-uuid current-offset]
-                                       :between (set (dll/indices-between (:children doc) started-uuid current-uuid)))
+                                       [current-uuid current-offset])
                         (sel/selection [current-uuid current-offset]
                                        [started-uuid started-offset]
-                                       :backwards? true
-                                       :between (set (dll/indices-between (:children doc) current-uuid started-uuid))))]
+                                       :backwards? true))]
     (nav/autoset-formats doc raw-selection)))
 
 (defn create-hidden-input!

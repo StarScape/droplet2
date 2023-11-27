@@ -1,6 +1,6 @@
-(ns slate.dll-test
+(ns slate.model.dll-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.dll :as dll :refer [dll big-dec]]
+            [slate.model.dll :as dll :refer [dll big-dec]]
             ["decimal.js" :refer [Decimal]]))
 
 (def val1 {:content "foo"})

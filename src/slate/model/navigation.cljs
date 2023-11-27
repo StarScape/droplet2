@@ -7,10 +7,10 @@
    be aware of either of those should go in the `view` namespace."
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [slate.model.dll :as dll]
             [slate.model.common :as m]
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.doc :as doc :refer [Document]]
-            [slate.dll :as dll]
             [slate.model.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
 ;; Some helpers and useful primitives ;;

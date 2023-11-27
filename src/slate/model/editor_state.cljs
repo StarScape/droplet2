@@ -2,7 +2,7 @@
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
-            [slate.dll :as dll]
+            [slate.model.dll :as dll]
             [slate.model.common :refer [TextContainer len blank?] :as m]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph ParagraphFragment]]
@@ -60,10 +60,13 @@
 
    Takes keyword arguments :changed-indices :inserted-indices, and :deleted-indices (each
    default to an empty set). If no arguments supplied, returns an empty changelist."
-  ([& {:keys [changed-indices inserted-indices deleted-indices]}]
-   {:changed-indices (or changed-indices #{})
-    :inserted-indices (or inserted-indices #{})
-    :deleted-indices (or deleted-indices #{})}))
+  [& {:keys [changed-indices inserted-indices deleted-indices]}]
+  {:pre [(or (nil? changed-indices) (set? changed-indices))
+         (or (nil? inserted-indices) (set? inserted-indices))
+         (or (nil? deleted-indices) (set? deleted-indices))]}
+  {:changed-indices (or changed-indices #{})
+   :inserted-indices (or inserted-indices #{})
+   :deleted-indices (or deleted-indices #{})})
 
 (defn identity-update
   "Returns an EditorUpdate with no changes, and therefore no effects."
@@ -291,11 +294,9 @@
   [{:keys [selection doc] :as editor-state}]
   (let [start-side (:start (nav/start doc))
         end-side (:end (nav/end doc))
-        between (-> doc :children (dll/indices-between (:paragraph start-side) (:paragraph end-side)) (set))
         new-selection (assoc selection
                              :start start-side
-                             :end end-side
-                             :between between)]
+                             :end end-side)]
     (set-selection editor-state new-selection)))
 
 (defn select-whole-word
@@ -348,9 +349,9 @@
         selected-paragraphs-updated (map #(assoc % :type type-to-set) selected-paragraphs)
         new-doc (update doc :children dll/replace-range start-uuid end-uuid selected-paragraphs-updated)]
     (->EditorUpdate (assoc editor-state :doc new-doc)
-                    (changelist :changed-indices (dll/indices-range (:children doc)
-                                                                    (sel/start-para selection)
-                                                                    (sel/end-para selection))))))
+                    (changelist :changed-indices (set (dll/indices-range (:children doc)
+                                                                         (sel/start-para selection)
+                                                                         (sel/end-para selection)))))))
 
 (defn toggle-format
   [{:keys [doc selection] :as editor-state} format]
@@ -538,6 +539,15 @@
 
   (formatting [{:keys [doc selection]}]
     (m/formatting doc selection)))
+
+(defn all-selected-indices
+  "Returns the indices of all paragraphs that are wholly
+   or partially inside the current selection, as a set."
+  [editor-state]
+  {:post [(set? %)]}
+  (set (dll/indices-range (-> editor-state :doc :children)
+                          (-> editor-state :selection :start :paragraph)
+                          (-> editor-state :selection :end :paragraph))))
 
 (defn merge-changelists
   "Takes two changelists and returns a third that combines them. UUIDs are rearranged

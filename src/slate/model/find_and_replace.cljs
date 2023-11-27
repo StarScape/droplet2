@@ -1,5 +1,5 @@
 (ns slate.model.find-and-replace
-  (:require [slate.dll :as dll]
+  (:require [slate.model.dll :as dll]
             [slate.model.common :as m]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.run :as r]

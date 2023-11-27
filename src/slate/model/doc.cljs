@@ -1,6 +1,6 @@
 (ns slate.model.doc
   (:require [clojure.set :as set]
-            [slate.dll :as dll :refer [dll]]
+            [slate.model.dll :as dll :refer [dll]]
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
                                                Fragment

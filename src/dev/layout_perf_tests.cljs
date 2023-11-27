@@ -1,6 +1,7 @@
 (ns dev.layout-perf-tests
   (:require-macros [slate.utils :refer [slurp-file]])
   (:require [clojure.string :as str]
+            [slate.model.dll :as dll]
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.viewmodel :as vm]
@@ -97,7 +98,7 @@
      (perf-utils/start-time-measurement! "measure-fn")
      ;; (js/console.profile "paragraph-layout-performance-test")
 
-     (vm/from-para para 500 measure-fn)
+     (vm/from-para para (dll/big-dec 1) 500 measure-fn)
 
      ;; (js/console.profileEnd "paragraph-layout-performance-test")
      (set! js/window.logText false)

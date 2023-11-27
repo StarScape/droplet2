@@ -19,11 +19,6 @@
   (ui-state/load-document! *ui-state doc)
   (dispatch [:set-open-file-path nil]))
 
-#_(defn open-file!
-  [*ui-state file-path contents]
-  (ui-state/load-file! *ui-state contents)
-  (dispatch [:set-open-file-path file-path]))
-
 (defn on-new!
   "Spawns a confirmation dialog, and if confirmed, resets the editor
    surface to a new file, and resets the open-file information."

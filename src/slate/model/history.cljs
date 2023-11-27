@@ -216,5 +216,5 @@
                   (es/identity-update state-or-update)
 
                   :else
-                  (throw "Error in history/init: argument must be either an EditorUpdate or EditorState."))]
+                  (throw (js/Error. "Error in history/init: argument must be either an EditorUpdate or EditorState.")))]
     {:tip nil, :backstack [initial], :current-state-index 0}))

@@ -1,4 +1,4 @@
-(ns slate.dll
+(ns slate.model.dll
   "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs.
    The central problem here is that for our paragraph list, we need a few things:
 

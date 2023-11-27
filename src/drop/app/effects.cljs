@@ -36,4 +36,5 @@
 (rf/reg-fx
  :open-file
  (fn [[*slate-instance file-contents]]
-   (slate-api/when-ready *slate-instance #(ui-state/load-file! *slate-instance file-contents))))
+   ;; TODO: remove when ready to go back to loading document from FS
+   (slate-api/when-ready *slate-instance #() #_#(ui-state/load-file! *slate-instance file-contents))))

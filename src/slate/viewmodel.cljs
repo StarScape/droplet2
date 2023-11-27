@@ -20,12 +20,9 @@
    representation between the model and the view, not because it's directly inspired by any of the MVC/psuedo-MVC
    frameworks that also happen to use that term."
   (:require [clojure.string :as str]
+            [slate.model.dll :as dll]
             [slate.model.common :as m]
-            [slate.model.run :as r]
-            [slate.measurement :refer [fake-measure-fn ruler]]
-            [hashp.core]
-            #_[dev.performance-utils :as perf-utils :refer-macros [inside-time-measurement!]]
-            [slate.dll :as dll]))
+            [slate.model.run :as r]))
 
 ;; It is worth noting that this is some of my least favorite code in the whole app.
 ;; I don't even like having this layer of indirection _here_, and I would gladly get rid

@@ -1,6 +1,6 @@
 (ns slate.model.find-and-replace-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.dll :as dll :refer [big-dec]]
+            [slate.model.dll :refer [big-dec]]
             [slate.model.run :as r :refer [run]]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.paragraph :as p :refer [paragraph]]

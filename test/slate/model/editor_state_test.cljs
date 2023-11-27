@@ -1,10 +1,10 @@
 (ns slate.model.editor-state-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
+            [slate.model.dll :as dll :refer [big-dec]]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.common :as sl]
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]
-            [slate.dll :as dll :refer [big-dec]]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.editor-state :as es :refer [editor-state
                                                      changelist
@@ -448,7 +448,7 @@
            (->EditorUpdate (editor-state doc (selection [(big-dec 1) 1] [(big-dec 1) 1] :formats #{:italic})) (changelist))))
     (is (= (nav/next-char (editor-state doc (selection [(big-dec 1) 14] [(big-dec 1) 14] :formats #{:bold})))
            (->EditorUpdate (editor-state doc (selection [(big-dec 2) 0])) (changelist))))
-    (is (= (nav/next-char (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 4] :between #{(big-dec 2)})))
+    (is (= (nav/next-char (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 4])))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 3) 4] [(big-dec 3) 4] :formats #{:underline})) (changelist))))))
 
 (deftest selectable-functions-test
@@ -460,19 +460,19 @@
 
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 1) 4])))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 0] :formats #{:italic})) (changelist))))
-    (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 4] :between #{(big-dec 2)})))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 4) 0] :between #{(big-dec 2) (big-dec 3)})) (changelist)))))
+    (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 4])))
+           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 4) 0])) (changelist)))))
 
   (testing "shift+right works backwards"
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 4] :backwards? true)))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 2) 4] :backwards? true, :formats #{:bold})) (changelist))))
-    (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 3) 4] :backwards? true, :between #{(big-dec 2)})))
+    (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 3) 4] :backwards? true)))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 3) 4] :backwards? true)) (changelist)))))
 
   (testing "shift+left works forwards"
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 0])))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 1) 4], :formats #{:italic})) (changelist))))
-    (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 0] :between #{(big-dec 2)})))
+    (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 0])))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 4])) (changelist)))))
 
   (testing "shift+left works backwards (or single)"
@@ -481,8 +481,8 @@
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0])))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 0], :backwards? true)) (changelist))))
 
-    (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 4) 4], :backwards? true, :between #{(big-dec 3)})))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 4], :backwards? true, :between #{(big-dec 2) (big-dec 3)})) (changelist))))
+    (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 4) 4], :backwards? true)))
+           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 4], :backwards? true)) (changelist))))
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 2) 4], :backwards? true)))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 4], :backwards? true, :formats #{:bold})) (changelist))))))
 

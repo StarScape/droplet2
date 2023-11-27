@@ -6,7 +6,7 @@
    converted into a Slate Document."
   (:require-macros [slate.utils :refer [slurp-file]])
   (:require [clojure.string :as str]
-            [slate.dll :as dll]
+            [slate.model.dll :as dll]
             [slate.model.common :as m]
             [slate.model.doc :as doc]
             [slate.model.paragraph :as p]

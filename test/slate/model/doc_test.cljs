@@ -1,11 +1,11 @@
 (ns slate.model.doc-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
+            [slate.model.dll :as dll :refer [dll big-dec]]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.common :as sl]
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]
-            [slate.model.doc :as doc :refer [document]]
-            [slate.dll :as dll :refer [dll big-dec]]))
+            [slate.model.doc :as doc :refer [document]]))
 
 (def p1 (paragraph [(run "foo" #{:italic})
                     (run "bar" #{:bold :italic})

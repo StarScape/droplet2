@@ -6,6 +6,7 @@
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [drop.utils :as utils]
+            [slate.model.dll :as dll]
             [slate.model.common :as m]
             [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
@@ -14,7 +15,6 @@
             [slate.model.paragraph]
             [slate.model.run]
             [slate.model.selection :as sel]
-            [slate.dll :as dll]
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
@@ -153,12 +153,8 @@
       :or {focus? true, scroll-to-caret? false}}]
   (let [{:keys [doc selection]} editor-state
         {:keys [deleted-indices changed-indices inserted-indices]} changelist
-        rerender-indices (set/difference (set/union (dll/indices-range (-> prev-state :doc :children)
-                                                                       (-> prev-state :selection :start :paragraph)
-                                                                       (-> prev-state :selection :end :paragraph))
-                                                    (dll/indices-range (:children doc)
-                                                                       (-> selection :start :paragraph)
-                                                                       (-> selection :end :paragraph)))
+        rerender-indices (set/difference (set/union (es/all-selected-indices prev-state)
+                                                    (es/all-selected-indices editor-state))
                                          deleted-indices
                                          inserted-indices)]
     (doseq [idx deleted-indices]

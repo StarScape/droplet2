@@ -56,7 +56,7 @@ __To run just the Karma tests:__
 npm run browser-test
 ```
 
-There's also a specific test build for the DLL tests (see `src/slate/dll.cljs`). Running the Node tests will run the DLL tests, but because it can be tiring to wait for the other tests to run while working on code for an independent data structure, you can do this if you want to run just the DLL tests:
+There's also a specific test build for the DLL tests (see `src/slate/model/dll.cljs`). Running the Node tests will run the DLL tests, but because it can be tiring to wait for the other tests to run while working on code for an independent data structure, you can do this if you want to run just the DLL tests:
 
 ```bash
 shadow-cljs compile test-dll
@@ -126,7 +126,7 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 
 # Changelog
 
-### 0.0.2
+### 0.0.2 - ([Released](https://github.com/StarScape/droplet2/releases/tag/v0.0.2))
 
 - Added a confirmation dialog before saving file
 - Added smart-nav actions to the application menu
@@ -150,9 +150,11 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 - Fixed bug where index in find and replace popup could become negative
 - Focus is no longer lost on editor pane when find and replace popup is selected
 
-### 0.0.3
+### 0.0.3 - ([Released](https://github.com/StarScape/droplet2/releases/tag/v0.0.3))
 
 - Fixed issue where undo/redo events could fire both for the find and replace inputs and the main editor pane simultaneously
 - All text is escaped before being entered into the document
 - Changes to fonts
 - Added ability to auto-record demo video
+
+### 0.0.4 - In Development
