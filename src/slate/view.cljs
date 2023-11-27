@@ -19,10 +19,15 @@
   [dom-id]
   (dll/big-dec (.substring dom-id 2)))
 
+(defn escape-dom-id
+  "Escapes `.` char in dom-id so it can be used in a query selector."
+  [dom-id]
+  (str/replace dom-id "." "\\."))
+
 (defn get-paragraph-dom-elem ;; TODO: correct all references to make sure they are passed IDXs
   [editor-elem paragraph-index]
   (let [dom-id (paragraph-index->dom-id paragraph-index)]
-    (.querySelector editor-elem (str "#" dom-id))))
+    (.querySelector editor-elem (str "#" (escape-dom-id dom-id)))))
 
 (defn match-elem-in-path
   "Returns the first element in the event's path that satisfies the given selector string
@@ -303,7 +308,6 @@
 
 (defmethod insert-para! :default
   [editor-elem paragraph-idx viewmodel {:keys [doc selection] :as _editor-state}]
-  (prn "insert default")
   (let [rendered-paragraph (vm-para->dom viewmodel selection)
         paragraph-elem (js/document.createElement "p")
         elem-to-insert-after (when-let [next-para-idx (dll/prev-index (:children doc) paragraph-idx)]
