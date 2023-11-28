@@ -20,13 +20,14 @@
   (dll/big-dec (.substring dom-id 2)))
 
 (defn escape-dom-id
-  "Escapes `.` char in dom-id so it can be used in a query selector."
+  "Escapes `.` char in `dom-id` so it can be used in a query selector."
   [dom-id]
   (str/replace dom-id "." "\\."))
 
 (defn get-paragraph-dom-elem ;; TODO: correct all references to make sure they are passed IDXs
   [editor-elem paragraph-index]
-  (let [dom-id (paragraph-index->dom-id paragraph-index)]
+  {:pre [(some? paragraph-index)]}
+  (let [dom-id #p (paragraph-index->dom-id #p paragraph-index)]
     (.querySelector editor-elem (str "#" (escape-dom-id dom-id)))))
 
 (defn match-elem-in-path
@@ -258,48 +259,45 @@
 
 (defn- insert-list-para!
   "Implementation for inserting both a :ul or an :ol paragraph (the only difference is the tag name of the
-   containing element, either <ul> or <ol>). Automatically wraps the element in <ul>/<ol> IF there is not already
-   one present for the current run of list paragraphs, otherwise will insert into that <ul>/<ol>"
-  [list-type editor-elem uuid viewmodel {:keys [doc selection] :as _es}]
+   containing element, either <ul> or <ol>). Automatically wraps the element in `<ul>` / `<ol>` __if__ there is
+   not already one present for the current run of list paragraphs, otherwise will insert into that `<ul>` / `<ol>`."
+  [list-type editor-elem paragraph-idx viewmodel {:keys [doc selection] :as _es}]
   {:pre [(or (= list-type :ol)
              (= list-type :ul))]}
   (let [tag-name (name list-type)
         rendered-paragraph (vm-para->dom viewmodel selection)
-        p-elem (js/document.createElement "p")
-        next-p-elem (next-dom-paragraph-after editor-elem uuid (:children doc))
-        next-p-inside-same-list-elem? (when next-p-elem
-                                        (= (.. next-p-elem -parentNode -tagName toLowerCase) tag-name))
-        prev-p-elem (next-dom-paragraph-before editor-elem uuid (:children doc))
-        prev-p-inside-same-list-elem? (when prev-p-elem
-                                        (= (.. prev-p-elem -parentNode -tagName toLowerCase) tag-name))
-        p-outer-html (if (or next-p-inside-same-list-elem?
-                             prev-p-inside-same-list-elem?)
+        next-p-dom-elem (when-let [next-idx (dll/next-index (:children doc) paragraph-idx)]
+                          (get-paragraph-dom-elem editor-elem next-idx))
+        next-p-same-list-type? (when next-p-dom-elem
+                                 (= (.. next-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
+        prev-p-dom-elem (when-let [prev-idx (dll/prev-index (:children doc) paragraph-idx)]
+                          (get-paragraph-dom-elem editor-elem prev-idx))
+        prev-p-same-list-type? (when prev-p-dom-elem
+                                 (= (.. prev-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
+        p-outer-html (if (or next-p-same-list-type?
+                             prev-p-same-list-type?)
                        rendered-paragraph
                        (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
     (cond
-      ;; insert into UL before next-p-elem
-      (and next-p-elem next-p-inside-same-list-elem?
-           prev-p-elem prev-p-inside-same-list-elem?)
-      (.insertBefore (.-parentNode next-p-elem) p-elem next-p-elem)
+      ;; insert into (U|O)L after prev-p-dom-elem
+      (and prev-p-dom-elem prev-p-same-list-type?)
+      (.insertAdjacentHTML prev-p-dom-elem "afterend" p-outer-html)
 
-      ;; insert into UL before next-p-elem
-      (and next-p-elem next-p-inside-same-list-elem?)
-      (.insertBefore (.-parentNode next-p-elem) p-elem next-p-elem)
+      ;; insert into (U|O)L before next-p-dom-elem
+      (and next-p-dom-elem next-p-same-list-type?)
+      (.insertAdjacentHTML next-p-dom-elem "beforebegin" p-outer-html)
 
-      ;; append to prev-p-elem's parent <ul>/<ol>
-      (and prev-p-elem prev-p-inside-same-list-elem?)
-      (.append (.-parentNode prev-p-elem) p-elem)
+      ;; Neither prev nor next is a list paragraph but there is a prev/next paragraph in the DOM currently.
+      ;; Insert directly before the _nearest ancestor_ of next-p-elem that is top-level within document elem.
+      (some? prev-p-dom-elem)
+      (.insertAdjacentHTML (nearest-top-level-ancestor prev-p-dom-elem editor-elem) "afterbegin" p-outer-html)
 
-      ;; neither prev nor next is a list paragraph but there is a next paragraph in the DOM currently
-      ;; insert directly before the _nearest ancestor_ of next-p-elem that is top-level within document elem
-      (some? next-p-elem)
-      (.insertBefore editor-elem p-elem (nearest-top-level-ancestor next-p-elem editor-elem))
+      (some? next-p-dom-elem)
+      (.insertAdjacentHTML (nearest-top-level-ancestor next-p-dom-elem editor-elem) "beforebegin" p-outer-html)
 
-      :else
       ;; No next elem, append to document end
-      (.append editor-elem p-elem))
-    ;; Must be placed in DOM before outerHTML can be set
-    (set! (.-outerHTML p-elem) p-outer-html)))
+      :else
+      (.insertAdjacentHTML editor-elem "afterbegin" p-outer-html))))
 
 (defmulti insert-para!
   "Renders and inserts the paragraph into the DOM."
