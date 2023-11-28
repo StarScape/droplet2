@@ -27,7 +27,7 @@
 (defn get-paragraph-dom-elem ;; TODO: correct all references to make sure they are passed IDXs
   [editor-elem paragraph-index]
   {:pre [(some? paragraph-index)]}
-  (let [dom-id #p (paragraph-index->dom-id #p paragraph-index)]
+  (let [dom-id (paragraph-index->dom-id paragraph-index)]
     (.querySelector editor-elem (str "#" (escape-dom-id dom-id)))))
 
 (defn match-elem-in-path
@@ -268,29 +268,29 @@
         rendered-paragraph (vm-para->dom viewmodel selection)
         next-p-dom-elem (when-let [next-idx (dll/next-index (:children doc) paragraph-idx)]
                           (get-paragraph-dom-elem editor-elem next-idx))
-        next-p-same-list-type? (when next-p-dom-elem
-                                 (= (.. next-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
+        next-p-in-same-list? (when next-p-dom-elem
+                               (= (.. next-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
         prev-p-dom-elem (when-let [prev-idx (dll/prev-index (:children doc) paragraph-idx)]
                           (get-paragraph-dom-elem editor-elem prev-idx))
-        prev-p-same-list-type? (when prev-p-dom-elem
-                                 (= (.. prev-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
-        p-outer-html (if (or next-p-same-list-type?
-                             prev-p-same-list-type?)
+        prev-p-in-same-list? (when prev-p-dom-elem
+                               (= (.. prev-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
+        p-outer-html (if (or next-p-in-same-list?
+                             prev-p-in-same-list?)
                        rendered-paragraph
                        (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
     (cond
       ;; insert into (U|O)L after prev-p-dom-elem
-      (and prev-p-dom-elem prev-p-same-list-type?)
+      (and prev-p-dom-elem prev-p-in-same-list?)
       (.insertAdjacentHTML prev-p-dom-elem "afterend" p-outer-html)
 
       ;; insert into (U|O)L before next-p-dom-elem
-      (and next-p-dom-elem next-p-same-list-type?)
+      (and next-p-dom-elem next-p-in-same-list?)
       (.insertAdjacentHTML next-p-dom-elem "beforebegin" p-outer-html)
 
       ;; Neither prev nor next is a list paragraph but there is a prev/next paragraph in the DOM currently.
       ;; Insert directly before the _nearest ancestor_ of next-p-elem that is top-level within document elem.
       (some? prev-p-dom-elem)
-      (.insertAdjacentHTML (nearest-top-level-ancestor prev-p-dom-elem editor-elem) "afterbegin" p-outer-html)
+      (.insertAdjacentHTML (nearest-top-level-ancestor prev-p-dom-elem editor-elem) "afterend" p-outer-html)
 
       (some? next-p-dom-elem)
       (.insertAdjacentHTML (nearest-top-level-ancestor next-p-dom-elem editor-elem) "beforebegin" p-outer-html)
@@ -311,7 +311,7 @@
         elem-to-insert-after (when-let [next-para-idx (dll/prev-index (:children doc) paragraph-idx)]
                                (get-paragraph-dom-elem editor-elem next-para-idx))]
     (if elem-to-insert-after
-      (.insertAdjacentElement elem-to-insert-after "afterend" paragraph-elem)
+      (.insertAdjacentElement (nearest-top-level-ancestor elem-to-insert-after editor-elem) "afterend" paragraph-elem)
       (.insertAdjacentElement editor-elem "afterbegin" paragraph-elem))
     (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
 
