@@ -37,8 +37,8 @@
    other than paragraphs inside a DLL, though it's doubtful you'd need those incredibly specific set of
    properties for any other use (but hey, weirder things have happened).
 
-   The only catch is that every item inserted MUST have a :index property. So `(dll {:index \"123\" :val 1})`
-   will work, but `(dll {:val 1})` will throw an error."
+   ~~The only catch is that every item inserted MUST have a :index property. So `(dll {:index \"123\" :val 1})`
+   will work, but `(dll {:val 1})` will throw an error.~~"
   (:refer-clojure :exclude [first last next remove range list])
   (:require ["decimal.js" :refer [Decimal]]
             [hashp.core]))
@@ -51,15 +51,6 @@
 ;; TODO: would be nice to be able to use plain numbers in place of big-decimals and have them auto-convert
 
 (set! *warn-on-infer* false)
-
-;; TODO: remove when crashing over and emergency debug facility no longer needed :)
-(defn dbg
-  ([prefix arg]
-   (println (str prefix ": ") arg)
-   arg)
-  ([arg]
-   (println arg)
-   arg))
 
 ;; TODO: It might be worth adding a dll/map function that takes and returns a DLL by default, similar to (mapv).
 (declare first)
@@ -350,9 +341,8 @@
         :else (apply conj removed to-insert))
       (insert to-insert))))
 
-;; TODO: TESTME!
 (defn replace-between
-  "Same as `replace-range`, but **not** inclusive for either end."
+  "Same as `replace-range`, but __not__ inclusive of either end."
   [list index1 index2 to-insert]
   (let [first-index (next-index list index1)]
     (if (= first-index index2)
@@ -385,6 +375,7 @@
                (conj indices index))))))
 
 (defn all-indices
+  "Returns a sequence of all indices in the list."
   [list]
   (if (empty? list)
     []

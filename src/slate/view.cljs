@@ -144,18 +144,18 @@
         end-offset (-> selection :end :offset)]
     (if-not (or (= paragraph-idx start-para)
                 (= paragraph-idx end-para))
-    ;; Neither start or end of selection is in the paragraph containing this span
+      ;; Neither start or end of selection is in the paragraph containing this span
       (if (and (> paragraph-idx start-para)
                (< paragraph-idx end-para))
-      ;; Paragraph containing span is between the start and
-      ;; end paragraphs of the selection, i.e. wholly inside
-      ;; of it, and therefore the whole span is too.
+        ;; Paragraph containing span is between the start and
+        ;; end paragraphs of the selection, i.e. wholly inside
+        ;; of it, and therefore the whole span is too.
         {:inside-sel (:text span)}
-      ;; Paragraph is not within selection at all. The use of :after-sel
-      ;; to return the whole text of the span here is arbitrary. We could
-      ;; just as well use :before-sel.
+        ;; Paragraph is not within selection at all. The use of :after-sel
+        ;; to return the whole text of the span here is arbitrary. We could
+        ;; just as well use :before-sel.
         {:after-sel (:text span)})
-    ;; Start or end of selection is in the paragraph containing this span
+      ;; Start or end of selection is in the paragraph containing this span
       (let [text (:text span)
             inside-start (if (and (= paragraph-idx start-para)
                                   (>= start-offset (:start-offset span)))
@@ -211,30 +211,6 @@
          (apply str (map #(vm-line->dom % selection paragraph-index (:length paragraph-vm)) lines))
          "</div>")))
 
-(defn- next-dom-paragraph-after
-  "Returns the next paragraph after the one with UUID `uuid` that currently has a node in the dom.
-   If no paragraphs are found at all, returns `nil`."
-  [editor-elem uuid paragraphs-dll]
-  (loop [node (dll/next-index paragraphs-dll uuid)]
-    (if (nil? node)
-      nil
-      (let [elem (get-paragraph-dom-elem editor-elem node)]
-        (if (some? elem)
-          elem
-          (recur (dll/next-index paragraphs-dll node)))))))
-
-(defn- next-dom-paragraph-before
-  "Returns the next paragraph before the one with UUID `uuid` that currently has a node in the dom.
-   If no paragraphs are found at all, returns `nil`."
-  [editor-elem uuid paragraphs-dll]
-  (loop [node (dll/prev paragraphs-dll uuid)]
-    (if (nil? node)
-      nil
-      (let [elem (get-paragraph-dom-elem editor-elem node)]
-        (if (some? elem)
-          elem
-          (recur (dll/prev paragraphs-dll node)))))))
-
 (defn- nearest-top-level-ancestor
   [elem editor-elem]
   (loop [e elem]
@@ -243,9 +219,10 @@
       (recur (.-parentElement e)))))
 
 (defn merge-list-elems-if-needed!
-  "Takes two ADJACENT elements and, if they are both of the same list container type (e.g.
-   are both a separate <ul> or <ol>), merges them together."
+  "Takes two ADJACENT elements and, if they are both of the same list
+   container type (e.g. are both a separate <ul> or <ol>), merges them together."
   [prev-elem next-elem]
+  {:pre [(= prev-elem (.-previousElementSibling next-elem))]}
   (when (and prev-elem next-elem
              (not= prev-elem next-elem)
              (= (.-tagName prev-elem) (.-tagName next-elem))
@@ -309,9 +286,20 @@
   (let [rendered-paragraph (vm-para->dom viewmodel selection)
         paragraph-elem (js/document.createElement "p")
         elem-to-insert-after (when-let [next-para-idx (dll/prev-index (:children doc) paragraph-idx)]
-                               (get-paragraph-dom-elem editor-elem next-para-idx))]
+                               (get-paragraph-dom-elem editor-elem next-para-idx))
+        split-prev-elem-parent-if-needed! (fn [prev-elem]
+                                            (let [parent-elem (.. prev-elem -parentElement)
+                                                  parent-tag (.. parent-elem -tagName toLowerCase)]
+                                              (if (and (or (= "ol" parent-tag) (= "ul" parent-tag))
+                                                       (= parent-elem (some-> prev-elem .-nextElementSibling .-parentElement)))
+                                                (split-elem-on-child! parent-elem prev-elem)
+                                                prev-elem)))]
     (if elem-to-insert-after
-      (.insertAdjacentElement (nearest-top-level-ancestor elem-to-insert-after editor-elem) "afterend" paragraph-elem)
+      (.insertAdjacentElement (-> elem-to-insert-after
+                                  (split-prev-elem-parent-if-needed!)
+                                  (nearest-top-level-ancestor editor-elem))
+                              "afterend"
+                              paragraph-elem)
       (.insertAdjacentElement editor-elem "afterbegin" paragraph-elem))
     (set! (.-outerHTML paragraph-elem) rendered-paragraph)))
 
@@ -354,7 +342,7 @@
     (merge-list-elems-if-needed! prev-elem next-elem)))
 
 (defn- remove-list-para!
-  [list-type editor-elem paragraph-idx editor-state prev-state]
+  [editor-elem paragraph-idx]
   (let [elem (get-paragraph-dom-elem editor-elem paragraph-idx)
         prev-elem (.-previousElementSibling elem)
         next-elem (.-nextElementSibling elem)
@@ -369,11 +357,11 @@
 
 (defmethod remove-para! :ul
   [editor-elem paragraph-idx editor-state prev-state]
-  (remove-list-para! :ul editor-elem paragraph-idx editor-state prev-state))
+  (remove-list-para! editor-elem paragraph-idx))
 
 (defmethod remove-para! :ol
   [editor-elem paragraph-idx editor-state prev-state]
-  (remove-list-para! :ol editor-elem paragraph-idx editor-state prev-state))
+  (remove-list-para! editor-elem paragraph-idx))
 
 ;; Currently all paragraph types update the same, no special logic/multimethod needed
 (defn update-para! [editor-elem paragraph-idx viewmodel editor-state prev-state]
