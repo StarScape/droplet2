@@ -10,9 +10,6 @@
     "node-test": "./scripts/node_test.sh || true",
     "browser-test": "./scripts/browser_test.sh || true",
     "test": "./scripts/test.sh || true",
-    "watch-stories": "shadow-cljs watch stories",
-    "start-stories": "start-storybook -p 9090",
-    "storybook-dev": "concurrently npm:watch-stories npm:start-stories",
     "dev-watch": "concurrently \"shadow-cljs watch electron app\" \"npx tailwindcss -i ./src/index.css -o ./public/index.css --watch\"",
     "build-tailwind": "NODE_ENV=production npx tailwindcss -i ./src/index.css -o ./public/index.css --minify",
     "build-release-js": "shadow-cljs release electron app",
@@ -27,8 +24,6 @@
   },
   "devDependencies": {
     "@electron/notarize": "^1.2.3",
-    "@storybook/addon-essentials": "^6.5.7",
-    "@storybook/react": "^6.5.7",
     "concurrently": "^7.2.1",
     "dotenv": "^16.0.3",
     "electron": "^19.0.3",
@@ -42,7 +37,6 @@
     "wait-on": "^6.0.1"
   },
   "dependencies": {
-    "@headlessui/react": "^1.6.6",
     "decimal.js": "^10.4.3",
     "electron-is-dev": "^2.0.0",
     "electron-window-state": "^5.0.3",

@@ -41,9 +41,4 @@
   :test-dll {:target :node-test
              :ns-regexp "slate.model.dll-test$"
              :output-to "dev_out/dll_test.js"
-             :autorun true}
-  ;; Storybook stories
-  ;; TODO: I never actually use Storybook, can remove at some point
-  :stories  {:target :npm-module
-             :ns-regexp  "drop.stories.*-story$"
-             :output-dir "dev_out/js/stories"}}}
+             :autorun true}}}

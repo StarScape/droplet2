@@ -375,7 +375,6 @@
                    (next-index new-list index-to-insert-after))))))))
 
 (comment
-  ;; TODO: fix rest of tests that are failing
   (= [1] (replace-range (dll :a :b) (big-dec 1) (big-dec 2) 1))
   (= [:a 1 :d] (replace-range (dll :a :b :c :d) (big-dec 2) (big-dec 3) 1))
 
