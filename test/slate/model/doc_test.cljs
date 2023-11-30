@@ -177,10 +177,9 @@
   (testing "deletes whole paragraph"
     ;; This is an odd edge case, but handling it this way makes the code simpler.
     ;; The reason it's like this is because the code merges the paragraph at the end
-    ;; of the range selection with the paragraph at the beginning of the range selection,
-    ;; and gives it the UUID of the first.
+    ;; of the range selection with the paragraph at the beginning of the range selection.
     (is (= (doc/delete test-doc (selection [(big-dec 1) 0] [(big-dec 2) 0]))
-           (document [p2])))) ;; FIXME
+           (document [p2]))))
 
   (testing "merges start and ending paragraphs when deleting across paragraphs"
     (is (= (doc/delete test-doc (selection [(big-dec 1) 3] [(big-dec 2) 3]))

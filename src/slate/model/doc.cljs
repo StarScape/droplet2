@@ -325,7 +325,7 @@
   Selectable
   (char-at [doc sel] (char-at ((:children doc) (sel/caret-para sel)) sel))
   (char-before [doc sel] (char-before ((:children doc) (sel/caret-para sel)) sel))
-  (selected-content [doc sel] (doc-selected-content doc sel)) ; TODO: how to handle UUIDs with this?
+  (selected-content [doc sel] (doc-selected-content doc sel))
   (formatting [doc sel] (doc-formatting doc sel)))
 
 (comment

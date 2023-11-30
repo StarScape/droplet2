@@ -26,11 +26,11 @@ See `./model/`.
 
 The atomic unit of Slate is the __`Run`__, which is a string with a set of formats attached, e.g. `#{:italic :bold}`.
 
-A __`Paragraph`__ contains one or more `Runs`, plus a paragraph type, which default to `:body` (`:ol` and `:ul` are also supported, for ordered and unordered lists). Each paragraph has a UUID. _Note_: a paragraph's `Run`s can never be adjacent to another `Run` with the exact same formatting, e.g. run1 having formatting `#{:italic}` cannot be directly next to run2 having formatting `#{:italic}`. If run2 instead has formatting of, for example, `#{:italic :bold}`, then this is a legal state.
+A __`Paragraph`__ contains one or more `Runs`, plus a paragraph type, which default to `:body` (`:ol` and `:ul` are also supported, for ordered and unordered lists). _Note_: a paragraph's `Run`s can never be adjacent to another `Run` with the exact same formatting, e.g. run1 having formatting `#{:italic}` cannot be directly next to run2 having formatting `#{:italic}`. If run2 instead has formatting of, for example, `#{:italic :bold}`, then this is a legal state.
 
 A __`Document`__ contains the list of all paragraphs in the document (and possibly some other metadata, if that ever becomes necessary).
 
-A __`Selection`__ consists of a start paragraph (the paragraph's UUID), an offset into that paragraph, an end paragraph and an offset into that paragraph, plus a `:backwards?` field. If the start and end of the selection are the same, it is a single selection, i.e. a normal text caret. `Selection`s keep track of a few other things as well, see `selection.cljs` for details.
+A __`Selection`__ consists of a start paragraph (the paragraph's index), an offset into that paragraph, an end paragraph and an offset into that paragraph, plus a `:backwards?` field. If the start and end of the selection are the same, it is a single selection, i.e. a normal text caret. `Selection`s keep track of a few other things as well, see `selection.cljs` for details.
 
 The __`EditorState`__ contains both the current `Document` and the current `Selection`, which forms the complete state of the editor at any one point time. Most operations on a `EditorState`, rather than returning a new `EditorState`, return `EditorUpdate`s, which contain both an `EditorState` plus a changelist, so that paragraphs in the DOM can be selectively updated instead of rerendering everything (or diffing). There are some mechanisms in place to make dealing with this a bit more elegant and allowing chaining `EditorState` functions, see `editor_state.cljs` for details.
 

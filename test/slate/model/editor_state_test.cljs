@@ -322,8 +322,7 @@
   (testing "deletes whole paragraph"
     ;; This is an odd edge case, but handling it this way makes the code simpler.
     ;; The reason it's like this is because the code merges the paragraph at the end
-    ;; of the range selection with the paragraph at the beginning of the range selection,
-    ;; and gives it the UUID of the first.
+    ;; of the range selection with the paragraph at the beginning of the range selection.
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 0])))
            (->EditorUpdate
             (map->EditorState {:doc (document [p2])
@@ -404,8 +403,8 @@
     (is (= (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12])))
            (->EditorUpdate
             (map->EditorState {:doc (document [p1, (p/paragraph), (p/paragraph)])
-                               :selection (selection [(big-dec 2) 0])})
-            {:inserted-indices #{(big-dec 1.5)}
+                               :selection (selection [(big-dec 3) 0])})
+            {:inserted-indices #{(big-dec 3)}
              :changed-indices #{(big-dec 2)}
              :deleted-indices #{}})))))
 

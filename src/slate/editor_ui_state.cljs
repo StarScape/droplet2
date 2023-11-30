@@ -543,10 +543,12 @@
                          (utils/throttle 50
                                          (fn [e]
                                            (when (and @*editor-surface-clicked?
-                                      ;; Make sure it's actually still clicked down, if the user moved the mouse
-                                      ;; off-window and back the 'mouseup' event will not have set the atom back to false.
+                                                      ;; Make sure it's actually still clicked down,
+                                                      ;; if the user moved the mouse off-window and
+                                                      ;; back the 'mouseup' event will not have set
+                                                      ;; the atom back to false.
                                                       (= 1 (.-which e)))
-                             ;; *last-mousedown-event* is passed this way for optimization purposes
+                                             ;; *last-mousedown-event* is passed this way because interceptors don't take extra parameters
                                              (binding [view/*last-mousedown-event* @*mousedown-event]
                                                (fire-interceptor! *ui-state (get-interceptor :drag) e))))))
 

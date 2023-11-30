@@ -222,7 +222,6 @@
   "Takes two ADJACENT elements and, if they are both of the same list
    container type (e.g. are both a separate <ul> or <ol>), merges them together."
   [prev-elem next-elem]
-  {:pre [(= prev-elem (.-previousElementSibling next-elem))]}
   (when (and prev-elem next-elem
              (not= prev-elem next-elem)
              (= (.-tagName prev-elem) (.-tagName next-elem))
@@ -645,7 +644,7 @@
                      (es/changelist)))
 
 (defn calc-line-height
-  "Returns the actual *rendered* line height given a paragraph DOM element, in pixels."
+  "Returns the actual *rendered* line height of a given paragraph DOM element, in pixels."
   [paragraph-dom-elem]
   (let [first-dom-line (.querySelector paragraph-dom-elem ".line")]
     (when (nil? first-dom-line)
@@ -734,9 +733,10 @@
         paragraph-idx (if paragraph-in-path
                         (dom-id->paragraph-index (.-id paragraph-in-path))
                         (find-overlapping-paragraph (:children doc) editor-elem (.-y event) shadow-root))
-         ; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
-         ; paragraph element in the path may not actually be present in the DOM. It's ID/UUID
-         ; will still be valid, however, so we can just grab the current element like this.
+        ;; The paragraph might have re-rendered since this MouseEvent was fired, and thus the
+        ;; paragraph element in the path may not actually be present in the DOM. It's index in
+        ;; the document will still be the same, however, so we can just grab the current element
+        ;; like this.
         paragraph-elem (get-paragraph-dom-elem editor-elem paragraph-idx)
         paragraph (get (:children doc) paragraph-idx)
         vm (get viewmodels paragraph-idx)
@@ -744,12 +744,12 @@
     sel))
 
 (defn- drag-direction
-  [started-at currently-at mousedown-event mousemove-event]
-  (if (= (sel/caret-para started-at) (sel/caret-para currently-at))
-    (if (> (sel/caret currently-at) (sel/caret started-at))
+  [drag-started-at drag-currently-at]
+  (if (= (sel/caret-para drag-started-at) (sel/caret-para drag-currently-at))
+    (if (> (sel/caret drag-currently-at) (sel/caret drag-started-at))
       :forward
       :backward)
-    (if (pos? (- (.-y mousemove-event) (.-y mousedown-event)))
+    (if (> (sel/caret-para drag-currently-at) (sel/caret-para drag-started-at))
       :forward
       :backward)))
 
@@ -757,16 +757,16 @@
   [mousemove-event doc viewmodels editor-elem measure-fn shadow-root]
   (let [started-at (mouse-event->selection *last-mousedown-event* doc viewmodels editor-elem measure-fn shadow-root)
         currently-at (mouse-event->selection mousemove-event doc viewmodels editor-elem measure-fn shadow-root)
-        started-uuid (sel/caret-para started-at)
+        started-para-idx (sel/caret-para started-at)
         started-offset (sel/caret started-at)
-        current-uuid (sel/caret-para currently-at)
+        current-para-idx (sel/caret-para currently-at)
         current-offset (sel/caret currently-at)
-        dir (drag-direction started-at currently-at *last-mousedown-event* mousemove-event)
+        dir (drag-direction started-at currently-at)
         raw-selection (if (= dir :forward)
-                        (sel/selection [started-uuid started-offset]
-                                       [current-uuid current-offset])
-                        (sel/selection [current-uuid current-offset]
-                                       [started-uuid started-offset]
+                        (sel/selection [started-para-idx started-offset]
+                                       [current-para-idx current-offset])
+                        (sel/selection [current-para-idx current-offset]
+                                       [started-para-idx started-offset]
                                        :backwards? true))]
     (nav/autoset-formats doc raw-selection)))
 

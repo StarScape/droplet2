@@ -220,21 +220,33 @@
            new-para-type (if (contains? doc/types-preserved-on-enter (:type paragraph))
                            (:type paragraph)
                            :body)
+           ;; If a paragraph is empty, the caret is currently at both the start
+           ;; AND end of that paragraph. However, hitting enter within an empty
+           ;; paragraph gets treated the same as at the END, i.e. insert a paragraph
+           ;; below and move the cursor down, rather than insert a paragraph above
+           ;; and keep the cursor where it is.
+           ;;
+           ;; Having this var here helps not get confused  aboutthat and keeps
+           ;; things easy the expressions further down.
+           pos-in-paragraph (cond
+                              (= caret (len paragraph)) :end
+                              (= caret 0) :start
+                              :else :middle)
            new-doc (cond
-                     (= caret 0)
-                     (doc/insert-paragraph-before doc paragraph-idx new-para-type)
-
-                     (= caret (len paragraph))
+                     (= :end pos-in-paragraph)
                      (doc/insert-paragraph-after doc paragraph-idx new-para-type)
 
-                     :else
+                     (= :start pos-in-paragraph)
+                     (doc/insert-paragraph-before doc paragraph-idx new-para-type)
+
+                     (= :middle pos-in-paragraph)
                      (let [[para1 para2] (doc/split-paragraph doc selection)]
                        (doc/replace-paragraph-with doc paragraph-idx [para1 para2])))
-           new-index (if (= caret 0)
+           new-index (if (= :start pos-in-paragraph)
                        (dll/prev-index (:children new-doc) paragraph-idx)
                        (dll/next-index (:children new-doc) paragraph-idx))
            new-paragraph (get (:children new-doc) new-index)
-           new-selection (if (= caret 0)
+           new-selection (if (= :start pos-in-paragraph)
                            (sel/selection [(sel/caret-para selection) 0])
                            (sel/selection [new-index 0] [new-index 0]))
            ;; If inserting a new (empty) paragraph, then the selection should inherit the :formats
@@ -277,12 +289,12 @@
                     (changelist :changed-indices #{index}))))
 
 (defn update-paragraph
-  "Passes the paragraph with UUID `uuid` to function f and replaces the paragraph with the value returned.
+  "Passes the paragraph with at index `paragraph-idx` to function f and replaces the paragraph with the value returned.
    Returns an EditorUpdate."
-  [{:keys [doc] :as editor-state} uuid f & args]
-  (let [paragraph (get (:children doc) uuid)
+  [{:keys [doc] :as editor-state} paragraph-idx f & args]
+  (let [paragraph (get (:children doc) paragraph-idx)
         new-paragraph (apply f paragraph args)]
-    (replace-paragraph editor-state uuid new-paragraph)))
+    (replace-paragraph editor-state paragraph-idx new-paragraph)))
 
 ;; TODO: Auto-set :formats on selection
 (defn set-selection
@@ -550,14 +562,14 @@
                           (-> editor-state :selection :end :paragraph))))
 
 (defn merge-changelists
-  "Takes two changelists and returns a third that combines them. UUIDs are rearranged
+  "Takes two changelists and returns a third that combines them. Indices are rearranged
    as necessary according to the following rules:
 
-   - If a pid is **deleted**:
+   - If an index is **deleted**:
      - And then inserted: move to changed
-   - If a pid is **changed**:
+   - If a index is **changed**:
      - And then deleted: move to deleted
-   - If a pid is **inserted**:
+   - If a index is **inserted**:
      - And then deleted: remove from both inserted and deleted
      - And then changed: move to inserted.
 

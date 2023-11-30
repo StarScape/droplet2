@@ -26,8 +26,8 @@
    next nodes, and maintain a map of UUIDs -> Nodes, it can be made into a functional version of a DLL.
 
    You don't really need to be aware of most of these details in order to write code that uses the DLL
-   data structure presented in this namespace. All you really need to know are the public functions it exposes:
-   `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
+   data structure presented in this namespace. All you really need to know are the public functions it
+   exposes: `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
    `dll` (plus some friends). Aside from that, DLLs behave basically like other Clojure collections: you
    can call `conj`, `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and
    from other sequential types using `into`. Destructuring and all your favorite Clojure goodies work as
@@ -71,6 +71,8 @@
 (declare insert-before)
 (declare insert-after)
 (declare replace-range)
+(declare replace-between)
+(declare all-indices)
 (declare dll)
 
 (declare make-seq)
@@ -262,7 +264,6 @@
   [^DoublyLinkedList dll prev-idx value]
   {:pre [(seq dll) (contains? dll prev-idx)]}
   (let [next-index (.-next-index (get (.-entries-map dll) prev-idx))
-
         new-entries (if next-index
                       (insert-between (.-entries-map dll) value prev-idx next-index)
                       (let [last-idx (.-last-index dll)
@@ -284,16 +285,21 @@
     (insert-before list (first-index list) val)))
 
 (defn remove
-  "Removes the node with `index` from the list. Calling (dissoc) on the DLL works identically"
+  "Removes the node with `index` from the list. Calling (dissoc) on the list works identically."
   [^DoublyLinkedList list index]
   (if-let [node ^Node (get (.-entries-map list) index)]
     (let [entries (.-entries-map list)
           first-node ^Node (get entries (.-first-index list))
           last-node ^Node (get entries (.-last-index list))
           new-entries (cond-> entries
-                        true (dissoc index)
-                        (some? (.-prev-index node)) (update (.-prev-index node) assoc-node :next-index (.-next-index node))
-                        (some? (.-next-index node)) (update (.-next-index node) assoc-node :prev-index (.-prev-index node)))
+                        true
+                        (dissoc index)
+
+                        (some? (.-prev-index node))
+                        (update (.-prev-index node) assoc-node :next-index (.-next-index node))
+
+                        (some? (.-next-index node))
+                        (update (.-next-index node) assoc-node :prev-index (.-prev-index node)))
           new-first (cond
                       (empty? new-entries) nil
                       (= index (.-first-index list)) (.-next-index first-node)
@@ -308,11 +314,26 @@
 (defn remove-range
   "Removes all the items between the nodes with index1 and index2 (both __inclusive__)."
   [list index1 index2]
-  {:pre [(contains? list index1) (contains? list index2)]}
+  {:pre [(contains? list index1)
+         (contains? list index2)
+         (<= index1 index2)]}
   (let [first-removed (remove list index1)]
     (if (= index1 index2)
       first-removed
       (recur first-removed (next-index list index1) index2))))
+
+(defn remove-between
+  "Removes all the items between the nodes with index1 and index2 (non-inclusive of both).
+   If index1 and index2 are the same or adjacent, the list will be unchanged."
+  [list index1 index2]
+  {:pre [(instance? DoublyLinkedList list)
+         (contains? list index1)
+         (contains? list index2)
+         (<= index1 index2)]}
+  (if (or (= index1 index2)
+          (= (next-index list index1) index2))
+    list
+    (remove-range list (next-index list index1) (prev-index list index2))))
 
 (defn replace-range
   "Replaces all the nodes between index1 and index2 (both inclusive) with
@@ -326,20 +347,59 @@
    ; => (dll {:val :a} {:val :e} {:val :f} {:val :d})
    ```"
   [list index1 index2 to-insert]
-  (let [removed (remove-range list index1 index2)
-        node-before (prev list index1)
-        node-after (next list index2)
-        insert (cond
-                 node-after #(insert-before removed (next-index list index2) %)
-                 node-before #(insert-after removed (prev-index list index1) %)
-                 :else #(conj removed %))]
-    (if (sequential? to-insert)
-      (cond
-        node-after (reduce (fn [new-dll next-element]
-                             (insert-before new-dll (next-index list index2) next-element))
-                           removed to-insert)
-        :else (apply conj removed to-insert))
-      (insert to-insert))))
+  (if-not (sequential? to-insert)
+    (replace-range list index1 index2 [to-insert])
+    (let [new-list (remove-between list index1 index2)
+          new-list (assoc new-list index1 (clojure.core/first to-insert))
+          new-list (cond
+                     (= index1 index2)
+                     new-list
+
+                     (> (count to-insert) 1)
+                     (assoc new-list index2 (clojure.core/last to-insert))
+
+                     :else
+                     (dissoc new-list index2))
+          insert-items (drop 1 to-insert)
+          insert-items (if (not= index1 index2)
+                         (drop-last 1 insert-items)
+                         insert-items)]
+      (loop [lst new-list
+             insert-items insert-items
+             index-to-insert-after index1]
+        (if (empty? insert-items)
+          lst
+          (let [new-list (insert-after lst index-to-insert-after (clojure.core/first insert-items))]
+            (recur new-list
+                   (rest insert-items)
+                   (next-index new-list index-to-insert-after))))))))
+
+(comment
+  ;; TODO: fix rest of tests that are failing
+  (= [1] (replace-range (dll :a :b) (big-dec 1) (big-dec 2) 1))
+  (= [:a 1 :d] (replace-range (dll :a :b :c :d) (big-dec 2) (big-dec 3) 1))
+
+  (= [:a 1 2 :c :d :e]
+     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 2) [1 2]))
+  (= [:a 1 2 3 :c :d :e]
+     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 2) [1 2 3]))
+
+  (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2 3 4 5 6 7 8 9 10]))
+
+  (= [:a 1 2 3 :e]
+     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2 3]))
+  (= [(big-dec 1) (big-dec 2) (big-dec 3) (big-dec 4) (big-dec 5)]
+     (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2 3])))
+
+  (= [:a 1 2 :e]
+     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2]))
+  (= [(big-dec 1) (big-dec 2) (big-dec 4) (big-dec 5)]
+     (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2])))
+
+  (= [(big-dec 1) (big-dec 2) (big-dec 5)]
+     (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 5) [1 2])))
+
+  )
 
 (defn replace-between
   "Same as `replace-range`, but __not__ inclusive of either end."

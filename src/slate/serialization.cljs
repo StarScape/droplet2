@@ -51,6 +51,8 @@
   ; hence why it is passed the history object instead of just editor-state
   (prn-str {:version current-version, :editor-state (history/current-state history)}))
 
+;; TODO: there should be a spec for the deserialized file.
+;; If the deserialized file does not match the spec, error out gracefully.
 (defn deserialize
   "Parses the EDN of the saved .drop file and returns the data structure."
   [edn-str]

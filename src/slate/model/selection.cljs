@@ -7,7 +7,7 @@
 (defrecord Selection
   [start end backwards? formats])
 
-(defn selection-impl
+(defn- constructor-impl
   [& {:keys [start end backwards? formats]
       :or {backwards? false
            formats #{}}}]
@@ -25,7 +25,7 @@
 
    A Selection is composed of these parts:
 
-   - `:start` and `:end`: both maps containing `:paragraph`, a UUID of the paragraph
+   - `:start` and `:end`: both maps containing `:paragraph`, the index of the paragraph
    referenced, and `:offset`, a integer indicating how many characters into the paragraph
    that side of the selection is. `:start` **always** comes *before* `:end` in the document.
 
@@ -37,17 +37,17 @@
   ([arg1, arg2, & args]
    (cond
      (and (vector? arg1) (vector? arg2))
-     (apply selection-impl :start arg1, :end arg2, args)
+     (apply constructor-impl :start arg1, :end arg2, args)
 
      (vector? arg1)
-     (apply selection-impl :start arg1, :end arg1, arg2, args)
+     (apply constructor-impl :start arg1, :end arg1, arg2, args)
 
      :else
-     (apply selection-impl arg1 arg2 args)))
+     (apply constructor-impl arg1 arg2 args)))
   ([arg1 arg2]
-   (selection-impl :start arg1 :end arg2))
+   (constructor-impl :start arg1 :end arg2))
   ([arg1]
-   (selection-impl :start arg1 :end arg1)))
+   (constructor-impl :start arg1 :end arg1)))
 
 (defn single?
   "Returns true if argument is a single selection."
@@ -69,7 +69,7 @@
     (-> sel :end :offset)))
 
 (defn caret-para
-  "Returns the UUID of the paragraph that the caret is inside of."
+  "Returns the index of the paragraph that the caret is inside of."
   [sel]
   (if (:backwards? sel)
     (-> sel :start :paragraph)
