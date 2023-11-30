@@ -157,10 +157,10 @@
 
 (defmethod insert
   ParagraphFragment
-  [{:keys [doc selection] :as editor-state} {:keys [runs] :as paragraph-fragment}]
+  [{:keys [doc selection] :as editor-state} paragraph-fragment]
   (if (sel/range? selection)
     (-> (delete editor-state)
-        (>>= insert runs))
+        (>>= insert paragraph-fragment))
     (let [new-doc (doc/insert doc selection paragraph-fragment)
           new-sel (->> (sel/shift-single selection (len paragraph-fragment))
                        (nav/autoset-formats new-doc))]
@@ -178,7 +178,7 @@
       (insert editor-state (first paragraphs))
       ;; Insert multiple paragraphs
       (if (sel/range? selection)
-        (-> (delete editor-state) (>>= insert paragraphs))
+        (-> (delete editor-state) (>>= insert fragment))
         (let [new-doc (doc/insert doc selection (doc/fragment paragraphs))
               sel-para-idx (sel/start-para selection)
               para-after-sel-idx (dll/next-index (:children doc) sel-para-idx)

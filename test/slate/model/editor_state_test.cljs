@@ -217,6 +217,29 @@
              :deleted-indices #{(big-dec 2)}
              :inserted-indices #{}}))))
 
+  (testing "Inserting a ParagraphFragment"
+    (is (= (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (p/fragment (r/run "inserted")))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph [(run "f" #{:italic}), (run "insertedd")])])
+                               :selection (selection [(big-dec 1) 9] [(big-dec 1) 9])})
+            {:changed-indices #{(big-dec 1)}
+             :deleted-indices #{(big-dec 2)}
+             :inserted-indices #{}}))))
+
+  (testing "Inserting a DocumentFragment"
+    (is (= (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11]))
+                      (doc/fragment [(paragraph [(r/run "inserted1")])
+                                     (paragraph [(r/run "inserted2")])
+                                     (paragraph [(r/run "inserted3")])]))
+           (->EditorUpdate
+            (map->EditorState {:doc (document [(paragraph [(run "f" #{:italic}), (run "inserted1")])
+                                               (paragraph [(r/run "inserted2")])
+                                               (paragraph [(r/run "inserted3d")])])
+                               :selection (selection [(big-dec 3) 9])})
+            {:changed-indices #{(big-dec 1) (big-dec 2)}
+             :inserted-indices #{(big-dec 3)}
+             :deleted-indices #{}}))))
+
   (testing "throws when out of range of paragraph"
     (is (thrown?
          js/Error
