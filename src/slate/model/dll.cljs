@@ -320,7 +320,7 @@
   [list index1 index2]
   {:pre [(contains? list index1)
          (contains? list index2)
-         (<= index1 index2)]}
+         (.lte index1 index2)]}
   (let [first-removed (remove list index1)]
     (if (= index1 index2)
       first-removed
@@ -333,7 +333,7 @@
   {:pre [(instance? DoublyLinkedList list)
          (contains? list index1)
          (contains? list index2)
-         (<= index1 index2)]}
+         (.lte index1 index2)]}
   (if (or (= index1 index2)
           (= (next-index list index1) index2))
     list

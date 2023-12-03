@@ -145,8 +145,8 @@
     (if-not (or (= paragraph-idx start-para)
                 (= paragraph-idx end-para))
       ;; Neither start or end of selection is in the paragraph containing this span
-      (if (and (> paragraph-idx start-para)
-               (< paragraph-idx end-para))
+      (if (and (.gt paragraph-idx start-para)
+               (.lt paragraph-idx end-para))
         ;; Paragraph containing span is between the start and
         ;; end paragraphs of the selection, i.e. wholly inside
         ;; of it, and therefore the whole span is too.
@@ -749,7 +749,7 @@
     (if (> (sel/caret drag-currently-at) (sel/caret drag-started-at))
       :forward
       :backward)
-    (if (> (sel/caret-para drag-currently-at) (sel/caret-para drag-started-at))
+    (if (.gt (sel/caret-para drag-currently-at) (sel/caret-para drag-started-at))
       :forward
       :backward)))
 
