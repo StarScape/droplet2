@@ -693,28 +693,33 @@
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its index."
   [paragraphs-dll editor-elem client-y shadow-root]
-  (let [idx->bounds (fn [paragraph-idx]
-                      (let [bounding-rect (.getBoundingClientRect (get-paragraph-dom-elem editor-elem paragraph-idx))]
-                        {:top (.-top bounding-rect)
-                         :bottom (.-bottom bounding-rect)}))
-        first-para-bounds (-> paragraphs-dll dll/first-index idx->bounds)
-        last-para-bounds (-> paragraphs-dll dll/last-index idx->bounds)]
-    (cond
-      ;; Above first paragraph
-      (< client-y (:top first-para-bounds))
-      (dll/first-index paragraphs-dll)
+  (let [bounds (fn [elem]
+                 (let [bounding-rect (.getBoundingClientRect elem)]
+                   {:top (.-top bounding-rect)
+                    :bottom (.-bottom bounding-rect)}))
+        paragraph-elem-at-y (fn [viewport-y]
+                              (let [editor-bounds (.getBoundingClientRect editor-elem)
+                                    center-x (+ (.-x editor-bounds) (/ (.-width editor-bounds) 2))]
+                                (some->> (.elementsFromPoint shadow-root center-x viewport-y)
+                                         (filter #(.matches % ".paragraph"))
+                                         (first))))
+        first-visible-para-elem (or (paragraph-elem-at-y 0)
+                                    (get-paragraph-dom-elem editor-elem (dll/first-index paragraphs-dll)))
+        last-visible-para-elem (or (paragraph-elem-at-y (.-innerHeight js/window))
+                                   (get-paragraph-dom-elem editor-elem (dll/last-index paragraphs-dll)))
+        paragraph-elem (cond
+                        ;; Above first paragraph
+                         (< client-y (:top (bounds first-visible-para-elem)))
+                         first-visible-para-elem
 
-      ;; Below last paragraph
-      (> client-y (:bottom last-para-bounds))
-      (dll/last-index paragraphs-dll)
+                         ;; Below last paragraph
+                         (> client-y (:bottom (bounds last-visible-para-elem)))
+                         last-visible-para-elem
 
-      ;; Find paragraph that client-y is overlapping with in the y axis
-      :else
-      (let [editor-bounds (.getBoundingClientRect editor-elem)
-            center-x (+ (.-x editor-bounds) (/ (.-width editor-bounds) 2))
-            elements-at-point (.elementsFromPoint shadow-root center-x client-y)
-            paragraph-elem (first (filter #(.matches % ".paragraph") elements-at-point))]
-        (dom-id->paragraph-index (.-id paragraph-elem))))))
+                         ;; Find paragraph that client-y is overlapping with in the y axis
+                         :else
+                         (paragraph-elem-at-y client-y))]
+    (dom-id->paragraph-index (.-id paragraph-elem))))
 
 (declare ^:dynamic *last-mousedown-event*)
 
