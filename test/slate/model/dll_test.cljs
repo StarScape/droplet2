@@ -33,7 +33,13 @@
               (big-dec 2) (dll/Node. {:field 2} (big-dec 2) (big-dec 1) (big-dec 3))
               (big-dec 3) (dll/Node. {:field 3} (big-dec 3) (big-dec 2) nil)}))
       (is (= (big-dec 1) (.-first-index d)))
-      (is (= (big-dec 3) (.-last-index d))))))
+      (is (= (big-dec 3) (.-last-index d)))))
+
+  (testing "works with 10 elements or more"
+    ;; This test is the result of a very specific bug
+    (let [d (dll :1 :2 :3 :4 :5 :6 :7 :8 :9 :10 :11)]
+      (is (= :1 (get d (big-dec 1))))
+      (is (= :11 (get d (big-dec 11)))))))
 
 (deftest insert-before-test
   (is (= (dll/insert-before l (big-dec 1) {:content "pre"})

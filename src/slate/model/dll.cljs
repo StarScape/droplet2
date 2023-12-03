@@ -92,6 +92,10 @@
   (-compare [d1 d2]
     (.comparedTo d1 d2))
 
+  IHash
+  (-hash [decimal]
+    (hash (.toString decimal)))
+
   IPrintWithWriter
   (-pr-writer [decimal writer opts]
     (-write writer (str "Decimal{" decimal "}"))))
