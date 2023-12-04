@@ -25,13 +25,16 @@
       'slate.model.editor-state.EditorState map->EditorState
       'slate.model.editor-state.EditorUpdate map->EditorUpdate
       'DoublyLinkedList #(apply dll %)}
-   3 {'slate.model.selection.Selection map->Selection
+   3 {'slate.model.selection.Selection #(-> (map->Selection %)
+                                            (update-in [:start :paragraph] dll/big-dec)
+                                            (update-in [:end :paragraph] dll/big-dec))
       'slate.model.run.Run map->Run
       'slate.model.paragraph.Paragraph map->Paragraph
       'slate.model.doc.Document map->Document
       'slate.model.editor-state.EditorState map->EditorState
       'slate.model.editor-state.EditorUpdate map->EditorUpdate
-      'DoublyLinkedList #(apply dll %)}})
+      'DoublyLinkedList #(dll/from-indexed-items %)
+      'Decimal dll/big-dec}})
 
 (defn- readers-for-version [version]
   (get slate-types-readers (->> (keys slate-types-readers)

@@ -70,6 +70,8 @@
 (declare remove)
 (declare insert-before)
 (declare insert-after)
+(declare prepend)
+(declare append)
 (declare replace-range)
 (declare replace-between)
 (declare all-indices)
@@ -98,7 +100,7 @@
 
   IPrintWithWriter
   (-pr-writer [decimal writer opts]
-    (-write writer (str "Decimal{" decimal "}"))))
+    (-write writer (str "#Decimal " (pr-str (.toString decimal))))))
 
 (defn big-dec "Construct new Decimal object." [n] (Decimal. n))
 
@@ -150,11 +152,7 @@
 
   ICollection
   (-conj [^DoublyLinkedList dll value]
-    (if (empty? entries-map)
-      (let [index (big-dec 1)
-            node (Node. value index nil nil)]
-        (DoublyLinkedList. {index node} index index))
-      (insert-after dll (.-last-index dll) value)))
+    (append dll value))
 
   IMap
   (-dissoc [^DoublyLinkedList dll index] (remove dll index))
@@ -184,8 +182,9 @@
 
   IPrintWithWriter
   (-pr-writer [dll writer opts]
-    (-write writer "#DoublyLinkedList")
-    (-write writer (vec dll)))
+    (-write writer "#DoublyLinkedList ")
+    (-write writer (->> (all-indices dll)
+                        (mapv #(vector % (get dll %))))))
   #_(-pr-writer [dll writer opts]
                 (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
                 (-write writer ", first-index: ") (-write writer (.-first-index dll))
@@ -287,6 +286,22 @@
   (if (empty? list)
     (conj list val)
     (insert-before list (first-index list) val)))
+
+(defn append
+  ([list value idx]
+   {:pre [(or (and (empty? list) (.gt idx 0))
+              (.gt idx (last-index list)))]}
+   (if (empty? (.-entries-map list))
+     (DoublyLinkedList. {idx (Node. value idx nil nil)} idx idx)
+     (DoublyLinkedList. (-> (.-entries-map list)
+                            (update (last-index list) assoc-node :next-index idx)
+                            (assoc idx (Node. value idx (last-index list) nil)))
+                        (first-index list)
+                        idx)))
+  ([list value]
+   (append list value (if (empty? list)
+                        (big-dec 1)
+                        (.add (last-index list) 1)))))
 
 (defn remove
   "Removes the node with `index` from the list. Calling (dissoc) on the list works identically."
@@ -567,3 +582,9 @@
    (DoublyLinkedList. {} nil nil))
   ([& xs]
    (reduce (fn [list x] (conj list x)) (dll) xs)))
+
+(defn from-indexed-items
+  [indexed-items]
+  (reduce (fn [list [idx item]]
+            (append list item idx))
+          (dll) indexed-items))

@@ -7,7 +7,8 @@
             [slate.model.run :as r :refer [run]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
-            [slate.model.editor-state :as es :refer [editor-state]]))
+            [slate.model.editor-state :as es :refer [editor-state]]
+            [slate.model.history :as history]))
 
 (def simple-test-result
   {:version 3
@@ -36,3 +37,10 @@
   (is (= (deserialize (slurp-file "test_files/serialization-test-files/v2/simple_test.drop"))
          simple-test-result))
   )
+
+(deftest circular-test
+  (testing "can serialize and deserialize and get the same result as initial EditorState"
+    (is (= (-> {:history (history/init (:editor-state simple-test-result))}
+               (serialize)
+               (deserialize))
+           simple-test-result))))

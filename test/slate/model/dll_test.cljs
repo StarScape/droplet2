@@ -303,3 +303,17 @@
   (is (= (dll val1 val2) (dll/range l (big-dec 1) (big-dec 2))))
   (is (= (dll val1 val2 before-val val3 val4) (dll/range l1 (big-dec 1) (big-dec 4))))
   (is (= (dll val2 before-val val3 val4) (dll/range l1 (big-dec 2) (big-dec 4)))))
+
+(deftest from-map-test
+  (is (= (dll/from-indexed-items [[(big-dec 1) :a]
+                        [(big-dec 3) :b]
+                        [(big-dec 3.5) :c]
+                        [(big-dec 4) :d]
+                        [(big-dec 4.1) :e]])
+         (dll :a :b :c :d :e)))
+  (is (= (dll/all-indices (dll/from-indexed-items [[(big-dec 1) :a]
+                                         [(big-dec 3) :b]
+                                         [(big-dec 3.5) :c]
+                                         [(big-dec 4) :d]
+                                         [(big-dec 4.1) :e]]))
+         [(big-dec 1) (big-dec 3) (big-dec 3.5) (big-dec 4) (big-dec 4.1)])))
