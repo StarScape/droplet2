@@ -688,8 +688,7 @@
                                                      :paragraph-type (:type paragraph)))]
     (nav/autoset-formats paragraph (sel/selection [paragraph-index offset]))))
 
-
-
+;; TODO: probably reasonable to inline this in the below method
 (defn find-overlapping-paragraph
   "Finds paragraph that client-y is overlapping with in the y-axis and returns its index."
   [paragraphs-dll editor-elem client-y shadow-root]

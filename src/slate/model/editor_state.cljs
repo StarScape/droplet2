@@ -312,20 +312,20 @@
     (set-selection editor-state new-selection)))
 
 (defn select-whole-word
-  [{:keys [selection] :as editor-state}]
+  [{:keys [doc selection] :as editor-state}]
   {:pre [(sel/single? selection)]}
   ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
         para-idx (sel/caret-para selection)
         raw-selection (cond
                         (nav/inside-word? para selection)
-                        (sel/from-singles (nav/prev-word para selection) (nav/next-word para selection))
+                        (sel/from-singles (nav/prev-word doc selection) (nav/next-word doc selection))
 
                         (nav/at-word-start? para selection)
-                        (sel/from-singles selection (nav/next-word para selection))
+                        (sel/from-singles selection (nav/next-word doc selection))
 
                         (nav/at-word-end? para selection)
-                        (sel/from-singles (nav/prev-word para selection) selection)
+                        (sel/from-singles (nav/prev-word doc selection) selection)
 
                         :else
                         (let [char (m/char-at para selection)
@@ -592,9 +592,7 @@
         new-inserted (-> (set/union (:inserted-indices c1) (:inserted-indices c2))
                          (set/difference inserted-then-deleted deleted-then-inserted)
                          (set/union inserted-then-changed))]
-    {;; :resolved? false
-     ;; :base-state-hash (:base-state-hash c1)
-     :deleted-indices new-deleted
+    {:deleted-indices new-deleted
      :changed-indices new-changed
      :inserted-indices new-inserted}))
 

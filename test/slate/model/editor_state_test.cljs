@@ -508,13 +508,22 @@
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 2) 4], :backwards? true)))
            (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 4], :backwards? true, :formats #{:bold})) (changelist))))))
 
-;; TODO: fix and add a select-whole-word function for doc
-
-(comment
-  (def single-para-doc (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])]))
-
-  (deftest select-whole-word-test
-    (is (= 1 (es/select-whole-word (editor-state single-para-doc (selection [(big-dec 1) 2])))))))
+(deftest select-whole-word-test
+  (is (= (es/select-whole-word (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                                             (selection [(big-dec 1) 2])))
+         (->EditorUpdate (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                                       (selection [(big-dec 1) 2] [(big-dec 1) 5]))
+                         (changelist))))
+  (is (= (es/select-whole-word (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                                             (selection [(big-dec 1) 0])))
+         (->EditorUpdate (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                                       (selection [(big-dec 1) 0] [(big-dec 1) 1]))
+                         (changelist))))
+  (is (= (es/select-whole-word (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                                             (selection [(big-dec 1) 12])))
+         (->EditorUpdate (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                                       (selection [(big-dec 1) 12] [(big-dec 1) 16]))
+                         (changelist)))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"
@@ -669,28 +678,11 @@
 
 (deftest merge-changelists-test
   (testing "merge logic works as it should (merge-changelists doc for details)"
-    (= (es/merge-changelists
-        {:resolved? false
-         :deleted-indices #{"a" "b" "g"}
-         :changed-indices #{"c" "d" "h"}
-         :inserted-indices #{"e" "f" "i"}}
-        {:resolved? false
-         :deleted-indices #{"c" "d" "e"}
-         :inserted-indices #{"a" "b" "f"}})
-       {:resolved? false
-        :deleted-indices #{"c" "d" "g"}
-        :changed-indices #{"a" "b" "h"}
-        :inserted-indices #{"f" "i"}}))
-
-  (testing "merging with a resolved list ignores merge and returns second changelist"
-    (= (es/merge-changelists
-        {:resolved? true
-         :deleted-indices #{"a" "b" "g"}
-         :changed-indices #{"c" "d" "h"}
-         :inserted-indices #{"e" "f" "i"}}
-        {:resolved? false
-         :deleted-indices #{"c" "d" "e"}
-         :inserted-indices #{"a" "b" "f"}})
-       {:resolved? false
-        :deleted-indices #{"c" "d" "e"}
-        :inserted-indices #{"a" "b" "f"}})))
+    (is (= (es/merge-changelists {:deleted-indices #{"a" "b" "g"}
+                                  :changed-indices #{"c" "d" "h"}
+                                  :inserted-indices #{"e" "f" "i"}}
+                                 {:deleted-indices #{"c" "d" "e"}
+                                  :inserted-indices #{"a" "b" "f"}})
+           {:deleted-indices #{"c" "d" "g"}
+            :changed-indices #{"a" "b" "h"}
+            :inserted-indices #{"f" "i"}}))))
