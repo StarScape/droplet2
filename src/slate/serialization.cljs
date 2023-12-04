@@ -2,25 +2,41 @@
   (:require [clojure.edn :as edn]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [map->EditorState map->EditorUpdate]]
-            [slate.model.doc :refer [map->Document]]
+            [slate.model.doc :as doc :refer [map->Document]]
             [slate.model.paragraph :refer [map->Paragraph]]
             [slate.model.run :refer [map->Run]]
             [slate.model.selection :as sel :refer [map->Selection]]
-            [slate.model.dll :refer [dll]]))
+            [slate.model.dll :as dll :refer [dll]]))
 
 (def current-version
   "Current version of Droplet's .drop file format. If you open an older versioned
-   format, Droplet will attempt to automatically migrate it to the newest version."
-  2)
+   file, Droplet will attempt to automatically migrate it to the newest version."
+  3)
 
 (def slate-types-readers
-  {'slate.model.selection.Selection map->Selection
-   'slate.model.run.Run map->Run
-   'slate.model.paragraph.Paragraph map->Paragraph
-   'slate.model.doc.Document map->Document
-   'slate.model.editor-state.EditorState map->EditorState
-   'slate.model.editor-state.EditorUpdate map->EditorUpdate
-   'DoublyLinkedList #(apply dll %)})
+  "Readers for each version of the .drop file format.
+   It's necessary to keep the readers for each separate version around since sometimes what types are read
+   (or _how_ they're read) changes from version to version. If there is no reader set specified for a version,
+   then the most recent version number before it is the one used."
+  {1 {'slate.model.selection.Selection map->Selection
+      'slate.model.run.Run map->Run
+      'slate.model.paragraph.Paragraph map->Paragraph
+      'slate.model.doc.Document map->Document
+      'slate.model.editor-state.EditorState map->EditorState
+      'slate.model.editor-state.EditorUpdate map->EditorUpdate
+      'DoublyLinkedList #(apply dll %)}
+   3 {'slate.model.selection.Selection map->Selection
+      'slate.model.run.Run map->Run
+      'slate.model.paragraph.Paragraph map->Paragraph
+      'slate.model.doc.Document map->Document
+      'slate.model.editor-state.EditorState map->EditorState
+      'slate.model.editor-state.EditorUpdate map->EditorUpdate
+      'DoublyLinkedList #(apply dll %)}})
+
+(defn- readers-for-version [version]
+  (get slate-types-readers (->> (keys slate-types-readers)
+                                (filter #(<= % version))
+                                (apply max))))
 
 ;; TODO: write unit tests for migrations
 (def migrations
@@ -28,8 +44,32 @@
    from the previous version.
 
    So for example, the function under 2 will migrate from version 1 to version 2."
-  {2 (fn [drop-file-ver-1]
-       {:editor-state (history/current-state (:history drop-file-ver-1))})})
+  {2 (fn [v1-file]
+       {:editor-state (history/current-state (:history v1-file))})
+   3 (fn [{:keys [editor-state] :as v2-file}]
+       (let [{:keys [selection doc]} editor-state
+             paragraphs-numbered (map-indexed vector (:children doc))
+             new-sel-start-idx (->> paragraphs-numbered
+                                    (filter #(= (-> selection :start :paragraph) (:uuid (second %))))
+                                    (ffirst)
+                                    (inc) ; recall that DLL indices start at 1 by default
+                                    (dll/big-dec))
+             new-sel-end-idx (->> paragraphs-numbered
+                                  (filter #(= (-> selection :end :paragraph) (:uuid (second %))))
+                                  (ffirst)
+                                  (inc)
+                                  (dll/big-dec))
+             new-selection (map->Selection {:start {:paragraph new-sel-start-idx
+                                                    :offset (-> selection :start :offset)}
+                                            :end {:paragraph new-sel-end-idx
+                                                  :offset (-> selection :end :offset)}
+                                            :backwards? (:backwards? selection)
+                                            :formats #{}})
+             new-doc (->> (:children doc)
+                          (map #(dissoc % :uuid))
+                          (apply dll)
+                          (doc/document))]
+         (assoc v2-file :editor-state (es/editor-state new-doc new-selection))))})
 
 (defn migrate
   [{:keys [version] :as deserialized-data}]
@@ -56,5 +96,15 @@
 (defn deserialize
   "Parses the EDN of the saved .drop file and returns the data structure."
   [edn-str]
-  (-> (edn/read-string {:readers slate-types-readers} edn-str)
-      (migrate)))
+  (let [version (js/parseInt (aget (.exec #":version (\d+)" edn-str) 1))
+        readers (readers-for-version version)]
+    ;; TODO, should return:
+    ;; - data structure, if success
+    ;; - :error, if error
+    ;; - :newer-version-error or similar if version of .drop is higher than current version
+    (-> (edn/read-string {:readers readers} edn-str)
+        (migrate))))
+
+(comment
+  (str "#Droplet {:a 1}")
+  )
