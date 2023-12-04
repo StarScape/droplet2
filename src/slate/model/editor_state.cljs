@@ -522,6 +522,7 @@
           paragraph (get (:children doc) caret-uuid)
           prev-paragraph (dll/prev (:children doc) (sel/caret-para selection))]
       (if (pos? (sel/caret selection))
+        ;; TODO: fix below calls to nav/*
         (->EditorUpdate (assoc editor-state :selection (nav/start paragraph)) (changelist))
         (->EditorUpdate (assoc editor-state :selection (nav/end prev-paragraph)) (changelist)))))
 

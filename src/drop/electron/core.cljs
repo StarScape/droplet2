@@ -221,7 +221,12 @@
               next-most-recent-file (first new-recently-opened)]
         (savefiles/write! :recently-opened new-recently-opened)
         (init-app-menu! @*main-window-info)
-        (open-file-in-slate! (:file-path next-most-recent-file)))))
+        (if next-most-recent-file
+          (open-file-in-slate! (:file-path next-most-recent-file))
+          (do
+            (.. (:window @*main-window-info) -webContents (send "load-blank-document"))
+            ;; in first branch of if, open-file-in-slate! will handle reset :current-file
+            (savefiles/write! :current-file {:path nil}))))))
 
   (on-ipc "new-file-confirmation-dialog"
     (fn [e]
