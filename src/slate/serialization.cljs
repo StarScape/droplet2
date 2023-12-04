@@ -99,15 +99,14 @@
 (defn deserialize
   "Parses the EDN of the saved .drop file and returns the data structure."
   [edn-str]
-  (let [version (js/parseInt (aget (.exec #":version (\d+)" edn-str) 1))
-        readers (readers-for-version version)]
-    ;; TODO, should return:
-    ;; - data structure, if success
-    ;; - :error, if error
-    ;; - :newer-version-error or similar if version of .drop is higher than current version
-    (-> (edn/read-string {:readers readers} edn-str)
-        (migrate))))
-
-(comment
-  (str "#Droplet {:a 1}")
-  )
+  (try
+    (let [version (js/parseInt (aget (.exec #":version (\d+)" edn-str) 1))
+          readers (readers-for-version version)]
+      (if (<= version current-version)
+        (-> (edn/read-string {:readers readers} edn-str)
+            (migrate))
+        {:error-message "Droplet cannot read the file as it is designed for a newer version of the application."
+         :exception nil}))
+    (catch js/Error e
+      {:error-message "Droplet could not read the file."
+       :exception e})))

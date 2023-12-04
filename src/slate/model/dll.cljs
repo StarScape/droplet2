@@ -584,6 +584,9 @@
    (reduce (fn [list x] (conj list x)) (dll) xs)))
 
 (defn from-indexed-items
+  "Creates a DLL from a list of [index, item_at_index] tuples, like the one the DLL is printed
+   as (see -pr-writer implementation above). Used when (de)serializing to / from EDN, so that
+   indexes are preserved."
   [indexed-items]
   (reduce (fn [list [idx item]]
             (append list item idx))

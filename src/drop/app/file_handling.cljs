@@ -2,6 +2,7 @@
   (:require [slate.editor-ui-state :as ui-state]
             [slate.filetypes.core :as filetypes]
             [slate.model.history :as history]
+            [drop.app.utils :refer [show-error-dialog!]]
             [re-frame.core :as rf :refer [dispatch]]
             [re-frame.db]
             ["electron" :refer [ipcRenderer]]
@@ -53,3 +54,9 @@
                               (.basename path open-file-path ".drop")
                               "untitled")]
     (.send ipcRenderer "save-exported-file-as" exported export-type suggested-file-name)))
+
+(defn on-fail-open-file!
+  [error-message]
+  ;; TODO: the showing of error dialog could be moved to Electron but for now I don't really care tbh
+  (show-error-dialog! "Error Opening File" error-message)
+  (.send ipcRenderer "open-file-error" error-message))

@@ -53,6 +53,10 @@
       (drop 1 $))
     (reverse $)))
 
+(defn remove-from-recently-opened
+  [recently-opened file-path]
+  (filter #(not= (:file-path %) file-path) recently-opened))
+
 (defn update-recently-opened!
   [opened-file-path]
   (p/let [recently-opened (savefiles/read! :recently-opened)
@@ -209,6 +213,16 @@
     (fn []
       (choose-file-from-fs!)))
 
+  (on-ipc "open-file-error"
+    (fn [_ error-message]
+      (p/let [current-file (savefiles/read! :current-file)
+              recently-opened (savefiles/read! :recently-opened)
+              new-recently-opened (remove-from-recently-opened recently-opened (:path current-file))
+              next-most-recent-file (first new-recently-opened)]
+        (savefiles/write! :recently-opened new-recently-opened)
+        (init-app-menu! @*main-window-info)
+        (open-file-in-slate! (:file-path next-most-recent-file)))))
+
   (on-ipc "new-file-confirmation-dialog"
     (fn [e]
       ;; Generic method for showing confirmation dialogs
@@ -224,7 +238,6 @@
                                              (if (< 1 (get recently-opened-path-frequencies file-path))
                                                file-path
                                                (path/basename file-path)))
-
           template (clj->js [{:label (.-name app)
                               :submenu [{:role "about"}
                                         {:type "separator"}

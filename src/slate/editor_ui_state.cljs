@@ -179,8 +179,11 @@
   "Loads a serialized .drop file into the editor, discarding current document and history."
   [*ui-state file-contents-str]
   (let [deserialized (deserialize file-contents-str)]
-    ;; TODO: throw user-visible error if the version of file is not compatible with this droplet version
-    (load-editor-state! *ui-state (:editor-state deserialized))))
+    (if-not (contains? deserialized :error-message)
+      (load-editor-state! *ui-state (:editor-state deserialized))
+      (do
+        (when-let [e (:exception deserialized)] (js/console.log e))
+        ((:on-load-file-error @*ui-state) (:error-message deserialized))))))
 
 (defn load-document!
   "Loads a Document object into the editor with a fresh history, discarding current document and history."
@@ -693,6 +696,7 @@
              on-save
              on-save-as
              on-open
+             on-load-file-error
              on-focus-find
              on-doc-changed
              on-selection-changed
@@ -703,6 +707,7 @@
            on-save nop
            on-save-as nop
            on-open nop
+           on-load-file-error nop
            on-focus-find nop
            on-doc-changed nop
            on-selection-changed nop
@@ -716,9 +721,7 @@
                    [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family)
                    #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)
-                   editor-state (if save-file-contents ;; TODO: this is no longer used
-                                  (:editor-state (deserialize save-file-contents))
-                                  (es/editor-state))
+                   editor-state (es/editor-state)
                    history (history/init editor-state)
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
@@ -746,6 +749,7 @@
                               :on-save on-save
                               :on-save-as on-save-as
                               :on-load on-open
+                              :on-load-file-error on-load-file-error
                               :on-focus-find on-focus-find
                               :on-doc-changed on-doc-changed
                               :on-selection-changed on-selection-changed

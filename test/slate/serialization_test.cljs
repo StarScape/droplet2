@@ -35,8 +35,7 @@
 
 (deftest v2->v3-test
   (is (= (deserialize (slurp-file "test_files/serialization-test-files/v2/simple_test.drop"))
-         simple-test-result))
-  )
+         simple-test-result)))
 
 (deftest circular-test
   (testing "can serialize and deserialize and get the same result as initial EditorState"
@@ -44,3 +43,10 @@
                (serialize)
                (deserialize))
            simple-test-result))))
+
+(deftest deserialize-test
+  (testing "returns error when fed bad input: invalid EDN, wrong data structure, etc"
+    (is (contains? (deserialize "{}") :error-message))
+    (is (contains? (deserialize "{:some-bad-edn [12 3}") :error-message))
+    (is (contains? (deserialize nil) :error-message))
+    (is (contains? (deserialize (assoc simple-test-result :version 1000000)) :error-message))))
