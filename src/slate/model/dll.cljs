@@ -1,51 +1,74 @@
 (ns slate.model.dll
-  "A fully-persistent, UUID-based doubly-linked list. Used for the list of paragraphs.
-   The central problem here is that for our paragraph list, we need a few things:
+  "A fully-persistent list type using fractional indexing. Used to hold the list of paragraphs.
+
+   Okay, time for some background. The central problem here is that for our paragraph list, we
+   need a few things:
 
    1. An efficient way to get the the next or previous paragraph from the list, given a paragraph.
       This is used when keying up/down between paragraphs, among other things.
-   2. An efficient way to *random-access* a paragraph. When it's DOM node is clicked, for example.
-   3. Efficient access to both the first and last paragraph, for jump to start/end.
+   2. An efficient way to _random access_ a paragraph. When its DOM node is clicked, for example.
+   3. Efficient access to both the first and last paragraph. For jump to start/end, among other things.
    4. Efficient removal of paragraph or paragraphs at an arbitrary point in the list.
    5. The list must be *ordered.*
-   6. Ideally, we do not want the indexes for accessing a paragraph to get invalidated across
-      versions, provided that paragraph is still present. We need this so that whenever a <p> element
-      is clicked in the DOM, we can get the paragraph model associated with it in constant time (and we need
-      to be able to do this without updating every <p>'s `id` every single time).
+   6. We do not want the indices for accessing a paragraph to get invalidated across versions, provided that
+      paragraph is still present. We need this so that whenever a <p> element is clicked in the DOM, we can
+      get the paragraph associated with it in constant time. And we need to be able to do this without updating
+      every <p>'s associated data that ties it to that paragraph, every single time -- if we used regular numeric
+      indexing and then inserted at the start of the document, then references to the indices of paragraph after
+      the first would need to be incremented by one. Likewise removing a paragraph would mean indices after
+      would have to be decremented. This is O(n) in the worst case and too costly for large documents.
+   7. It should be possible to tell if one paragraph lies before or after another, in constant time.
+   8. Ideally, it should be fully persistent, so it's idiomatic to the Clojure way of doing things.
 
    Any one of these is trivial, but getting all of them at once is hard. #1, #2, and #3 are easy
    with a vector or an array. #4 is possible with finger trees or RRB vectors. #5 is a property
-   of any list type. #6 is impossible using numeric indexing, as removing a paragraph would invalidate
-   the indexes of any paragraph(s) after it. It could be achieved with a map of UUIDs -> Paragraphs,
-   but this would get rid of properties #1, #3, and #5.
+   of any list type. #6 is impossible using regular numeric indexing, and while you can ditch normal
+   numeric indexing by using a linked list and indexing on UUIDs rather than numbers, that gets rid
+   of property #8 (as well as making most things constant time operations).
 
-   Maintaining a doubly-linked list of paragraphs, along with a hashmap of UUIDs -> Nodes could
-   *almost* get us what we want, but a traditional doubly-linked list cannot be made fully-persistent
-   in the way a singly-linked list can, at least without making every operation O(n). However, if we
-   swap the `prev` and `next` pointers on each node and instead use UUIDs referencing the previous and
-   next nodes, and maintain a map of UUIDs -> Nodes, it can be made into a functional version of a DLL.
+   Enter fractional indexing. There are good references to this topic elsewhere, but the TL;DR version
+   is that there are an infinite quantity of numbers between any two rational numbers. And while we normally
+   use whole numbers for indexing list types, you can do arbitrary insertions at any point in the list
+   _and keep all previous indices valid_ if you switch from only whole numbers to rationals. Insert between
+   1 and 2 and the index of the newly inserted item is 1.5. Insert between 1 and 1.5 and it's 1.25. And so on.
+
+   The data structure implemented in this file employs this fractional indexing strategy. Inserting repeatedly
+   into an empty list without deleting will result in all whole number indices, starting from 1. Insert
+   between two items and the index of the inserted item will be the midpoint between those two indices.
+   Decimal.js, an arbitrary precision number library, is employed so that this can be done any number of times.
+
+   Under the hood, the data structure is a persistent, doubly-linked list. The list maintains:
+
+   1. A map of indices -> Nodes (for O(1) access to any element)
+   2. The first and last index
+
+   Each Node contains:
+
+   1. Its own index
+   2. The index of the previous item in the list (`nil` if none)
+   3. The index of the next item in the list (`nil` if none)
+   4. The data for that Node
+
+   Notice that the Nodes use references to the index of the next/prev element, rather than pointers to
+   the Nodes themselves as in a traditional doubly-linked list; this allows the list to be fully persistent
+   while still having most operations be O(1).
 
    You don't really need to be aware of most of these details in order to write code that uses the DLL
    data structure presented in this namespace. All you really need to know are the public functions it
-   exposes: `first`, `last`, `next`, `prev`, `remove`, `insert-after`, `insert-before`, and the constructor,
-   `dll` (plus some friends). Aside from that, DLLs behave basically like other Clojure collections: you
-   can call `conj`, `get`, `seq`, `map`, `filter`, `count` or `reduce` on them, and convert them to and
-   from other sequential types using `into`. Destructuring and all your favorite Clojure goodies work as
-   expected.
+   exposes: `first`, `last`, `next-index`, `next`, `prev-index`, `prev`, `remove`, `insert-after`,
+   `insert-before`, and the constructor, `dll` (plus some friends). Aside from that, DLLs behave basically
+   like other Clojure collections: you can call `conj`, `get`, `seq`, `map`, `filter`, `count` or `reduce`
+   on them, and convert them to and from other sequential types using `into`. Destructuring and all your
+   favorite Clojure goodies work as expected.
 
-   They are also decoupled from the rest of the code -- there's no reason you couldn't put something
-   other than paragraphs inside a DLL, though it's doubtful you'd need those incredibly specific set of
-   properties for any other use (but hey, weirder things have happened).
-
-   ~~The only catch is that every item inserted MUST have a :index property. So `(dll {:index \"123\" :val 1})`
-   will work, but `(dll {:val 1})` will throw an error.~~"
+   They are also decoupled from the rest of the code -- there's no reason you couldn't put something other than
+   paragraphs inside a DLL, though it's doubtful one would need these incredibly specific set of properties for
+   any other use."
   (:refer-clojure :exclude [first last next remove range list])
   (:require ["decimal.js" :refer [Decimal]]
             [hashp.core]))
 
-;; Indices will always be > 0. If a DLL is created, the first item inserted will be given index 1 by default.
-;; If a new item is inserted before that, it will be given index 0.5. If another before that, its index will
-;; be 0.25, then 0.125, 0.0625, etc.
+
 
 ;; TODO: implement (keys)
 ;; TODO: would be nice to be able to use plain numbers in place of big-decimals and have them auto-convert
@@ -102,7 +125,10 @@
   (-pr-writer [decimal writer opts]
     (-write writer (str "#Decimal " (pr-str (.toString decimal))))))
 
-(defn big-dec "Construct new Decimal object." [n] (Decimal. n))
+(defn big-dec
+  "Construct new Decimal object. Arg may be a number of a string."
+  [n]
+  (Decimal. n))
 
 (deftype Node [^obj value ^obj index ^obj prev-index ^obj next-index]
   IEquiv
@@ -184,12 +210,7 @@
   (-pr-writer [dll writer opts]
     (-write writer "#DoublyLinkedList ")
     (-write writer (->> (all-indices dll)
-                        (mapv #(vector % (get dll %))))))
-  #_(-pr-writer [dll writer opts]
-                (-write writer "#DoublyLinkedList{entries-map: ") (-write writer (.-entries-map dll))
-                (-write writer ", first-index: ") (-write writer (.-first-index dll))
-                (-write writer ", last-index: ") (-write writer (.-last-index dll))
-                (-write writer "}")))
+                        (mapv #(vector % (get dll %)))))))
 
 (defn- assoc-node
   "Helper function for creating a new [[Node]] based on the value of an old one.
@@ -198,7 +219,7 @@
    ```
    ; creates a new Node with identical to some-node
    ; but with the value of prev-index set to 12
-   (assoc-node some-node :prev-index \"12\")
+   (assoc-node some-node :prev-index (big-dec \"12\"))
    ```"
   [^Node node & kvs]
   (reduce (fn [^Node new-node [k v]]
@@ -246,41 +267,46 @@
       :always (assoc new-idx (Node. value new-idx prev-idx next-idx)))))
 
 (defn insert-before
-  "Inserts `val` into the double-linked list `dll` immediately before index `next-index`."
-  [^DoublyLinkedList dll next-index value]
-  {:pre [(seq dll) (contains? dll next-index)]}
-  (let [prev-idx (.-prev-index (get (.-entries-map dll) next-index))
+  "Inserts `value` into the list immediately before index `next-index`."
+  [^DoublyLinkedList list next-index value]
+  {:pre [(seq list) (contains? list next-index)]}
+  (let [prev-idx (.-prev-index (get (.-entries-map list) next-index))
         new-entries (if prev-idx
-                      (insert-between (.-entries-map dll) value prev-idx next-index)
-                      (let [first-idx (.-first-index dll)
+                      (insert-between (.-entries-map list) value prev-idx next-index)
+                      (let [first-idx (.-first-index list)
                             new-idx (.. first-idx (div 2))]
-                        (-> (.-entries-map dll)
+                        (-> (.-entries-map list)
                             (assoc new-idx (Node. value new-idx nil first-idx))
                             (update first-idx assoc-node :prev-index new-idx))))
-        new-first-index (if (= (.-first-index dll) next-index)
-                          (.-prev-index (get new-entries (.-first-index dll)))
-                          (.-first-index dll))]
-    (DoublyLinkedList. new-entries new-first-index (.-last-index dll))))
+        new-first-index (if (= (.-first-index list) next-index)
+                          (.-prev-index (get new-entries (.-first-index list)))
+                          (.-first-index list))]
+    (DoublyLinkedList. new-entries new-first-index (.-last-index list))))
 
 (defn insert-after
-  "Inserts `val` into the double-linked list `dll` immediately after the node with index = `prev-index`."
-  [^DoublyLinkedList dll prev-idx value]
-  {:pre [(seq dll) (contains? dll prev-idx)]}
-  (let [next-index (.-next-index (get (.-entries-map dll) prev-idx))
+  "Inserts `value` into the list immediately after the node with index `prev-index`."
+  [^DoublyLinkedList list prev-idx value]
+  {:pre [(seq list) (contains? list prev-idx)]}
+  (let [next-index (.-next-index (get (.-entries-map list) prev-idx))
         new-entries (if next-index
-                      (insert-between (.-entries-map dll) value prev-idx next-index)
-                      (let [last-idx (.-last-index dll)
+                      (insert-between (.-entries-map list) value prev-idx next-index)
+                      (let [last-idx (.-last-index list)
                             new-idx (.. last-idx (add 1))]
-                        (-> (.-entries-map dll)
+                        (-> (.-entries-map list)
                             (assoc new-idx (Node. value new-idx last-idx nil))
                             (update last-idx assoc-node :next-index new-idx))))
-        new-last-index (if (= (.-last-index dll) prev-idx)
+        new-last-index (if (= (.-last-index list) prev-idx)
                          (.-next-index (get new-entries prev-idx))
-                         (.-last-index dll))]
-    (DoublyLinkedList. new-entries (.-first-index dll) new-last-index)))
+                         (.-last-index list))]
+    (DoublyLinkedList. new-entries (.-first-index list) new-last-index)))
 
 (defn prepend
-  "Inserts `val` into `dll` at the beginning of the list."
+  "Adds an element to the start of the list.
+
+   Indices will always be > 0. If a DLL is created, the first item inserted
+   will be given index 1 by default. If a new item is inserted before that,
+   it will be given index 0.5. If another before that, its index will be 0.25,
+   then 0.125, 0.0625, etc."
   [list val]
   {:pre [(instance? DoublyLinkedList list)]}
   (if (empty? list)
@@ -288,6 +314,11 @@
     (insert-before list (first-index list) val)))
 
 (defn append
+  "Adds an element to the end of the list.
+
+   Indices will always be > 0. If a DLL is created, the first item inserted
+   will be given index 1 by default. Any element appended will have an index
+   of last-index + 1 by default."
   ([list value idx]
    {:pre [(or (and (empty? list) (.gt idx 0))
               (.gt idx (last-index list)))]}
@@ -331,7 +362,7 @@
     list))
 
 (defn remove-range
-  "Removes all the items between the nodes with index1 and index2 (both __inclusive__)."
+  "Removes all the items between the nodes at `index1` and `index2` (__inclusive__ on both ends)."
   [list index1 index2]
   {:pre [(contains? list index1)
          (contains? list index2)
@@ -342,8 +373,8 @@
       (recur first-removed (next-index list index1) index2))))
 
 (defn remove-between
-  "Removes all the items between the nodes with index1 and index2 (non-inclusive of both).
-   If index1 and index2 are the same or adjacent, the list will be unchanged."
+  "Removes all the items between the nodes at `index1` and `index2` (__non-inclusive__ on both end).
+   If `index1` and `index2` are the same or adjacent, the list will be unchanged."
   [list index1 index2]
   {:pre [(instance? DoublyLinkedList list)
          (contains? list index1)
@@ -355,7 +386,7 @@
     (remove-range list (next-index list index1) (prev-index list index2))))
 
 (defn replace-range
-  "Replaces all the nodes between index1 and index2 (both inclusive) with
+  "Replaces all the nodes between `index1` and `index2` (both inclusive) with
    the supplied item or list of items. Example:
    ```
    (def lst (dll {:val :a} {:val :b} {:val :c} {:val :d}))

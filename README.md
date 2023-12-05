@@ -160,3 +160,4 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 ### 0.0.4 - In Development
 
 - Heavy changes to text editor internals
+- .drop file version v2 -> v3
