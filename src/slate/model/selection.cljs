@@ -2,7 +2,21 @@
   "Functions for creating and manipulating Selection objects,
    a basic building block of the editor which indicate where
    the text cursor and selection are."
-  (:require [clojure.set :as set]))
+  (:require [clojure.spec.alpha :as s]
+            ["decimal.js" :refer [Decimal]]))
+
+(s/def ::paragraph #(instance? Decimal %))
+(s/def ::offset nat-int?)
+(s/def ::start (s/keys :req-un [::paragraph ::offset]))
+(s/def ::end (s/keys :req-un [::paragraph ::offset]))
+
+(s/def ::backwards? boolean?)
+
+(s/def ::format #{:italic :bold :strikethrough})
+(s/def ::formats (s/coll-of ::format))
+
+(s/def ::Selection
+  (s/keys :req-un [::start ::end ::backwards? ::formats]))
 
 (defrecord Selection
   [start end backwards? formats])

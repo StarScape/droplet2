@@ -12,6 +12,16 @@
 
 (declare identity-update)
 (declare merge-changelists)
+(declare EditorState)
+(declare EditorUpdate)
+
+(s/def ::doc ::doc/Document)
+(s/def ::selection ::sel/Selection)
+(s/def ::editor-state
+  (s/and #(instance? EditorState %)
+         (s/keys :req-un [::doc
+                          ::selection])))
+(s/def ::editor-update #(instance? EditorUpdate %))
 
 (defprotocol Monad
   "Standard monad interface. See any of the myriad monad tutorials online for deeper explanations of its mechanics.
@@ -46,9 +56,6 @@
       combined-update))
   (bind [update, state->update]
     (bind update state->update [])))
-
-(s/def ::editor-state #(instance? EditorState %))
-(s/def ::editor-update #(instance? EditorUpdate %))
 
 (defn changelist
   "Constructor for a new changelist object. Changelists are used for tracking differences between

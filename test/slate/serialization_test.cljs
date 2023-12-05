@@ -44,9 +44,13 @@
                (deserialize))
            simple-test-result))))
 
+(defn deserialize-error? [x] (contains? x :error-message))
+
 (deftest deserialize-test
   (testing "returns error when fed bad input: invalid EDN, wrong data structure, etc"
-    (is (contains? (deserialize "{}") :error-message))
-    (is (contains? (deserialize "{:some-bad-edn [12 3}") :error-message))
-    (is (contains? (deserialize nil) :error-message))
-    (is (contains? (deserialize (assoc simple-test-result :version 1000000)) :error-message))))
+    (is (deserialize-error? (deserialize "{}")))
+    (is (deserialize-error? (deserialize "{:some-bad-edn [12 3}")))
+    (is (deserialize-error? (deserialize nil)))
+    (is (deserialize-error? (deserialize (assoc simple-test-result :version 1000000))))
+    (is (deserialize-error? (deserialize "{:version 3, :editor-state {}}")))
+    (is (deserialize-error? (deserialize "{:version 3, :editor-state {:doc nil, :selection {:foo :bar, :start {:paragraph 1, :offset -33}}}}")))))

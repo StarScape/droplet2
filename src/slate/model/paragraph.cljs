@@ -2,6 +2,7 @@
   "Paragraphs contain a series of one or more runs. This namespace
    contains functionality for using and manipulating paragraphs."
   (:require [clojure.set :as set]
+            [clojure.spec.alpha :as s]
             [slate.model.common :refer [TextContainer
                                         Selectable
                                         Fragment
@@ -17,6 +18,12 @@
             [slate.utils :as utils :refer-macros [weak-cache-val]]))
 
 (declare optimize-runs)
+
+(s/def ::type #{:body :h1 :h2 :ol :ul})
+(s/def ::runs (s/coll-of ::r/Run))
+(s/def ::Paragraph
+  (s/keys :req-un [::runs
+                   ::type]))
 
 (defrecord Paragraph [runs type]
   TextContainer

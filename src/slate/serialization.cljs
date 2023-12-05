@@ -1,5 +1,6 @@
 (ns slate.serialization
   (:require [clojure.edn :as edn]
+            [clojure.spec.alpha :as s]
             [slate.model.history :as history]
             [slate.model.editor-state :as es :refer [map->EditorState map->EditorUpdate]]
             [slate.model.doc :as doc :refer [map->Document]]
@@ -12,6 +13,11 @@
   "Current version of Droplet's .drop file format. If you open an older versioned
    file, Droplet will attempt to automatically migrate it to the newest version."
   3)
+
+(s/def ::version #(= % current-version))
+(s/def ::editor-state ::es/editor-state)
+(s/def ::drop-file (s/keys :req-un [::version
+                                    ::editor-state]))
 
 (def slate-types-readers
   "Readers for each version of the .drop file format.
@@ -87,6 +93,13 @@
                 (update (migration-fn drop-file) :version inc))
               deserialized-data migrations))))
 
+(defn validate
+  "Validates that the deserialized .drop matches expectations, and throws an error if it does not."
+  [deserialized-data]
+  (if (s/valid? ::drop-file deserialized-data)
+    deserialized-data
+    (throw (js/Error. ".drop file did not match the ::drop-file spec"))))
+
 (defn serialize
   "Serializes the editor-state object to EDN, to be saved in a .drop file."
   [{:keys [history] :as _ui-state}]
@@ -105,7 +118,8 @@
       (if (<= version current-version)
         ;; ⬇ The Happy Path (TM) ⬇ ;;
         (-> (edn/read-string {:readers readers} edn-str)
-            (migrate))
+            (migrate)
+            (validate))
         {:error-message "Droplet cannot read the file as it is designed for a newer version of the application."
          :exception nil}))
     (catch js/Error e

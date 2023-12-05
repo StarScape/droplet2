@@ -68,8 +68,6 @@
   (:require ["decimal.js" :refer [Decimal]]
             [hashp.core]))
 
-
-
 ;; TODO: implement (keys)
 ;; TODO: would be nice to be able to use plain numbers in place of big-decimals and have them auto-convert
 

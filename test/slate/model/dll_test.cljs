@@ -10,7 +10,7 @@
 (def before-val {:content "bar"})
 (def l (dll val1 val2 val3 val4))
 (def l1 (dll/insert-before l (big-dec 3) before-val)) ; foo bar bar bizz bang
-(def l2 (dll/insert-before l (big-dec 1) {:content "pre"})) ;; TODO: FIXME
+(def l2 (dll/insert-before l (big-dec 1) {:content "pre"}))
 
 (deftest initialize-test
   (testing "empty constructor"

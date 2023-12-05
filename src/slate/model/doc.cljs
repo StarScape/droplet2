@@ -1,5 +1,6 @@
 (ns slate.model.doc
   (:require [clojure.set :as set]
+            [clojure.spec.alpha :as s]
             [slate.model.dll :as dll :refer [dll]]
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
@@ -15,6 +16,11 @@
             [slate.model.selection :as sel]))
 
 (def ^:const types-preserved-on-enter #{:ul, :ol})
+
+(s/def ::children (s/and #(instance? dll/DoublyLinkedList %)
+                         (s/coll-of ::p/Paragraph)))
+(s/def ::Document
+  (s/keys :req-un [::children]))
 
 (defrecord Document [children]
   TextContainer
