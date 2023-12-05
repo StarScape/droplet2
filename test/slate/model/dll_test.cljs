@@ -317,3 +317,19 @@
                                          [(big-dec 4) :d]
                                          [(big-dec 4.1) :e]]))
          [(big-dec 1) (big-dec 3) (big-dec 3.5) (big-dec 4) (big-dec 4.1)])))
+
+(deftest decimal-division-test
+  ;; This is really just a sanity test -- making sure that the
+  ;; Decimal object can withstand a ton of divisions without loss of
+  ;; precision. 10,000 iterations is chosen because JS's builtin number
+  ;; type will underflow after just over 1,000 divisions.
+  (let [iters 10000
+        lots-of-halving (loop [n (big-dec 1), i 0]
+                          (if (>= i iters)
+                            n
+                            (recur (.div n 2) (inc i))))]
+    (is (not (.eq lots-of-halving 0)))
+    (is (.gt lots-of-halving 0))
+    (is (dll/big-dec? lots-of-halving))
+    #_(is (.eq (big-dec 1)
+             (.mul lots-of-halving (.pow (big-dec 2) iters))))))

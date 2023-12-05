@@ -130,6 +130,11 @@
   [n]
   (Decimal. n))
 
+(defn big-dec?
+  "Returns true if arg is an instance of Decimal."
+  [o]
+  (instance? Decimal o))
+
 (deftype Node [^obj value ^obj index ^obj prev-index ^obj next-index]
   IEquiv
   (-equiv [^Node node other]
