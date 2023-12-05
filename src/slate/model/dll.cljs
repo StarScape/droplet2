@@ -155,7 +155,8 @@
 ;; TODO: this blows up the whole project when you try to pretty-print it and throws
 ;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
 ;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
-(deftype DoublyLinkedList [entries-map ; map of (index -> DLLEntry)
+(deftype DoublyLinkedList [meta
+                           entries-map ; map of (index -> DLLEntry)
                            first-index
                            last-index]
   ISequential
@@ -189,7 +190,7 @@
   IAssociative
   (-assoc [^DoublyLinkedList _dll index v]
     (if (contains? entries-map index)
-      (DoublyLinkedList. (update entries-map index #(assoc-node % :value v)) first-index last-index)
+      (DoublyLinkedList. meta (update entries-map index #(assoc-node % :value v)) first-index last-index)
       (throw (js/Error. "Attempting (assoc) a DLL key that does not exist."))))
   (-contains-key? [^DoublyLinkedList _dll k]
     (contains? entries-map k))
@@ -208,6 +209,15 @@
   IFn
   (-invoke [^DoublyLinkedList dll index] (-lookup dll index))
   (-invoke [^DoublyLinkedList dll index not-found] (-lookup dll index not-found))
+
+  IWithMeta
+  (-with-meta [coll new-meta]
+    (if (identical? new-meta meta)
+      coll
+      (DoublyLinkedList. new-meta entries-map first-index last-index)))
+
+  IMeta
+  (-meta [_dll] meta)
 
   IPrintWithWriter
   (-pr-writer [dll writer opts]
@@ -284,7 +294,7 @@
         new-first-index (if (= (.-first-index list) next-index)
                           (.-prev-index (get new-entries (.-first-index list)))
                           (.-first-index list))]
-    (DoublyLinkedList. new-entries new-first-index (.-last-index list))))
+    (DoublyLinkedList. (.-meta list) new-entries new-first-index (.-last-index list))))
 
 (defn insert-after
   "Inserts `value` into the list immediately after the node with index `prev-index`."
@@ -301,7 +311,7 @@
         new-last-index (if (= (.-last-index list) prev-idx)
                          (.-next-index (get new-entries prev-idx))
                          (.-last-index list))]
-    (DoublyLinkedList. new-entries (.-first-index list) new-last-index)))
+    (DoublyLinkedList. (.-meta list) new-entries (.-first-index list) new-last-index)))
 
 (defn prepend
   "Adds an element to the start of the list.
@@ -326,8 +336,9 @@
    {:pre [(or (and (empty? list) (.gt idx 0))
               (.gt idx (last-index list)))]}
    (if (empty? (.-entries-map list))
-     (DoublyLinkedList. {idx (Node. value idx nil nil)} idx idx)
-     (DoublyLinkedList. (-> (.-entries-map list)
+     (DoublyLinkedList. (.-meta list) {idx (Node. value idx nil nil)} idx idx)
+     (DoublyLinkedList. (.-meta list)
+                        (-> (.-entries-map list)
                             (update (last-index list) assoc-node :next-index idx)
                             (assoc idx (Node. value idx (last-index list) nil)))
                         (first-index list)
@@ -361,7 +372,7 @@
                      (empty? new-entries) nil
                      (= index (.-last-index list)) (.-prev-index last-node)
                      :else (.-last-index list))]
-      (DoublyLinkedList. new-entries new-first new-last))
+      (DoublyLinkedList. (.-meta list) new-entries new-first new-last))
     list))
 
 (defn remove-range
@@ -613,7 +624,7 @@
 (defn dll
   "Constructor for a doubly-linked-list, optionally taking a list of items to insert."
   ([]
-   (DoublyLinkedList. {} nil nil))
+   (DoublyLinkedList. nil {} nil nil))
   ([& xs]
    (reduce (fn [list x] (conj list x)) (dll) xs)))
 
