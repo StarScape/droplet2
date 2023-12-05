@@ -326,14 +326,12 @@
    (insert-all! editor-elem (dll/all-indices (-> editor-state :doc :children)) viewmodel editor-state)))
 
 (defmulti remove-para!
-  "Removes the paragraph with `uuid` from the DOM."
-  {:arglists '([uuid editor-state prev-editor-state])}
-  (fn [_ uuid _ {:keys [doc]}] (:type (get (:children doc) uuid))))
+  "Removes the paragraph at index `paragraph-idx` from the DOM."
+  {:arglists '([paragraph-idx editor-state prev-editor-state])}
+  (fn [_ paragraph-idx _ {:keys [doc]}] (:type (get (:children doc) paragraph-idx))))
 
 (defmethod remove-para! :default
   [editor-elem paragraph-idx _ _]
-  ;; TODO: check to see if the paragraphs before and after uuid are both list paragraphs
-  ;; of the same type, and merge if so
   (let [p-elem (get-paragraph-dom-elem editor-elem paragraph-idx)
         prev-elem (.-previousElementSibling p-elem)
         next-elem (.-nextElementSibling p-elem)]

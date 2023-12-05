@@ -250,7 +250,7 @@
     (is (= (dll/replace-range l (big-dec 2) (big-dec 4) {:content "CHANGED"})
            (dll val1 {:content "CHANGED"}))))
 
-  (testing "replacing just one node (uuid1 == uuid2)"
+  (testing "replacing just one node"
     (is (= (dll/replace-range l (big-dec 2) (big-dec 2) [{:content "a"}, {:content "b"}])
            (dll val1 {:content "a"} {:content "b"} val3 val4)))
     (is (= (dll/replace-range l (big-dec 1) (big-dec 1) [{:content "a"}, {:content "b"}])

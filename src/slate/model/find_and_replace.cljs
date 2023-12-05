@@ -92,10 +92,10 @@
   "Returns an EditorUpdate replacing the current selection with `text`."
   [{:keys [doc selection] :as editor-state} text]
   {:pre [(sel/single-paragraph? selection)]}
-  (let [para-uuid (sel/caret-para selection)
-        new-para (paragraph-replace (get (:children doc) para-uuid) [selection] text)
+  (let [para-idx (sel/caret-para selection)
+        new-para (paragraph-replace (get (:children doc) para-idx) [selection] text)
         {{new-selection :selection} :editor-state
-         :as para-replaced-update} (es/replace-paragraph editor-state para-uuid new-para)
+         :as para-replaced-update} (es/replace-paragraph editor-state para-idx new-para)
         selection-length-diff (- (.-length text) (- (-> new-selection :end :offset) (-> new-selection :start :offset)))
         final-selection (sel/shift-end new-selection selection-length-diff)]
     (assoc-in para-replaced-update [:editor-state :selection] final-selection)))
@@ -104,11 +104,11 @@
   "Returns an EditorUpdate replacing each Selection in `locations` with `text`."
   [editor-state locations text]
   (let [locations-by-paragraph (group-by sel/caret-para locations)]
-    (reduce (fn [editor-update, [para-uuid, para-locations]]
+    (reduce (fn [editor-update, [para-idx, para-locations]]
               (let [doc (-> editor-update :editor-state :doc)
-                    para (get (:children doc) para-uuid)
+                    para (get (:children doc) para-idx)
                     new-para (paragraph-replace para para-locations text)]
-                (>>= editor-update es/replace-paragraph para-uuid new-para)))
+                (>>= editor-update es/replace-paragraph para-idx new-para)))
             (es/identity-update editor-state) locations-by-paragraph)))
 
 (defn init

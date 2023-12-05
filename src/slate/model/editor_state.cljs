@@ -82,8 +82,7 @@
     {:doc doc
      :selection selection}))
   ([doc]
-   (let [first-paragraph-uuid (-> doc :children dll/first-index)]
-     (editor-state doc (sel/selection [first-paragraph-uuid 0]))))
+   (editor-state doc (sel/selection [(-> doc :children dll/first-index) 0])))
   ([]
    (editor-state (doc/document) (sel/selection [(dll/big-dec 1) 0]))))
 
@@ -353,13 +352,13 @@
 ;; TODO: test
 (defn toggle-paragraph-type
   [{:keys [selection doc] :as editor-state} type]
-  (let [start-uuid (sel/start-para selection)
-        end-uuid (sel/end-para selection)
-        selected-paragraphs (dll/range (:children doc) start-uuid end-uuid)
+  (let [start-paragraph-idx (sel/start-para selection)
+        end-paragraph-idx (sel/end-para selection)
+        selected-paragraphs (dll/range (:children doc) start-paragraph-idx end-paragraph-idx)
         set-paragraph-type-true? (not-every? #(= (:type %) type) selected-paragraphs)
         type-to-set (if set-paragraph-type-true? type :body)
         selected-paragraphs-updated (map #(assoc % :type type-to-set) selected-paragraphs)
-        new-doc (update doc :children dll/replace-range start-uuid end-uuid selected-paragraphs-updated)]
+        new-doc (update doc :children dll/replace-range start-paragraph-idx end-paragraph-idx selected-paragraphs-updated)]
     (->EditorUpdate (assoc editor-state :doc new-doc)
                     (changelist :changed-indices (set (dll/indices-range (:children doc)
                                                                          (sel/start-para selection)
@@ -372,9 +371,9 @@
                       ;; No changelist, only the selection is updated
                     (changelist))
     (let [doc-children (:children doc)
-          start-para-uuid (-> selection :start :paragraph)
-          end-para-uuid (-> selection :end :paragraph)
-          changed-indices (dll/indices-range doc-children start-para-uuid end-para-uuid)
+          start-para-idx (-> selection :start :paragraph)
+          end-para-idx (-> selection :end :paragraph)
+          changed-indices (dll/indices-range doc-children start-para-idx end-para-idx)
           common-formats (m/formatting doc selection)
           format-modify-fn (if (contains? common-formats format) disj conj)
           new-selection (update selection :formats format-modify-fn format)]
@@ -518,21 +517,22 @@
     (nav-fallthrough editor-state nav/prev-sentence))
 
   (prev-paragraph [{:keys [doc selection] :as editor-state}]
-    (let [caret-uuid (sel/caret-para selection)
-          paragraph (get (:children doc) caret-uuid)
-          prev-paragraph (dll/prev (:children doc) (sel/caret-para selection))]
-      (if (pos? (sel/caret selection))
-        ;; TODO: fix below calls to nav/*
-        (->EditorUpdate (assoc editor-state :selection (nav/start paragraph)) (changelist))
-        (->EditorUpdate (assoc editor-state :selection (nav/end prev-paragraph)) (changelist)))))
+    (let [caret-para-idx (sel/caret-para selection)
+          prev-para-idx (dll/prev-index (:children doc) (sel/caret-para selection))
+          prev-paragraph (get (:children doc) prev-para-idx)]
+      (if (or (pos? (sel/caret selection))
+              (nil? prev-paragraph))
+        (->EditorUpdate (assoc editor-state :selection (sel/selection [caret-para-idx 0])) (changelist))
+        (->EditorUpdate (assoc editor-state :selection (sel/selection [prev-para-idx (m/len prev-paragraph)])) (changelist)))))
 
   (next-paragraph [{:keys [doc selection] :as editor-state}]
-    (let [caret-uuid (sel/caret-para selection)
-          paragraph (get (:children doc) caret-uuid)
-          next-paragraph (dll/next-index (:children doc) (sel/caret-para selection))]
-      (if (= (m/len paragraph) (sel/caret selection))
-        (->EditorUpdate (assoc editor-state :selection (nav/start next-paragraph)) (changelist))
-        (->EditorUpdate (assoc editor-state :selection (nav/end paragraph)) (changelist)))))
+    (let [caret-para-idx (sel/caret-para selection)
+          paragraph (get (:children doc) caret-para-idx)
+          next-paragraph-idx (dll/next-index (:children doc) (sel/caret-para selection))]
+      (if (and (= (m/len paragraph) (sel/caret selection))
+               next-paragraph-idx)
+        (->EditorUpdate (assoc editor-state :selection (sel/selection [next-paragraph-idx 0])) (changelist))
+        (->EditorUpdate (assoc editor-state :selection (sel/selection [caret-para-idx (m/len paragraph)])) (changelist)))))
 
   nav/Selectable
   (shift+right [editor-state] (nav-fallthrough editor-state nav/shift+right))

@@ -103,6 +103,7 @@
     (let [version (js/parseInt (aget (.exec #":version (\d+)" edn-str) 1))
           readers (readers-for-version version)]
       (if (<= version current-version)
+        ;; ⬇ The Happy Path (TM) ⬇ ;;
         (-> (edn/read-string {:readers readers} edn-str)
             (migrate))
         {:error-message "Droplet cannot read the file as it is designed for a newer version of the application."
