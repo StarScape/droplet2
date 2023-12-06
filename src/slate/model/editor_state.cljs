@@ -631,7 +631,7 @@
 
   #_(def doc (document [(p/paragraph "p1" [(r/run "Hello, ")])]))
   #_(-> (insert-text-container doc (sel/selection ["p1" 0] ["p1" 5]) (r/run "Goodbye"))
-      :children
-      (vec))
+        :children
+        (vec))
   (def sel (sel/selection ["p1" 7]))
   )

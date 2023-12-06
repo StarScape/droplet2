@@ -65,7 +65,8 @@
    paragraphs inside a DLL, though it's doubtful one would need these incredibly specific set of properties for
    any other use."
   (:refer-clojure :exclude [first last next remove range list])
-  (:require ["decimal.js" :refer [Decimal]]
+  (:require [clojure.set :as set]
+            ["decimal.js" :refer [Decimal]]
             [hashp.core]))
 
 ;; TODO: implement (keys)
@@ -133,6 +134,67 @@
   [o]
   (instance? Decimal o))
 
+(defn create-changelist
+  "Constructor for a new changelist object. Changelists are used for tracking what indices have
+   changed between different versions of a DLL.
+
+   A changelist is composed of 3 fields: :changed-indices, :inserted-indices, and :deleted-indices,
+   which are sets containing the indices of the paragraphs that have been changed,
+   newly inserted, or removed from the list, respectively, since the last EditorState, respectively.
+
+   Takes keyword arguments :changed-indices :inserted-indices, and :deleted-indices (each
+   default to an empty set). If no arguments supplied, returns an empty changelist."
+  [& {:keys [changed-indices inserted-indices deleted-indices]}]
+  {:pre [(or (nil? changed-indices) (set? changed-indices))
+         (or (nil? inserted-indices) (set? inserted-indices))
+         (or (nil? deleted-indices) (set? deleted-indices))]}
+  {:changed-indices (or changed-indices #{})
+   :inserted-indices (or inserted-indices #{})
+   :deleted-indices (or deleted-indices #{})})
+
+(defn merge-changelists
+  "Takes two changelists and returns a third that combines them. Indices are rearranged
+   as necessary according to the following rules:
+
+   - If an index is **deleted**:
+     - And then inserted: move to changed
+   - If a index is **changed**:
+     - And then deleted: move to deleted
+   - If a index is **inserted**:
+     - And then deleted: remove from both inserted and deleted
+     - And then changed: move to inserted.
+
+   It is assumed that c2 happened immediately after c1. You cannot supply random
+   changelists on wholly unrelated lists, or lists from non-adjacent points in time.
+
+   The purpose of this is so that we can roll many EditorUpdates into one, and re-render the document only once."
+  [c1 c2]
+  (let [deleted-then-inserted (set (filter #(contains? (:deleted-indices c1) %) (:inserted-indices c2)))
+        changed-then-deleted  (set (filter #(contains? (:changed-indices c1) %) (:deleted-indices c2)))
+        inserted-then-deleted (set (filter #(contains? (:inserted-indices c1) %) (:deleted-indices c2)))
+        inserted-then-changed (set (filter #(contains? (:inserted-indices c1) %) (:changed-indices c2)))
+
+        new-deleted (-> (set/union (:deleted-indices c1) (:deleted-indices c2))
+                        (set/difference deleted-then-inserted inserted-then-deleted)
+                        (set/union changed-then-deleted))
+        new-changed (-> (set/union (:changed-indices c1) (:changed-indices c2))
+                        (set/difference changed-then-deleted inserted-then-changed)
+                        (set/union deleted-then-inserted))
+        new-inserted (-> (set/union (:inserted-indices c1) (:inserted-indices c2))
+                         (set/difference inserted-then-deleted deleted-then-inserted)
+                         (set/union inserted-then-changed))]
+    {:deleted-indices new-deleted
+     :changed-indices new-changed
+     :inserted-indices new-inserted}))
+
+(defn reverse-changelist
+  "Taking a changelist that contains update information to go from state A to state B,
+   produces a new changelists with update information on on how to go from state B to A."
+  [{:keys [inserted-indices changed-indices deleted-indices]}]
+  {:inserted-indices deleted-indices
+   :changed-indices changed-indices
+   :deleted-indices inserted-indices})
+
 (deftype Node [^obj value ^obj index ^obj prev-index ^obj next-index]
   IEquiv
   (-equiv [^Node node other]
@@ -147,16 +209,14 @@
   ;; Implement pretty-printing for easier debugging
   IPrintWithWriter
   (-pr-writer [n writer opts]
-   (-write writer "#Node{value: ") (-write writer value)
+   (-write writer "#Node {value: ") (-write writer value)
    (-write writer ", prev-index: ") (-write writer prev-index)
    (-write writer ", next-index: ") (-write writer next-index)
    (-write writer "}")))
 
-;; TODO: this blows up the whole project when you try to pretty-print it and throws
-;; a downright mysterious error to do with KeySeq. My best guess is that implementing one
-;; of the protocols below (IMap?) is what causes the issue. Implement pretty-printing/fix it.
 (deftype DoublyLinkedList [meta
-                           entries-map ; map of (index -> DLLEntry)
+                           changelist
+                           entries-map ; map of (index -> Node)
                            first-index
                            last-index]
   ISequential
@@ -181,8 +241,7 @@
   (-count [_dll] (count entries-map))
 
   ICollection
-  (-conj [^DoublyLinkedList dll value]
-    (append dll value))
+  (-conj [^DoublyLinkedList dll value] (append dll value))
 
   IMap
   (-dissoc [^DoublyLinkedList dll index] (remove dll index))
@@ -190,7 +249,11 @@
   IAssociative
   (-assoc [^DoublyLinkedList _dll index v]
     (if (contains? entries-map index)
-      (DoublyLinkedList. meta (update entries-map index #(assoc-node % :value v)) first-index last-index)
+      (DoublyLinkedList. meta
+                         (merge-changelists changelist {:changed-indices #{index}})
+                         (update entries-map index #(assoc-node % :value v))
+                         first-index
+                         last-index)
       (throw (js/Error. "Attempting (assoc) a DLL key that does not exist."))))
   (-contains-key? [^DoublyLinkedList _dll k]
     (contains? entries-map k))
@@ -214,7 +277,7 @@
   (-with-meta [coll new-meta]
     (if (identical? new-meta meta)
       coll
-      (DoublyLinkedList. new-meta entries-map first-index last-index)))
+      (DoublyLinkedList. new-meta changelist entries-map first-index last-index)))
 
   IMeta
   (-meta [_dll] meta)
@@ -255,63 +318,41 @@
       (cons (.-value node) (make-seq dll (.-next-index node)))))))
 
 (defn- insert-between
-  "Inserts `val` into the map of `entries` immediately between `prev-index` and `next-index`.
+  "Inserts `val` into the list immediately between `prev-index` and `next-index`.
    If you call this with values of `prev-index` and `next-index` that are not adjacent, you
-   will die a horrible death.
-
-   Also note that this function operates on the entries-map, NOT the DLL itself."
-  [entries value prev-idx next-idx]
+   will die a horrible death (aka it will throw)."
+  [list prev-idx next-idx value]
   {:pre [(instance? Decimal prev-idx)
          (instance? Decimal next-idx)]}
-  (let [new-idx (cond
-                  (and prev-idx next-idx)
-                  (.. prev-idx (add next-idx) (div 2))
-
-                  prev-idx
-                  (.add prev-idx 1)
-
-                  next-idx
-                  (if (.greaterThan next-idx 1)
-                    (.sub next-idx 1)
-                    (.. (Decimal. 0) (add next-idx) (div 2))))]
-    (cond-> entries
-      (some? prev-idx) (update prev-idx assoc-node :next-index new-idx)
-      (some? next-idx) (update next-idx assoc-node :prev-index new-idx)
-      :always (assoc new-idx (Node. value new-idx prev-idx next-idx)))))
+  (let [new-idx (.. prev-idx (add next-idx) (div 2))]
+    (DoublyLinkedList. (.-meta list)
+                       (merge-changelists (.-changelist list) (create-changelist :inserted-indices #{new-idx}))
+                       (-> (.-entries-map list)
+                           (assoc new-idx (Node. value new-idx prev-idx next-idx))
+                           (update prev-idx assoc-node :next-index new-idx)
+                           (update next-idx assoc-node :prev-index new-idx))
+                       (first-index list)
+                       (last-index list))))
 
 (defn insert-before
-  "Inserts `value` into the list immediately before index `next-index`."
-  [^DoublyLinkedList list next-index value]
-  {:pre [(seq list) (contains? list next-index)]}
-  (let [prev-idx (.-prev-index (get (.-entries-map list) next-index))
-        new-entries (if prev-idx
-                      (insert-between (.-entries-map list) value prev-idx next-index)
-                      (let [first-idx (.-first-index list)
-                            new-idx (.. first-idx (div 2))]
-                        (-> (.-entries-map list)
-                            (assoc new-idx (Node. value new-idx nil first-idx))
-                            (update first-idx assoc-node :prev-index new-idx))))
-        new-first-index (if (= (.-first-index list) next-index)
-                          (.-prev-index (get new-entries (.-first-index list)))
-                          (.-first-index list))]
-    (DoublyLinkedList. (.-meta list) new-entries new-first-index (.-last-index list))))
+  "Inserts `value` into the list immediately before index `next-idx`."
+  [^DoublyLinkedList list next-idx value]
+  {:pre [(seq list) (contains? list next-idx)]}
+  (if-let [prev-idx (.-prev-index (get (.-entries-map list) next-idx))]
+    ;; Inserting between two indices
+    (insert-between list prev-idx next-idx value)
+    ;; Inserting at the start of the list
+    (prepend list value)))
 
 (defn insert-after
   "Inserts `value` into the list immediately after the node with index `prev-index`."
   [^DoublyLinkedList list prev-idx value]
   {:pre [(seq list) (contains? list prev-idx)]}
-  (let [next-index (.-next-index (get (.-entries-map list) prev-idx))
-        new-entries (if next-index
-                      (insert-between (.-entries-map list) value prev-idx next-index)
-                      (let [last-idx (.-last-index list)
-                            new-idx (.. last-idx (add 1))]
-                        (-> (.-entries-map list)
-                            (assoc new-idx (Node. value new-idx last-idx nil))
-                            (update last-idx assoc-node :next-index new-idx))))
-        new-last-index (if (= (.-last-index list) prev-idx)
-                         (.-next-index (get new-entries prev-idx))
-                         (.-last-index list))]
-    (DoublyLinkedList. (.-meta list) new-entries (.-first-index list) new-last-index)))
+  (if-let [next-idx (.-next-index (get (.-entries-map list) prev-idx))]
+    ;; Inserting between two indices
+    (insert-between list prev-idx next-idx value)
+    ;; Inserting at the end of the list
+    (append list value)))
 
 (defn prepend
   "Adds an element to the start of the list.
@@ -320,33 +361,44 @@
    will be given index 1 by default. If a new item is inserted before that,
    it will be given index 0.5. If another before that, its index will be 0.25,
    then 0.125, 0.0625, etc."
-  [list val]
+  [list value]
   {:pre [(instance? DoublyLinkedList list)]}
   (if (empty? list)
-    (conj list val)
-    (insert-before list (first-index list) val)))
+    (append list value)
+    (let [first-idx (first-index list)
+          new-idx (.. first-idx (div 2))]
+      (DoublyLinkedList. (.-meta list)
+                         (merge-changelists (.-changelist list) (create-changelist :inserted-indices #{new-idx}))
+                         (-> (.-entries-map list)
+                             (assoc new-idx (Node. value new-idx nil first-idx))
+                             (update first-idx assoc-node :prev-index new-idx))
+                         new-idx
+                         (last-index list)))))
 
 (defn append
   "Adds an element to the end of the list.
 
-   Indices will always be > 0. If a DLL is created, the first item inserted
+   Indices will always be > 0. If a DLL is empty, the first item inserted
    will be given index 1 by default. Any element appended will have an index
    of last-index + 1 by default."
   ([list value idx]
    {:pre [(or (and (empty? list) (.gt idx 0))
               (.gt idx (last-index list)))]}
    (if (empty? (.-entries-map list))
-     (DoublyLinkedList. (.-meta list) {idx (Node. value idx nil nil)} idx idx)
      (DoublyLinkedList. (.-meta list)
+                        (merge-changelists (.-changelist list) (create-changelist :inserted-indices #{idx}))
+                        {idx (Node. value idx nil nil)}
+                        idx
+                        idx)
+     (DoublyLinkedList. (.-meta list)
+                        (merge-changelists (.-changelist list) (create-changelist :inserted-indices #{idx}))
                         (-> (.-entries-map list)
                             (update (last-index list) assoc-node :next-index idx)
                             (assoc idx (Node. value idx (last-index list) nil)))
                         (first-index list)
                         idx)))
   ([list value]
-   (append list value (if (empty? list)
-                        (big-dec 1)
-                        (.add (last-index list) 1)))))
+   (append list value (if (empty? list) (big-dec 1) (.add (last-index list) 1)))))
 
 (defn remove
   "Removes the node with `index` from the list. Calling (dissoc) on the list works identically."
@@ -372,7 +424,11 @@
                      (empty? new-entries) nil
                      (= index (.-last-index list)) (.-prev-index last-node)
                      :else (.-last-index list))]
-      (DoublyLinkedList. (.-meta list) new-entries new-first new-last))
+      (DoublyLinkedList. (.-meta list)
+                         (merge-changelists (.-changelist list) (create-changelist :deleted-indices #{index}))
+                         new-entries
+                         new-first
+                         new-last))
     list))
 
 (defn remove-range
@@ -411,6 +467,7 @@
    ; => (dll {:val :a} {:val :e} {:val :f} {:val :d})
    ```"
   [list index1 index2 to-insert]
+  {:pre [(.lte index1 index2)]}
   (if-not (sequential? to-insert)
     (replace-range list index1 index2 [to-insert])
     (let [new-list (remove-between list index1 index2)
@@ -438,32 +495,6 @@
                    (rest insert-items)
                    (next-index new-list index-to-insert-after))))))))
 
-(comment
-  (= [1] (replace-range (dll :a :b) (big-dec 1) (big-dec 2) 1))
-  (= [:a 1 :d] (replace-range (dll :a :b :c :d) (big-dec 2) (big-dec 3) 1))
-
-  (= [:a 1 2 :c :d :e]
-     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 2) [1 2]))
-  (= [:a 1 2 3 :c :d :e]
-     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 2) [1 2 3]))
-
-  (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2 3 4 5 6 7 8 9 10]))
-
-  (= [:a 1 2 3 :e]
-     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2 3]))
-  (= [(big-dec 1) (big-dec 2) (big-dec 3) (big-dec 4) (big-dec 5)]
-     (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2 3])))
-
-  (= [:a 1 2 :e]
-     (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2]))
-  (= [(big-dec 1) (big-dec 2) (big-dec 4) (big-dec 5)]
-     (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 4) [1 2])))
-
-  (= [(big-dec 1) (big-dec 2) (big-dec 5)]
-     (all-indices (replace-range (dll :a :b :c :d :e) (big-dec 2) (big-dec 5) [1 2])))
-
-  )
-
 (defn replace-between
   "Same as `replace-range`, but __not__ inclusive of either end."
   [list index1 index2 to-insert]
@@ -476,7 +507,8 @@
   "Returns a sequence of all the indices between `index1` and `index2`"
   [list index1 index2]
   {:pre [(contains? list index1)
-         (contains? list index2)]}
+         (contains? list index2)
+         (.lte index1 index2)]}
   (if (= index1 index2)
     []
     (loop [index (next-index list index1), indices []]
@@ -489,7 +521,8 @@
   "Returns a sequence of all the indices between `index1` and `index2` (including both `index1` and `index2`)"
   [list index1 index2]
   {:pre [(contains? list index1)
-         (contains? list index2)]}
+         (contains? list index2)
+         (.lte index1 index2)]}
   (let [index-after-index2 (next-index list index2)]
     (loop [index index1, indices []]
       (if (= index index-after-index2)
@@ -529,7 +562,7 @@
    Returns `nil` if there is no next element."
   [^DoublyLinkedList list index]
   {:pre [(instance? DoublyLinkedList list)]}
-  (if-let [node (get (.-entries-map list) index)]
+  (if-let [node (get-node list index)]
     (when-let [next-index ^Node (.-next-index node)]
       (get (.-entries-map list) next-index))
     (throw (js/Error. (str "There is no element with index " index)))))
@@ -565,7 +598,7 @@
    Returns `nil` if there is no previous element."
   [^DoublyLinkedList list index]
   {:pre [(instance? DoublyLinkedList list)]}
-  (if-let [node (get (.-entries-map list) index)]
+  (if-let [node (get-node list index)]
     (when-let [prev-index ^Node (.-prev-index node)]
       (get (.-entries-map list) prev-index))
     (throw (js/Error. (str "There is no element with index " index)))))
@@ -624,7 +657,7 @@
 (defn dll
   "Constructor for a doubly-linked-list, optionally taking a list of items to insert."
   ([]
-   (DoublyLinkedList. nil {} nil nil))
+   (DoublyLinkedList. nil (create-changelist) {} nil nil))
   ([& xs]
    (reduce (fn [list x] (conj list x)) (dll) xs)))
 
