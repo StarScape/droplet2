@@ -40,18 +40,19 @@
 
 (defn document
   "Creates a new document."
+  ([include-initial-children-in-changelist? children]
+   {:pre [(sequential? children)]}
+   (let [children-dll (cond->> children
+                        (not (instance? dll/DoublyLinkedList children))
+                        (into (dll))
+
+                        (not include-initial-children-in-changelist?)
+                        (dll/clear-changelist))]
+     (->Document children-dll)))
   ([children]
-   (cond
-     (= (type children) dll/DoublyLinkedList)
-     (->Document children)
-
-     (sequential? children)
-     (->Document (into (dll) children))
-
-     :else
-     (throw (js/Error. "Error: non-sequence type supplied as `children` to `document` constructor."))))
+   (document true children))
   ([]
-   (->Document (dll (p/paragraph)))))
+   (document true (dll (p/paragraph)))))
 
 (defn fragment
   "Creates a new DocumentFragment."

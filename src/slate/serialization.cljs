@@ -2,7 +2,7 @@
   (:require [clojure.edn :as edn]
             [clojure.spec.alpha :as s]
             [slate.model.history :as history]
-            [slate.model.editor-state :as es :refer [map->EditorState map->EditorUpdate]]
+            [slate.model.editor-state :as es :refer [map->EditorState]]
             [slate.model.doc :as doc :refer [map->Document]]
             [slate.model.paragraph :refer [map->Paragraph]]
             [slate.model.run :refer [map->Run]]
@@ -29,7 +29,7 @@
       'slate.model.paragraph.Paragraph map->Paragraph
       'slate.model.doc.Document map->Document
       'slate.model.editor-state.EditorState map->EditorState
-      'slate.model.editor-state.EditorUpdate map->EditorUpdate
+      'slate.model.editor-state.EditorUpdate identity
       'DoublyLinkedList #(apply dll %)}
    3 {'slate.model.selection.Selection #(-> (map->Selection %)
                                             (update-in [:start :paragraph] dll/big-dec)
@@ -38,7 +38,7 @@
       'slate.model.paragraph.Paragraph map->Paragraph
       'slate.model.doc.Document map->Document
       'slate.model.editor-state.EditorState map->EditorState
-      'slate.model.editor-state.EditorUpdate map->EditorUpdate
+      'slate.model.editor-state.EditorUpdate identity
       'DoublyLinkedList #(dll/from-indexed-items %)
       'Decimal dll/big-dec}})
 
