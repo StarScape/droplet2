@@ -44,6 +44,6 @@
              :autorun true}
   ;; TODO: just for testing during refactor, remove when done
   :test-current {:target :node-test
-                 :ns-regexp "slate.model.editor-state-test$"
+                 :ns-regexp "slate.model.find-and-replace-test$"
                  :output-to "dev_out/dll_test.js"
                  :autorun true}}}

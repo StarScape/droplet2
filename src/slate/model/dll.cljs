@@ -195,6 +195,10 @@
    :changed-indices changed-indices
    :deleted-indices inserted-indices})
 
+(defn changelist
+  [list]
+  ^obj (.-changelist list))
+
 (deftype Node [^obj value ^obj index ^obj prev-index ^obj next-index]
   IEquiv
   (-equiv [^Node node other]

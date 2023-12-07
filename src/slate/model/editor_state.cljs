@@ -249,7 +249,7 @@
   (get (:children doc) (sel/caret-para selection)))
 
 (defn replace-paragraph
-  "Returns an editor-update replacing the paragraph at index `index` with `new-paragraph`.
+  "Returns a new EditorState replacing the paragraph at index `index` with `new-paragraph`.
    If the selection is inside the paragraph replaced, and its offset is invalidated (i.e.
    the new paragraph is shorter than the one previously there, and the selection's start or
    end offset is greater than the new paragraph's length), it will be reset to the end of the
@@ -528,7 +528,7 @@
 
 (defn changelist
   [editor-state]
-  ^obj (.-changelist (-> editor-state :doc :children)))
+  (dll/changelist (-> editor-state :doc :children)))
 
 #_(defn merge-updates
   "Merges the changelists of `editor-update1` and `editor-update2`."

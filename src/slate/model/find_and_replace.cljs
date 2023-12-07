@@ -4,9 +4,7 @@
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.run :as r]
             [slate.model.paragraph :as p]
-            [slate.model.doc :as doc]
-            [slate.model.editor-state :as es :refer [>>=]]
-            [slate.model.history :as history])
+            [slate.model.editor-state :as es])
   (:refer-clojure :exclude [find replace]))
 
 (defn- find-all-occurrences
@@ -71,7 +69,7 @@
       (let [sel (adjust-selection location offset-change)
             prior-formatting (m/formatting paragraph sel)
             selected-length (- (-> sel :end :offset) (-> sel :start :offset))
-          ; shift future offsets by difference between oldtext and newtext
+            ; shift future offsets by difference between oldtext and newtext
             new-offset-change (- selected-length (.-length text))
             new-para (-> para
                          (p/delete sel)
@@ -89,27 +87,26 @@
   )
 
 (defn replace
-  "Returns an EditorUpdate replacing the current selection with `text`."
+  "Returns a new EditorState replacing the current selection with `text`."
   [{:keys [doc selection] :as editor-state} text]
   {:pre [(sel/single-paragraph? selection)]}
   (let [para-idx (sel/caret-para selection)
         new-para (paragraph-replace (get (:children doc) para-idx) [selection] text)
-        {{new-selection :selection} :editor-state
-         :as para-replaced-update} (es/replace-paragraph editor-state para-idx new-para)
+        {new-selection :selection :as para-replaced-state} (es/replace-paragraph editor-state para-idx new-para)
         selection-length-diff (- (.-length text) (- (-> new-selection :end :offset) (-> new-selection :start :offset)))
         final-selection (sel/shift-end new-selection selection-length-diff)]
-    (assoc-in para-replaced-update [:editor-state :selection] final-selection)))
+    (assoc para-replaced-state :selection final-selection)))
 
 (defn replace-all
-  "Returns an EditorUpdate replacing each Selection in `locations` with `text`."
+  "Returns a new EditorState replacing each Selection in `locations` with `text`."
   [editor-state locations text]
   (let [locations-by-paragraph (group-by sel/caret-para locations)]
-    (reduce (fn [editor-update, [para-idx, para-locations]]
-              (let [doc (-> editor-update :editor-state :doc)
+    (reduce (fn [editor-state, [para-idx, para-locations]]
+              (let [doc (:doc editor-state)
                     para (get (:children doc) para-idx)
                     new-para (paragraph-replace para para-locations text)]
-                (>>= editor-update es/replace-paragraph para-idx new-para)))
-            (es/identity-update editor-state) locations-by-paragraph)))
+                (es/replace-paragraph editor-state para-idx new-para)))
+            editor-state locations-by-paragraph)))
 
 (defn init
   "Initializes find and replace state map."
