@@ -239,349 +239,354 @@
   (testing "throws when out of range of paragraph"
     (is (thrown?
          js/Error
-         (es/insert (editor-state doc (selection [(big-dec 1) 55])) (run "Goodbye!" #{:italic})))))
-  )
+         (es/insert (editor-state doc (selection [(big-dec 1) 55])) (run "Goodbye!" #{:italic}))))))
 
-(comment
 (deftest delete-single-test
   (testing "does nothing at beginning of doc"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0])))
-           (->EditorUpdate
-            (map->EditorState {:doc doc
-                               :selection (selection [(big-dec 1) 0])})
-            {:changed-indices #{}
-             :deleted-indices #{}
-             :inserted-indices #{}}))))
+           (map->EditorState {:doc doc
+                              :selection (selection [(big-dec 1) 0])})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0]))))
+           {:changed-indices #{}
+            :deleted-indices #{}
+            :inserted-indices #{}})))
 
   (testing "deletes single char in middle of paragraph"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 1])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "oo" #{:italic})
-                                                           (run "bar" #{:bold :italic})
-                                                           (run "bizz" #{:italic})
-                                                           (run "buzz" #{:bold})])
-                                               p2])
-                               :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:italic})})
-            {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "oo" #{:italic})
+                                                          (run "bar" #{:bold :italic})
+                                                          (run "bizz" #{:italic})
+                                                          (run "buzz" #{:bold})])
+                                              p2])
+                              :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:italic})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 1]))))
+           {:changed-indices #{(big-dec 1)}
+            :inserted-indices #{}
+            :deleted-indices #{}})))
 
   (testing "deletes single char at end of paragraph"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 14])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})
-                                                           (run "bar" #{:bold :italic})
-                                                           (run "bizz" #{:italic})
-                                                           (run "buz" #{:bold})])
-                                               p2])
-                               :selection (selection [(big-dec 1) 13] [(big-dec 1) 13] :formats #{:bold})})
-            {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})
+                                                          (run "bar" #{:bold :italic})
+                                                          (run "bizz" #{:italic})
+                                                          (run "buz" #{:bold})])
+                                              p2])
+                              :selection (selection [(big-dec 1) 13] [(big-dec 1) 13] :formats #{:bold})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 14]))))
+           {:changed-indices #{(big-dec 1)}
+            :inserted-indices #{}
+            :deleted-indices #{}})))
 
   (testing "merges paragraphs when backspacing from start of paragraph that is not first"
     (is (= (es/delete (editor-state doc (selection [(big-dec 2) 0])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph (concat (:runs p1) (:runs p2)))])
-                               :selection (selection [(big-dec 1) 14] [(big-dec 1) 14] :formats #{:bold})})
-            {:changed-indices #{(big-dec 1)}
-             :deleted-indices #{(big-dec 2)}
-             :inserted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph (concat (:runs p1) (:runs p2)))])
+                              :selection (selection [(big-dec 1) 14] [(big-dec 1) 14] :formats #{:bold})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 0]))))
+           {:changed-indices #{(big-dec 1)}
+            :deleted-indices #{(big-dec 2)}
+            :inserted-indices #{}})))
+
+  (testing "merges paragraphs when backspacing from start of paragraph that is not first"
+    (is (= (es/delete (editor-state doc (selection [(big-dec 2) 0])))
+           (map->EditorState {:doc (document [(paragraph (concat (:runs p1) (:runs p2)))])
+                              :selection (selection [(big-dec 1) 14] [(big-dec 1) 14] :formats #{:bold})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 0]))))
+           {:changed-indices #{(big-dec 1)}
+            :deleted-indices #{(big-dec 2)}
+            :inserted-indices #{}})))
 
   (testing "deletes single char as normal at end of the paragraph"
     (is (= (es/delete (editor-state doc (selection [(big-dec 2) 12])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [p1, (paragraph [(run "aaabbbcccdd")])])
-                               :selection (selection [(big-dec 2) 11])})
-            {:changed-indices #{(big-dec 2)}
-             :deleted-indices #{}
-             :inserted-indices #{}}))))
+           (map->EditorState {:doc (document [p1, (paragraph [(run "aaabbbcccdd")])])
+                              :selection (selection [(big-dec 2) 11])})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 12]))))
+           {:changed-indices #{(big-dec 2)}
+            :deleted-indices #{}
+            :inserted-indices #{}})))
+
+  (testing "deletes single char as normal at end of the paragraph"
+    (is (= (es/delete (editor-state doc (selection [(big-dec 2) 12])))
+           (map->EditorState {:doc (document [p1, (paragraph [(run "aaabbbcccdd")])])
+                              :selection (selection [(big-dec 2) 11])})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 12]))))
+           {:changed-indices #{(big-dec 2)}
+            :deleted-indices #{}
+            :inserted-indices #{}})))
 
   (testing "does nothing when backspacing at start of first paragraph"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0])))
-           (->EditorUpdate
-            (map->EditorState {:doc doc
-                               :selection (selection [(big-dec 1) 0])})
-            {:changed-indices #{}
-             :inserted-indices #{}
-             :deleted-indices #{}})))))
+           (map->EditorState {:doc doc
+                              :selection (selection [(big-dec 1) 0])})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0]))))
+           {:changed-indices #{}
+            :inserted-indices #{}
+            :deleted-indices #{}}))))
 
 (deftest delete-range-test
   (testing "deletes from start of paragraph"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "bar" #{:bold :italic})
-                                                           (run "bizz" #{:italic})
-                                                           (run "buzz" #{:bold})])
-                                               p2])
-                               :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:bold :italic})})
-            {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "bar" #{:bold :italic})
+                                                          (run "bizz" #{:italic})
+                                                          (run "buzz" #{:bold})])
+                                              p2])
+                              :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:bold :italic})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3]))))
+           {:changed-indices #{(big-dec 1)}
+            :inserted-indices #{}
+            :deleted-indices #{}})))
 
   (testing "deletes from start of paragraph backwards"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3] :backwards? true)))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "bar" #{:bold :italic})
-                                                           (run "bizz" #{:italic})
-                                                           (run "buzz" #{:bold})])
-                                               p2])
-                               :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:bold :italic})})
-            {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "bar" #{:bold :italic})
+                                                          (run "bizz" #{:italic})
+                                                          (run "buzz" #{:bold})])
+                                              p2])
+                              :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:bold :italic})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3] :backwards? true))))
+           {:changed-indices #{(big-dec 1)}
+            :inserted-indices #{}
+            :deleted-indices #{}})))
 
   (testing "deletes up to end of paragraph"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 1) 14])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})]), p2])
-                               :selection (selection [(big-dec 1) 3] [(big-dec 1) 3] :formats #{:italic})})
-            {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})]), p2])
+                              :selection (selection [(big-dec 1) 3] [(big-dec 1) 3] :formats #{:italic})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 1) 14]))))
+           {:changed-indices #{(big-dec 1)}
+            :inserted-indices #{}
+            :deleted-indices #{}})))
 
   (testing "deletes whole paragraph"
     ;; This is an odd edge case, but handling it this way makes the code simpler.
     ;; The reason it's like this is because the code merges the paragraph at the end
     ;; of the range selection with the paragraph at the beginning of the range selection.
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 0])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [p2])
-                               :selection (selection [(big-dec 1) 0])})
-            {:changed-indices #{(big-dec 1)}
-             :deleted-indices #{(big-dec 2)}
-             :inserted-indices #{}}))))
+           (map->EditorState {:doc (document [p2])
+                              :selection (selection [(big-dec 1) 0])})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 0]))))
+           {:changed-indices #{(big-dec 1)}
+            :deleted-indices #{(big-dec 2)}
+            :inserted-indices #{}})))
 
   (testing "merges start and ending paragraphs when deleting across paragraphs"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 2) 3])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic}), (run "bbbcccddd")])])
-                               :selection (selection [(big-dec 1) 3] [(big-dec 1) 3] :formats #{:italic})})
-            {:changed-indices #{(big-dec 1)}
-             :deleted-indices #{(big-dec 2)}
-             :inserted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic}), (run "bbbcccddd")])])
+                              :selection (selection [(big-dec 1) 3] [(big-dec 1) 3] :formats #{:italic})})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 2) 3]))))
+           {:changed-indices #{(big-dec 1)}
+            :deleted-indices #{(big-dec 2)}
+            :inserted-indices #{}})))
 
   (testing "merges start and ending paragraphs when deleting across more than 2 paragraphs"
     (is (= (es/delete (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 0])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "foo1" #{:italic}), (run "foo4" #{:strike})])])
-                               :selection (selection [(big-dec 1) 4] [(big-dec 1) 4] :formats #{:italic})})
-            {:changed-indices #{(big-dec 1)}
-             :deleted-indices #{(big-dec 2) (big-dec 3) (big-dec 4)}
-             :inserted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "foo1" #{:italic}), (run "foo4" #{:strike})])])
+                              :selection (selection [(big-dec 1) 4] [(big-dec 1) 4] :formats #{:italic})})))
+    (is (= (changelist (es/delete (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 0]))))
+           {:changed-indices #{(big-dec 1)}
+            :deleted-indices #{(big-dec 2) (big-dec 3) (big-dec 4)}
+            :inserted-indices #{}})))
 
   (testing "deletes whole document"
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 12])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run)])])
-                               :selection (selection [(big-dec 1) 0])})
-            {:changed-indices #{(big-dec 1)}
-             :deleted-indices #{(big-dec 2)}
-             :inserted-indices #{}})))))
+           (map->EditorState {:doc (document [(paragraph [(run)])])
+                              :selection (selection [(big-dec 1) 0])})))
+    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 12]))))
+           {:changed-indices #{(big-dec 1)}
+            :deleted-indices #{(big-dec 2)}
+            :inserted-indices #{}}))))
 
 (deftest enter-test
   (testing "works at start of paragraph"
     (is (= (es/enter (editor-state doc (selection [(big-dec 1) 0])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run)]), p1, p2])
-                               :selection (selection [(big-dec 1) 0])})
-            {:inserted-indices #{(big-dec 0.5)}
-             :deleted-indices #{}
-             :changed-indices #{(big-dec 1)}}))))
+           (map->EditorState {:doc (document [(paragraph [(run)]), p1, p2])
+                              :selection (selection [(big-dec 1) 0])})))
+    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 1) 0]))))
+           {:inserted-indices #{(big-dec 0.5)}
+            :deleted-indices #{}
+            :changed-indices #{}})))
 
   (testing "works at end of paragraph"
     (is (= (es/enter (editor-state doc (selection [(big-dec 1) 14])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [p1, (paragraph [(run)]), p2])
-                               :selection (selection [(big-dec 1.5) 0])})
-            {:inserted-indices #{(big-dec 1.5)}
-             :changed-indices #{(big-dec 1)}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [p1, (paragraph [(run)]), p2])
+                              :selection (selection [(big-dec 1.5) 0])})))
+    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 1) 14]))))
+           {:inserted-indices #{(big-dec 1.5)}
+            :changed-indices #{}
+            :deleted-indices #{}})))
 
   (testing "works in middle of paragraph"
     (is (= (es/enter (editor-state doc (selection [(big-dec 1) 3])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})])
-                                               (paragraph [(run "bar" #{:bold :italic})
-                                                           (run "bizz" #{:italic})
-                                                           (run "buzz" #{:bold})])
-                                               p2])
-                               :selection (selection [(big-dec 1.5) 0] [(big-dec 1.5) 0] :formats #{:bold :italic})})
-            {:changed-indices #{(big-dec 1)}
-             :inserted-indices #{(big-dec 1.5)}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})])
+                                              (paragraph [(run "bar" #{:bold :italic})
+                                                          (run "bizz" #{:italic})
+                                                          (run "buzz" #{:bold})])
+                                              p2])
+                              :selection (selection [(big-dec 1.5) 0] [(big-dec 1.5) 0] :formats #{:bold :italic})})))
+    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 1) 3]))))
+           {:changed-indices #{(big-dec 1)}
+            :inserted-indices #{(big-dec 1.5)}
+            :deleted-indices #{}})))
 
   (testing "works at end of doc"
     (is (= (es/enter (editor-state doc (selection [(big-dec 2) 12])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [p1, p2, (paragraph [(run)])])
-                               :selection (selection [(big-dec 3) 0])})
-            {:inserted-indices #{(big-dec 3)}
-             :changed-indices #{(big-dec 2)}
-             :deleted-indices #{}}))))
+           (map->EditorState {:doc (document [p1, p2, (paragraph [(run)])])
+                              :selection (selection [(big-dec 3) 0])})))
+    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 2) 12]))))
+           {:inserted-indices #{(big-dec 3)}
+            :changed-indices #{}
+            :deleted-indices #{}})))
 
   (testing "works with range selection"
     (is (= (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12])))
-           (->EditorUpdate
-            (map->EditorState {:doc (document [p1, (p/paragraph), (p/paragraph)])
-                               :selection (selection [(big-dec 3) 0])})
-            {:inserted-indices #{(big-dec 3)}
-             :changed-indices #{(big-dec 2)}
-             :deleted-indices #{}})))))
+           (map->EditorState {:doc (document [p1, (p/paragraph), (p/paragraph)])
+                              :selection (selection [(big-dec 3) 0])})))
+    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12]))))
+           {:inserted-indices #{(big-dec 3)}
+            :changed-indices #{(big-dec 2)}
+            :deleted-indices #{}}))))
 
 (deftest auto-surround-test
   (testing "wraps cursor in opening and closing for single selection"
     (is (= (es/auto-surround (editor-state doc (selection [(big-dec 2) 3])) "(" ")")
-           (->EditorUpdate
-            (map->EditorState {:doc (document [p1, (p/paragraph [(r/run "aaa()bbbcccddd")])])
-                               :selection (selection [(big-dec 2) 4])})
-            (changelist :changed-indices #{(big-dec 2)})))))
+           (map->EditorState {:doc (document [p1, (p/paragraph [(r/run "aaa()bbbcccddd")])])
+                              :selection (selection [(big-dec 2) 4])})))
+    (is (= (changelist (es/auto-surround (editor-state doc (selection [(big-dec 2) 3])) "(" ")"))
+           (dll/create-changelist :changed-indices #{(big-dec 2)}))))
   (testing "surrounds selection with opening and closing for range selection"
     (is (= (es/auto-surround (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 3])) "(" ")")
-           (->EditorUpdate
-            (map->EditorState {:doc (document [(paragraph [(run "(")
-                                                           (run "foo" #{:italic})
-                                                           (run "bar" #{:bold :italic})
-                                                           (run "bizz" #{:italic})
-                                                           (run "buzz" #{:bold})])
-                                               (p/paragraph [(r/run "aaa)bbbcccddd")])])
-                               :selection (selection [(big-dec 1) 1] [(big-dec 2) 3])})
-            (changelist :changed-indices #{(big-dec 1) (big-dec 2)}))))))
+           (map->EditorState {:doc (document [(paragraph [(run "(")
+                                                          (run "foo" #{:italic})
+                                                          (run "bar" #{:bold :italic})
+                                                          (run "bizz" #{:italic})
+                                                          (run "buzz" #{:bold})])
+                                              (p/paragraph [(r/run "aaa)bbbcccddd")])])
+                              :selection (selection [(big-dec 1) 1] [(big-dec 2) 3])})))
+    (is (= (changelist (es/auto-surround (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 3])) "(" ")"))
+           (dll/create-changelist :changed-indices #{(big-dec 1) (big-dec 2)})))))
 
 (deftest nav-functions-test
   (testing "start and end work"
     (is (= (nav/start (editor-state doc (selection [(big-dec 1) 3])))
-           (->EditorUpdate (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:italic})) (changelist))))
+           (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:italic}))))
     (is (= (nav/start (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 3])))
-           (->EditorUpdate (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:italic})) (changelist))))
+           (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:italic}))))
     (is (= (nav/end (editor-state doc (selection [(big-dec 1) 3])))
-           (->EditorUpdate (editor-state doc (selection [(big-dec 2) (sl/len p2)])) (changelist))))
+           (editor-state doc (selection [(big-dec 2) (sl/len p2)]))))
     (is (= (nav/end (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 3])))
-           (->EditorUpdate (editor-state doc (selection [(big-dec 2) (sl/len p2)])) (changelist))))
+           (editor-state doc (selection [(big-dec 2) (sl/len p2)]))))
     (is (= (nav/end (editor-state doc (selection [(big-dec 2) 3])))
-           (->EditorUpdate (editor-state doc (selection [(big-dec 2) (sl/len p2)])) (changelist)))))
+           (editor-state doc (selection [(big-dec 2) (sl/len p2)])))))
 
   ;; The rest of these currently all use the same fallthrough function,
   ;; so testing one is basically the same as testing all of them.
   (testing "rest work"
     (is (= (nav/next-char (editor-state doc (selection [(big-dec 1) 0])))
-           (->EditorUpdate (editor-state doc (selection [(big-dec 1) 1] [(big-dec 1) 1] :formats #{:italic})) (changelist))))
+           (editor-state doc (selection [(big-dec 1) 1] [(big-dec 1) 1] :formats #{:italic}))))
     (is (= (nav/next-char (editor-state doc (selection [(big-dec 1) 14] [(big-dec 1) 14] :formats #{:bold})))
-           (->EditorUpdate (editor-state doc (selection [(big-dec 2) 0])) (changelist))))
+           (editor-state doc (selection [(big-dec 2) 0]))))
     (is (= (nav/next-char (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 4])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 3) 4] [(big-dec 3) 4] :formats #{:underline})) (changelist))))))
+           (editor-state long-doc (selection [(big-dec 3) 4] [(big-dec 3) 4] :formats #{:underline}))))))
 
 (deftest selectable-functions-test
   (testing "shift+right works forwards (or single)"
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 0])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 1) 1], :formats #{:italic})) (changelist))))
+           (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 1) 1], :formats #{:italic}))))
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 4])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 0])) (changelist))))
+           (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 0]))))
 
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 1) 4])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 0] :formats #{:italic})) (changelist))))
+           (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 0] :formats #{:italic}))))
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 4])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 4) 0])) (changelist)))))
+           (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 4) 0])))))
 
   (testing "shift+right works backwards"
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 4] :backwards? true)))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 2) 4] :backwards? true, :formats #{:bold})) (changelist))))
+           (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 2) 4] :backwards? true, :formats #{:bold}))))
     (is (= (nav/shift+right (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 3) 4] :backwards? true)))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 3) 4] :backwards? true)) (changelist)))))
+           (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 3) 4] :backwards? true)))))
 
   (testing "shift+left works forwards"
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 0])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 1) 4], :formats #{:italic})) (changelist))))
+           (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 1) 4], :formats #{:italic}))))
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 3) 0])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 4])) (changelist)))))
+           (editor-state long-doc (selection [(big-dec 1) 0] [(big-dec 2) 4])))))
 
   (testing "shift+left works backwards (or single)"
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 1) 4])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 3] [(big-dec 1) 4], :backwards? true, :formats #{:italic})) (changelist))))
+           (editor-state long-doc (selection [(big-dec 1) 3] [(big-dec 1) 4], :backwards? true, :formats #{:italic}))))
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0])))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 0], :backwards? true)) (changelist))))
+           (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 0], :backwards? true))))
 
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 4) 4], :backwards? true)))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 4], :backwards? true)) (changelist))))
+           (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 4], :backwards? true))))
     (is (= (nav/shift+left (editor-state long-doc (selection [(big-dec 2) 0] [(big-dec 2) 4], :backwards? true)))
-           (->EditorUpdate (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 4], :backwards? true, :formats #{:bold})) (changelist))))))
+           (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 2) 4], :backwards? true, :formats #{:bold}))))))
 
 (deftest select-whole-word-test
   (is (= (es/select-whole-word (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
                                              (selection [(big-dec 1) 2])))
-         (->EditorUpdate (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
-                                       (selection [(big-dec 1) 2] [(big-dec 1) 5]))
-                         (changelist))))
+         (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                       (selection [(big-dec 1) 2] [(big-dec 1) 5]))))
   (is (= (es/select-whole-word (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
                                              (selection [(big-dec 1) 0])))
-         (->EditorUpdate (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
-                                       (selection [(big-dec 1) 0] [(big-dec 1) 1]))
-                         (changelist))))
+         (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                       (selection [(big-dec 1) 0] [(big-dec 1) 1]))))
   (is (= (es/select-whole-word (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
                                              (selection [(big-dec 1) 12])))
-         (->EditorUpdate (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
-                                       (selection [(big-dec 1) 12] [(big-dec 1) 16]))
-                         (changelist)))))
+         (editor-state (doc/document [(p/paragraph [(r/run "\t\"And so he said, like....hello world!\"")])])
+                       (selection [(big-dec 1) 12] [(big-dec 1) 16])))))
 
 (deftest next-paragraph-test
   (is (= (nav/next-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 1) 0])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 1) 3]))
-                         (changelist))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 1) 3]))))
   (is (= (nav/next-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 1) 3])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 2) 0]))
-                         (changelist))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 2) 0]))))
   (is (= (nav/next-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 2) 0])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 2) 3]))
-                         (changelist))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 2) 3]))))
   (is (= (nav/next-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 2) 3])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 2) 3]))
-                         (changelist)))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 2) 3])))))
 
 (deftest prev-paragraph-test
   (is (= (nav/prev-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 2) 3])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 2) 0]))
-                         (changelist))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 2) 0]))))
   (is (= (nav/prev-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 2) 0])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 1) 3]))
-                         (changelist))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 1) 3]))))
   (is (= (nav/prev-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 1) 3])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 1) 0]))
-                         (changelist))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 1) 0]))))
   (is (= (nav/prev-paragraph (editor-state (document [(paragraph [(run "foo")])
                                                       (paragraph [(run "bar")])])
                                            (selection [(big-dec 1) 0])))
-         (->EditorUpdate (editor-state (document [(paragraph [(run "foo")])
-                                                  (paragraph [(run "bar")])])
-                                       (selection [(big-dec 1) 0]))
-                         (changelist)))))
+         (editor-state (document [(paragraph [(run "foo")])
+                                  (paragraph [(run "bar")])])
+                       (selection [(big-dec 1) 0])))))
 
 ;; (deftest selected-content-test
 ;;   (testing "returns list of runs when passed selection within one paragraph"
@@ -733,15 +738,3 @@
 ;;     (is (= "d" (sl/char-before doc (selection [(big-dec 2) 11]))))
 ;;     (is (= "d" (sl/char-before doc (selection [(big-dec 2) 12]))))
 ;;     (is (thrown? js/Error (sl/char-before doc (selection ["[2]" 13]))))))
-
-(deftest merge-changelists-test
-  (testing "merge logic works as it should (merge-changelists doc for details)"
-    (is (= (es/merge-changelists {:deleted-indices #{"a" "b" "g"}
-                                  :changed-indices #{"c" "d" "h"}
-                                  :inserted-indices #{"e" "f" "i"}}
-                                 {:deleted-indices #{"c" "d" "e"}
-                                  :inserted-indices #{"a" "b" "f"}})
-           {:deleted-indices #{"c" "d" "g"}
-            :changed-indices #{"a" "b" "h"}
-            :inserted-indices #{"f" "i"}}))))
-)

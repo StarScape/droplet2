@@ -333,3 +333,14 @@
     (is (dll/big-dec? lots-of-halving))
     #_(is (.eq (big-dec 1)
              (.mul lots-of-halving (.pow (big-dec 2) iters))))))
+
+(deftest merge-changelists-test
+  (testing "merge logic works as it should (merge-changelists doc for details)"
+    (is (= (dll/merge-changelists {:deleted-indices #{"a" "b" "g"}
+                                   :changed-indices #{"c" "d" "h"}
+                                   :inserted-indices #{"e" "f" "i"}}
+                                  {:deleted-indices #{"c" "d" "e"}
+                                   :inserted-indices #{"a" "b" "f"}})
+           {:deleted-indices #{"c" "d" "g"}
+            :changed-indices #{"a" "b" "h"}
+            :inserted-indices #{"f" "i"}}))))

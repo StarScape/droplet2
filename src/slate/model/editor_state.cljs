@@ -10,10 +10,7 @@
             [slate.model.selection :as sel]
             [slate.model.navigation :as nav :refer [Navigable]]))
 
-(declare identity-update)
-(declare merge-changelists)
 (declare EditorState)
-(declare EditorUpdate)
 
 (s/def ::doc ::doc/Document)
 (s/def ::selection ::sel/Selection)
@@ -103,7 +100,7 @@
       (if (zero? (sel/caret selection))
         (if (= start-para-idx (-> doc :children dll/first-index))
           ; First char of first paragraph, do nothing
-          (identity-update editor-state)
+          editor-state
           ; First char of a different paragraph, merge with previous
           (let [prev-para-idx (dll/prev-index (:children doc) start-para-idx)
                 prev-para ((:children doc) prev-para-idx)
