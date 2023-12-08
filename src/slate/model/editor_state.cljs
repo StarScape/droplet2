@@ -526,9 +526,14 @@
                           (-> editor-state :selection :start :paragraph)
                           (-> editor-state :selection :end :paragraph))))
 
-(defn changelist
+(defn get-changelist
   [editor-state]
   (dll/changelist (-> editor-state :doc :children)))
+
+(defn clear-changelist
+  "Returns an identical EditorState with the changelist of its doc's `children` DLL cleared."
+  [editor-state]
+  (update-in editor-state [:doc :children] dll/clear-changelist))
 
 #_(defn merge-updates
   "Merges the changelists of `editor-update1` and `editor-update2`."

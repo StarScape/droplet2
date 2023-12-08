@@ -8,7 +8,7 @@
             [slate.model.doc :as doc :refer [document]]
             [slate.model.editor-state :as es :refer [editor-state
                                                      map->EditorState
-                                                     changelist]]
+                                                     get-changelist]]
             [slate.model.navigation :as nav]))
 
 (def p1 (paragraph [(run "foo" #{:italic})
@@ -42,7 +42,7 @@
                                                                (run "buzz" #{:bold})])
                                                    p2])
                                    :selection (selection [(big-dec 1) 16])})))
-      (is (= (changelist es)
+      (is (= (get-changelist es)
              {:changed-indices #{(big-dec 1)}
               :inserted-indices #{}
               :deleted-indices #{}}))))
@@ -56,7 +56,7 @@
                                                                (run "buzz" #{:bold})])
                                                    p2])
                                    :selection (selection [(big-dec 1) 11])})))
-      (is (= (changelist es)
+      (is (= (get-changelist es)
              {:changed-indices #{(big-dec 1)}
               :inserted-indices #{}
               :deleted-indices #{}}))))
@@ -70,7 +70,7 @@
                                                                      (run "buzz" #{:bold})])
                                                          p2])
                                    :selection (selection [(big-dec 1) 6])})))
-      (is (= (changelist es) {:changed-indices #{(big-dec 1)}
+      (is (= (get-changelist es) {:changed-indices #{(big-dec 1)}
                               :inserted-indices #{}
                               :deleted-indices #{}}))))
 
@@ -92,7 +92,7 @@
                                                                    (run "buzz" #{:bold})])
                                                    p2])
                                    :selection (selection [(big-dec 1) 14] :formats #{:italic})})))
-      (is (= (changelist es)
+      (is (= (get-changelist es)
              {:changed-indices #{(big-dec 1)}
               :inserted-indices #{}
               :deleted-indices #{}}))))
@@ -115,7 +115,7 @@
                                                                    (run "buzz" #{:bold})])
                                                    p2])
                                    :selection (selection [(big-dec 1) 14] :formats #{:italic})})))
-      (is (= (changelist es)
+      (is (= (get-changelist es)
              {:changed-indices #{(big-dec 1)}
               :inserted-indices #{}
               :deleted-indices #{}}))))
@@ -124,7 +124,7 @@
     (let [es (es/insert (editor-state doc (selection [(big-dec 2) 12])) (run "Goodbye!" #{:italic}))]
       (is (= es (map->EditorState {:doc (document [p1, (paragraph [(run "aaabbbcccddd") (run "Goodbye!" #{:italic})])])
                                    :selection (selection [(big-dec 2) 20] [(big-dec 2) 20] :formats #{:italic})})))
-      (is (= (changelist es)
+      (is (= (get-changelist es)
              {:changed-indices #{(big-dec 2)}
               :inserted-indices #{}
               :deleted-indices #{}}))))
@@ -140,7 +140,7 @@
                                                           (run "buzz" #{:bold})])
                                               p2])
                               :selection (selection [(big-dec 1.75) 20])})))
-    (is (= (changelist (es/insert (editor-state doc (selection [(big-dec 1) 10])) to-insert))
+    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 1) 10])) to-insert))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{(big-dec 1.5), (big-dec 1.75)}
             :deleted-indices #{}})))
@@ -152,7 +152,7 @@
                                               (paragraph [(run "inserted paragraph 2")])
                                               (paragraph [(run "inserted paragraph 3aaabbbcccddd")])])
                               :selection (selection [(big-dec 4) 20])})))
-    (is (= (changelist (es/insert (editor-state doc (selection [(big-dec 2) 0])) to-insert))
+    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 2) 0])) to-insert))
            {:changed-indices #{(big-dec 2)}
             :inserted-indices #{(big-dec 3) (big-dec 4)}
             :deleted-indices #{}})))
@@ -167,7 +167,7 @@
                                               (paragraph [(run "inserted paragraph 3")])
                                               p2])
                               :selection (selection [(big-dec 1.75) 20])})))
-    (is (= (changelist (es/insert (editor-state doc (selection [(big-dec 1) 14])) to-insert))
+    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 1) 14])) to-insert))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{(big-dec 1.5) (big-dec 1.75)}
             :deleted-indices #{}})))
@@ -181,7 +181,7 @@
                                                           (run "buzz" #{:bold})])
                                               p2])
                               :selection (selection [(big-dec 1) 11])})))
-    (is (= (changelist (es/insert (editor-state doc (selection [(big-dec 1) 3])) "inserted"))
+    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 1) 3])) "inserted"))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{}
             :deleted-indices #{}})))
@@ -200,7 +200,7 @@
                             (run "buzz" #{:bold})]))
       (is (= para3 p2))
       (is (= (-> es :selection) (selection [(big-dec 1.5) 9])))
-      (is (= (changelist es) {:changed-indices #{(big-dec 1)}
+      (is (= (get-changelist es) {:changed-indices #{(big-dec 1)}
                               :inserted-indices #{(big-dec 1.5)}
                               :deleted-indices #{}}))))
 
@@ -208,7 +208,7 @@
     (is (= (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (run "(inserted!)" #{}))
            (map->EditorState {:doc (document [(paragraph [(run "f" #{:italic}), (run "(inserted!)d")])])
                               :selection (selection [(big-dec 1) 12] [(big-dec 1) 12])})))
-    (is (= (changelist (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (run "(inserted!)" #{})))
+    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (run "(inserted!)" #{})))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
@@ -217,7 +217,7 @@
     (is (= (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (p/fragment (r/run "inserted")))
            (map->EditorState {:doc (document [(paragraph [(run "f" #{:italic}), (run "insertedd")])])
                               :selection (selection [(big-dec 1) 9] [(big-dec 1) 9])})))
-    (is (= (changelist (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (p/fragment (r/run "inserted"))))
+    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (p/fragment (r/run "inserted"))))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
@@ -231,7 +231,7 @@
                                                    (paragraph [(r/run "inserted2")])
                                                    (paragraph [(r/run "inserted3d")])])
                                    :selection (selection [(big-dec 3) 9])})))
-      (is (= (changelist es)
+      (is (= (get-changelist es)
              {:changed-indices #{(big-dec 1) (big-dec 2)}
               :inserted-indices #{(big-dec 3)}
               :deleted-indices #{}}))))
@@ -246,7 +246,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0])))
            (map->EditorState {:doc doc
                               :selection (selection [(big-dec 1) 0])})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 0]))))
            {:changed-indices #{}
             :deleted-indices #{}
             :inserted-indices #{}})))
@@ -259,7 +259,7 @@
                                                           (run "buzz" #{:bold})])
                                               p2])
                               :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:italic})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 1]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 1]))))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{}
             :deleted-indices #{}})))
@@ -272,7 +272,7 @@
                                                           (run "buz" #{:bold})])
                                               p2])
                               :selection (selection [(big-dec 1) 13] [(big-dec 1) 13] :formats #{:bold})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 14]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 14]))))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{}
             :deleted-indices #{}})))
@@ -281,7 +281,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 2) 0])))
            (map->EditorState {:doc (document [(paragraph (concat (:runs p1) (:runs p2)))])
                               :selection (selection [(big-dec 1) 14] [(big-dec 1) 14] :formats #{:bold})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 0]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 2) 0]))))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
@@ -290,7 +290,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 2) 0])))
            (map->EditorState {:doc (document [(paragraph (concat (:runs p1) (:runs p2)))])
                               :selection (selection [(big-dec 1) 14] [(big-dec 1) 14] :formats #{:bold})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 0]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 2) 0]))))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
@@ -299,7 +299,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 2) 12])))
            (map->EditorState {:doc (document [p1, (paragraph [(run "aaabbbcccdd")])])
                               :selection (selection [(big-dec 2) 11])})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 12]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 2) 12]))))
            {:changed-indices #{(big-dec 2)}
             :deleted-indices #{}
             :inserted-indices #{}})))
@@ -308,7 +308,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 2) 12])))
            (map->EditorState {:doc (document [p1, (paragraph [(run "aaabbbcccdd")])])
                               :selection (selection [(big-dec 2) 11])})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 2) 12]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 2) 12]))))
            {:changed-indices #{(big-dec 2)}
             :deleted-indices #{}
             :inserted-indices #{}})))
@@ -317,7 +317,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0])))
            (map->EditorState {:doc doc
                               :selection (selection [(big-dec 1) 0])})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 0]))))
            {:changed-indices #{}
             :inserted-indices #{}
             :deleted-indices #{}}))))
@@ -330,7 +330,7 @@
                                                           (run "buzz" #{:bold})])
                                               p2])
                               :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:bold :italic})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3]))))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{}
             :deleted-indices #{}})))
@@ -342,7 +342,7 @@
                                                           (run "buzz" #{:bold})])
                                               p2])
                               :selection (selection [(big-dec 1) 0] [(big-dec 1) 0] :formats #{:bold :italic})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3] :backwards? true))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3] :backwards? true))))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{}
             :deleted-indices #{}})))
@@ -351,7 +351,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 1) 14])))
            (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic})]), p2])
                               :selection (selection [(big-dec 1) 3] [(big-dec 1) 3] :formats #{:italic})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 1) 14]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 1) 14]))))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{}
             :deleted-indices #{}})))
@@ -363,7 +363,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 0])))
            (map->EditorState {:doc (document [p2])
                               :selection (selection [(big-dec 1) 0])})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 0]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 0]))))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
@@ -372,7 +372,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 2) 3])))
            (map->EditorState {:doc (document [(paragraph [(run "foo" #{:italic}), (run "bbbcccddd")])])
                               :selection (selection [(big-dec 1) 3] [(big-dec 1) 3] :formats #{:italic})})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 2) 3]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 3] [(big-dec 2) 3]))))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
@@ -381,7 +381,7 @@
     (is (= (es/delete (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 0])))
            (map->EditorState {:doc (document [(paragraph [(run "foo1" #{:italic}), (run "foo4" #{:strike})])])
                               :selection (selection [(big-dec 1) 4] [(big-dec 1) 4] :formats #{:italic})})))
-    (is (= (changelist (es/delete (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 0]))))
+    (is (= (get-changelist (es/delete (editor-state long-doc (selection [(big-dec 1) 4] [(big-dec 4) 0]))))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2) (big-dec 3) (big-dec 4)}
             :inserted-indices #{}})))
@@ -390,7 +390,7 @@
     (is (= (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 12])))
            (map->EditorState {:doc (document [(paragraph [(run)])])
                               :selection (selection [(big-dec 1) 0])})))
-    (is (= (changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 12]))))
+    (is (= (get-changelist (es/delete (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 12]))))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}}))))
@@ -400,7 +400,7 @@
     (is (= (es/enter (editor-state doc (selection [(big-dec 1) 0])))
            (map->EditorState {:doc (document [(paragraph [(run)]), p1, p2])
                               :selection (selection [(big-dec 1) 0])})))
-    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 1) 0]))))
+    (is (= (get-changelist (es/enter (editor-state doc (selection [(big-dec 1) 0]))))
            {:inserted-indices #{(big-dec 0.5)}
             :deleted-indices #{}
             :changed-indices #{}})))
@@ -409,7 +409,7 @@
     (is (= (es/enter (editor-state doc (selection [(big-dec 1) 14])))
            (map->EditorState {:doc (document [p1, (paragraph [(run)]), p2])
                               :selection (selection [(big-dec 1.5) 0])})))
-    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 1) 14]))))
+    (is (= (get-changelist (es/enter (editor-state doc (selection [(big-dec 1) 14]))))
            {:inserted-indices #{(big-dec 1.5)}
             :changed-indices #{}
             :deleted-indices #{}})))
@@ -422,7 +422,7 @@
                                                           (run "buzz" #{:bold})])
                                               p2])
                               :selection (selection [(big-dec 1.5) 0] [(big-dec 1.5) 0] :formats #{:bold :italic})})))
-    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 1) 3]))))
+    (is (= (get-changelist (es/enter (editor-state doc (selection [(big-dec 1) 3]))))
            {:changed-indices #{(big-dec 1)}
             :inserted-indices #{(big-dec 1.5)}
             :deleted-indices #{}})))
@@ -431,7 +431,7 @@
     (is (= (es/enter (editor-state doc (selection [(big-dec 2) 12])))
            (map->EditorState {:doc (document [p1, p2, (paragraph [(run)])])
                               :selection (selection [(big-dec 3) 0])})))
-    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 2) 12]))))
+    (is (= (get-changelist (es/enter (editor-state doc (selection [(big-dec 2) 12]))))
            {:inserted-indices #{(big-dec 3)}
             :changed-indices #{}
             :deleted-indices #{}})))
@@ -440,7 +440,7 @@
     (is (= (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12])))
            (map->EditorState {:doc (document [p1, (p/paragraph), (p/paragraph)])
                               :selection (selection [(big-dec 3) 0])})))
-    (is (= (changelist (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12]))))
+    (is (= (get-changelist (es/enter (editor-state doc (selection [(big-dec 2) 0] [(big-dec 2) 12]))))
            {:inserted-indices #{(big-dec 3)}
             :changed-indices #{(big-dec 2)}
             :deleted-indices #{}}))))
@@ -450,7 +450,7 @@
     (is (= (es/auto-surround (editor-state doc (selection [(big-dec 2) 3])) "(" ")")
            (map->EditorState {:doc (document [p1, (p/paragraph [(r/run "aaa()bbbcccddd")])])
                               :selection (selection [(big-dec 2) 4])})))
-    (is (= (changelist (es/auto-surround (editor-state doc (selection [(big-dec 2) 3])) "(" ")"))
+    (is (= (get-changelist (es/auto-surround (editor-state doc (selection [(big-dec 2) 3])) "(" ")"))
            (dll/create-changelist :changed-indices #{(big-dec 2)}))))
   (testing "surrounds selection with opening and closing for range selection"
     (is (= (es/auto-surround (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 3])) "(" ")")
@@ -461,7 +461,7 @@
                                                           (run "buzz" #{:bold})])
                                               (p/paragraph [(r/run "aaa)bbbcccddd")])])
                               :selection (selection [(big-dec 1) 1] [(big-dec 2) 3])})))
-    (is (= (changelist (es/auto-surround (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 3])) "(" ")"))
+    (is (= (get-changelist (es/auto-surround (editor-state doc (selection [(big-dec 1) 0] [(big-dec 2) 3])) "(" ")"))
            (dll/create-changelist :changed-indices #{(big-dec 1) (big-dec 2)})))))
 
 (deftest nav-functions-test

@@ -535,7 +535,7 @@
    This is not in the model code because it requires the viewmodel to work."
   [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   (let [new-selection (down-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
 
 (defn up-selection
   "Move the caret up into the next line. Returns a new Selection."
@@ -575,7 +575,7 @@
    This is not in the model code because it requires the viewmodel to work."
   [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   (let [new-selection (up-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
 
 (defn shift+down
   "Move the caret down into the next line. Returns an EditorUpdate."
@@ -592,7 +592,7 @@
                           (assoc selection :start (:end selection), :end down-caret, :backwards? false)
                           (assoc selection :start down-caret, :backwards? true))
                         (assoc selection :end down-caret, :backwards? false))]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
 
 (defn shift+up
   "Move the caret up into the next line. Returns an EditorUpdate."
@@ -609,7 +609,7 @@
                           (assoc selection :start up-caret, :end (:start selection), :backwards? true)
                           (assoc selection :end up-caret, :backwards? false))
                         (assoc selection :start up-caret, :backwards? true))]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/changelist))))
+    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
 
 (defn start-of-line-selection
   "Returns a Selection that moves the cursor to the beginning of the current line."
@@ -621,7 +621,7 @@
   "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
   [editor-state viewmodels]
   (es/->EditorUpdate (assoc editor-state :selection (start-of-line-selection editor-state viewmodels))
-                     (es/changelist)))
+                     (es/get-changelist)))
 
 (defn end-of-line-selection
   "Returns a Selection that moves the cursor to the beginning of the current line."
@@ -639,7 +639,7 @@
   "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
   [editor-state viewmodels]
   (es/->EditorUpdate (assoc editor-state :selection (end-of-line-selection editor-state viewmodels))
-                     (es/changelist)))
+                     (es/get-changelist)))
 
 (defn calc-line-height
   "Returns the actual *rendered* line height of a given paragraph DOM element, in pixels."

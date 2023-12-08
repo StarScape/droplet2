@@ -5,7 +5,7 @@
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
-            [slate.model.editor-state :as es :refer [editor-state changelist]]
+            [slate.model.editor-state :as es :refer [editor-state get-changelist]]
             [slate.model.find-and-replace :refer [find replace replace-all]]))
 
 (def doc (document false (dll (paragraph [(run "foo") (run "bar" #{:italic})
@@ -49,7 +49,7 @@
                                                      (run "hoo") (run "bar" #{:underline})])
                                          (paragraph [(run "one a one, and a foo, and a bar!")])])
                               (selection [(big-dec 1) 0] [(big-dec 1) 20]))))
-      (is (= (changelist es) (create-changelist :changed-indices #{(big-dec 1)}))))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1)}))))))
 
 (deftest replace-all-test
   (testing "single location"
@@ -58,7 +58,7 @@
                                                      (run "goo") (run "bar" #{:bold})
                                                      (run "hoo") (run "bar" #{:underline})])
                                          (paragraph [(run "one a one, and a foo, and a bar!")])]))))
-      (is (= (changelist es)
+      (is (= (get-changelist es)
              (create-changelist :changed-indices #{(big-dec 1)})))))
 
   (testing "multiple locations"
@@ -74,7 +74,7 @@
                                                   (run "123") (run "bar" #{:bold})
                                                   (run "hoo") (run "bar" #{:underline})])
                                       (paragraph [(run "one a one, and a foo, and a bar!")])]))))
-      (is (= (changelist es) (create-changelist :changed-indices #{(big-dec 1)})))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1)})))))
 
   (testing "multiple locations across 2 paragraphs"
     (let [es (replace-all (editor-state doc)
@@ -86,7 +86,7 @@
                                                      (run "123") (run "bar" #{:bold})
                                                      (run "hoo") (run "bar" #{:underline})])
                                          (paragraph [(run "o123 a one, and a foo, and a bar!")])]))))
-      (is (= (changelist es) (create-changelist :changed-indices #{(big-dec 1) (big-dec 2)})))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1) (big-dec 2)})))))
 
   (testing "shifts selection appropriately when needed"
     (let [es (replace-all (editor-state doc (selection [(big-dec 1) 17]))
@@ -97,4 +97,4 @@
                                                      (run "bizz")])
                                          (paragraph [(run "one a one, and a foo, and a bar!")])])
                               (selection [(big-dec 1) 16]))))
-      (is (= (changelist es) (create-changelist :changed-indices #{(big-dec 1)}))))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1)}))))))

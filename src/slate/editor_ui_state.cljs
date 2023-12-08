@@ -1,7 +1,5 @@
 (ns slate.editor-ui-state
-  (:require-macros [slate.interceptors :refer [definterceptor]]
-                   [slate.utils :refer [slurp-file]]
-                   [dev.performance-utils :refer [measure-time-and-print! inside-time-measurement!]])
+  (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
@@ -23,8 +21,7 @@
             [slate.viewmodel :as vm]
             [slate.style :as style]
             [slate.word-count :as word-count]
-            [slate.utils :as slate-utils]
-            [dev.performance-utils :as perf-utils]))
+            [slate.utils :as slate-utils]))
 
 (s/def ::id uuid?)
 (s/def ::history ::history/editor-state-history)
@@ -76,50 +73,47 @@
 (defn update-viewmodels
   "Updates the :viewmodels attribute of `ui-state` to match the tip of the ui state's
    :history object. See the history namespace for more info."
-  [ui-state {:keys [editor-state changelist]}]
+  [ui-state editor-state changelist]
   (let [{:keys [viewmodels measure-fn]} ui-state
         new-viewmodels (vm/update-viewmodels viewmodels (:doc editor-state) (view/elem-width ui-state) measure-fn changelist)]
     (assoc ui-state :viewmodels new-viewmodels)))
 
 (defn modifies-doc?
-  "Returns true if the `EditorUpdate` makes changes to the Document."
-  [{{:keys [inserted-indices changed-indices deleted-indices]} :changelist :as _editor-update}]
+  "Returns true if the changelist makes changes to the Document."
+  [{:keys [inserted-indices changed-indices deleted-indices] :as _changelist}]
   (or (seq inserted-indices)
       (seq changed-indices)
       (seq deleted-indices)))
 
-(def does-not-modify-doc?
-  "Returns true if the `EditorUpdate` does not make changes to the Document."
-  (complement modifies-doc?))
-
 (defn should-integrate-tip-first?
   "Returns true if the history's tip should be integrated into the backstack before
    `new-editor-update` is added to the history."
-  [history new-editor-update]
-  (and (modifies-doc? new-editor-update)
-       (does-not-modify-doc? (history/current history))))
+  [history changelist]
+  (and (modifies-doc? changelist)
+       (not (modifies-doc? (:changelist (history/current history))))))
 
 (defn update-history
-  [history editor-update interceptor]
+  [history new-editor-state changelist interceptor]
   ;; if completion:
   ;;   Take state before interceptor fired, add that to the backstack immediately.
   ;;   Then set the tip to the result of the completion interceptor.
   ;; else if normal:
   ;;   Just update tip, will be integrated into backstack after debounced timeout
   (if-not (:include-in-history? interceptor)
-    (history/set-tip history editor-update)
+    (history/set-tip history new-editor-state changelist)
     (if (:add-to-history-immediately? interceptor)
       (-> history
           (history/add-tip-to-backstack)
-          (history/set-tip editor-update))
+          (history/set-tip new-editor-state changelist))
       (as-> history $
-        (if (should-integrate-tip-first? $ editor-update) (history/add-tip-to-backstack $) $)
-        (history/set-tip $ editor-update)))))
+        (if (should-integrate-tip-first? $ changelist)
+          (history/add-tip-to-backstack $)
+          $)
+        (history/set-tip $ new-editor-state changelist)))))
 
 (defn add-tip-to-backstack!
   [*ui-state]
   {:pre [(satisfies? IAtom *ui-state)]}
-  ;; "Add tip to backstack."
   (swap! *ui-state update :history history/add-tip-to-backstack))
 
 (defn add-tip-to-backstack-after-wait!
@@ -234,18 +228,15 @@
   {:manual? true}
   [*ui-state _]
   (cancel-add-tip-to-backstack! *ui-state)
-  (let [{:keys [viewmodels history input-history word-count measure-fn] :as ui-state} @*ui-state
-        current-update (history/current history)]
+  (let [{:keys [viewmodels history input-history word-count measure-fn] :as ui-state} @*ui-state]
     (when (history/has-undo? history)
-      (let [new-input-history (interceptors/add-to-input-history input-history :undo)
+      (let [{current-editor-state :editor-state, last-changelist :changelist} (history/current history)
+            new-input-history (interceptors/add-to-input-history input-history :undo)
             new-history (history/undo history)
-            restored-update (history/current new-history)
-            restored-state (:editor-state restored-update)
-            changelist (es/reverse-changelist (:changelist current-update))
-            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn changelist)
-            new-word-count (word-count/update word-count
-                                              (:editor-state current-update)
-                                              restored-update)
+            restored-state (history/current-state new-history)
+            undo-changelist (dll/reverse-changelist last-changelist)
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn undo-changelist)
+            new-word-count (word-count/update word-count current-editor-state restored-state undo-changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
@@ -254,10 +245,10 @@
         (sync-dom! :shadow-root (:shadow-root ui-state)
                    :dom-elem (:dom-elem new-ui-state)
                    :hidden-input (:hidden-input ui-state)
-                   :editor-state (:editor-state restored-update)
-                   :prev-state (history/current-state history)
+                   :editor-state restored-state
+                   :prev-state current-editor-state
                    :viewmodels (:viewmodels new-ui-state)
-                   :changelist changelist)
+                   :changelist undo-changelist)
         (reset! *ui-state new-ui-state)))))
 
 (definterceptor redo!
@@ -266,15 +257,12 @@
   (cancel-add-tip-to-backstack! *ui-state)
   (let [{:keys [viewmodels history input-history word-count measure-fn] :as ui-state} @*ui-state]
     (when (history/has-redo? history)
-      (let [new-input-history (interceptors/add-to-input-history input-history :redo)
+      (let [{current-editor-state :editor-state} (history/current history)
+            new-input-history (interceptors/add-to-input-history input-history :redo)
             new-history (history/redo history)
-            restored-update (history/current new-history)
-            restored-state (:editor-state restored-update)
-            changelist (:changelist restored-update)
-            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn changelist)
-            new-word-count (word-count/update word-count
-                                              (history/current-state history)
-                                              restored-update)
+            {restored-state :editor-state, redo-changelist :changelist} (history/current new-history)
+            new-vms (vm/update-viewmodels viewmodels (:doc restored-state) (view/elem-width ui-state) measure-fn redo-changelist)
+            new-word-count (word-count/update word-count current-editor-state restored-state redo-changelist)
             new-ui-state (assoc ui-state
                                 :input-history new-input-history
                                 :history new-history
@@ -283,10 +271,10 @@
         (sync-dom! :shadow-root (:shadow-root new-ui-state)
                    :dom-elem (:dom-elem new-ui-state)
                    :hidden-input (:hidden-input new-ui-state)
-                   :editor-state (:editor-state restored-update)
-                   :prev-state (history/current-state history)
+                   :editor-state restored-state
+                   :prev-state current-editor-state
                    :viewmodels (:viewmodels new-ui-state)
-                   :changelist changelist)
+                   :changelist redo-changelist)
         (reset! *ui-state new-ui-state)))))
 
 (defn- fire-doc-and-selection-changed-callbacks!
@@ -304,25 +292,27 @@
       (on-selection-changed (:selection new-state)))))
 
 (defn fire-update!
-  "Update the UI state and UI in response to an EditorUpdate.
+  "Update the UI state and UI in response to a new EditorState.
    If no event is supplied, nothing will be added to the input-history.
    Arg opts: {:include-in-history? :add-to-history-immediately?}."
-  ([*ui-state editor-update event {:keys [include-in-history? :add-to-history-immediately? focus? scroll-to-caret?]
-                                   :or {focus? true}, :as opts}]
+  ([*ui-state new-editor-state event {:keys [include-in-history? add-to-history-immediately? focus? scroll-to-caret?]
+                                      :or {focus? true}, :as opts}]
    (let [ui-state @*ui-state ; only deref once a cycle
+         changelist (es/get-changelist new-editor-state)
+         new-editor-state (es/clear-changelist new-editor-state)
          current-editor-state (history/current-state (:history ui-state))
          new-ui-state (-> ui-state
-                          (update :history update-history editor-update opts)
-                          (update :word-count word-count/update current-editor-state editor-update)
+                          (update :history update-history new-editor-state changelist opts)
+                          (update :word-count word-count/update current-editor-state new-editor-state changelist)
                           (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
-                          (update-viewmodels editor-update))]
+                          (update-viewmodels new-editor-state changelist))]
      (sync-dom! :shadow-root (:shadow-root new-ui-state)
                 :dom-elem (:dom-elem new-ui-state)
                 :hidden-input (:hidden-input new-ui-state)
-                :editor-state (:editor-state editor-update)
+                :editor-state new-editor-state
                 :prev-state current-editor-state
                 :viewmodels (:viewmodels new-ui-state)
-                :changelist (:changelist editor-update)
+                :changelist changelist
                 :focus? focus?
                 :scroll-to-caret? scroll-to-caret?)
      (reset! *ui-state new-ui-state)

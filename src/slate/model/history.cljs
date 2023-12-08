@@ -20,12 +20,17 @@
    but that is outside the responsibility of this module. This is just a pure data structure for
    storing series of EditorStates."
   (:require [clojure.spec.alpha :as s]
+            [slate.model.dll :as dll]
             [slate.model.editor-state :as es :refer [editor-state]])
   (:refer-clojure :exclude [next]))
 
-(s/def ::backstack (s/coll-of ::es/editor-update))
+(s/def ::editor-state ::es/editor-state)
+(s/def ::changelist map?)
+(s/def ::update (s/keys :req-un [::editor-state
+                                 ::changelist]))
+(s/def ::backstack (s/coll-of ::update))
 (s/def ::current-state-index nat-int?)
-(s/def ::tip (s/nilable ::es/editor-update))
+(s/def ::tip (s/nilable ::update))
 
 (s/def ::editor-state-history
   (s/and (s/keys :req-un [::backstack
@@ -63,7 +68,7 @@
 
 (s/fdef current
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-update)
+  :ret ::update)
 
 (defn current
   "Returns the current entry of `history` (the one that should currently be displayed on the screen).
@@ -85,7 +90,7 @@
 
 (s/fdef prev
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-update)
+  :ret ::update)
 
 (defn prev
   "Returns the previous entry in `history` (the one immediately preceeding the
@@ -111,7 +116,7 @@
 
 (s/fdef next
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-update)
+  :ret ::update)
 
 (defn next
   "Returns the next entry in `history` (the one immediately succeeding the
@@ -158,7 +163,7 @@
   :ret ::editor-state-history)
 
 (defn undo
-  "Reverts `history` to the previous entry, if one exists, (identity otherwise)."
+  "Reverts `history` to the previous entry, if one exists. Otherwise returns `history` unchanged."
   [{:keys [tip] :as history}]
   (if (has-undo? history)
     (-> (if (some? tip) (add-tip-to-backstack history) history)
@@ -170,7 +175,7 @@
   :ret ::editor-state-history)
 
 (defn redo
-  "Restores `history` to the previously undone entry, if one exists (identity otherwise)."
+  "Restores `history` to the previously undone entry, if one exists. Otherwise returns `history` unchanged."
   [history]
   (if (has-redo? history)
     (update history :current-state-index inc)
@@ -178,27 +183,29 @@
 
 (s/fdef set-tip
   :args (s/cat :history ::editor-state-history
-               :tip ::es/editor-update)
+               :tip ::update)
   :ret ::editor-state-history)
 
 (defn set-tip
   "Sets the `tip` to the provided val `new-tip`. If `(has-redo?)` is true, the redos will be removed.
    This is what should be called whenever you want to update the editor state without yet adding
    anything to the backstack. For adding the tip to the backstack, see `add-tip-to-backstack`."
-  [history new-tip]
+  [history new-editor-state changelist]
   (let [backstack (if (has-redo? history)
                     (subvec (:backstack history) 0 (inc (:current-state-index history)))
                     (:backstack history))]
     (assoc history
            :tip (if (nil? (:tip history))
-                  new-tip
-                  (es/merge-updates (:tip history) new-tip))
+                  {:editor-state new-editor-state, :changelist changelist}
+                  (-> (:tip history)
+                      (assoc :editor-state new-editor-state)
+                      (update :changelist dll/merge-changelists changelist)))
            :backstack backstack
            :current-state-index (count backstack))))
 
 (s/fdef init
   :args (s/cat :state-or-update (s/or :state ::es/editor-state
-                                      :update ::es/editor-update))
+                                      :update ::update))
   :ret ::editor-state-history)
 
 (defn init
@@ -207,14 +214,7 @@
    Arguments:
    - `state-or-update`: An initial `EditorState` or `EditorUpdate` to serve as the beginning of history.
    An `EditorState` argument will be converted to an `EditorUpdate` with no changelist."
-  [state-or-update]
-  (let [initial (cond
-                  (instance? es/EditorUpdate state-or-update)
-                  state-or-update
-
-                  (instance? es/EditorState state-or-update)
-                  (es/identity-update state-or-update)
-
-                  :else
-                  (throw (js/Error. "Error in history/init: argument must be either an EditorUpdate or EditorState.")))]
+  [editor-state]
+  (let [initial {:editor-state editor-state,
+                 :changelist (es/get-changelist editor-state)}]
     {:tip nil, :backstack [initial], :current-state-index 0}))

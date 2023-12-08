@@ -54,10 +54,10 @@
         :document (paragraphs-word-count (m/items selected-fragment))
         :paragraph (paragraph-word-count (p/paragraph (m/items selected-fragment)))))))
 
-(defn update [word-count prev-state {:keys [editor-state changelist] :as _editor-update}]
+(defn update [word-count prev-editor-state new-editor-state changelist]
   (-> word-count
-      (clojure.core/update :total update-total-count (:doc prev-state) (:doc editor-state) changelist)
-      (assoc :selection (selection-count editor-state))))
+      (clojure.core/update :total update-total-count (:doc prev-editor-state) (:doc new-editor-state) changelist)
+      (assoc :selection (selection-count new-editor-state))))
 
 (defn init
   ([{:keys [doc] :as editor-state}]
