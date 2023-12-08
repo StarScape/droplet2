@@ -86,8 +86,7 @@
       (seq deleted-indices)))
 
 (defn should-integrate-tip-first?
-  "Returns true if the history's tip should be integrated into the backstack before
-   `new-editor-update` is added to the history."
+  "Returns true if the history's tip should be integrated into the backstack before the next state is added to the history."
   [history changelist]
   (and (modifies-doc? changelist)
        (not (modifies-doc? (:changelist (history/current history))))))
@@ -328,8 +327,8 @@
 
      ;; Fire doc and/or selection changed callbacks IF they have changed
      (fire-doc-and-selection-changed-callbacks! ui-state @*ui-state (:on-doc-changed ui-state) (:on-selection-changed ui-state))))
-  ([*ui-state editor-update opts]
-   (fire-update! *ui-state editor-update nil opts)))
+  ([*ui-state new-editor-state opts]
+   (fire-update! *ui-state new-editor-state nil opts)))
 
 (defn fire-normal-interceptor!
   "This is the core of Slate's main data loop.
@@ -344,9 +343,9 @@
   [*ui-state interceptor event]
   (let [ui-state @*ui-state ; only deref once a cycle
         editor-state (history/current-state (:history ui-state))
-        editor-update (interceptor editor-state ui-state event)
+        new-editor-state (interceptor editor-state ui-state event)
         opts (select-keys interceptor [:scroll-to-caret? :add-to-history-immediately? :include-in-history? :input-name])]
-    (fire-update! *ui-state editor-update event opts)))
+    (fire-update! *ui-state new-editor-state event opts)))
 
 (defn fire-manual-interceptor!
   [*ui-state interceptor event]
@@ -368,9 +367,9 @@
   "Sets the selection to the location provided and centers it in the viewport.
    location should be a Selection."
   [*ui-state location & {:keys [focus?] :or {focus? true}}]
-  (let [editor-update (es/set-selection (history/current-state (:history @*ui-state)) location)]
-    (fire-update! *ui-state editor-update {:include-in-history? false
-                                           :focus? focus?})
+  (let [new-editor-state (es/set-selection (history/current-state (:history @*ui-state)) location)]
+    (fire-update! *ui-state new-editor-state {:include-in-history? false
+                                              :focus? focus?})
     (view/scroll-to-caret! (:shadow-root @*ui-state))))
 
 (defn goto-current-occurrence!
@@ -401,17 +400,17 @@
 
 (defn replace-current! [*ui-state replacement-text]
   (let [{:keys [history]} @*ui-state
-        editor-update (f+r/replace-current-selection (history/current-state history) replacement-text)]
-    (fire-update! *ui-state editor-update {:add-to-history-immediately? true
-                                           :focus? false})))
+        new-editor-state (f+r/replace-current-selection (history/current-state history) replacement-text)]
+    (fire-update! *ui-state new-editor-state {:add-to-history-immediately? true
+                                              :focus? false})))
 
 (defn replace-all! [*ui-state replacement-text]
   (let [{:keys [find-and-replace history]} @*ui-state
-        editor-update (f+r/replace-all-occurrences find-and-replace
-                                                   (history/current-state history)
-                                                   replacement-text)]
-    (fire-update! *ui-state editor-update {:add-to-history-immediately? true
-                                           :focus? false})))
+        new-editor-state (f+r/replace-all-occurrences find-and-replace
+                                                      (history/current-state history)
+                                                      replacement-text)]
+    (fire-update! *ui-state new-editor-state {:add-to-history-immediately? true
+                                              :focus? false})))
 
 (defn set-find-text!
   "Sets the find text in the find-and-replace state map.
@@ -550,56 +549,56 @@
                            (reset! *editor-surface-clicked? false))))
 
     (bind-hidden-input-event! "keydown"
-      (fn [e]
-        (when-let [interceptor-fn (get-interceptor e)]
-          (.preventDefault e)
-          (fire-interceptor! *ui-state interceptor-fn e))))
+                              (fn [e]
+                                (when-let [interceptor-fn (get-interceptor e)]
+                                  (.preventDefault e)
+                                  (fire-interceptor! *ui-state interceptor-fn e))))
 
     (bind-hidden-input-event! "beforeinput"
-      (fn [e]
-        (.preventDefault e)
-        (case (.-inputType e)
-          "insertText"
-          (let [;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
-                completion-interceptor (when (= 1 (.. e -data -length))
-                                          (get-completion (.-data e)))
-                interceptor (or completion-interceptor (get-interceptor :insert))]
-            (fire-interceptor! *ui-state interceptor e))
+                              (fn [e]
+                                (.preventDefault e)
+                                (case (.-inputType e)
+                                  "insertText"
+                                  (let [;; If the data is a single key and matches a completion, fire that instead of the insert interceptor
+                                        completion-interceptor (when (= 1 (.. e -data -length))
+                                                                 (get-completion (.-data e)))
+                                        interceptor (or completion-interceptor (get-interceptor :insert))]
+                                    (fire-interceptor! *ui-state interceptor e))
 
-          "deleteContentBackward"
-          (let [{:keys [input-history]} @*ui-state]
-            (if (= :completion (peek input-history))
-              (fire-interceptor! *ui-state undo! e)
-              (fire-interceptor! *ui-state (get-interceptor :delete) e)))
+                                  "deleteContentBackward"
+                                  (let [{:keys [input-history]} @*ui-state]
+                                    (if (= :completion (peek input-history))
+                                      (fire-interceptor! *ui-state undo! e)
+                                      (fire-interceptor! *ui-state (get-interceptor :delete) e)))
 
-          nil)))
+                                  nil)))
 
     (bind-hidden-input-event! "cut"
-      (fn [e]
-        (.preventDefault e)
-        (fire-interceptor! *ui-state (get-interceptor :cut) e)))
+                              (fn [e]
+                                (.preventDefault e)
+                                (fire-interceptor! *ui-state (get-interceptor :cut) e)))
 
     (bind-hidden-input-event! "copy"
-      (fn [e]
-        (.preventDefault e)
-        (fire-interceptor! *ui-state (get-interceptor :copy) e)))
+                              (fn [e]
+                                (.preventDefault e)
+                                (fire-interceptor! *ui-state (get-interceptor :copy) e)))
 
     (bind-hidden-input-event! "paste"
-      (fn [e]
-        (.preventDefault e)
-        (fire-interceptor! *ui-state (get-interceptor :paste) e)))
+                              (fn [e]
+                                (.preventDefault e)
+                                (fire-interceptor! *ui-state (get-interceptor :paste) e)))
 
     (bind-hidden-input-event! "focusout"
-      (fn [e]
-        (let [{:keys [hidden-input shadow-root]} @*ui-state]
-          (when (not= hidden-input (.-activeElement shadow-root))
-            (.preventDefault e)
-            (handle-focus-out! *ui-state e)))))
+                              (fn [e]
+                                (let [{:keys [hidden-input shadow-root]} @*ui-state]
+                                  (when (not= hidden-input (.-activeElement shadow-root))
+                                    (.preventDefault e)
+                                    (handle-focus-out! *ui-state e)))))
 
     (bind-hidden-input-event! "focusin"
-      (fn [e]
-        (.preventDefault e)
-        (handle-focus-in! *ui-state)))
+                              (fn [e]
+                                (.preventDefault e)
+                                (handle-focus-in! *ui-state)))
 
     (.addEventListener js/window "resize" #(handle-resize! *ui-state))))
 

@@ -7,7 +7,7 @@
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [slate.interceptors]
             [slate.model.common :as m]
-            [slate.model.editor-state :as es :refer [>>=]]
+            [slate.model.editor-state :as es]
             [slate.model.navigation :as nav]
             [slate.model.selection :as sel]
             [slate.utils :as utils]
@@ -69,7 +69,7 @@
                                                     (:measure-fn ui-state)
                                                     (:shadow-root ui-state))]
     (-> (es/set-selection editor-state click-location)
-        (>>= es/select-whole-word editor-state))))
+        (es/select-whole-word))))
 
 (definterceptor triple-click
   {:include-in-history? false}
@@ -81,7 +81,7 @@
                                                     (:measure-fn ui-state)
                                                     (:shadow-root ui-state))]
     (-> (es/set-selection editor-state click-location)
-        (>>= es/select-whole-paragraph editor-state))))
+        (es/select-whole-paragraph))))
 
 (definterceptor drag
   {:include-in-history? false}
@@ -221,17 +221,17 @@
    offset that vertical navigation began at.
 
    This function will do that, calling the supplied vertical navigation function, remembering the start
-   offset when appropriate, and return an EditorUpdate."
+   offset when appropriate, and return a new EditorState"
   [vertical-nav-fn editor-state {:keys [input-history viewmodels dom-elem measure-fn] :as ui-state}]
   (let [last-event-vertical-nav? (vertical-nav-events (peek input-history))
         start-pos (when last-event-vertical-nav?
                     (extras/get ui-state :horizontal-start-pos nil))
-        vertical-nav-update (vertical-nav-fn editor-state viewmodels dom-elem measure-fn start-pos)]
+        vertical-nav-editor-state (vertical-nav-fn editor-state viewmodels dom-elem measure-fn start-pos)]
     (when-not last-event-vertical-nav?
       (extras/set! ui-state
                    :horizontal-start-pos
                    (view/caret-px editor-state viewmodels measure-fn)))
-    vertical-nav-update))
+    vertical-nav-editor-state))
 
 (definterceptor down
   {:include-in-history? false}
@@ -329,8 +329,8 @@
   {:add-to-history-immediately? true}
   [editor-state _ _]
   (-> (es/delete editor-state)
-      (>>= es/delete)
-      (>>= es/insert "—")))
+      (es/delete)
+      (es/insert "—")))
 
 (definterceptor insert-ol-at-paragraph-start
   {:add-to-history-immediately? true
@@ -338,8 +338,8 @@
                    (and (sel/single? selection) (= 2 (sel/caret selection))))}
   [editor-state _ui-state _e]
   (-> (es/delete editor-state)
-      (>>= es/delete)
-      (>>= es/toggle-paragraph-type :ol)))
+      (es/delete)
+      (es/toggle-paragraph-type :ol)))
 
 (definterceptor insert-ul-at-paragraph-start
   {:add-to-history-immediately? true
@@ -347,7 +347,7 @@
                    (and (sel/single? selection) (= 1 (sel/caret selection))))}
   [editor-state _ui-state _e]
   (-> (es/delete editor-state)
-      (>>= es/toggle-paragraph-type :ul)))
+      (es/toggle-paragraph-type :ul)))
 
 ;; Formatting
 (definterceptor italic

@@ -79,7 +79,7 @@
     ;; but for the life of me I can't understand what I was getting at with it???
     ;; Fix at some point maybe.
     #_(is (not= (history/current {:backstack (-> [state]
-                                               (concat (repeat 4 (editor-update)))
+                                               (concat (repeat 4 (empty-update)))
                                                (vec))
                                 :current-state-index 1
                                 :tip nil})

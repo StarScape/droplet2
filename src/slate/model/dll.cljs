@@ -167,7 +167,7 @@
    It is assumed that c2 happened immediately after c1. You cannot supply random
    changelists on wholly unrelated lists, or lists from non-adjacent points in time.
 
-   The purpose of this is so that we can roll many EditorUpdates into one, and re-render the document only once."
+   The purpose of this is so that we can roll many changelists into one, and re-render the document only once."
   [c1 c2]
   (let [deleted-then-inserted (set (filter #(contains? (:deleted-indices c1) %) (:inserted-indices c2)))
         changed-then-deleted  (set (filter #(contains? (:changed-indices c1) %) (:deleted-indices c2)))

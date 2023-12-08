@@ -35,23 +35,23 @@
                         :copy-id copy-id})))
 
 (defn cut
-  "Cuts the currently selected content to the clipboard and returns an EditorUpdate."
+  "Cuts the currently selected content to the clipboard and returns the new EditorState"
   [{:keys [selection] :as editor-state} event]
   (if (sel/range? selection)
     (let [content (selected-content editor-state)]
       (copy-to-clipboard! content event)
       (es/delete editor-state))
-    (es/identity-update editor-state)))
+    editor-state))
 
 (defn copy
-  "Copies the currently selected content to the clipboard and returns an (empty) EditorUpdate."
+  "Copies the currently selected content to the clipboard and returns an unchanged EditorState."
   [editor-state event]
   (let [fragment (selected-content editor-state)]
     (copy-to-clipboard! fragment event)
-    (es/identity-update editor-state)))
+    editor-state))
 
 (defn paste
-  "Pastes the currently selected content into the editor and returns an EditorUpdate."
+  "Pastes the currently selected content into the editor and returns a new EditorState."
   [editor-state event]
   (let [clipboard-data @*clipboard
         slate-copy-id (.. event -clipboardData (getData "slate-copy-id"))
@@ -73,4 +73,4 @@
       (es/insert editor-state (.. event -clipboardData (getData mime-plaintext)))
 
       :else
-      (es/identity-update editor-state))))
+      editor-state)))

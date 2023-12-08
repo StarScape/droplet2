@@ -243,7 +243,7 @@
 
 (defprotocol Navigable
   "Methods for navigating around. Implemented for Documents, and EditorStates.
-  All methods return a new Selection, except for on EditorStates, which returns EditorUpdates."
+  All methods return a new Selection, except for on EditorStates, which return new EditorStates."
   (start
     [this]
     "Go to start of Document.")
@@ -279,28 +279,28 @@
   (next-clause
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping ahead to the end of the next clause (defined as
+    "Returns selection after jumping ahead to the end of the next clause (defined as
     the end of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
   (prev-clause
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping back to the start of the current clause (defined as
+    "Returns selection after jumping back to the start of the current clause (defined as
     the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
   (next-sentence
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping ahead to the end of the next clause (defined as
+    "Returns selection after jumping ahead to the end of the next clause (defined as
     the end of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
   (prev-sentence
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping back to the start of the current clause (defined as
+    "Returns selection after jumping back to the start of the current clause (defined as
     the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 

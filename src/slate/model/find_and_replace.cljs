@@ -143,12 +143,12 @@
     (update find-and-replace-state :current-occurrence-idx dec)))
 
 (defn replace-current-selection
-  "Returns an EditorUpdate replacing the current occurrence with `replacement-text`."
+  "Returns an EditorState replacing the current occurrence with `replacement-text`."
   [editor-state replacement-text]
   (replace editor-state replacement-text))
 
 (defn replace-all-occurrences
-  "Returns an EditorUpdate replacing all occurrences with `replacement-text`."
+  "Returns an EditorState replacing all occurrences with `replacement-text`."
   [{:keys [occurrences] :as _find-and-replace-state} editor-state replacement-text]
   (replace-all editor-state occurrences replacement-text))
 

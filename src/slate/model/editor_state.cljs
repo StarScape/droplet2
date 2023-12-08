@@ -18,64 +18,12 @@
   (s/and #(instance? EditorState %)
          (s/keys :req-un [::doc
                           ::selection])))
-#_(s/def ::editor-update #(instance? EditorUpdate %))
-
-#_(defprotocol Monad
-  "Standard monad interface. See any of the myriad monad tutorials online for deeper explanations of its mechanics.
-  EditorUpdates are modeled as monads. Every operation on EditorState can return a new EditorUpdate. They can then be
-  chained using bind, which will automatically combine changelists."
-  (bind [ma, a->b] [ma, a->b, args]
-    "Bind operation. Takes a monad of type a, a function of a to b, and a produces a monad of type b.
-     Second arity also takes a list of arguments to be passed in to the function after its first arg.")
-  (return [val] "Returns a new monad wrapping a."))
-
-#_(defn >>=
-  "Sugared version of Monad's bind, taking extra arguments as varargs instead of a list."
-  [ma f & args]
-  (bind ma f args))
 
 (defrecord EditorState [doc, selection]
   ;; TODO: needed for EditorState?
   TextContainer
   (len [{:keys [doc]}] (len doc))
   (blank? [{:keys [doc]}] (blank? doc)))
-
-#_(defrecord EditorUpdate [editor-state, changelist]
-  ;; EditorUpdate implements monad for the sake of easily tracking changelists (which
-  ;; is needed in order to efficiently update the UI), and maintaining this as separate
-  ;; from the core logic of EditorState while still allowing for easy chaining.
-  ;; Most functions in this namespace return an EditorUpdate.
-  Monad
-  (bind [update, state->update, args]
-    (let [update2 (apply state->update (:editor-state update) args)
-          merged-changelists (merge-changelists (:changelist update) (:changelist update2))
-          combined-update (assoc update2 :changelist merged-changelists)]
-      combined-update))
-  (bind [update, state->update]
-    (bind update state->update [])))
-
-#_(defn changelist
-  "Constructor for a new changelist object. Changelists are used for tracking differences between
-   successive EditorStates.
-
-   A changelist is composed of 3 fields: :changed-indices, :inserted-indices, and :deleted-indices,
-   which are sets containing the indices of the paragraphs that have been changed,
-   newly inserted, or removed from the document since the last EditorState, respectively.
-
-   Takes keyword arguments :changed-indices :inserted-indices, and :deleted-indices (each
-   default to an empty set). If no arguments supplied, returns an empty changelist."
-  [& {:keys [changed-indices inserted-indices deleted-indices]}]
-  {:pre [(or (nil? changed-indices) (set? changed-indices))
-         (or (nil? inserted-indices) (set? inserted-indices))
-         (or (nil? deleted-indices) (set? deleted-indices))]}
-  {:changed-indices (or changed-indices #{})
-   :inserted-indices (or inserted-indices #{})
-   :deleted-indices (or deleted-indices #{})})
-
-#_(defn identity-update
-  "Returns an EditorUpdate with no changes, and therefore no effects."
-  [editor-state]
-  (->EditorUpdate editor-state (changelist)))
 
 (defn editor-state
   "Creates a new EditorState object with the given doc and selection.
@@ -119,7 +67,7 @@
              :selection (nav/autoset-formats new-doc (sel/collapse-start selection))))))
 
 (defmulti insert
-  "Inserts into the EditorState's document at the current selection. Returns an EditorUpdate."
+  "Inserts into the EditorState's document at the current selection. Returns an EditorState."
   {:arglists '([editor-state selection content-to-insert])}
   (fn [& args] (type (last args))))
 
@@ -440,7 +388,7 @@
     new-editor-state))
 
 (defn- nav-fallthrough
-  "Little helper method for generating an EditorUpdate with a selection made
+  "Little helper method for generating a new EditorState with a selection made
    by calling nav-method with the `editor-state`'s `doc` and `selection`."
   [{:keys [doc selection] :as editor-state}, nav-method]
   (let [new-selection (nav-method doc selection)]
@@ -535,8 +483,3 @@
   [editor-state]
   (update-in editor-state [:doc :children] dll/clear-changelist))
 
-#_(defn merge-updates
-  "Merges the changelists of `editor-update1` and `editor-update2`."
-  [editor-update1 editor-update2]
-  (let [merged-changelists (merge-changelists (:changelist editor-update1) (:changelist editor-update2))]
-    (assoc editor-update2 :changelist merged-changelists)))

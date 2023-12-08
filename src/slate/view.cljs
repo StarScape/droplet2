@@ -531,11 +531,11 @@
         (nav/autoset-formats doc (sel/selection [destination-para-idx next-line-offset]))))))
 
 (defn down
-  "Move the caret down into the next line. Returns an EditorUpdate.
+  "Move the caret down into the next line. Returns a new EditorState.
    This is not in the model code because it requires the viewmodel to work."
   [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   (let [new-selection (down-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
+    (assoc editor-state :selection new-selection)))
 
 (defn up-selection
   "Move the caret up into the next line. Returns a new Selection."
@@ -571,14 +571,14 @@
     (nav/autoset-formats doc (sel/selection [destination-para-idx prev-line-offset]))))
 
 (defn up
-  "Move the caret up into the next line. Returns an EditorUpdate.
+  "Move the caret up into the next line. Returns an EditorState.
    This is not in the model code because it requires the viewmodel to work."
   [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   (let [new-selection (up-selection editor-state viewmodels editor-elem measure-fn horizontal-start-pos)]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
+    (assoc editor-state :selection new-selection)))
 
 (defn shift+down
-  "Move the caret down into the next line. Returns an EditorUpdate."
+  "Move the caret down into the next line. Returns an EditorState."
   [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   ;; TODO: go to end of line if down-selection == selection (aka it's the last para)
   (let [{:keys [selection]} editor-state
@@ -592,10 +592,10 @@
                           (assoc selection :start (:end selection), :end down-caret, :backwards? false)
                           (assoc selection :start down-caret, :backwards? true))
                         (assoc selection :end down-caret, :backwards? false))]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
+    (assoc editor-state :selection new-selection)))
 
 (defn shift+up
-  "Move the caret up into the next line. Returns an EditorUpdate."
+  "Move the caret up into the next line. Returns an EditorState."
   [editor-state viewmodels editor-elem measure-fn horizontal-start-pos]
   ;; TODO: go to start of line if down-selection == selection (aka it's the first para)
   (let [{:keys [selection]} editor-state
@@ -609,7 +609,7 @@
                           (assoc selection :start up-caret, :end (:start selection), :backwards? true)
                           (assoc selection :end up-caret, :backwards? false))
                         (assoc selection :start up-caret, :backwards? true))]
-    (es/->EditorUpdate (assoc editor-state :selection new-selection) (es/get-changelist))))
+    (assoc editor-state :selection new-selection)))
 
 (defn start-of-line-selection
   "Returns a Selection that moves the cursor to the beginning of the current line."
@@ -618,10 +618,9 @@
     (sel/selection [(sel/caret-para selection) new-offset])))
 
 (defn start-of-line
-  "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
+  "Returns an new EditorState with the cursor moved to the beginning of the current line."
   [editor-state viewmodels]
-  (es/->EditorUpdate (assoc editor-state :selection (start-of-line-selection editor-state viewmodels))
-                     (es/get-changelist)))
+  (assoc editor-state :selection (start-of-line-selection editor-state viewmodels)))
 
 (defn end-of-line-selection
   "Returns a Selection that moves the cursor to the beginning of the current line."
@@ -636,10 +635,9 @@
     (sel/selection [(sel/caret-para selection) new-offset])))
 
 (defn end-of-line
-  "Returns an EditorUpdate that moves the cursor to the beginning of the current line."
+  "Returns a new EditorState with the cursor moved to the beginning of the current line."
   [editor-state viewmodels]
-  (es/->EditorUpdate (assoc editor-state :selection (end-of-line-selection editor-state viewmodels))
-                     (es/get-changelist)))
+  (assoc editor-state :selection (end-of-line-selection editor-state viewmodels)))
 
 (defn calc-line-height
   "Returns the actual *rendered* line height of a given paragraph DOM element, in pixels."

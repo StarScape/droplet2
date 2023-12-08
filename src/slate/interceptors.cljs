@@ -6,7 +6,7 @@
             [clojure.spec.test.alpha :as stest]
             [slate.model.editor-state :as es]))
 
-;; An Interceptor is a a function of (EditorState, EditorUiState?, Event?) -> EditorUpdate
+;; An Interceptor is a a function of (EditorState, EditorUiState?, Event?) -> EditorState
 (defrecord Interceptor [interceptor-fn
                         input-name
                         should-fire?

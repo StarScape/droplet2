@@ -183,7 +183,8 @@
 
 (s/fdef set-tip
   :args (s/cat :history ::editor-state-history
-               :tip ::update)
+               :tip ::editor-state
+               :changelist ::changelist)
   :ret ::editor-state-history)
 
 (defn set-tip
@@ -212,9 +213,8 @@
   "Returns a new history object with the tip set to the provided EditorState.
 
    Arguments:
-   - `state-or-update`: An initial `EditorState` or `EditorUpdate` to serve as the beginning of history.
-   An `EditorState` argument will be converted to an `EditorUpdate` with no changelist."
+   - `editor-state`: An initial `EditorState` to serve as the beginning of history."
   [editor-state]
-  (let [initial {:editor-state editor-state,
+  (let [initial {:editor-state (es/clear-changelist editor-state),
                  :changelist (es/get-changelist editor-state)}]
     {:tip nil, :backstack [initial], :current-state-index 0}))
