@@ -242,11 +242,17 @@
              (= list-type :ul))]}
   (let [tag-name (name list-type)
         rendered-paragraph (vm-para->dom viewmodel selection)
-        next-p-dom-elem (when-let [next-idx (dll/next-index (:children doc) paragraph-idx)]
+        next-idx (dll/next-index (:children doc) paragraph-idx)
+        next-p (when next-idx
+                 (get (:children doc) next-idx))
+        next-p-dom-elem (when next-idx
                           (get-paragraph-dom-elem editor-elem next-idx))
         next-p-in-same-list? (when next-p-dom-elem
                                (= (.. next-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
-        prev-p-dom-elem (when-let [prev-idx (dll/prev-index (:children doc) paragraph-idx)]
+        prev-idx (dll/prev-index (:children doc) paragraph-idx)
+        prev-p (when prev-idx
+                 (get (:children doc) prev-idx))
+        prev-p-dom-elem (when prev-idx
                           (get-paragraph-dom-elem editor-elem prev-idx))
         prev-p-in-same-list? (when prev-p-dom-elem
                                (= (.. prev-p-dom-elem -parentNode -tagName toLowerCase) tag-name))
@@ -262,6 +268,13 @@
       ;; insert into (U|O)L before next-p-dom-elem
       (and next-p-dom-elem next-p-in-same-list?)
       (.insertAdjacentHTML next-p-dom-elem "beforebegin" p-outer-html)
+
+      (and prev-p-dom-elem next-p-dom-elem
+           (or (= (:type prev-p) (:type next-p) :ol)
+               (= (:type prev-p) (:type next-p :ul))))
+      (do
+        (split-elem-on-child! (.-parentNode prev-p-dom-elem) prev-p-dom-elem)
+        (.insertAdjacentHTML (nearest-top-level-ancestor prev-p-dom-elem editor-elem) "afterend" p-outer-html))
 
       ;; Neither prev nor next is a list paragraph but there is a prev/next paragraph in the DOM currently.
       ;; Insert directly before the _nearest ancestor_ of next-p-elem that is top-level within document elem.
@@ -362,6 +375,7 @@
 
 ;; Currently all paragraph types update the same, no special logic/multimethod needed
 (defn update-para! [editor-elem paragraph-idx viewmodel editor-state prev-state]
+  (-> editor-state :doc :children)
   (let [paragraph-elem (get-paragraph-dom-elem editor-elem paragraph-idx)
         type-changed? (not= (-> editor-state :doc :children (get paragraph-idx) :type)
                             (-> prev-state :doc :children (get paragraph-idx) :type))]

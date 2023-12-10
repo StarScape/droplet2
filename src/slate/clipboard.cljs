@@ -1,21 +1,17 @@
 (ns slate.clipboard
-  (:require [clojure.string :as str]
-            [slate.filetypes.export.html :refer [fragment->html]]
+  (:require [slate.filetypes.export.html :refer [fragment->html]]
             [slate.filetypes.import.html :refer [html->fragment]]
-            [slate.model.common :as model :refer [TextContainer
-                                                  selected-content
+            [slate.model.common :as model :refer [selected-content
                                                   text]]
-            [slate.model.run :as r :refer [Run]]
-            [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.editor-state :as es]
             [slate.model.selection :as sel]))
 
 (def ^:const mime-plaintext "text/plain")
 (def ^:const mime-html "text/html")
 
-;; JS's clipboardData store its data as a string, so it's more efficient, when
+;; JS's clipboardData stores its data as a string, so it's more efficient, when
 ;; pasting from Droplet straight back into Droplet, to not bother with serializing
-;; and deserializing an object=, and instead just stash it in a local atom. If Slate
+;; and deserializing an object, and instead just stash it in a local atom. If Slate
 ;; sees that the data in the clipboard is from itself, it will just pull the stashed
 ;; content from this atom instead.
 (def *clipboard (atom nil))

@@ -224,28 +224,6 @@
   ([doc idx]
    (insert-paragraph-after doc idx :body)))
 
-#_(defn enter
-  "Equivalent to what happens when the user hits the enter button.
-   Creates a new paragraph in the appropriate position in the doc."
-  ([doc sel]
-   {:pre [(sel/single? sel)]}
-   (let [caret (sel/caret sel)
-         para-idx (-> sel :start :paragraph)
-         para ((:children doc) para-idx)
-         new-para-type (if (contains? types-preserved-on-enter (:type para))
-                         (:type para)
-                         :body)]
-     (cond
-       (= caret 0)
-       (insert-paragraph-before doc para-idx new-para-type)
-
-       (= caret (len para))
-       (insert-paragraph-after doc para-idx new-para-type)
-
-       :else
-       (let [[para1 para2] (split-paragraph doc sel)]
-         (replace-paragraph-with doc para-idx [para1 para2]))))))
-
 (defn doc-selected-content
   [doc sel]
   (let [start-para-idx (-> sel :start :paragraph)

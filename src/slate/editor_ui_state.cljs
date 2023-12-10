@@ -673,7 +673,7 @@
 
    :editor-state - The initial EditorState to load into the editor. Will default to an empty document.
    OR
-   :save-file-contents - The restored, deserialized history object.
+   :save-file-contents - The restored, deserialized history object (deprecated).
 
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
   [& {:keys [*atom
@@ -749,3 +749,4 @@
                (swap! *atom assoc :ready? true)
                (on-ready))))
   *atom)
+

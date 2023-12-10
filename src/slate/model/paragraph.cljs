@@ -76,8 +76,8 @@
 ;; Paragraph helper functions
 (defn optimize-runs
   "Given a vector/seq of runs, merges adjacent runs with the same formatting, and removes
-   empty runs. Returns a vector. Return an empty run if one is passed in, or if all runs have
-   no content."
+   empty runs. Returns a vector. Return an empty run if one is passed in, or if all runs
+   have no content."
   [runs]
   {:post [(vector? %)]}
   (let [non-empty-runs (filterv (complement blank?) runs)]
@@ -204,19 +204,18 @@
   (fn [& args] (type (last args))))
 
 (defmethod insert
-  ParagraphFragment
-  [para sel {:keys [runs]}]
-  (if (sel/range? sel)
-    (let [selection-removed (delete para sel)]
-      (insert selection-removed (sel/collapse-start sel) runs))
-    (let [[before after] (split-runs (:runs para) (sel/caret sel))
-          new-runs (concat before runs after)]
-      (assoc para :runs (optimize-runs new-runs)))))
-
-(defmethod insert
   r/Run
   [para sel run]
   (insert para sel (fragment run)))
+
+(defmethod insert
+  ParagraphFragment
+  [para sel {:keys [runs]}]
+  (if (sel/range? sel)
+    (insert (delete para sel) (sel/collapse-start sel) runs)
+    (let [[before after] (split-runs (:runs para) (sel/caret sel))
+          new-runs (concat before runs after)]
+      (assoc para :runs (optimize-runs new-runs)))))
 
 (defmethod insert
   Paragraph
@@ -318,28 +317,28 @@
   (update-in paragraph [:runs (dec (count (:runs paragraph))) :text] #(.trimEnd %)))
 
 (defn apply-format
- ([p format]
-  (update p :runs (partial mapv #(r/apply-format % format))))
- ([p sel format]
-  (update-selected-runs p sel #(r/apply-format % format))))
+  ([p format]
+   (update p :runs (partial mapv #(r/apply-format % format))))
+  ([p sel format]
+   (update-selected-runs p sel #(r/apply-format % format))))
 
 (defn remove-format
- ([p format]
-  (update p :runs (partial mapv #(r/remove-format % format))))
- ([p sel format]
-  (update-selected-runs p sel #(r/remove-format % format))))
+  ([p format]
+   (update p :runs (partial mapv #(r/remove-format % format))))
+  ([p sel format]
+   (update-selected-runs p sel #(r/remove-format % format))))
 
 (defn toggle-format
- [para sel format]
- (let [[runs-before runs-in-selection runs-after] (separate-selected (:runs para) sel)
-       common-formats (->> runs-in-selection
-                           (map :formats)
-                           (apply set/intersection))
-       new-runs-in-selection (if (contains? common-formats format)
-                               (mapv #(r/remove-format % format) runs-in-selection)
-                               (mapv #(r/apply-format % format) runs-in-selection))
-       new-runs (optimize-runs (concat runs-before new-runs-in-selection runs-after))]
-   (assoc para :runs new-runs)))
+  [para sel format]
+  (let [[runs-before runs-in-selection runs-after] (separate-selected (:runs para) sel)
+        common-formats (->> runs-in-selection
+                            (map :formats)
+                            (apply set/intersection))
+        new-runs-in-selection (if (contains? common-formats format)
+                                (mapv #(r/remove-format % format) runs-in-selection)
+                                (mapv #(r/apply-format % format) runs-in-selection))
+        new-runs (optimize-runs (concat runs-before new-runs-in-selection runs-after))]
+    (assoc para :runs new-runs)))
 
 (extend-type Paragraph
   Selectable
