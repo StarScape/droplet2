@@ -61,6 +61,10 @@
    on them, and convert them to and from other sequential types using `into`. Destructuring and all your
    favorite Clojure goodies work as expected.
 
+   The DLL also keeps track of changes to it via a __changelist__. This is a map of three fields: `:inserted-indices`,
+   `:changed-indices`, and `:deleted-indices`, which keep track of the indices inserted, changed, or deleted since the
+   last time the changelist was reset. This is done by Droplet between renders, much further up the call stack.
+
    They are also decoupled from the rest of the code -- there's no reason you couldn't put something other than
    paragraphs inside a DLL, though it's doubtful one would need these incredibly specific set of properties for
    any other use."

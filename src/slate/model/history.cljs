@@ -3,13 +3,12 @@
    the changes between them. This namespace defines functions for manipulating
    and managing the history object.
 
-   The history consists of a few parts: the backstack (a list of EditorStates),
-   the current-state-index (which references an index into the backstack), and the
-   *tip*. The tip is also an EditorState, but represents a current state that *has
-   not yet been incorporated into the backstack*. The tip can be modified directly --
-   and doing so will not result in a new state being added to the history. If you want
-   to add the history's tip to the backstack, an explicit call to `add-tip-to-backstack`
-   is needed.
+   The history consists of a few parts: the backstack (a list of updates, each consisting
+   of an EditorState and a changelist), the current-state-index (which references an index
+   into the backstack), and the *tip*. The tip is also an EditorState, but represents a current
+   state that *has not yet been incorporated into the backstack*. The tip can be modified directly --
+   and doing so will not result in a new state being added to the history. If you want to add
+   the history's tip to the backstack, an explicit call to `add-tip-to-backstack` is needed.
 
    To understand the need for tip, consider the behavior of a typical text editor.
    Not EVERY single state change is preserved. For example, if you type ten characters
