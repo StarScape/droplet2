@@ -30,11 +30,11 @@
           0 paragraphs))
 
 (defn update-total-count
-  [total-word-count prev-doc new-doc {:keys [inserted-uuids changed-uuids deleted-uuids] :as _changelist}]
-  (let [deleted-paragraphs (map #(get (:children prev-doc) %) deleted-uuids)
-        inserted-paragraphs (map #(get (:children new-doc) %) inserted-uuids)
-        old-changed-paragraphs (map #(get (:children prev-doc) %) changed-uuids)
-        new-changed-paragraphs (map #(get (:children new-doc) %) changed-uuids)]
+  [total-word-count prev-doc new-doc {:keys [inserted-indices changed-indices deleted-indices] :as _changelist}]
+  (let [deleted-paragraphs (map #(get (:children prev-doc) %) deleted-indices)
+        inserted-paragraphs (map #(get (:children new-doc) %) inserted-indices)
+        old-changed-paragraphs (map #(get (:children prev-doc) %) changed-indices)
+        new-changed-paragraphs (map #(get (:children new-doc) %) changed-indices)]
     (-> total-word-count
         (+ (paragraphs-word-count inserted-paragraphs))
         (- (paragraphs-word-count deleted-paragraphs))
@@ -54,10 +54,10 @@
         :document (paragraphs-word-count (m/items selected-fragment))
         :paragraph (paragraph-word-count (p/paragraph (m/items selected-fragment)))))))
 
-(defn update [word-count prev-state {:keys [editor-state changelist] :as _editor-update}]
+(defn update [word-count prev-editor-state new-editor-state changelist]
   (-> word-count
-      (clojure.core/update :total update-total-count (:doc prev-state) (:doc editor-state) changelist)
-      (assoc :selection (selection-count editor-state))))
+      (clojure.core/update :total update-total-count (:doc prev-editor-state) (:doc new-editor-state) changelist)
+      (assoc :selection (selection-count new-editor-state))))
 
 (defn init
   ([{:keys [doc] :as editor-state}]

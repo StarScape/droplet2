@@ -4,6 +4,7 @@
             [drop.app.components.find-and-replace-popup :as f+r :refer [find-and-replace-popup]]
             [drop.app.file-handling :as file-handling]
             [drop.utils :as utils]
+            [drop.app.utils :refer [show-error-dialog!]]
             [slate.default-interceptors :as ints]
             [slate.editor-ui-state :as ui-state]
             [slate.model.selection :as sel]
@@ -66,6 +67,7 @@
                        :on-open file-handling/on-open!
                        :on-save file-handling/on-save!
                        :on-save-as file-handling/on-save-as!
+                       :on-load-file-error file-handling/on-fail-open-file!
                        :on-focus-find on-focus-find
                        :on-doc-changed on-doc-changed
                        :on-selection-changed on-selection-changed

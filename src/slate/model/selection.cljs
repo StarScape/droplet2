@@ -2,15 +2,28 @@
   "Functions for creating and manipulating Selection objects,
    a basic building block of the editor which indicate where
    the text cursor and selection are."
-  (:require [clojure.set :as set]))
+  (:require [clojure.spec.alpha :as s]
+            ["decimal.js" :refer [Decimal]]))
+
+(s/def ::paragraph #(instance? Decimal %))
+(s/def ::offset nat-int?)
+(s/def ::start (s/keys :req-un [::paragraph ::offset]))
+(s/def ::end (s/keys :req-un [::paragraph ::offset]))
+
+(s/def ::backwards? boolean?)
+
+(s/def ::format #{:italic :bold :strikethrough})
+(s/def ::formats (s/coll-of ::format))
+
+(s/def ::Selection
+  (s/keys :req-un [::start ::end ::backwards? ::formats]))
 
 (defrecord Selection
-  [start end between backwards? formats])
+  [start end backwards? formats])
 
-(defn selection-impl
-  [& {:keys [start end backwards? between formats]
+(defn- constructor-impl
+  [& {:keys [start end backwards? formats]
       :or {backwards? false
-           between #{}
            formats #{}}}]
   (let [[start-paragraph start-offset] start
         [end-paragraph end-offset] (or end start)]
@@ -19,7 +32,6 @@
                      :end {:paragraph end-paragraph
                            :offset end-offset}
                      :backwards? backwards?
-                     :between between
                      :formats formats})))
 
 (defn selection
@@ -27,13 +39,9 @@
 
    A Selection is composed of these parts:
 
-   - `:start` and `:end`: both maps containing `:paragraph`, a UUID of the paragraph
+   - `:start` and `:end`: both maps containing `:paragraph`, the index of the paragraph
    referenced, and `:offset`, a integer indicating how many characters into the paragraph
    that side of the selection is. `:start` **always** comes *before* `:end` in the document.
-
-   - `:between`: a set of UUIDs, indicating all the paragraphs *between* the `:start` and `:end`.
-     This **can** be null/empty set, but if so, it is the responsibility of the consumer to ensure
-     that there actually are no paragraphs between `:start` and `:end`.
 
    - `:backwards?`: a boolean indicating if the range selection is backwards, i.e. if
    the text caret should be visible at the start instead of the end.
@@ -43,17 +51,17 @@
   ([arg1, arg2, & args]
    (cond
      (and (vector? arg1) (vector? arg2))
-     (apply selection-impl :start arg1, :end arg2, args)
+     (apply constructor-impl :start arg1, :end arg2, args)
 
      (vector? arg1)
-     (apply selection-impl :start arg1, :end arg1, arg2, args)
+     (apply constructor-impl :start arg1, :end arg1, arg2, args)
 
      :else
-     (apply selection-impl arg1 arg2 args)))
+     (apply constructor-impl arg1 arg2 args)))
   ([arg1 arg2]
-   (selection-impl :start arg1 :end arg2))
+   (constructor-impl :start arg1 :end arg2))
   ([arg1]
-   (selection-impl :start arg1 :end arg1)))
+   (constructor-impl :start arg1 :end arg1)))
 
 (defn single?
   "Returns true if argument is a single selection."
@@ -75,7 +83,7 @@
     (-> sel :end :offset)))
 
 (defn caret-para
-  "Returns the UUID of the paragraph that the caret is inside of."
+  "Returns the index of the paragraph that the caret is inside of."
   [sel]
   (if (:backwards? sel)
     (-> sel :start :paragraph)
@@ -100,20 +108,6 @@
   [sel]
   (= (-> sel :start :paragraph) (-> sel :end :paragraph)))
 
-(defn add-to-between
-  "Adds the UUID to the selection's :between set if it is not also the UUID of the start or end paragraph."
-  [sel uuid]
-  (if (or (= uuid (-> sel :start :paragraph))
-          (= uuid (-> sel :end :paragraph)))
-    sel
-    (update sel :between conj uuid)))
-
-(defn remove-ends-from-between
-  "If the UUID of the start of end paragraphs are in the :between set,
-  removes them. Otherwise, just return the selection as is."
-  [sel]
-  (update sel :between #(disj % (-> sel :start :paragraph) (-> sel :end :paragraph))))
-
 (defn shift-single
   "Shift a single-selection by `n` characters (can be positive or negative)."
   [{{paragraph :paragraph offset :offset} :start :as sel} n]
@@ -127,8 +121,7 @@
   {:pre [(single? sel), (nat-int? offset)]}
   (-> sel
       (assoc-in [:start :offset] offset)
-      (assoc-in [:end :offset] offset)
-      (assoc :formats #{}, :between #{})))
+      (assoc-in [:end :offset] offset)))
 
 (defn correct-orientation
   "Sets the selection's :backwards? field to false if it is a single selection."
@@ -201,15 +194,3 @@
   (assoc sel :formats (if (contains? formats f)
                         (disj formats f)
                         (conj formats f))))
-
-(defn all-uuids
-  "Returns a set of **all** the paragraphs' UUIDs which are
-  inside the selection (i.e. :start, :between, and :end).
-
-   If passed multiple selections, will return the union of all UUIDs for each selection."
-  ([& sels]
-   (reduce (fn [uuids, sel]
-             (set/union uuids (conj (:between sel) (-> sel :start :paragraph) (-> sel :end :paragraph))))
-           #{} sels)))
-
-;; TODO: change :paragraph in :start and :end to :uuid

@@ -46,7 +46,7 @@
    (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
    (measure elem cache text #{} :body))
   ([_elem _cache _text _formats]
-   (throw "Invalid arity of measurement function!")
+   (throw (js/Error. "Invalid arity of measurement function!"))
    #_(measure elem cache text formats nil))
   ([elem cache text formats paragraph-type]
    #_(when (nil? text)

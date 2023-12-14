@@ -13,7 +13,12 @@
   (slurp (java.io.File. filepath)))
 
 (defmacro weak-cache-val
-  "Evaluates `body` in an implicit `do` and cache's the value via a weak reference to object `obj`."
+  "Evaluates `body` in an implicit `do` and cache's the value via a weak reference to object `obj`.
+   In other words, the cached values will be freed from memory whenever `obj` is.
+
+   This is particularly useful in a Clojure context, because, since values don't change, you can
+   lazily compute complex things about the value, put them in a weak cache, and they remain valid
+   for the lifetime of that object."
   [obj & body]
   `(let [func# (fn [] ~@body)]
      (weak-cache ~obj func#)))

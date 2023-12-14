@@ -1,21 +1,17 @@
 (ns slate.clipboard
-  (:require [clojure.string :as str]
-            [slate.filetypes.export.html :refer [fragment->html]]
+  (:require [slate.filetypes.export.html :refer [fragment->html]]
             [slate.filetypes.import.html :refer [html->fragment]]
-            [slate.model.common :as model :refer [TextContainer
-                                                  selected-content
+            [slate.model.common :as model :refer [selected-content
                                                   text]]
-            [slate.model.run :as r :refer [Run]]
-            [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.editor-state :as es]
             [slate.model.selection :as sel]))
 
 (def ^:const mime-plaintext "text/plain")
 (def ^:const mime-html "text/html")
 
-;; JS's clipboardData store its data as a string, so it's more efficient, when
+;; JS's clipboardData stores its data as a string, so it's more efficient, when
 ;; pasting from Droplet straight back into Droplet, to not bother with serializing
-;; and deserializing an object=, and instead just stash it in a local atom. If Slate
+;; and deserializing an object, and instead just stash it in a local atom. If Slate
 ;; sees that the data in the clipboard is from itself, it will just pull the stashed
 ;; content from this atom instead.
 (def *clipboard (atom nil))
@@ -35,23 +31,23 @@
                         :copy-id copy-id})))
 
 (defn cut
-  "Cuts the currently selected content to the clipboard and returns an EditorUpdate."
+  "Cuts the currently selected content to the clipboard and returns the new EditorState"
   [{:keys [selection] :as editor-state} event]
   (if (sel/range? selection)
     (let [content (selected-content editor-state)]
       (copy-to-clipboard! content event)
       (es/delete editor-state))
-    (es/identity-update editor-state)))
+    editor-state))
 
 (defn copy
-  "Copies the currently selected content to the clipboard and returns an (empty) EditorUpdate."
+  "Copies the currently selected content to the clipboard and returns an unchanged EditorState."
   [editor-state event]
   (let [fragment (selected-content editor-state)]
     (copy-to-clipboard! fragment event)
-    (es/identity-update editor-state)))
+    editor-state))
 
 (defn paste
-  "Pastes the currently selected content into the editor and returns an EditorUpdate."
+  "Pastes the currently selected content into the editor and returns a new EditorState."
   [editor-state event]
   (let [clipboard-data @*clipboard
         slate-copy-id (.. event -clipboardData (getData "slate-copy-id"))
@@ -73,4 +69,4 @@
       (es/insert editor-state (.. event -clipboardData (getData mime-plaintext)))
 
       :else
-      (es/identity-update editor-state))))
+      editor-state)))

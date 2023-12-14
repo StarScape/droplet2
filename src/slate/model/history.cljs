@@ -3,13 +3,12 @@
    the changes between them. This namespace defines functions for manipulating
    and managing the history object.
 
-   The history consists of a few parts: the backstack (a list of EditorStates),
-   the current-state-index (which references an index into the backstack), and the
-   *tip*. The tip is also an EditorState, but represents a current state that *has
-   not yet been incorporated into the backstack*. The tip can be modified directly --
-   and doing so will not result in a new state being added to the history. If you want
-   to add the history's tip to the backstack, an explicit call to `add-tip-to-backstack`
-   is needed.
+   The history consists of a few parts: the backstack (a list of updates, each consisting
+   of an EditorState and a changelist), the current-state-index (which references an index
+   into the backstack), and the *tip*. The tip is also an EditorState, but represents a current
+   state that *has not yet been incorporated into the backstack*. The tip can be modified directly --
+   and doing so will not result in a new state being added to the history. If you want to add
+   the history's tip to the backstack, an explicit call to `add-tip-to-backstack` is needed.
 
    To understand the need for tip, consider the behavior of a typical text editor.
    Not EVERY single state change is preserved. For example, if you type ten characters
@@ -20,12 +19,17 @@
    but that is outside the responsibility of this module. This is just a pure data structure for
    storing series of EditorStates."
   (:require [clojure.spec.alpha :as s]
+            [slate.model.dll :as dll]
             [slate.model.editor-state :as es :refer [editor-state]])
   (:refer-clojure :exclude [next]))
 
-(s/def ::backstack (s/coll-of ::es/editor-update))
+(s/def ::editor-state ::es/editor-state)
+(s/def ::changelist map?)
+(s/def ::update (s/keys :req-un [::editor-state
+                                 ::changelist]))
+(s/def ::backstack (s/coll-of ::update))
 (s/def ::current-state-index nat-int?)
-(s/def ::tip (s/nilable ::es/editor-update))
+(s/def ::tip (s/nilable ::update))
 
 (s/def ::editor-state-history
   (s/and (s/keys :req-un [::backstack
@@ -63,7 +67,7 @@
 
 (s/fdef current
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-update)
+  :ret ::update)
 
 (defn current
   "Returns the current entry of `history` (the one that should currently be displayed on the screen).
@@ -85,7 +89,7 @@
 
 (s/fdef prev
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-update)
+  :ret ::update)
 
 (defn prev
   "Returns the previous entry in `history` (the one immediately preceeding the
@@ -111,7 +115,7 @@
 
 (s/fdef next
   :args (s/cat :history ::editor-state-history)
-  :ret ::es/editor-update)
+  :ret ::update)
 
 (defn next
   "Returns the next entry in `history` (the one immediately succeeding the
@@ -158,7 +162,7 @@
   :ret ::editor-state-history)
 
 (defn undo
-  "Reverts `history` to the previous entry, if one exists, (identity otherwise)."
+  "Reverts `history` to the previous entry, if one exists. Otherwise returns `history` unchanged."
   [{:keys [tip] :as history}]
   (if (has-undo? history)
     (-> (if (some? tip) (add-tip-to-backstack history) history)
@@ -170,7 +174,7 @@
   :ret ::editor-state-history)
 
 (defn redo
-  "Restores `history` to the previously undone entry, if one exists (identity otherwise)."
+  "Restores `history` to the previously undone entry, if one exists. Otherwise returns `history` unchanged."
   [history]
   (if (has-redo? history)
     (update history :current-state-index inc)
@@ -178,43 +182,38 @@
 
 (s/fdef set-tip
   :args (s/cat :history ::editor-state-history
-               :tip ::es/editor-update)
+               :tip ::editor-state
+               :changelist ::changelist)
   :ret ::editor-state-history)
 
 (defn set-tip
   "Sets the `tip` to the provided val `new-tip`. If `(has-redo?)` is true, the redos will be removed.
    This is what should be called whenever you want to update the editor state without yet adding
    anything to the backstack. For adding the tip to the backstack, see `add-tip-to-backstack`."
-  [history new-tip]
+  [history new-editor-state changelist]
   (let [backstack (if (has-redo? history)
                     (subvec (:backstack history) 0 (inc (:current-state-index history)))
                     (:backstack history))]
     (assoc history
            :tip (if (nil? (:tip history))
-                  new-tip
-                  (es/merge-updates (:tip history) new-tip))
+                  {:editor-state new-editor-state, :changelist changelist}
+                  (-> (:tip history)
+                      (assoc :editor-state new-editor-state)
+                      (update :changelist dll/merge-changelists changelist)))
            :backstack backstack
            :current-state-index (count backstack))))
 
 (s/fdef init
   :args (s/cat :state-or-update (s/or :state ::es/editor-state
-                                      :update ::es/editor-update))
+                                      :update ::update))
   :ret ::editor-state-history)
 
 (defn init
   "Returns a new history object with the tip set to the provided EditorState.
 
    Arguments:
-   - `state-or-update`: An initial `EditorState` or `EditorUpdate` to serve as the beginning of history.
-   An `EditorState` argument will be converted to an `EditorUpdate` with no changelist."
-  [state-or-update]
-  (let [initial (cond
-                  (instance? es/EditorUpdate state-or-update)
-                  state-or-update
-
-                  (instance? es/EditorState state-or-update)
-                  (es/identity-update state-or-update)
-
-                  :else
-                  (throw "Error in history/init: argument must be either an EditorUpdate or EditorState."))]
+   - `editor-state`: An initial `EditorState` to serve as the beginning of history."
+  [editor-state]
+  (let [initial {:editor-state (es/clear-changelist editor-state),
+                 :changelist (es/get-changelist editor-state)}]
     {:tip nil, :backstack [initial], :current-state-index 0}))

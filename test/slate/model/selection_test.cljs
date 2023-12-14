@@ -13,7 +13,6 @@
       (is (= sel (map->Selection {:start {:paragraph :p1, :offset 0}
                                   :end {:paragraph :p2, :offset 10}
                                   :backwards? true
-                                  :between #{}
                                   :formats #{}})))))
   (testing "Different ways of initializing selection"
     (let [s1 (selection [:p1 0] [:p1 0] :backwards? false)
@@ -23,28 +22,24 @@
           s4-alt1 (selection :start [:p1 0] :formats #{:italic})
           s4-alt2 (selection :start [:p1 0] :end [:p1 0] :formats #{:italic})
           s5 (selection :start [:p1 0] :end [:p2 3])
-          s6 (selection :start [:p1 0] :end [:p2 3] :between #{:p1.5})]
+          s6 (selection :start [:p1 0] :end [:p2 3])]
       (is (= s1 (map->Selection {:start {:paragraph :p1, :offset 0}
                                  :end {:paragraph :p1, :offset 0}
                                  :backwards? false
-                                 :between #{}
                                  :formats #{}})))
       (is (= s1 s2 s3))
       (is (= s4 (map->Selection {:start {:paragraph :p1, :offset 0}
                                  :end {:paragraph :p1, :offset 0}
                                  :backwards? false
-                                 :between #{}
                                  :formats #{:italic}})))
       (is (= s4 s4-alt1 s4-alt2))
       (is (= s5 (map->Selection {:start {:paragraph :p1, :offset 0}
                                  :end {:paragraph :p2, :offset 3}
                                  :backwards? false
-                                 :between #{}
                                  :formats #{}})))
       (is (= s6 (map->Selection {:start {:paragraph :p1, :offset 0}
                                  :end {:paragraph :p2, :offset 3}
                                  :backwards? false
-                                 :between #{:p1.5}
                                  :formats #{}}))))))
 
 (deftest caret-test
@@ -69,7 +64,6 @@
 (deftest set-single-test
   (is (= 255 (-> sel-single (sel/set-single 255) sel/caret)))
   (is (thrown? js/Error (sel/set-single sel-range 10)))
-  (is (thrown? js/Error (sel/set-single sel-single -1)))
   (is (= 0 (sel/caret (sel/set-single sel-single 0)))))
 
 (deftest collapse-test
@@ -79,7 +73,7 @@
     (is (= (sel/caret collapsed-start) 10))
     (is (= (sel/caret collapsed-end) 20))))
 
-(def between-sel (selection [:p1 0] [:p4 10] :between #{:p2 :p3}))
+(def between-sel (selection [:p1 0] [:p4 10]))
 
 (deftest between-test
   (is (= (sel/collapse-start between-sel)
@@ -88,7 +82,6 @@
                           :end {:paragraph :p1
                                 :offset 0}
                           :backwards? false
-                          :between #{}
                           :formats #{}})))
   (is (= (sel/collapse-end between-sel)
          (map->Selection {:start {:paragraph :p4
@@ -96,7 +89,6 @@
                           :end {:paragraph :p4
                                 :offset 10}
                           :backwards? false
-                          :between #{}
                           :formats #{}})))
   (is (= (sel/smart-collapse between-sel)
          (map->Selection {:start {:paragraph :p4
@@ -104,22 +96,7 @@
                           :end {:paragraph :p4
                                 :offset 10}
                           :backwards? false
-                          :between #{}
                           :formats #{}}))))
-
-(deftest add-to-between
-  (let [sel (selection ["p1" 0] ["p4" 0] :between #{"p2"})]
-    (is (= (sel/add-to-between sel "p3")
-           (selection ["p1" 0] ["p4" 0] :between #{"p2" "p3"})))
-    (is (= sel (sel/add-to-between sel "p1")))))
-
-(deftest all-uuids
-  (is (= (sel/all-uuids (selection [:p1 0] [:p4 0] :between #{:p2 :p3}))
-         #{:p1 :p2 :p3 :p4}))
-  (is (= (sel/all-uuids (selection [:p1 0] [:p2 0]))
-         #{:p1 :p2}))
-  (is (= (sel/all-uuids (selection [:p1 0] [:p1 1]))
-         #{:p1})))
 
 (deftest toggle-format-test
   (let [s (selection [:p1 0] :formats #{:italic})]

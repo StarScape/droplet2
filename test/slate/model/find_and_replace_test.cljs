@@ -1,98 +1,100 @@
 (ns slate.model.find-and-replace-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
+            [slate.model.dll :refer [create-changelist big-dec dll]]
             [slate.model.run :as r :refer [run]]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
-            [slate.model.editor-state :as es :refer [editor-state ->EditorUpdate changelist]]
+            [slate.model.editor-state :as es :refer [editor-state get-changelist]]
             [slate.model.find-and-replace :refer [find replace replace-all]]))
 
-#_(def p (p/paragraph "p1" [(r/run "foo") (r/run "bar" #{:italic})
-                          (r/run "goo") (r/run "bar" #{:bold})
-                          (r/run "hoo") (r/run "bar" #{:underline})]))
+(def doc (document false (dll (paragraph [(run "foo") (run "bar" #{:italic})
+                                          (run "goo") (run "bar" #{:bold})
+                                          (run "hoo") (run "bar" #{:underline})])
+                              (paragraph [(run "one a one, and a foo, and a bar!")]))))
 
-(def doc (document [(paragraph "p1" [(run "foo") (run "bar" #{:italic})
-                                     (run "goo") (run "bar" #{:bold})
-                                     (run "hoo") (run "bar" #{:underline})])
-                    (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
-
-(def doc2 (document [(paragraph "p1" [(run "foo") (run "bar" #{:italic})
-                                      (run "goo") (run "Bar" #{:bold})
-                                      (run "hoo") (run "BAR" #{:underline})])
-                     (paragraph "p2" [(run "one a one, and a foo, and a bAr!")])]))
-
+(def doc2 (document false [(paragraph [(run "foo") (run "bar" #{:italic})
+                                       (run "goo") (run "Bar" #{:bold})
+                                       (run "hoo") (run "BAR" #{:underline})])
+                           (paragraph [(run "one a one, and a foo, and a bAr!")])]))
 
 (deftest find-test
   (testing "basic functions"
     (is (= (find (editor-state doc) "foo")
-           [(selection ["p1" 0] ["p1" 3])
-            (selection ["p2" 17] ["p2" 20])]))
+           [(selection [(big-dec 1) 0] [(big-dec 1) 3])
+            (selection [(big-dec 2) 17] [(big-dec 2) 20])]))
     (is (= (find (editor-state doc) "bar")
-           [(selection ["p1" 3] ["p1" 6])
-            (selection ["p1" 9] ["p1" 12])
-            (selection ["p1" 15] ["p1" 18])
-            (selection ["p2" 28] ["p2" 31])]))
+           [(selection [(big-dec 1) 3] [(big-dec 1) 6])
+            (selection [(big-dec 1) 9] [(big-dec 1) 12])
+            (selection [(big-dec 1) 15] [(big-dec 1) 18])
+            (selection [(big-dec 2) 28] [(big-dec 2) 31])]))
     (is (= (find (editor-state doc) "goo")
-           [(selection ["p1" 6] ["p1" 9])]))
+           [(selection [(big-dec 1) 6] [(big-dec 1) 9])]))
     (is (= [] (find (editor-state doc) "byzantium"))))
 
   (testing "case sensitivity"
     (is (= (find (editor-state doc2) "bar" true)
-           [(selection ["p1" 3] ["p1" 6])
-            (selection ["p1" 9] ["p1" 12])
-            (selection ["p1" 15] ["p1" 18])
-            (selection ["p2" 28] ["p2" 31])]))
+           [(selection [(big-dec 1) 3] [(big-dec 1) 6])
+            (selection [(big-dec 1) 9] [(big-dec 1) 12])
+            (selection [(big-dec 1) 15] [(big-dec 1) 18])
+            (selection [(big-dec 2) 28] [(big-dec 2) 31])]))
     (is (= (find (editor-state doc2) "bar" false)
-           [(selection ["p1" 3] ["p1" 6])]))))
+           [(selection [(big-dec 1) 3] [(big-dec 1) 6])]))))
 
 (deftest replace-test
   (testing "shifts selection appropriately when replacement text is of different length than initial selection"
-    (is (= (replace (editor-state doc (selection ["p1" 0] ["p1" 3])) "a longer run of text")
-           (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "a longer run of text") (run "bar" #{:italic})
-                                                                     (run "goo") (run "bar" #{:bold})
-                                                                     (run "hoo") (run "bar" #{:underline})])
-                                                    (paragraph "p2" [(run "one a one, and a foo, and a bar!")])])
-                                         (selection ["p1" 0] ["p1" 20]))
-                           (changelist :changed-uuids #{"p1"}))))))
+    (let [es (replace (editor-state doc (selection [(big-dec 1) 0] [(big-dec 1) 3])) "a longer run of text")]
+      (is (= es (editor-state (document [(paragraph [(run "a longer run of text") (run "bar" #{:italic})
+                                                     (run "goo") (run "bar" #{:bold})
+                                                     (run "hoo") (run "bar" #{:underline})])
+                                         (paragraph [(run "one a one, and a foo, and a bar!")])])
+                              (selection [(big-dec 1) 0] [(big-dec 1) 20]))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1)}))))))
 
 (deftest replace-all-test
   (testing "single location"
-    (is (= (replace-all (editor-state doc)
-                        [(selection ["p1" 0] ["p1" 3])]
-                        "123")
-           (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "123") (run "bar" #{:italic})
-                                                                     (run "goo") (run "bar" #{:bold})
-                                                                     (run "hoo") (run "bar" #{:underline})])
-                                                    (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
-                           (changelist :changed-uuids #{"p1"})))))
+    (let [es (replace-all (editor-state doc) [(selection [(big-dec 1) 0] [(big-dec 1) 3])] "123")]
+      (is (= es (editor-state (document [(paragraph [(run "123") (run "bar" #{:italic})
+                                                     (run "goo") (run "bar" #{:bold})
+                                                     (run "hoo") (run "bar" #{:underline})])
+                                         (paragraph [(run "one a one, and a foo, and a bar!")])]))))
+      (is (= (get-changelist es)
+             (create-changelist :changed-indices #{(big-dec 1)})))))
+
   (testing "multiple locations"
-    (is (= (replace-all (editor-state doc)
-                        [(selection ["p1" 0] ["p1" 3])
-                         (selection ["p1" 6] ["p1" 9])]
-                        "123")
-           (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "123") (run "bar" #{:italic})
-                                                                     (run "123") (run "bar" #{:bold})
-                                                                     (run "hoo") (run "bar" #{:underline})])
-                                                    (paragraph "p2" [(run "one a one, and a foo, and a bar!")])]))
-                           (changelist :changed-uuids #{"p1"})))))
+    (let [es (replace-all (editor-state doc)
+                          [(selection [(big-dec 1) 0] [(big-dec 1) 3])
+                           (selection [(big-dec 1) 6] [(big-dec 1) 9])]
+                          "123")]
+      (is (= (replace-all (editor-state doc)
+                          [(selection [(big-dec 1) 0] [(big-dec 1) 3])
+                           (selection [(big-dec 1) 6] [(big-dec 1) 9])]
+                          "123")
+             (editor-state (document [(paragraph [(run "123") (run "bar" #{:italic})
+                                                  (run "123") (run "bar" #{:bold})
+                                                  (run "hoo") (run "bar" #{:underline})])
+                                      (paragraph [(run "one a one, and a foo, and a bar!")])]))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1)})))))
+
   (testing "multiple locations across 2 paragraphs"
-    (is (= (replace-all (editor-state doc)
-                        [(selection ["p1" 0] ["p1" 3])
-                         (selection ["p1" 6] ["p1" 9])
-                         (selection ["p2" 1] ["p2" 3])]
-                        "123")
-           (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "123") (run "bar" #{:italic})
-                                                                     (run "123") (run "bar" #{:bold})
-                                                                     (run "hoo") (run "bar" #{:underline})])
-                                                    (paragraph "p2" [(run "o123 a one, and a foo, and a bar!")])]))
-                           (changelist :changed-uuids #{"p1" "p2"})))))
+    (let [es (replace-all (editor-state doc)
+                          [(selection [(big-dec 1) 0] [(big-dec 1) 3])
+                           (selection [(big-dec 1) 6] [(big-dec 1) 9])
+                           (selection [(big-dec 2) 1] [(big-dec 2) 3])]
+                          "123")]
+      (is (= es (editor-state (document [(paragraph [(run "123") (run "bar" #{:italic})
+                                                     (run "123") (run "bar" #{:bold})
+                                                     (run "hoo") (run "bar" #{:underline})])
+                                         (paragraph [(run "o123 a one, and a foo, and a bar!")])]))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1) (big-dec 2)})))))
+
   (testing "shifts selection appropriately when needed"
-    (is (= (replace-all (editor-state doc (selection ["p1" 17]))
-                        [(selection ["p1" 12] ["p1" 18])]
-                        "bizz")
-           (->EditorUpdate (editor-state (document [(paragraph "p1" [(run "foo") (run "bar" #{:italic})
-                                                                     (run "goo") (run "bar" #{:bold})
-                                                                     (run "bizz")])
-                                                    (paragraph "p2" [(run "one a one, and a foo, and a bar!")])])
-                                         (selection ["p1" 16]))
-                           (changelist :changed-uuids #{"p1"}))))))
+    (let [es (replace-all (editor-state doc (selection [(big-dec 1) 17]))
+                          [(selection [(big-dec 1) 12] [(big-dec 1) 18])]
+                          "bizz")]
+      (is (= es (editor-state (document [(paragraph [(run "foo") (run "bar" #{:italic})
+                                                     (run "goo") (run "bar" #{:bold})
+                                                     (run "bizz")])
+                                         (paragraph [(run "one a one, and a foo, and a bar!")])])
+                              (selection [(big-dec 1) 16]))))
+      (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1)}))))))

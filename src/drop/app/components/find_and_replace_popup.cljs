@@ -4,8 +4,7 @@
             [drop.app.components.layout :refer [v-spacer-m]]
             [drop.utils :refer [debounce]]
             [reagent.core :as r :refer-macros [with-let]]
-            [slate.utils :as slate-utils :refer [is-mac?]]
-            ["@headlessui/react" :refer [Transition]]))
+            [slate.utils :as slate-utils :refer [is-mac?]]))
 
 (def element-id "find-and-replace-popup")
 

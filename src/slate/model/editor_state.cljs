@@ -2,7 +2,7 @@
   (:require [clojure.set :as set]
             [clojure.string :as str]
             [clojure.spec.alpha :as s]
-            [slate.dll :as dll]
+            [slate.model.dll :as dll]
             [slate.model.common :refer [TextContainer len blank?] :as m]
             [slate.model.run :as r :refer [Run]]
             [slate.model.paragraph :as p :refer [Paragraph ParagraphFragment]]
@@ -10,65 +10,20 @@
             [slate.model.selection :as sel]
             [slate.model.navigation :as nav :refer [Navigable]]))
 
-(declare identity-update)
-(declare merge-changelists)
+(declare EditorState)
 
-(defprotocol Monad
-  "Standard monad interface. See any of the myriad monad tutorials online for deeper explanations of its mechanics.
-  EditorUpdates are modeled as monads. Every operation on EditorState can return a new EditorUpdate. They can then be
-  chained using bind, which will automatically combine changelists."
-  (bind [ma, a->b] [ma, a->b, args]
-    "Bind operation. Takes a monad of type a, a function of a to b, and a produces a monad of type b.
-     Second arity also takes a list of arguments to be passed in to the function after its first arg.")
-  (return [val] "Returns a new monad wrapping a."))
-
-(defn >>=
-  "Sugared version of Monad's bind, taking extra arguments as varargs instead of a list."
-  [ma f & args]
-  (bind ma f args))
+(s/def ::doc ::doc/Document)
+(s/def ::selection ::sel/Selection)
+(s/def ::editor-state
+  (s/and #(instance? EditorState %)
+         (s/keys :req-un [::doc
+                          ::selection])))
 
 (defrecord EditorState [doc, selection]
   ;; TODO: needed for EditorState?
   TextContainer
   (len [{:keys [doc]}] (len doc))
   (blank? [{:keys [doc]}] (blank? doc)))
-
-(defrecord EditorUpdate [editor-state, changelist]
-  ;; EditorUpdate implements monad for the sake of easily tracking changelists (which
-  ;; is needed in order to efficiently update the UI), and maintaining this as separate
-  ;; from the core logic of EditorState while still allowing for easy chaining.
-  ;; Most functions in this namespace return an EditorUpdate.
-  Monad
-  (bind [update, state->update, args]
-    (let [update2 (apply state->update (:editor-state update) args)
-          merged-changelists (merge-changelists (:changelist update) (:changelist update2))
-          combined-update (assoc update2 :changelist merged-changelists)]
-      combined-update))
-  (bind [update, state->update]
-    (bind update state->update [])))
-
-(s/def ::editor-state #(instance? EditorState %))
-(s/def ::editor-update #(instance? EditorUpdate %))
-
-(defn changelist
-  "Constructor for a new changelist object. Changelists are used for tracking differences between
-   successive EditorStates.
-
-   A changelist is composed of 3 fields: :changed-uuids, :inserted-uuids, and :deleted-uuids,
-   which are sets containing the UUIDs of the paragraphs that have been changed,
-   newly inserted, or removed from the document since the last EditorState, respectively.
-
-   Takes keyword arguments :change-uuids, :inserted-uuids, and :deleted-uuids (each
-   default to an empty set). If no arguments supplied, returns an empty changelist."
-  ([& {:keys [changed-uuids inserted-uuids deleted-uuids rerender-uuids]}]
-   {:changed-uuids (or changed-uuids #{})
-    :inserted-uuids (or inserted-uuids #{})
-    :deleted-uuids (or deleted-uuids #{})}))
-
-(defn identity-update
-  "Returns an EditorUpdate with no changes, and therefore no effects."
-  [editor-state]
-  (->EditorUpdate editor-state (changelist)))
 
 (defn editor-state
   "Creates a new EditorState object with the given doc and selection.
@@ -79,52 +34,40 @@
     {:doc doc
      :selection selection}))
   ([doc]
-   (let [first-paragraph-uuid (-> doc :children dll/first :uuid)]
-     (editor-state doc (sel/selection [first-paragraph-uuid 0]))))
+   (editor-state doc (sel/selection [(-> doc :children dll/first-index) 0])))
   ([]
-   (let [p (p/paragraph)]
-     (editor-state (doc/document [p]) (sel/selection [(:uuid p) 0])))))
+   (editor-state (doc/document) (sel/selection [(dll/big-dec 1) 0]))))
 
 (defn delete
-  "Deletes the current selection. Returns an EditorUpdate."
+  "Deletes the current selection. Returns a new EditorState"
   [{:keys [doc selection] :as editor-state}]
   (let [new-doc (doc/delete doc selection)
-        startp-uuid (-> selection :start :paragraph)]
+        start-para-idx (-> selection :start :paragraph)]
     (if (sel/single? selection)
       ;; Single selection
       (if (zero? (sel/caret selection))
-        (if (= startp-uuid (-> doc :children dll/first :uuid))
+        (if (= start-para-idx (-> doc :children dll/first-index))
           ; First char of first paragraph, do nothing
-          (identity-update editor-state)
+          editor-state
           ; First char of a different paragraph, merge with previous
-          (let [prev-para (dll/prev (:children doc) startp-uuid)
-                new-selection (->> (sel/selection [(:uuid prev-para), (len prev-para)])
+          (let [prev-para-idx (dll/prev-index (:children doc) start-para-idx)
+                prev-para ((:children doc) prev-para-idx)
+                new-selection (->> (sel/selection [prev-para-idx, (len prev-para)])
                                    (nav/autoset-formats prev-para))]
-            (->EditorUpdate (assoc editor-state
-                                   :doc new-doc
-                                   :selection new-selection)
-                            (changelist :changed-uuids #{(:uuid prev-para)}
-                                        :deleted-uuids #{startp-uuid}))))
+            (assoc editor-state
+                   :doc new-doc
+                   :selection new-selection)))
         ; Not the first char of the selected paragraph, normal backspace
-        (->EditorUpdate (assoc editor-state
-                               :doc new-doc
-                               :selection (nav/prev-char doc selection))
-                        (changelist :changed-uuids #{startp-uuid})))
+        (assoc editor-state
+               :doc new-doc
+               :selection (nav/prev-char doc selection)))
       ;; Range selection
-      (let [startp-uuid (-> selection :start :paragraph)
-            endp-uuid (-> selection :end :paragraph)
-            new-changelist (changelist :changed-uuids #{startp-uuid}
-                                       :deleted-uuids (when-not (= startp-uuid endp-uuid)
-                                                        (-> (dll/uuids-range (:children doc) startp-uuid endp-uuid)
-                                                            (rest)
-                                                            (set))))]
-        (->EditorUpdate (assoc editor-state
-                               :doc new-doc
-                               :selection (nav/autoset-formats new-doc (sel/collapse-start selection)))
-                        new-changelist)))))
+      (assoc editor-state
+             :doc new-doc
+             :selection (nav/autoset-formats new-doc (sel/collapse-start selection))))))
 
 (defmulti insert
-  "Inserts into the EditorState's document at the current selection. Returns an EditorUpdate."
+  "Inserts into the EditorState's document at the current selection. Returns an EditorState."
   {:arglists '([editor-state selection content-to-insert])}
   (fn [& args] (type (last args))))
 
@@ -132,15 +75,13 @@
   [{:keys [doc selection] :as editor-state}, content]
   {:pre [(satisfies? TextContainer content)]}
   (if (sel/range? selection)
-    (-> (delete editor-state)
-        (>>= insert content))
+    (-> (delete editor-state) (insert content))
     (let [new-doc (doc/insert doc selection content)
           new-sel (->> (sel/shift-single selection (len content))
                        (nav/autoset-formats new-doc))]
-      (->EditorUpdate (assoc editor-state
-                             :doc new-doc
-                             :selection new-sel)
-                      (changelist :changed-uuids #{(sel/start-para selection)})))))
+      (assoc editor-state
+             :doc new-doc
+             :selection new-sel))))
 
 (defmethod insert
   Run
@@ -154,44 +95,38 @@
 
 (defmethod insert
   ParagraphFragment
-  [{:keys [doc selection] :as editor-state} {:keys [runs] :as paragraph-fragment}]
+  [{:keys [doc selection] :as editor-state} paragraph-fragment]
   (if (sel/range? selection)
-    (-> (delete editor-state)
-        (>>= insert runs))
+    (-> (delete editor-state) (insert paragraph-fragment))
     (let [new-doc (doc/insert doc selection paragraph-fragment)
-          runs-len (reduce + (map len runs))
-          new-sel (->> (sel/shift-single selection runs-len)
+          new-sel (->> (sel/shift-single selection (len paragraph-fragment))
                        (nav/autoset-formats new-doc))]
-      (->EditorUpdate (assoc editor-state
-                             :doc new-doc
-                             :selection new-sel)
-                      (changelist :changed-uuids #{(sel/start-para selection)})))))
+      (assoc editor-state
+             :doc new-doc
+             :selection new-sel))))
 
 (defmethod insert
   DocumentFragment
   [{:keys [doc selection] :as editor-state}, fragment]
   (let [paragraphs (m/items fragment)]
     (if (= (count paragraphs) 1)
-      ;; For a number of reasons, it's easier to handle
-      ;; inserting a single paragraph as a distinct case.
+      ;; For a number of reasons, it's easier to handle inserting a single paragraph as a distinct case.
       (insert editor-state (first paragraphs))
       ;; Insert multiple paragraphs
       (if (sel/range? selection)
-        (-> (delete editor-state) (>>= insert paragraphs))
-        (let [dedupe-para-uuid (fn [p]
-                                 (if (contains? (:children doc) (:uuid p))
-                                   (assoc p :uuid (random-uuid))
-                                   p))
-              paragraphs (map dedupe-para-uuid paragraphs)
-              new-doc (doc/insert doc selection (doc/fragment paragraphs))
+        (-> (delete editor-state) (insert fragment))
+        (let [new-doc (doc/insert doc selection (doc/fragment paragraphs))
+              sel-para-idx (sel/start-para selection)
+              para-after-sel-idx (dll/next-index (:children doc) sel-para-idx)
+              last-inserted-para-idx (if (nil? para-after-sel-idx)
+                                       (dll/last-index (:children new-doc))
+                                       (dll/prev-index (:children new-doc) para-after-sel-idx))
               last-paragraph (last paragraphs)
-              new-selection (->> (sel/selection [(:uuid last-paragraph) (len last-paragraph)])
+              new-selection (->> (sel/selection [last-inserted-para-idx (len last-paragraph)])
                                  (nav/autoset-formats last-paragraph))]
-          (->EditorUpdate (assoc editor-state
-                                 :doc new-doc
-                                 :selection new-selection)
-                          (changelist :changed-uuids #{(sel/start-para selection)}
-                                      :inserted-uuids (set (map :uuid (drop 1 paragraphs))))))))))
+          (assoc editor-state
+                 :doc new-doc
+                 :selection new-selection))))))
 
 (defmethod insert
   js/String
@@ -204,20 +139,45 @@
 
 (defn enter
   "Equivalent to what happens when the user hits the enter button.
-   Creates a new paragraph in the appropriate position in the doc.
-   Optionally takes a UUID to assign to the new paragraph, otherwise
-   a random one will be used."
-  ([{:keys [doc selection] :as editor-state} new-uuid]
+   Creates a new paragraph in the appropriate position in the doc."
+  ([{:keys [doc selection] :as editor-state}]
    (if (sel/range? selection)
-     (-> (delete editor-state)
-         (>>= enter new-uuid))
-     (let [uuid (-> selection :start :paragraph)
-           caret (sel/caret selection)
-           new-doc (doc/enter doc selection new-uuid)
-           new-paragraph (get (:children new-doc) new-uuid)
-           new-selection (if (= caret 0)
+     (-> (delete editor-state) (enter))
+     (let [caret (sel/caret selection)
+           paragraph-idx (-> selection :start :paragraph)
+           paragraph ((:children doc) paragraph-idx)
+           new-para-type (if (contains? doc/types-preserved-on-enter (:type paragraph))
+                           (:type paragraph)
+                           :body)
+           ;; If a paragraph is empty, the caret is currently at both the start
+           ;; AND end of that paragraph. However, hitting enter within an empty
+           ;; paragraph gets treated the same as at the END, i.e. insert a paragraph
+           ;; below and move the cursor down, rather than insert a paragraph above
+           ;; and keep the cursor where it is.
+           ;;
+           ;; Having this var here helps not get confused  aboutthat and keeps
+           ;; things easy the expressions further down.
+           pos-in-paragraph (cond
+                              (= caret (len paragraph)) :end
+                              (= caret 0) :start
+                              :else :middle)
+           new-doc (cond
+                     (= :end pos-in-paragraph)
+                     (doc/insert-paragraph-after doc paragraph-idx new-para-type)
+
+                     (= :start pos-in-paragraph)
+                     (doc/insert-paragraph-before doc paragraph-idx new-para-type)
+
+                     (= :middle pos-in-paragraph)
+                     (let [[para1 para2] (doc/split-paragraph doc selection)]
+                       (doc/replace-paragraph-with doc paragraph-idx [para1 para2])))
+           new-index (if (= :start pos-in-paragraph)
+                       (dll/prev-index (:children new-doc) paragraph-idx)
+                       (dll/next-index (:children new-doc) paragraph-idx))
+           new-paragraph (get (:children new-doc) new-index)
+           new-selection (if (= :start pos-in-paragraph)
                            (sel/selection [(sel/caret-para selection) 0])
-                           (sel/selection [new-uuid 0] [new-uuid 0]))
+                           (sel/selection [new-index 0] [new-index 0]))
            ;; If inserting a new (empty) paragraph, then the selection should inherit the :formats
            ;; of the current selection. If splitting an existing paragraph into two using enter, the
            ;; now-2nd paragraph's should just set its :formats based on whatever formats are active
@@ -226,13 +186,9 @@
                      (:formats selection)
                      (m/formatting new-paragraph new-selection))
            new-selection (assoc new-selection :formats formats)]
-       (->EditorUpdate (assoc editor-state
-                              :doc new-doc
-                              :selection new-selection)
-                       (changelist :inserted-uuids #{new-uuid}
-                                   :changed-uuids #{uuid})))))
-  ([editor-state]
-   (enter editor-state (random-uuid))))
+       (assoc editor-state
+              :doc new-doc
+              :selection new-selection)))))
 
 (defn current-paragraph
   "Returns current paragraph if selection is a single selection."
@@ -241,63 +197,59 @@
   (get (:children doc) (sel/caret-para selection)))
 
 (defn replace-paragraph
-  "Returns an editor-update replacing the paragraph with uuid `:uuid` with `new-paragraph`.
+  "Returns a new EditorState replacing the paragraph at index `index` with `new-paragraph`.
    If the selection is inside the paragraph replaced, and its offset is invalidated (i.e.
    the new paragraph is shorter than the one previously there, and the selection's start or
    end offset is greater than the new paragraph's length), it will be reset to the end of the
    paragraph."
-  [{:keys [doc selection] :as _editor-state} uuid new-paragraph]
-  (let [new-doc (assoc-in doc [:children uuid] (assoc new-paragraph :uuid uuid))
+  [{:keys [doc selection] :as _editor-state} index new-paragraph]
+  (let [new-doc (assoc-in doc [:children index] new-paragraph)
         adjust-side (fn [{:keys [paragraph offset] :as side}]
-                      (if (and (= paragraph uuid)
+                      (if (and (= paragraph index)
                                (> offset (m/len new-paragraph)))
                         {:paragraph paragraph, :offset (m/len new-paragraph)}
                         side))
         new-selection (-> selection
                           (update :start adjust-side)
                           (update :end adjust-side))]
-    (->EditorUpdate (editor-state new-doc new-selection)
-                    (changelist :changed-uuids #{uuid}))))
+    (editor-state new-doc new-selection)))
 
 (defn update-paragraph
-  "Passes the paragraph with UUID `uuid` to function f and replaces the paragraph with the value returned.
-   Returns an EditorUpdate."
-  [{:keys [doc] :as editor-state} uuid f & args]
-  (let [paragraph (get (:children doc) uuid)
+  "Passes the paragraph with at index `paragraph-idx` to function f and replaces the paragraph with the value returned."
+  [{:keys [doc] :as editor-state} paragraph-idx f & args]
+  (let [paragraph (get (:children doc) paragraph-idx)
         new-paragraph (apply f paragraph args)]
-    (replace-paragraph editor-state uuid new-paragraph)))
+    (replace-paragraph editor-state paragraph-idx new-paragraph)))
 
 ;; TODO: Auto-set :formats on selection
 (defn set-selection
-  "Returns a new EditorUpdate with the selection set to `new-selection`."
+  "Returns a new EditorState with the selection set to `new-selection`."
   [editor-state new-selection]
-  (->EditorUpdate (assoc editor-state :selection new-selection) (changelist)))
+  (assoc editor-state :selection new-selection))
 
 (defn select-all
   [{:keys [selection doc] :as editor-state}]
   (let [start-side (:start (nav/start doc))
         end-side (:end (nav/end doc))
-        between (-> doc :children (dll/uuids-between (:paragraph start-side) (:paragraph end-side)) (set))
         new-selection (assoc selection
                              :start start-side
-                             :end end-side
-                             :between between)]
+                             :end end-side)]
     (set-selection editor-state new-selection)))
 
 (defn select-whole-word
-  [{:keys [selection] :as editor-state}]
+  [{:keys [doc selection] :as editor-state}]
   {:pre [(sel/single? selection)]}
-  ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
+        para-idx (sel/caret-para selection)
         raw-selection (cond
                         (nav/inside-word? para selection)
-                        (sel/from-singles (nav/prev-word para selection) (nav/next-word para selection))
+                        (sel/from-singles (nav/prev-word doc selection) (nav/next-word doc selection))
 
                         (nav/at-word-start? para selection)
-                        (sel/from-singles selection (nav/next-word para selection))
+                        (sel/from-singles selection (nav/next-word doc selection))
 
                         (nav/at-word-end? para selection)
-                        (sel/from-singles (nav/prev-word para selection) selection)
+                        (sel/from-singles (nav/prev-word doc selection) selection)
 
                         :else
                         (let [char (m/char-at para selection)
@@ -307,58 +259,49 @@
                                                           (nav/whitespace? char) [nav/back-until-non-whitespace nav/until-non-whitespace]
                                                           :else [(fn [_ i] i), (fn [_ i] i)])
                               para-text (m/text para)]
-                          (sel/selection [(:uuid para) (backward-fn para-text (sel/caret selection))]
-                                         [(:uuid para) (forward-fn para-text (sel/caret selection))])))
+                          (sel/selection [para-idx (backward-fn para-text (sel/caret selection))]
+                                         [para-idx (forward-fn para-text (sel/caret selection))])))
         new-selection (nav/autoset-formats para raw-selection)]
     (set-selection editor-state new-selection)))
 
 (defn select-whole-paragraph
   [{:keys [selection] :as editor-state}]
   {:pre [(sel/single? selection)]}
-  ;; TODO: would be good to write a test for this
   (let [para (current-paragraph editor-state)
-        raw-selection (sel/selection [(:uuid para) 0] [(:uuid para) (m/len para)])
+        para-idx (sel/caret-para selection)
+        raw-selection (sel/selection [para-idx 0] [para-idx (m/len para)])
         new-selection (nav/autoset-formats para raw-selection)]
     (set-selection editor-state new-selection)))
 
-;; TODO: test
+;; TODO: Write unit test
 (defn toggle-paragraph-type
   [{:keys [selection doc] :as editor-state} type]
-  (let [start-uuid (sel/start-para selection)
-        end-uuid (sel/end-para selection)
-        selected-paragraphs (dll/range (:children doc) start-uuid end-uuid)
+  (let [start-paragraph-idx (sel/start-para selection)
+        end-paragraph-idx (sel/end-para selection)
+        selected-paragraphs (dll/range (:children doc) start-paragraph-idx end-paragraph-idx)
         set-paragraph-type-true? (not-every? #(= (:type %) type) selected-paragraphs)
         type-to-set (if set-paragraph-type-true? type :body)
         selected-paragraphs-updated (map #(assoc % :type type-to-set) selected-paragraphs)
-        new-doc (update doc :children dll/replace-range start-uuid end-uuid selected-paragraphs-updated)]
-    (->EditorUpdate (assoc editor-state :doc new-doc)
-                    (changelist :changed-uuids (sel/all-uuids selection)))))
+        new-doc (update doc :children dll/replace-range start-paragraph-idx end-paragraph-idx selected-paragraphs-updated)]
+    (assoc editor-state :doc new-doc)))
 
 (defn toggle-format
   [{:keys [doc selection] :as editor-state} format]
   (if (sel/single? selection)
-    (->EditorUpdate (update editor-state :selection sel/toggle-format format)
-                      ;; No changelist, only the selection is updated
-                    (changelist))
-    (let [doc-children (:children doc)
-          start-para-uuid (-> selection :start :paragraph)
-          end-para-uuid (-> selection :end :paragraph)
-          changed-uuids (dll/uuids-range doc-children start-para-uuid end-para-uuid)
-          common-formats (m/formatting doc selection)
+    (update editor-state :selection sel/toggle-format format)
+    (let [common-formats (m/formatting doc selection)
           format-modify-fn (if (contains? common-formats format) disj conj)
           new-selection (update selection :formats format-modify-fn format)]
-      (->EditorUpdate (assoc editor-state
-                             :doc (doc/toggle-format doc selection format)
-                             :selection new-selection)
-                      (changelist :changed-uuids (set changed-uuids))))))
+      (assoc editor-state
+             :doc (doc/toggle-format doc selection format)
+             :selection new-selection))))
 
 (defn auto-surround
   ([{:keys [doc selection] :as editor-state} opening closing]
    (if (sel/single? selection)
-     (->EditorUpdate (assoc editor-state
-                            :doc (doc/insert doc selection (str opening closing))
-                            :selection (sel/shift-single selection (len opening)))
-                     (changelist :changed-uuids #{(-> selection :start :paragraph)}))
+     (assoc editor-state
+            :doc (doc/insert doc selection (str opening closing))
+            :selection (sel/shift-single selection (len opening)))
      (let [opening-insert-point (sel/collapse-start selection)
            closing-insert-point (sel/collapse-end selection)
            same-para? (= (sel/caret-para opening-insert-point) (sel/caret-para closing-insert-point))
@@ -372,8 +315,7 @@
            new-selection (if same-para?
                            (sel/shift-end new-selection (len opening))
                            new-selection)]
-       (->EditorUpdate (assoc editor-state :doc new-doc :selection new-selection)
-                       (changelist :changed-uuids #{(sel/start-para selection), (sel/end-para selection)})))))
+       (assoc editor-state :doc new-doc :selection new-selection))))
   ([editor-state surround] (auto-surround editor-state surround surround)))
 
 (defn after-anchor?
@@ -424,14 +366,9 @@
                               (assoc :backwards? false))
                           (assoc selection :start new-caret-side))
                         ;; forwards selection
-                        (let [s (assoc selection :end new-caret-side)
-                              old-sel-end-para (-> selection :end :paragraph)]
-                          (if (not= old-sel-end-para (:paragraph new-caret-side))
-                            (sel/add-to-between s old-sel-end-para)
-                            s)))
-        new-selection (sel/remove-ends-from-between new-selection)
+                        (assoc selection :end new-caret-side))
         new-editor-state (assoc editor-state :selection new-selection)]
-    (->EditorUpdate new-editor-state (changelist))))
+    new-editor-state))
 
 (defn expand-caret-left
   [{:keys [selection] :as editor-state} new-caret]
@@ -446,31 +383,26 @@
                               (assoc :backwards? true))
                           (assoc selection :end new-caret-side))
                         ;; backwards selection
-                        (let [s (assoc selection :start new-caret-side)
-                              old-sel-start-para (-> selection :start :paragraph)]
-                          (if (not= old-sel-start-para (:paragraph new-caret-side))
-                            (sel/add-to-between s old-sel-start-para)
-                            s)))
-        new-selection (sel/remove-ends-from-between new-selection)
+                        (assoc selection :start new-caret-side))
         new-editor-state (assoc editor-state :selection new-selection)]
-    (->EditorUpdate new-editor-state (changelist))))
+    new-editor-state))
 
 (defn- nav-fallthrough
-  "Little helper method for generating an EditorUpdate with a selection made
+  "Little helper method for generating a new EditorState with a selection made
    by calling nav-method with the `editor-state`'s `doc` and `selection`."
   [{:keys [doc selection] :as editor-state}, nav-method]
   (let [new-selection (nav-method doc selection)]
-    (->EditorUpdate (assoc editor-state :selection new-selection) (changelist))))
+    (assoc editor-state :selection new-selection)))
 
 (extend-type EditorState
   Navigable
   (start [{:keys [doc] :as editor-state}]
     (let [new-selection (nav/start doc)]
-      (->EditorUpdate (assoc editor-state :selection new-selection) (changelist))))
+      (assoc editor-state :selection new-selection)))
 
   (end [{:keys [doc] :as editor-state}]
     (let [new-selection (nav/end doc)]
-      (->EditorUpdate (assoc editor-state :selection new-selection) (changelist))))
+      (assoc editor-state :selection new-selection)))
 
   (next-char [editor-state]
     (nav-fallthrough editor-state nav/next-char))
@@ -497,20 +429,22 @@
     (nav-fallthrough editor-state nav/prev-sentence))
 
   (prev-paragraph [{:keys [doc selection] :as editor-state}]
-    (let [caret-uuid (sel/caret-para selection)
-          paragraph (get (:children doc) caret-uuid)
-          prev-paragraph (dll/prev (:children doc) (sel/caret-para selection))]
-      (if (pos? (sel/caret selection))
-        (->EditorUpdate (assoc editor-state :selection (nav/start paragraph)) (changelist))
-        (->EditorUpdate (assoc editor-state :selection (nav/end prev-paragraph)) (changelist)))))
+    (let [caret-para-idx (sel/caret-para selection)
+          prev-para-idx (dll/prev-index (:children doc) (sel/caret-para selection))
+          prev-paragraph (get (:children doc) prev-para-idx)]
+      (if (or (pos? (sel/caret selection))
+              (nil? prev-paragraph))
+        (assoc editor-state :selection (sel/selection [caret-para-idx 0]))
+        (assoc editor-state :selection (sel/selection [prev-para-idx (m/len prev-paragraph)])))))
 
   (next-paragraph [{:keys [doc selection] :as editor-state}]
-    (let [caret-uuid (sel/caret-para selection)
-          paragraph (get (:children doc) caret-uuid)
-          next-paragraph (dll/next (:children doc) (sel/caret-para selection))]
-      (if (= (m/len paragraph) (sel/caret selection))
-        (->EditorUpdate (assoc editor-state :selection (nav/start next-paragraph)) (changelist))
-        (->EditorUpdate (assoc editor-state :selection (nav/end paragraph)) (changelist)))))
+    (let [caret-para-idx (sel/caret-para selection)
+          paragraph (get (:children doc) caret-para-idx)
+          next-paragraph-idx (dll/next-index (:children doc) (sel/caret-para selection))]
+      (if (and (= (m/len paragraph) (sel/caret selection))
+               next-paragraph-idx)
+        (assoc editor-state :selection (sel/selection [next-paragraph-idx 0]))
+        (assoc editor-state :selection (sel/selection [caret-para-idx (m/len paragraph)])))))
 
   nav/Selectable
   (shift+right [editor-state] (nav-fallthrough editor-state nav/shift+right))
@@ -531,71 +465,21 @@
   (formatting [{:keys [doc selection]}]
     (m/formatting doc selection)))
 
-(defn merge-changelists
-  "Takes two changelists and returns a third that combines them. UUIDs are rearranged
-   as necessary according to the following rules:
+(defn all-selected-indices
+  "Returns the indices of all paragraphs that are wholly
+   or partially inside the current selection, as a set."
+  [editor-state]
+  {:post [(set? %)]}
+  (set (dll/indices-range (-> editor-state :doc :children)
+                          (-> editor-state :selection :start :paragraph)
+                          (-> editor-state :selection :end :paragraph))))
 
-   - If a pid is **deleted**:
-     - And then inserted: move to changed
-   - If a pid is **changed**:
-     - And then deleted: move to deleted
-   - If a pid is **inserted**:
-     - And then deleted: remove from both inserted and deleted
-     - And then changed: move to inserted.
+(defn get-changelist
+  [editor-state]
+  (dll/changelist (-> editor-state :doc :children)))
 
-   It is assumed that c2 happened immediately after c1. You cannot supply random
-   changelists on wholly unrelated editor states, or states at different points in time.
+(defn clear-changelist
+  "Returns an identical EditorState with the changelist of its doc's `children` DLL cleared."
+  [editor-state]
+  (update-in editor-state [:doc :children] dll/clear-changelist))
 
-   The purpose of this is so that we can roll many EditorUpdates into one, and re-render the document only once."
-  [c1 c2]
-  (let [deleted-then-inserted (set (filter #(contains? (:deleted-uuids c1) %) (:inserted-uuids c2)))
-        changed-then-deleted  (set (filter #(contains? (:changed-uuids c1) %) (:deleted-uuids c2)))
-        inserted-then-deleted (set (filter #(contains? (:inserted-uuids c1) %) (:deleted-uuids c2)))
-        inserted-then-changed (set (filter #(contains? (:inserted-uuids c1) %) (:changed-uuids c2)))
-
-        new-deleted (-> (set/union (:deleted-uuids c1) (:deleted-uuids c2))
-                        (set/difference deleted-then-inserted inserted-then-deleted)
-                        (set/union changed-then-deleted))
-        new-changed (-> (set/union (:changed-uuids c1) (:changed-uuids c2))
-                        (set/difference changed-then-deleted inserted-then-changed)
-                        (set/union deleted-then-inserted))
-        new-inserted (-> (set/union (:inserted-uuids c1) (:inserted-uuids c2))
-                         (set/difference inserted-then-deleted deleted-then-inserted)
-                         (set/union inserted-then-changed))]
-    {;; :resolved? false
-     ;; :base-state-hash (:base-state-hash c1)
-     :deleted-uuids new-deleted
-     :changed-uuids new-changed
-     :inserted-uuids new-inserted}))
-
-(defn reverse-changelist
-  "Taking a changelist that contains update information to go from state A to state B,
-   produces a new changelists with update information on on how to go from state B to A."
-  [{:keys [inserted-uuids changed-uuids deleted-uuids]}]
-  {:inserted-uuids deleted-uuids
-   :changed-uuids changed-uuids
-   :deleted-uuids inserted-uuids})
-
-(defn merge-updates
-  "Merges the changelists of `editor-update1` and `editor-update2`."
-  [editor-update1 editor-update2]
-  (let [merged-changelists (merge-changelists (:changelist editor-update1) (:changelist editor-update2))]
-    (assoc editor-update2 :changelist merged-changelists)))
-
-(comment
-  (def p1 (p/paragraph [(r/run "foo" #{:italic})
-                        (r/run "bar" #{:bold :italic})
-                        (r/run "bizz" #{:italic})
-                        (r/run "buzz" #{:bold :italic})]))
-
-  (def p2 (p/paragraph [(r/run "aaa" #{:bold :italic})
-                        (r/run "bbb" #{})
-                        (r/run "ccc" #{})
-                        (r/run "ddd" #{})]))
-
-  #_(def doc (document [(p/paragraph "p1" [(r/run "Hello, ")])]))
-  #_(-> (insert-text-container doc (sel/selection ["p1" 0] ["p1" 5]) (r/run "Goodbye"))
-      :children
-      (vec))
-  (def sel (sel/selection ["p1" 7]))
-  )

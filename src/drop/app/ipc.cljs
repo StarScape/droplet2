@@ -3,6 +3,7 @@
   (:require [re-frame.core :as rf :refer [dispatch]]
             [re-frame.db]
             [slate.api :as slate-api]
+            [slate.editor-ui-state :as ui-state]
             [slate.serialization :as slate-serialization]
             [slate.filetypes.core :as filetypes]
             [drop.app.file-handling :as file-handling]
@@ -48,6 +49,12 @@
            (catch :default e
              (app-utils/show-error-dialog! "Failed to open file" "File failed to open")
              (js/console.log "Error thrown in ipcRenderer open-file:" e)))))
+
+  (.on ipcRenderer "load-blank-document"
+       (fn [_e]
+         (let [{:keys [*slate-instance]} @re-frame.db/app-db]
+           (ui-state/new-document! *slate-instance)
+           (dispatch [:set-open-file-path nil]))))
 
   (.on ipcRenderer "import-file"
        (fn [_e, file-type, file-contents]

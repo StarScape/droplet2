@@ -7,10 +7,10 @@
    be aware of either of those should go in the `view` namespace."
   (:require [clojure.set :as set]
             [clojure.string :as str]
+            [slate.model.dll :as dll]
             [slate.model.common :as m]
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.doc :as doc :refer [Document]]
-            [slate.dll :as dll]
             [slate.model.selection :as sel :refer [selection caret smart-collapse single? range?]]))
 
 ;; Some helpers and useful primitives ;;
@@ -65,14 +65,14 @@
 
 (defprotocol WordLocations
   (inside-word?
-   [entity location]
+    [entity location]
     "Are the characters on either side of the text entity at the location word-chars?")
   (at-word-start?
     [entity location]
     "Is the specified location in the text entity at the start of a word?")
   (at-word-end?
-   [entity location]
-   "Is the specified location in the text entity at the start of a word?"))
+    [entity location]
+    "Is the specified location in the text entity at the start of a word?"))
 
 (extend-protocol WordLocations
   string
@@ -231,8 +231,8 @@
    Returns the new offset, NOT a selection."
   [text start-offset]
   (let [prev-sentence-end (as-> start-offset offset
-                          (back-until text offset (complement sentence-separators))
-                          (back-until text offset sentence-separators))
+                            (back-until text offset (complement sentence-separators))
+                            (back-until text offset sentence-separators))
         current-sentence-start (until-non-whitespace text prev-sentence-end)]
     ;; If there is another sentence before the current one that was just navigated to the start of,
     ;; there will be leading whitespace. Place the cursor in front of that leading whitespace if applicable.
@@ -242,15 +242,15 @@
       current-sentence-start)))
 
 (defprotocol Navigable
-  "Methods for navigating around. Implemented for Paragraphs, Documents, and EditorStates.
-  All methods return a new Selection, except for on EditorStates, which returns EditorUpdates."
+  "Methods for navigating around. Implemented for Documents, and EditorStates.
+  All methods return a new Selection, except for on EditorStates, which return new EditorStates."
   (start
     [this]
-    "Go to start of Paragraph or Document.")
+    "Go to start of Document.")
 
   (end
     [this]
-    "Go to end of Paragraph or Document.")
+    "Go to end of of Document.")
 
   (next-char
     [this sel]
@@ -279,28 +279,28 @@
   (next-clause
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping ahead to the end of the next clause (defined as
+    "Returns selection after jumping ahead to the end of the next clause (defined as
     the end of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
   (prev-clause
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping back to the start of the current clause (defined as
+    "Returns selection after jumping back to the start of the current clause (defined as
     the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
   (next-sentence
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping ahead to the end of the next clause (defined as
+    "Returns selection after jumping ahead to the end of the next clause (defined as
     the end of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
   (prev-sentence
     [this sel]
     [editor-state]
-    "Returns selection (or EditorUpdate) after jumping back to the start of the current clause (defined as
+    "Returns selection after jumping back to the start of the current clause (defined as
     the start of the current sentence or the next intra-sentence punctuation mark such as commas, colons,
     and semicolons).")
 
@@ -355,143 +355,128 @@
         prev-grapheme-segment (first (reverse (filter #(< (:offset %) offset) graphemes)))]
     (or (:offset prev-grapheme-segment) 0)))
 
-(extend-type Paragraph
-  Navigable
-  (start [para]
-    (autoset-formats para (selection [(:uuid para) 0])))
-
-  (end [para]
-    (autoset-formats para (selection [(:uuid para) (m/len para)])))
-
-  (next-char [para sel]
-    (cond
-      (range? sel)
-      (autoset-formats para (sel/collapse-end sel))
-
-      (and (single? sel) (< (caret sel) (m/len para)))
-      (let [next-grapheme-offset (next-grapheme para (sel/caret sel))]
-        (autoset-formats para (sel/set-single sel next-grapheme-offset)))
-
-      :else
-      sel))
-
-  (prev-char [para sel]
-    (cond
-      (range? sel)
-      (autoset-formats para (sel/collapse-start sel))
-
-      (and (single? sel) (pos? (caret sel)))
-      (let [prev-grapheme-offset (prev-grapheme para (sel/caret sel))]
-        (autoset-formats para (sel/set-single sel prev-grapheme-offset)))
-
-      :else
-      sel))
-
-  (next-word [para sel]
-    (let [text (m/text para)
-          collapsed (smart-collapse sel)
-          offset (next-word-offset text (caret collapsed))]
-      (autoset-formats para (sel/set-single collapsed offset))))
-
-  (prev-word [para sel]
-    (let [text (m/text para)
-          collapsed (smart-collapse sel)
-          offset (prev-word-offset text (caret collapsed))]
-      (autoset-formats para (sel/set-single collapsed offset))))
-
-  (next-clause [para sel]
-    (let [text (m/text para)
-          collapsed (smart-collapse sel)
-          offset (next-clause-offset text (caret collapsed))]
-      (autoset-formats para (sel/set-single collapsed offset))))
-
-  (prev-clause [para sel]
-    (let [text (m/text para)
-          collapsed (smart-collapse sel)
-          offset (prev-clause-offset text (caret collapsed))]
-      (autoset-formats para (sel/set-single collapsed offset))))
-
-  (next-sentence [para sel]
-    (let [text (m/text para)
-          collapsed (smart-collapse sel)
-          offset (next-sentence-offset text (caret collapsed))]
-      (autoset-formats para (sel/set-single collapsed offset))))
-
-  (prev-sentence [para sel]
-    (let [text (m/text para)
-          collapsed (smart-collapse sel)
-          offset (prev-sentence-offset text (caret collapsed))]
-      (autoset-formats para (sel/set-single collapsed offset)))))
 
 (defn next-method [doc sel paragraph-fn]
   (let [collapsed (smart-collapse sel)
-        para-uuid (sel/start-para collapsed)
-        para ((:children doc) para-uuid)]
+        para-idx (sel/start-para collapsed)
+        para ((:children doc) para-idx)]
+    ;; At end of any paragraph EXCEPT the last paragraph?
     (if (and (= (sel/caret collapsed) (m/len para))
              (not= para (dll/last (:children doc))))
-      (start (dll/next (:children doc) para))
-      (paragraph-fn ((:children doc) (sel/start-para collapsed)) collapsed))))
+      (sel/selection [(dll/next-index (:children doc) para-idx), 0])
+      (paragraph-fn para collapsed))))
 
 (defn prev-method [doc sel paragraph-fn]
   (let [collapsed (smart-collapse sel)
-        para-uuid (sel/start-para collapsed)
-        para ((:children doc) para-uuid)]
+        para-idx (sel/start-para collapsed)
+        para ((:children doc) para-idx)]
+    ;; At the start of any paragraph EXCEPT the first paragraph?
     (if (and (= 0 (sel/caret collapsed))
              (not= para (dll/first (:children doc))))
-      (end (dll/prev (:children doc) para))
-      (paragraph-fn ((:children doc) (sel/start-para collapsed)) collapsed))))
+      (sel/selection [(dll/prev-index (:children doc) para-idx)
+                      (m/len (dll/prev (:children doc) para-idx))])
+      (paragraph-fn para collapsed))))
 
 (extend-type Document
   Navigable
-  (start [doc] (start (dll/first (:children doc))))
+  (start [doc]
+    (autoset-formats doc (selection [(dll/first-index (:children doc)) 0])))
 
-  (end [doc] (end (dll/last (:children doc))))
+  (end [doc]
+    (autoset-formats doc (selection [(dll/last-index (:children doc))
+                                     (m/len (dll/last (:children doc)))])))
 
   (next-char [doc sel]
     (if (range? sel)
       (autoset-formats doc (sel/collapse-end sel))
-      (let [para ((:children doc) (-> sel :start :paragraph))]
+      (let [para-idx (-> sel :start :paragraph)
+            para (get (:children doc) para-idx)]
         ;; At end of paragraph?
         (if (= (caret sel) (m/len para))
           ;; At end of _last_ paragraph?
           (if (doc/last-para? doc para)
             sel
             ;; At end of different paragraph, goto start of next one
-            (start (dll/next (:children doc) para)))
-          ;; Not at end of paragraph, defer to Paragraph's next-char impl
-          (next-char para sel)))))
+            (sel/selection [(dll/next-index (:children doc) para-idx), 0]))
+          ;; Not at end of paragraph, defer to default single-paragraph behavior
+          (cond
+            (range? sel)
+            (autoset-formats para (sel/collapse-end sel))
+
+            (and (single? sel) (< (caret sel) (m/len para)))
+            (let [next-grapheme-offset (next-grapheme para (sel/caret sel))]
+              (autoset-formats para (sel/set-single sel next-grapheme-offset)))
+
+            :else
+            sel)))))
 
   (prev-char [doc sel]
     (if (range? sel)
       (autoset-formats doc (sel/collapse-start sel))
-      (let [para ((:children doc) (-> sel :start :paragraph))]
+      (let [para-idx (-> sel :start :paragraph)
+            para (get (:children doc) para-idx)]
         ;; At start of paragraph?
         (if (zero? (caret sel))
           ;; At start of _first_ paragraph?
           (if (doc/first-para? doc para)
             sel
             ;; At start of different paragraph, goto end of previous one
-            (end (dll/prev (:children doc) para)))
-          ;; Not at start of paragraph, defer to Paragraph's prev-char impl
-          (prev-char para sel)))))
+            (let [prev-para-idx (dll/prev-index (:children doc) para-idx)
+                  prev-para ((:children doc) prev-para-idx)]
+              (sel/selection [prev-para-idx, (m/len prev-para)])))
+          ;; Not at start of paragraph, defer to default single-paragraph behavior
+          (cond
+            (range? sel)
+            (autoset-formats para (sel/collapse-start sel))
+
+            (and (single? sel) (pos? (caret sel)))
+            (let [prev-grapheme-offset (prev-grapheme para (sel/caret sel))]
+              (autoset-formats para (sel/set-single sel prev-grapheme-offset)))
+
+            :else
+            sel)))))
 
   (next-word [doc sel]
-    (next-method doc sel next-word))
+    (next-method doc sel (fn [para sel]
+                           (let [text (m/text para)
+                                 collapsed (smart-collapse sel)
+                                 offset (next-word-offset text (caret collapsed))]
+                             (autoset-formats para (sel/set-single collapsed offset))))))
 
   (prev-word [doc sel]
-    (prev-method doc sel prev-word))
+    (prev-method doc sel (fn [para sel]
+                           (let [text (m/text para)
+                                 collapsed (smart-collapse sel)
+                                 offset (prev-word-offset text (caret collapsed))]
+                             (autoset-formats para (sel/set-single collapsed offset))))))
 
   (next-clause [doc sel]
-    (next-method doc sel next-clause))
+    (next-method doc sel (fn [para sel]
+                           (let [text (m/text para)
+                                 collapsed (smart-collapse sel)
+                                 offset (next-clause-offset text (caret collapsed))]
+                             (autoset-formats para (sel/set-single collapsed offset))))))
 
   (prev-clause [doc sel]
-    (prev-method doc sel prev-clause))
+    (prev-method doc sel (fn [para sel]
+                           (let [text (m/text para)
+                                 collapsed (smart-collapse sel)
+                                 offset (prev-clause-offset text (caret collapsed))]
+                             (autoset-formats para (sel/set-single collapsed offset))))))
 
   (next-sentence [doc sel]
-    (next-method doc sel next-sentence))
+    (next-method doc sel (fn [para sel]
+                           (let [text (m/text para)
+                                 collapsed (smart-collapse sel)
+                                 offset (next-sentence-offset text (caret collapsed))]
+                             (autoset-formats para (sel/set-single collapsed offset))))))
 
   (prev-sentence [doc sel]
-    (prev-method doc sel prev-sentence))
+    (prev-method doc sel (fn [para sel]
+                           (let [text (m/text para)
+                                 collapsed (smart-collapse sel)
+                                 offset (prev-sentence-offset text (caret collapsed))]
+                             (autoset-formats para (sel/set-single collapsed offset))))))
 
   ;; TODO: It's possible these can be cleaned up, but *write tests* before
   ;; trying to make them more elegant. That will make it a lot easier to prove
@@ -501,17 +486,14 @@
     (autoset-formats
      doc
      (let [caret-offset (sel/caret sel)
-           para ((:children doc) (sel/caret-para sel))
+           para-idx (sel/caret-para sel)
+           para ((:children doc) para-idx)
            para-length (m/len para)
-           next-para (dll/next (:children doc) para)]
+           next-para-idx (dll/next-index (:children doc) para-idx)]
        (if (and (:backwards? sel) (sel/range? sel))
          (cond
            (= caret-offset para-length)
-           (-> sel
-               (assoc :start {:offset 0, :paragraph (:uuid next-para)})
-               ;; We just moved the caret from p1 to p2, removing p1 from the selection
-               ;; and making p2 the new start. Remove p2 from :between if it's present.
-               (sel/remove-ends-from-between))
+           (assoc sel :start {:offset 0, :paragraph next-para-idx})
 
            :else
            (sel/shift-caret sel (- (next-grapheme para caret-offset) caret-offset)))
@@ -521,10 +503,7 @@
            sel
 
            (= caret-offset para-length)
-           (-> sel
-               (assoc :end {:offset 0, :paragraph (:uuid next-para)})
-              ;; We just shift+right'd from p1 to p2, so add p1 to :between IF it's not also :start
-               (sel/add-to-between (:uuid para)))
+           (assoc sel :end {:offset 0, :paragraph next-para-idx})
 
            :else
            (sel/shift-caret sel (- (next-grapheme para caret-offset) caret-offset)))))))
@@ -534,7 +513,8 @@
      doc
      (let [caret-offset (sel/caret sel)
            para ((:children doc) (sel/caret-para sel))
-           prev-para (dll/prev (:children doc) para)
+           prev-para-idx (dll/prev-index (:children doc) (sel/caret-para sel))
+           prev-para (get (:children doc) prev-para-idx)
            prev-grapheme-offset (prev-grapheme para caret-offset)]
        (if (sel/single? sel)
          (cond
@@ -544,10 +524,9 @@
 
            (zero? caret-offset)
            (-> sel
-               (assoc :start {:paragraph (:uuid prev-para)
+               (assoc :start {:paragraph prev-para-idx
                               :offset (m/len prev-para)}
                       :backwards? true))
-              ;; No need to update :between because this is operating on a single selection
 
            :else
            (-> sel
@@ -560,19 +539,10 @@
 
            (zero? caret-offset)
            (if (:backwards? sel)
-             (-> sel
-                 (assoc :start {:offset (m/len prev-para)
-                                :paragraph (:uuid prev-para)})
-                 ;; Add what was previously the :start paragraph to the :between,
-                 ;; as long as it is not also the :end paragraph (i.e. if the selection
-                 ;; only spanned a single paragraph).
-                 (sel/add-to-between (:uuid para)))
-             (-> sel
-                 (assoc :end {:offset (m/len prev-para)
-                              :paragraph (:uuid prev-para)})
-                ;; Previous paragraph was either in :between or the :start para. It's
-                ;; now the new :end paragraph, so make sure it's removed from :between.
-                 (sel/remove-ends-from-between)))
+             (assoc sel :start {:offset (m/len prev-para)
+                                :paragraph prev-para-idx})
+             (assoc sel :end {:offset (m/len prev-para)
+                              :paragraph prev-para-idx}))
 
            :else
            (sel/shift-caret sel (- prev-grapheme-offset caret-offset)))))))
@@ -585,15 +555,12 @@
                       :offset (sel/caret next-word-sel)}]
        (if (and (:backwards? sel) (sel/range? sel))
          ;; Backwards range selection
-         (-> (if (and (>= (:offset new-caret) (-> sel :end :offset))
-                      (= (:paragraph new-caret) (-> sel :end :paragraph)))
-               (assoc sel :start (:end sel), :end new-caret, :backwards? false)
-               (assoc sel :start new-caret))
-             (sel/remove-ends-from-between))
+         (if (and (>= (:offset new-caret) (-> sel :end :offset))
+                  (= (:paragraph new-caret) (-> sel :end :paragraph)))
+           (assoc sel :start (:end sel), :end new-caret, :backwards? false)
+           (assoc sel :start new-caret))
          ;; Forwards range or single selection
-         (-> sel
-             (assoc :end new-caret, :backwards? false)
-             (sel/add-to-between (sel/end-para sel)))))))
+         (assoc sel :end new-caret, :backwards? false)))))
 
   (ctrl+shift+left [doc sel]
     (autoset-formats
@@ -603,15 +570,12 @@
                       :offset (sel/caret prev-word-sel)}]
        (if (or (sel/single? sel) (and (:backwards? sel) (sel/range? sel)))
          ;; Single selection or backwards range-selection
-         (-> sel
-             (assoc :start new-caret, :backwards? true)
-             (sel/add-to-between (sel/start-para sel)))
+         (assoc sel :start new-caret, :backwards? true)
          ;; Forwards range selection
-         (-> (if (and (< (:offset new-caret) (-> sel :start :offset))
-                      (= (:paragraph new-caret) (-> sel :start :paragraph)))
-               (assoc sel :start new-caret, :end (:start sel), :backwards? true)
-               (assoc sel :end new-caret, :backwards? false))
-             (sel/remove-ends-from-between)))))))
+         (if (and (< (:offset new-caret) (-> sel :start :offset))
+                  (= (:paragraph new-caret) (-> sel :start :paragraph)))
+           (assoc sel :start new-caret, :end (:start sel), :backwards? true)
+           (assoc sel :end new-caret, :backwards? false)))))))
 
 (comment
   (def my-par (p/paragraph [(r/run "Hello world. Hello    world, my name is Jack...and this is my counterpart, R2-D2")]))

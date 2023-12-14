@@ -1,11 +1,18 @@
 (ns slate.model.run
   "Runs are the basic building blocks of a document: a string with associated styling.
    This namespace contains the functions for dealing with Runs."
-  (:require [slate.model.common :refer [TextContainer
+  (:require [clojure.spec.alpha :as s]
+            [slate.model.common :refer [TextContainer
                                         len
                                         graphemes]]
-            [slate.utils :refer [weak-cache]]
             [slate.utils :refer-macros [weak-cache-val]]))
+
+(s/def ::format #{:italic :bold :strikethrough})
+(s/def ::text string?)
+(s/def ::formats (s/coll-of ::format))
+(s/def ::Run
+  (s/keys :req-un [::text
+                   ::formats]))
 
 (defrecord Run [text formats]
   TextContainer
