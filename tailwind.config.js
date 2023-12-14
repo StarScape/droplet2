@@ -1,7 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 
+const jsContent = process.env.NODE_ENV == 'production' ? "./public/js/main.js" : "./public/js/cljs-runtime/*.js";
+
 module.exports = {
-  content: process.env.NODE_ENV == 'production' ? ["./public/js/main.js"] : ["./public/js/cljs-runtime/*.js"],
+  content: [jsContent, "./public/index.html"],
   theme: {
     extend: {
       colors: {
@@ -10,5 +12,6 @@ module.exports = {
       },
     },
   },
+  darkMode: "class",
   plugins: [],
 }

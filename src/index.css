@@ -5,3 +5,7 @@
 html {
   @apply text-slate-700
 }
+
+html.dark {
+  @apply text-zinc-100
+}

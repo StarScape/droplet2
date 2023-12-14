@@ -28,6 +28,9 @@
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (defn main []
+  (let [theme (ipc/get-theme-sync)]
+    (when (= :dark theme)
+      (.. js/document -documentElement -classList (toggle "dark"))))
   (rf/dispatch-sync [:boot])
   (ipc/init-handlers!)
   (mount-main-component))

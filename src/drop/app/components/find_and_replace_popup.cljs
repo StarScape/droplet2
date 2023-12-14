@@ -14,6 +14,7 @@
                                  :on-click on-click
                                  :toggled? toggled?}
    [:img {:src src
+          :class "dark:invert"
           :style {:width "15px"}}]])
 
 (defn text-button
@@ -27,24 +28,33 @@
 (defn- input-row
   [{:keys [placeholder tab-index buttons input-tray on-key-down on-change ref value autofocus?]
     :or {on-key-down #() on-change #() ref #() value (r/atom "")}}]
-  [:div {:class "flex flex-row"
-         :on-key-down #(on-key-down % value)}
-   [:div {:class "p-1 mr-1 border bg-slate-100 border-gray-200 flex flex-row rounded-sm
-                  focus-within:border focus-within:border-dark-blue"}
-    [:input {:class "outline-none bg-transparent"
-             :type "text"
-             :ref #(when ref (ref %))
-             :tabIndex tab-index
-             :spellCheck "false"
-             :size "30"
-             :placeholder placeholder
-             :autoComplete "off"
-             :autoFocus autofocus?
-             :value value
-             :on-change (fn [e] (on-change (.. e -target -value)))}]
-    [:div {:class "w-16 flex flex-row justify-end items-center"}
-     input-tray]]
-   buttons])
+  (r/with-let [*mousedown? (r/atom false)]
+    [:div {:class "flex flex-row"
+           :on-key-down #(on-key-down % value)}
+     [:div {:class "p-1 mr-1 border bg-slate-100 dark:bg-zinc-900 border-gray-200 dark:border-gray-700 flex flex-row rounded-sm
+                  focus-within:border focus-within:border-dark-blue dark:focus-within:border-dark-blue"}
+      [:input {:class "outline-none bg-transparent"
+               :type "text"
+               :ref #(when ref (ref %))
+               :tabIndex tab-index
+               :spellCheck "false"
+               :size "30"
+               :placeholder placeholder
+               :autoComplete "off"
+               :autoFocus autofocus?
+               :value value
+               :on-change (fn [e] (on-change (.. e -target -value)))
+               ;; This ⬇️ is so that all text in the input will be selected when the find and replace dialog
+               ;; is first called up, as well as when tabbing between them. However, we don't want to select
+               ;; all when the user clicks on somewhere specific in the text.
+               :on-mouse-down #(reset! *mousedown? true)
+               :on-mouse-up #(reset! *mousedown? false)
+               :on-focus (fn [e]
+                           (when-not @*mousedown?
+                             (.. e -target (select))))}]
+      [:div {:class "w-16 flex flex-row justify-end items-center"}
+       input-tray]]
+     buttons]))
 
 (defn find-and-replace-popup
   [{:keys [activated?
@@ -68,19 +78,12 @@
                *replace-text (r/atom "")
                replace! #(when-not (str/blank? @*replace-text) (on-replace @*replace-text))
                replace-all! #(when-not (str/blank? @*replace-text) (on-replace-all @*replace-text))]
-    #_[:> Transition {:show (boolean activated?)
-                    :enter "transition-opacity duration-300"
-                    :enterFrom "hidden opacity-0"
-                    :enterTo "opacity-100"
-                    :leave "transition-opacity duration-300"
-                    :leaveFrom "opacity-100"
-                    :leaveTo "opacity-0"}]
     (when activated?
-      [:div {:class "fixed w-screen top-3 flex flex-row justify-center"}
+      [:div {:class "fixed w-screen top-3 flex flex-row justify-center"
+             :style {:z-index 2}}
        [:div {:id element-id
              ;; drop-shadow-[0_0_13px_rgba(0,0,0,0.15)]
-              :class "p-3 bg-gray-50 rounded-md border border-gray-200 drop-shadow-[0_0_13px_rgba(0,0,0,0.15)] flex flex-col"
-              :style {:z-index 2}
+              :class "flex flex-col rounded-md p-3 bg-gray-50 dark:bg-zinc-800 border border-gray-200 dark:border-gray-700 drop-shadow-[0_0_13px_rgba(0,0,0,0.15)]"
               :on-focus on-focus
               :on-blur on-blur
               :on-key-down (fn [e]
@@ -159,4 +162,10 @@
                               [text-button {:text "Replace All"
                                             :tab-index "4"
                                             :hover-text (if (is-mac?) "⌘⇧R" "Ctrl+Shift+R")
-                                            :on-click replace-all!}]]}]]])))
+                                            :on-click replace-all!}]]}]
+        (when (and (not (or (= find-text "")
+                            (nil? find-text)))
+                   (zero? total-occurrences))
+          [:<>
+           [v-spacer-m]
+           [:p {:class "text-red-500 text-center"} "No results found"]])]])))

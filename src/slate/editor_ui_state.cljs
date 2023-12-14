@@ -623,11 +623,20 @@
      :ctrl+f activate-find!}))
 
 (def wrapper-elem-class "slate-shadow-dom-wrapper")
+(def style-elem-id "slate-style")
+
+(defn toggle-theme!
+  "Switch from light to dark mode or vice versa."
+  [*slate-instance]
+  (let [{:keys [shadow-root font-family dark-mode?]} @*slate-instance]
+    (set! (.. shadow-root (querySelector (str "#" style-elem-id)) -innerHTML)
+          (style/get-rendered-shadow-elem-css font-family (not dark-mode?)))
+    (swap! *slate-instance update :dark-mode? not)))
 
 (defn- init-shadow-dom!
   "Initializes the shadow dom within the top level container element where the Slate instance lives,
    and creates and returns the [editor element within shadow dom, shadowRoot]"
-  [slate-top-level-elem font-family]
+  [slate-top-level-elem font-family dark-mode?]
   (set! (.-innerHTML slate-top-level-elem) "")
   (let [shadow-dom-wrapper (js/document.createElement "div")
         shadow-dom-wrapper-style (.-style shadow-dom-wrapper)]
@@ -640,7 +649,7 @@
 
     (.attachShadow shadow-dom-wrapper #js {:mode "open"})
     (set! (.. shadow-dom-wrapper -shadowRoot -innerHTML)
-          (str "<style>" (style/get-rendered-shadow-elem-css font-family) "</style>"))
+          (str "<style id='" style-elem-id "'>" (style/get-rendered-shadow-elem-css font-family dark-mode?) "</style>"))
 
     ;; There are some things you cannot do (like set outerHTML on elements, among other
     ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
@@ -678,6 +687,7 @@
    :*atom IAtom into which the editor state will be intialized. If one is not provided, an atom will be initialized and returned."
   [& {:keys [*atom
              font-family
+             theme
              save-file-contents
              dom-elem
              on-ready
@@ -706,8 +716,9 @@
   ;; If fonts are not loaded prior to initialization, measurements will be wrong and layout chaos will ensue
   (.. (load-fonts! font-family)
       (then #(let [uuid (random-uuid)
+                   dark-mode? (= theme :dark)
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family)
+                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
                    #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    measure-fn (ruler-for-elem editor-elem shadow-root)
                    editor-state (es/editor-state)
@@ -722,6 +733,8 @@
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
                               #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
+                              :dark-mode? dark-mode?
+                              :viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :history history
                               :word-count (word-count/init editor-state)
                               :input-history []
@@ -731,6 +744,7 @@
                               :add-tip-to-backstack-timer-id nil
                               :outer-dom-elem dom-elem
                               :dom-elem editor-elem
+                              :font-family font-family
                               :shadow-root shadow-root
                               :measure-fn measure-fn
                               :on-ready on-ready

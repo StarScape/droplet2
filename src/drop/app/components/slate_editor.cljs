@@ -14,7 +14,8 @@
             [reagent.core :as r]
             [re-frame.core :as rf :refer [dispatch subscribe]]
             [re-frame.db]
-            ["electron" :refer [ipcRenderer]]))
+            ["electron" :refer [ipcRenderer]]
+            [drop.app.ipc :as ipc]))
 
 (defn find-and-replace
   [*slate-instance *find-and-replace-ref focus-find-popup!]
@@ -59,6 +60,8 @@
        ;; Call init only once, when component initialized
        (ui-state/init! :*atom *ui-state
                        :font-family "Noto Serif"
+                       :theme (ipc/get-theme-sync)
+                       :save-file-contents file-contents
                        :dom-elem @*editor-elem-ref
                        :on-new file-handling/on-new!
                        :on-open file-handling/on-open!

@@ -15,6 +15,7 @@
 ;; (def bg-color "bg-[rgb(246,247,249)]")
 ;; (def bg-color "bg-gray-100")
 (def bg-color "bg-gray-50")
+(def bg-color-dark "dark:bg-zinc-800")
 
 (defn- shortcut-for [formatting-command]
   (if slate-utils/is-mac?
@@ -38,10 +39,10 @@
 (defn format-button [{:keys [duration-ms] :as props}]
   (let [half-duration (/ duration-ms 2)
         ;; When *entering* transparent mode, first transition opacity to zero and then width/padding to zero
-        transition-hide (format "[transition:opacity_%ims,max-width_%ims_%ims,padding_%ims_%ims]"
+        transition-hide (format "opacity %ims, max-width %ims %ims, padding %ims %ims"
                                 half-duration half-duration half-duration half-duration half-duration)
         ;; When *leaving* transparent mode, first transition width/padding back to normal and then opacity to 1
-        transition-show (format "[transition:max-width_%ims,margin_%ims,padding_%ims,opacity_%ims_%ims]"
+        transition-show (format "max-width %ims, margin %ims, padding %ims, opacity %ims %ims"
                                 half-duration half-duration half-duration half-duration half-duration)
         transition-none "transition-none"
         *transition (r/atom transition-hide)
@@ -85,21 +86,24 @@
                                                                        (or (and hidden? (= "max-width" (.-propertyName e)))
                                                                            (and (not hidden?) (= "opacity" (.-propertyName e)))))
                                                               (reset! *transition transition-none)))
-                                       :class (twMerge "rounded-md" transition (when space-after? "mr-1.5")
+                                       :class (twMerge "rounded-md"
+                                                       (when space-after? "mr-1.5")
                                                        (if hidden?
                                                          "opacity-0 mx-0 max-w-0 px-0"
                                                          "opacity-1 max-w-[35px]"))
+                                       :style {:transition transition}
                                        :title mouseover-text}
          [:img {:src img-url
+                :class "dark:invert"
                 :style {:width "15px"}}]]))))
 
 #_(defn- invisible-button []
   [:div.invisible [format-button "icons/italic.svg" false false #()]])
 
 (defn word-count-display [num-words]
-  [:span {:class "flex text-slate-800 items-center text-sm mr-2"}
+  [:span {:class "flex text-slate-800 dark:text-slate-100 items-center text-sm mr-2"}
    num-words
-   [:span {:class "text-xs text-slate-600 ml-1"} (if (= 1 num-words) "word" "words")]])
+   [:span {:class "text-xs text-slate-600 dark:text-slate-400 ml-1"} (if (= 1 num-words) "word" "words")]])
 
 (defn actionbar [{:keys [active-formats word-count on-format-toggle]}]
   (r/with-let [move-handler (fn [e]
@@ -109,10 +113,11 @@
                                     (dispatch [:actionbar-woken])))))
                _ (.addEventListener js/window "mousemove" move-handler)]
     (let [transparent? @(subscribe [:actionbar-transparent?])
-          show-hide-duration 200
-          base-classes (twMerge "fixed px-1 py-1 flex place-content-between transition-all" (str "duration-[" show-hide-duration "]"))
-          visible-classes (str bg-color " bottom-2.5 rounded-md inset-x-10 border border-light-blue drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
-          transparent-classes "inset-x-0 bottom-0 bg-transparent"
+          show-hide-duration 250
+          base-classes (twMerge "fixed px-1 py-1 flex place-content-between")
+          visible-classes (twMerge bg-color bg-color-dark
+                                   "bottom-2.5 rounded-md inset-x-10 border border-light-blue dark:border-zinc-500 drop-shadow-[0_10px_10px_rgba(0,0,0,0.1)]")
+          transparent-classes "inset-x-0 bottom-0 bg-transparent border-transparent pl-2.5 pr-4 pb-2.5"
           buttons-info [{:img-url "icons/italic.svg"
                          :active? (contains? active-formats :italic)
                          :transparent-mode? transparent?
@@ -175,7 +180,9 @@
                                       buttons-info)
                          buttons-info)
           buttons-info (into [] buttons-info)]
-      [:div {:class (twMerge base-classes (if transparent? transparent-classes visible-classes))}
+      [:div {:class (twMerge base-classes (if transparent? transparent-classes visible-classes))
+             :style {:transition-property "all"
+                     :transition-duration (str show-hide-duration "ms")}}
        [:div.flex
         (for [info buttons-info]
             ^{:key (:img-url info)} [format-button info])
