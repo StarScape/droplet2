@@ -227,11 +227,8 @@
              (= (.-tagName prev-elem) (.-tagName next-elem))
              (or (= "OL" (.-tagName prev-elem))
                  (= "UL" (.-tagName prev-elem))))
-    (let [prev-elem-content (.-innerHTML prev-elem)
-          next-elem-content (.-innerHTML next-elem)
-          prev-elem-new-content (str prev-elem-content next-elem-content)]
-      (.remove next-elem)
-      (set! (.-innerHTML prev-elem) prev-elem-new-content))))
+    (.remove next-elem)
+    (.insertAdjacentHTML prev-elem "beforeend" (.-innerHTML next-elem))))
 
 (defn- insert-list-para!
   "Implementation for inserting both a :ul or an :ol paragraph (the only difference is the tag name of the
@@ -261,30 +258,47 @@
                        rendered-paragraph
                        (str "<" tag-name ">" rendered-paragraph "</" tag-name ">"))]
     (cond
-      ;; insert into (U|O)L after prev-p-dom-elem
-      (and prev-p-dom-elem prev-p-in-same-list?)
-      (.insertAdjacentHTML prev-p-dom-elem "afterend" p-outer-html)
+      (and prev-p-dom-elem next-p-dom-elem)
+      (cond
+        ;; Between two of same list type as inserting
+        (and (= (:type prev-p) list-type)
+             (= (:type next-p) list-type))
+        (do
+          (.insertAdjacentHTML prev-p-dom-elem "afterend" p-outer-html)
+          (merge-list-elems-if-needed! (.-parentElement prev-p-dom-elem) (.-parentElement next-p-dom-elem)))
 
-      ;; insert into (U|O)L before next-p-dom-elem
-      (and next-p-dom-elem next-p-in-same-list?)
-      (.insertAdjacentHTML next-p-dom-elem "beforebegin" p-outer-html)
+        ;; Between two of different list type as inserting
+        (and (= (:type prev-p) (:type next-p))
+             (not= list-type (:type prev-p)))
+        (do
+          (split-elem-on-child! (.-parentNode prev-p-dom-elem) prev-p-dom-elem)
+          (.insertAdjacentHTML (nearest-top-level-ancestor prev-p-dom-elem editor-elem) "afterend" p-outer-html))
 
-      (and prev-p-dom-elem next-p-dom-elem
-           (or (= (:type prev-p) (:type next-p) :ol)
-               (= (:type prev-p) (:type next-p :ul))))
-      (do
-        (split-elem-on-child! (.-parentNode prev-p-dom-elem) prev-p-dom-elem)
+        ;; Prev element of same list type but next not
+        (= list-type (:type prev-p))
+        (.insertAdjacentHTML prev-p-dom-elem "afterend" p-outer-html)
+
+        ;; Next element of same list type but prev not
+        (= list-type (:type next-p))
+        (.insertAdjacentHTML next-p-dom-elem "beforebegin" p-outer-html))
+
+      ;; Insert after elem...
+      prev-p-dom-elem
+      (if (= list-type (:type prev-p))
+        ;; ...of same list type
+        (.insertAdjacentHTML prev-p-dom-elem "afterend" p-outer-html)
+        ;; ...of any other type
         (.insertAdjacentHTML (nearest-top-level-ancestor prev-p-dom-elem editor-elem) "afterend" p-outer-html))
 
-      ;; Neither prev nor next is a list paragraph but there is a prev/next paragraph in the DOM currently.
-      ;; Insert directly before the _nearest ancestor_ of next-p-elem that is top-level within document elem.
-      (some? prev-p-dom-elem)
-      (.insertAdjacentHTML (nearest-top-level-ancestor prev-p-dom-elem editor-elem) "afterend" p-outer-html)
+      ;; Insert before elem...
+      next-p-dom-elem
+      (if (= list-type (:type next-p))
+        ;; ...of same list type
+        (.insertAdjacentHTML next-p-dom-elem "beforebegin" p-outer-html)
+        ;; ...of any other type
+        (.insertAdjacentHTML (nearest-top-level-ancestor next-p-dom-elem editor-elem) "beforebegin" p-outer-html))
 
-      (some? next-p-dom-elem)
-      (.insertAdjacentHTML (nearest-top-level-ancestor next-p-dom-elem editor-elem) "beforebegin" p-outer-html)
-
-      ;; No next elem, append to document end
+      ;; No next or previous elemements, append to document end
       :else
       (.insertAdjacentHTML editor-elem "afterbegin" p-outer-html))))
 

@@ -371,10 +371,12 @@
   (es/toggle-paragraph-type editor-state :h2))
 
 (definterceptor ulist
+  {:add-to-history-immediately? true}
   [editor-state _ _]
   (es/toggle-paragraph-type editor-state :ul))
 
 (definterceptor olist
+  {:add-to-history-immediately? true}
   [editor-state _ _]
   (es/toggle-paragraph-type editor-state :ol))
 
