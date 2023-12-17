@@ -237,7 +237,7 @@
     (assoc-in parser-state [:paragraph :type] type)
     parser-state))
 
-;; All of the handle-* fns take [something, parser-state] and return a new parser-state
+;; All of the handle-* fns take [something?, parser-state] and return a new parser-state
 
 (defn- handle-text
   [text {:keys [run paragraph] :as parser-state}]
@@ -316,7 +316,7 @@
 
 (defn- *-escape-group?
   "Returns `true` if the RTF group begins with a \\* escape. These escapes (in the
-   format {\\*\\cmdname ...}) signal to the RTF processor 'ignore until the end of
+   format `{\\*\\cmdname ...}`) signal to the RTF processor 'ignore until the end of
    this group if the command following \\* is not understood by this program', and
    is typically used for marking custom or nonstandard behavior. For the basic needs
    of Slate's RTF importer, any group with a \\* command can be safely ignored."
@@ -360,7 +360,7 @@
     ;; The astute Clojurist (Clojurian? Clojurer? Clo-bro?) will note that the RTF conversion
     ;; algorithm is, despite the functional patina given to it by essentially being one big
     ;; reduction, very stateful. Tehcnically everything is a pure function, but all the child
-    ;; functions called by `parse-ir` basically just build up the parser-state value. This is on
+    ;; functions called by `parse-ir` basically just build up the `parser-state` value. This is on
     ;; purpose--RTF itself is a *very* stateful format, to the point that it might be better to
     ;; consider it a simple imperative language for mutating a document than a declarative format
     ;; for defining one. Swimming upstream here is not worth the effort, and all things considered,

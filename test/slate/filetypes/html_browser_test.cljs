@@ -99,11 +99,11 @@
                          (run "incoming." #{:bold})])]))
 
 (comment
-  (html-import/html->droplet test-file2)
-  (html-import/html->droplet (:gdocs-complex paste-tests))
-  (html-import/html->fragment (:word-online-simple paste-tests))
-  (html-import/html->fragment (:word-online-complex paste-tests))
-  (html-import/html->fragment (:word-desktop-simple paste-tests))
+  (html-import/html->slate test-file2)
+  (html-import/html->slate (:gdocs-complex paste-tests))
+  (html-import/html->slate (:word-online-simple paste-tests))
+  (html-import/html->slate (:word-online-complex paste-tests))
+  (html-import/html->slate (:word-desktop-simple paste-tests))
   )
 
 (deftest whole-document-import
@@ -115,93 +115,93 @@
 (deftest paste-import
   (testing "can handle pastes from google docs"
     (is (=
-         (html-import/html->fragment (:gdocs-basic-single-style paste-tests))
-         (p/fragment [(run "Hello")])))
+         (html-import/html->slate (:gdocs-basic-single-style paste-tests))
+         (paragraph [(run "Hello")])))
     (is (=
-         (html-import/html->fragment (:gdocs-basic-two-style paste-tests))
-         (p/fragment [(run "Hello ") (run "there" #{:bold})])))
+         (html-import/html->slate (:gdocs-basic-two-style paste-tests))
+         (paragraph [(run "Hello ") (run "there" #{:bold})])))
     (is (doc-frag=
-         (html-import/html->fragment (:gdocs-complex paste-tests))
-         (doc/fragment [(paragraph :h1 [(run "This is an H1")])
-                        (paragraph :h2 [(run "This is an H2")])
-                        (paragraph [(run "")])
-                        (paragraph [(run "Normal paragraph with a sentence, some ")
-                                    (run "italics" #{:italic})
-                                    (run ", ")
-                                    (run "bold" #{:bold})
-                                    (run ", and ")
-                                    (run "strikethrough" #{:strikethrough})
-                                    (run ".")])
-                        (paragraph [(run "")])
-                        (paragraph :ol [(run "OL 1")])
-                        (paragraph :ol [(run "OL 2")])
-                        (paragraph :ol [(run "OL 3")])
-                        (paragraph [(run "")])
-                        (paragraph :ul [(run "UL 1")])
-                        (paragraph :ul [(run "UL 2")])
-                        (paragraph :ul [(run "UL 3")])
-                        (paragraph [(run "")])
-                        (paragraph [(run "\tAnd a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
-                        (paragraph [(run "")])])))
+         (html-import/html->slate (:gdocs-complex paste-tests))
+         (document [(paragraph :h1 [(run "This is an H1")])
+                    (paragraph :h2 [(run "This is an H2")])
+                    (paragraph [(run "")])
+                    (paragraph [(run "Normal paragraph with a sentence, some ")
+                                (run "italics" #{:italic})
+                                (run ", ")
+                                (run "bold" #{:bold})
+                                (run ", and ")
+                                (run "strikethrough" #{:strikethrough})
+                                (run ".")])
+                    (paragraph [(run "")])
+                    (paragraph :ol [(run "OL 1")])
+                    (paragraph :ol [(run "OL 2")])
+                    (paragraph :ol [(run "OL 3")])
+                    (paragraph [(run "")])
+                    (paragraph :ul [(run "UL 1")])
+                    (paragraph :ul [(run "UL 2")])
+                    (paragraph :ul [(run "UL 3")])
+                    (paragraph [(run "")])
+                    (paragraph [(run "\tAnd a longer indented paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after. And a longer paragraph after.")])
+                    (paragraph [(run "")])])))
     (testing "converts whitespace"
-      (is (doc-frag= (html-import/html->fragment "<span>&nbsp;</span>")
+      (is (doc-frag= (html-import/html->slate "<span>&nbsp;</span>")
                      (paragraph [(run " ")])))
-      (is (doc-frag= (html-import/html->fragment "<span>\t</span>")
+      (is (doc-frag= (html-import/html->slate "<span>\t</span>")
                      (paragraph [(run "\t")])))))
 
   (testing "can handle pastes from MS Word online"
-    (is (= (html-import/html->fragment (:word-online-simple paste-tests))
-           (p/fragment [(run "Hello ") (run "there" #{:bold})])))
-    (is (doc-frag= (html-import/html->fragment (:word-online-complex paste-tests))
+    (is (= (html-import/html->slate (:word-online-simple paste-tests))
+           (paragraph [(run "Hello ") (run "there" #{:bold})])))
+    (is (doc-frag= (html-import/html->slate (:word-online-complex paste-tests))
                    ;; NOTE: for some reason, MS word online leaves a trailing non-breaking space (nbsp) at the end of each paragraph.
                    ;; It may be worth trimming off the trailing whitespace of any paragraph at some point. For now, this is fine and
                    ;; requires fewer special cases.
-                   (doc/fragment [(paragraph :h1 [(run "This is an H1")])
-                                  (paragraph :body [(run "This is an H2")])
-                                  (paragraph [(run "")])
-                                  (paragraph [(run "Normal paragraph with a sentence, some ")
-                                              (run "italics" #{:italic})
-                                              (run ", ")
-                                              (run "bold" #{:bold})
-                                              (run ", and ")
-                                              (run "strikethrough" #{:strikethrough})
-                                              (run ".")])
-                                  (paragraph [(run "")])
-                                  (paragraph :ol [(run "OL 1")])
-                                  (paragraph :ol [(run "OL 2")])
-                                  (paragraph :ol [(run "OL 3")])
-                                  (paragraph [(run "")])
-                                  (paragraph :ul [(run "UL 1")])
-                                  (paragraph :ul [(run "UL 2")])
-                                  (paragraph :ul [(run "UL 3")])
-                                  (paragraph [(run "")])
-                                  (paragraph [(run "\tAnd a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after.")])
-                                  (paragraph [(run "")])]))))
+                   (document [(paragraph :h1 [(run "This is an H1")])
+                              (paragraph :body [(run "This is an H2")])
+                              (paragraph [(run "")])
+                              (paragraph [(run "Normal paragraph with a sentence, some ")
+                                          (run "italics" #{:italic})
+                                          (run ", ")
+                                          (run "bold" #{:bold})
+                                          (run ", and ")
+                                          (run "strikethrough" #{:strikethrough})
+                                          (run ".")])
+                              (paragraph [(run "")])
+                              (paragraph :ol [(run "OL 1")])
+                              (paragraph :ol [(run "OL 2")])
+                              (paragraph :ol [(run "OL 3")])
+                              (paragraph [(run "")])
+                              (paragraph :ul [(run "UL 1")])
+                              (paragraph :ul [(run "UL 2")])
+                              (paragraph :ul [(run "UL 3")])
+                              (paragraph [(run "")])
+                              (paragraph [(run "\tAnd a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after.")])
+                              (paragraph [(run "")])]))))
 
   (testing "can handle pastes from MS Word (desktop version)"
-    (is (= (html-import/html->fragment (:word-desktop-simple paste-tests))
-           (p/fragment [(run "Hello ") (run "world" #{:italic})])))
-    (is (doc-frag= (html-import/html->fragment (:word-desktop-complex paste-tests))
-                   (doc/fragment [(paragraph :h1 [(run "This is an H1")])
-                                  (paragraph :h2 [(run "This is an H2")])
-                                  (paragraph [(run "")])
-                                  (paragraph [(run "Normal paragraph with a sentence, some ")
-                                              (run "italics" #{:italic})
-                                              (run ", ")
-                                              (run "bold" #{:bold})
-                                              (run ", and ")
-                                              (run "strikethrough" #{:strikethrough})
-                                              (run ".")])
-                                  (paragraph [(run "")])
-                                  (paragraph :ol [(run "OL 1")])
-                                  (paragraph :ol [(run "OL 2")])
-                                  (paragraph :ol [(run "OL 3")])
-                                  (paragraph [(run "")])
-                                  (paragraph :ul [(run "UL 1")])
-                                  (paragraph :ul [(run "UL 2")])
-                                  (paragraph :ul [(run "UL 3")])
-                                  (paragraph [(run "")])
-                                  (paragraph [(run "\tAnd a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after.")])])))))
+    (is (= (html-import/html->slate (:word-desktop-simple paste-tests))
+           (paragraph [(run "Hello ") (run "world" #{:italic})])))
+    (is (doc-frag= (html-import/html->slate (:word-desktop-complex paste-tests))
+                   (document [(paragraph :h1 [(run "This is an H1")])
+                              (paragraph :h2 [(run "This is an H2")])
+                              (paragraph [(run "")])
+                              (paragraph [(run "Normal paragraph with a sentence, some ")
+                                          (run "italics" #{:italic})
+                                          (run ", ")
+                                          (run "bold" #{:bold})
+                                          (run ", and ")
+                                          (run "strikethrough" #{:strikethrough})
+                                          (run ".")])
+                              (paragraph [(run "")])
+                              (paragraph :ol [(run "OL 1")])
+                              (paragraph :ol [(run "OL 2")])
+                              (paragraph :ol [(run "OL 3")])
+                              (paragraph [(run "")])
+                              (paragraph :ul [(run "UL 1")])
+                              (paragraph :ul [(run "UL 2")])
+                              (paragraph :ul [(run "UL 3")])
+                              (paragraph [(run "")])
+                              (paragraph [(run "\tAnd a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after. And a longer indented paragraph after.")])])))))
 
 (def export1-expected
   (render-to-static-markup
@@ -239,22 +239,22 @@
   (testing "can export whole document"
     (is (= (html-export/doc->html test-file2-expected) export1-expected)))
 
-  (testing "can export fragment"
-    (let [fragment1 (p/fragment [(run "foo") (run "bar" #{:italic})])
-          fragment1-expected (render-to-static-markup
-                              [:<>
-                               [:span "foo"]
-                               [:span {:style {:font-style "italic"}} "bar"]])
-          fragment2 (doc/fragment [(paragraph :h1 [(run "title")])
-                                   (paragraph [(run "foo")])
-                                   (paragraph [(run "bar" #{:italic})])])
-          fragment2-expected (render-to-static-markup
-                              [:<>
-                               [:h1 {:style html-export/default-p-styles}
-                                [:span "title"]]
-                               [:p {:style html-export/default-p-styles}
-                                [:span "foo"]]
-                               [:p {:style html-export/default-p-styles}
-                                [:span {:style {:font-style "italic"}} "bar"]]])]
-      (is (= (html-export/fragment->html fragment1) fragment1-expected))
-      (is (= (html-export/fragment->html fragment2) fragment2-expected)))))
+  (testing "can export slate type"
+    (let [paragraph1 (paragraph [(run "foo") (run "bar" #{:italic})])
+          paragraph1-expected (render-to-static-markup
+                               [:<>
+                                [:span "foo"]
+                                [:span {:style {:font-style "italic"}} "bar"]])
+          doc1 (document [(paragraph :h1 [(run "title")])
+                          (paragraph [(run "foo")])
+                          (paragraph [(run "bar" #{:italic})])])
+          doc1-expected (render-to-static-markup
+                         [:<>
+                          [:h1 {:style html-export/default-p-styles}
+                           [:span "title"]]
+                          [:p {:style html-export/default-p-styles}
+                           [:span "foo"]]
+                          [:p {:style html-export/default-p-styles}
+                           [:span {:style {:font-style "italic"}} "bar"]]])]
+      (is (= (html-export/slate->html paragraph1) paragraph1-expected))
+      (is (= (html-export/slate->html doc1) doc1-expected)))))

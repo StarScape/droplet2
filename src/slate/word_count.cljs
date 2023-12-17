@@ -1,7 +1,8 @@
 (ns slate.word-count
   (:require [clojure.string :as str]
             [slate.model.common :as m]
-            [slate.model.paragraph :as p]
+            [slate.model.paragraph :as p :refer [Paragraph]]
+            [slate.model.doc :as doc :refer [Document]]
             [slate.model.selection :as sel])
   (:refer-clojure :exclude [update]))
 
@@ -49,10 +50,10 @@
 (defn selection-count [{:keys [selection] :as editor-state}]
   (if (sel/single? selection)
     nil
-    (let [selected-fragment (m/selected-content editor-state)]
-      (case (m/fragment-type selected-fragment)
-        :document (paragraphs-word-count (m/items selected-fragment))
-        :paragraph (paragraph-word-count (p/paragraph (m/items selected-fragment)))))))
+    (let [selected (m/selected-content editor-state)]
+      (condp = (type selected)
+        Document (paragraphs-word-count (:children selected))
+        Paragraph (paragraph-word-count selected)))))
 
 (defn update [word-count prev-editor-state new-editor-state changelist]
   (-> word-count

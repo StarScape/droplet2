@@ -5,14 +5,12 @@
             [clojure.spec.alpha :as s]
             [slate.model.common :refer [TextContainer
                                         Selectable
-                                        Fragment
                                         text
                                         len
                                         blank?
                                         graphemes
                                         formatting
-                                        char-at
-                                        items]]
+                                        char-at]]
             [slate.model.run :as r]
             [slate.model.selection :as sel :refer [Selection selection]]
             [slate.utils :as utils :refer-macros [weak-cache-val]]))
@@ -44,22 +42,6 @@
                    (+ segment-start-offset (len run))
                    (concat segments offset-graphemes))))))))
 
-(defrecord ParagraphFragment [runs]
-  Fragment
-  (items [fragment] (:runs fragment))
-  (fragment-type [_] :paragraph)
-
-  TextContainer
-  (text [f] (reduce str (map text (items f))))
-  (len [f] (reduce #(+ %1 (len %2)) 0 (items f)))
-  (blank? [f] (zero? (len f))))
-
-(defn fragment
-  [run-or-runs]
-  (if (sequential? run-or-runs)
-    (->ParagraphFragment run-or-runs)
-    (->ParagraphFragment [run-or-runs])))
-
 (defn paragraph
   "Creates a new paragraph.
 
@@ -69,8 +51,10 @@
   ([]
    (->Paragraph [(r/empty-run)] :body))
   ([runs]
+   {:pre [(sequential? runs)]}
    (->Paragraph (optimize-runs runs) :body))
   ([type runs]
+   {:pre [(sequential? runs)]}
    (->Paragraph (optimize-runs runs) type)))
 
 ;; Paragraph helper functions
@@ -206,25 +190,25 @@
 (defmethod insert
   r/Run
   [para sel run]
-  (insert para sel (fragment run)))
-
-(defmethod insert
-  ParagraphFragment
-  [para sel {:keys [runs]}]
   (if (sel/range? sel)
-    (insert (delete para sel) (sel/collapse-start sel) runs)
+    (insert (delete para sel) (sel/collapse-start sel) run)
     (let [[before after] (split-runs (:runs para) (sel/caret sel))
-          new-runs (concat before runs after)]
+          new-runs (concat (conj before run) after)]
       (assoc para :runs (optimize-runs new-runs)))))
 
 (defmethod insert
   Paragraph
-  [para sel para-to-insert]
-  (let [new-type (if (zero? (-> sel :start :offset))
-                   (:type para-to-insert)
-                   (:type para))]
-    (assoc (insert para sel (fragment (:runs para-to-insert)))
-           :type new-type)))
+  [para sel {:keys [runs] :as para-to-insert}]
+  (if (sel/range? sel)
+    (insert (delete para sel) (sel/collapse-start sel) para-to-insert)
+    (let [new-type (if (and (zero? (-> sel :start :offset))
+                            (blank? para)
+                            (:type para-to-insert))
+                     (:type para-to-insert)
+                     (:type para))
+          [before after] (split-runs (:runs para) (sel/caret sel))
+          new-runs (concat before runs after)]
+      (assoc para :type new-type, :runs (optimize-runs new-runs)))))
 
 (defmulti insert-start
   "Inserts at the start of the paragraph."
@@ -233,11 +217,6 @@
 (defmulti insert-end
   "Inserts at the end of the paragraph."
   (fn [& args] (type (last args))))
-
-(defmethod insert-start
-  ParagraphFragment
-  [para runs]
-  (insert para (selection [nil 0]) runs))
 
 (defmethod insert-start
   r/Run
@@ -253,11 +232,6 @@
   Paragraph
   [para para-to-insert]
   (insert para (selection [nil 0]) para-to-insert))
-
-(defmethod insert-end
-  ParagraphFragment
-  [para fragment]
-  (insert para (selection [nil (len para)]) fragment))
 
 (defmethod insert-end
   r/Run
@@ -356,7 +330,7 @@
       (char-at para (sel/shift-single sel -1)))) ;; TODO: graphemes
 
   (selected-content [para sel]
-    (fragment (second (separate-selected (:runs para) sel))))
+    (paragraph (second (separate-selected (:runs para) sel))))
 
   (formatting
     ([para] (formatting para (selection [nil 0]

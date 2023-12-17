@@ -1,12 +1,11 @@
 (ns slate.model.editor-state
-  (:require [clojure.set :as set]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.spec.alpha :as s]
             [slate.model.dll :as dll]
             [slate.model.common :refer [TextContainer len blank?] :as m]
             [slate.model.run :as r :refer [Run]]
-            [slate.model.paragraph :as p :refer [Paragraph ParagraphFragment]]
-            [slate.model.doc :as doc :refer [DocumentFragment]]
+            [slate.model.paragraph :as p :refer [Paragraph]]
+            [slate.model.doc :as doc :refer [Document]]
             [slate.model.selection :as sel]
             [slate.model.navigation :as nav :refer [Navigable]]))
 
@@ -94,34 +93,22 @@
   (insert-text-container editor-state paragraph))
 
 (defmethod insert
-  ParagraphFragment
-  [{:keys [doc selection] :as editor-state} paragraph-fragment]
-  (if (sel/range? selection)
-    (-> (delete editor-state) (insert paragraph-fragment))
-    (let [new-doc (doc/insert doc selection paragraph-fragment)
-          new-sel (->> (sel/shift-single selection (len paragraph-fragment))
-                       (nav/autoset-formats new-doc))]
-      (assoc editor-state
-             :doc new-doc
-             :selection new-sel))))
-
-(defmethod insert
-  DocumentFragment
-  [{:keys [doc selection] :as editor-state}, fragment]
-  (let [paragraphs (m/items fragment)]
+  Document
+  [{:keys [doc selection] :as editor-state}, doc-to-insert]
+  (let [paragraphs (:children doc-to-insert)]
     (if (= (count paragraphs) 1)
       ;; For a number of reasons, it's easier to handle inserting a single paragraph as a distinct case.
-      (insert editor-state (first paragraphs))
+      (insert editor-state (dll/first paragraphs))
       ;; Insert multiple paragraphs
       (if (sel/range? selection)
-        (-> (delete editor-state) (insert fragment))
-        (let [new-doc (doc/insert doc selection (doc/fragment paragraphs))
+        (-> (delete editor-state) (insert doc-to-insert))
+        (let [new-doc (doc/insert doc selection doc-to-insert)
               sel-para-idx (sel/start-para selection)
               para-after-sel-idx (dll/next-index (:children doc) sel-para-idx)
               last-inserted-para-idx (if (nil? para-after-sel-idx)
                                        (dll/last-index (:children new-doc))
                                        (dll/prev-index (:children new-doc) para-after-sel-idx))
-              last-paragraph (last paragraphs)
+              last-paragraph (dll/last paragraphs)
               new-selection (->> (sel/selection [last-inserted-para-idx (len last-paragraph)])
                                  (nav/autoset-formats last-paragraph))]
           (assoc editor-state
@@ -133,7 +120,7 @@
   [{:keys [selection] :as editor-state} text]
   (let [paragraphs (str/split-lines text)]
     (if (< 1 (count paragraphs))
-      (insert editor-state (doc/fragment (map #(p/paragraph [(r/run %)]) paragraphs)))
+      (insert editor-state (doc/document (map #(p/paragraph [(r/run %)]) paragraphs)))
       ;; Insert string == insert run with current active formats
       (insert editor-state (r/run text (:formats selection))))))
 
@@ -214,7 +201,7 @@
                           (update :end adjust-side))]
     (editor-state new-doc new-selection)))
 
-(defn update-paragraph
+#_(defn update-paragraph
   "Passes the paragraph with at index `paragraph-idx` to function f and replaces the paragraph with the value returned."
   [{:keys [doc] :as editor-state} paragraph-idx f & args]
   (let [paragraph (get (:children doc) paragraph-idx)

@@ -21,9 +21,9 @@
                     (run "ccc" #{})
                     (run "ddd" #{})]))
 
-(def to-insert (doc/fragment [(paragraph [(run "inserted paragraph 1")])
-                              (paragraph [(run "inserted paragraph 2")])
-                              (paragraph [(run "inserted paragraph 3")])]))
+(def to-insert (document [(paragraph [(run "inserted paragraph 1")])
+                          (paragraph [(run "inserted paragraph 2")])
+                          (paragraph [(run "inserted paragraph 3")])]))
 
 (def doc (document false (dll p1 p2)))
 
@@ -34,7 +34,7 @@
 
 (deftest insert-test
   (testing "insert 2 runs in middle of a paragraph"
-    (let [es (es/insert (editor-state doc (selection [(big-dec 1) 3])) (p/fragment [(run "Hello" #{:italic}) (run "Goodbye!")]))]
+    (let [es (es/insert (editor-state doc (selection [(big-dec 1) 3])) (paragraph [(run "Hello" #{:italic}) (run "Goodbye!")]))]
       (is (= es (map->EditorState {:doc (document [(paragraph [(run "fooHello" #{:italic})
                                                                (run "Goodbye!" #{})
                                                                (run "bar" #{:bold :italic})
@@ -71,33 +71,37 @@
                                                          p2])
                                    :selection (selection [(big-dec 1) 6])})))
       (is (= (get-changelist es) {:changed-indices #{(big-dec 1)}
-                              :inserted-indices #{}
-                              :deleted-indices #{}}))))
+                                  :inserted-indices #{}
+                                  :deleted-indices #{}}))))
 
-  (testing "inserting runs at start of paragraph retains type"
-    (let [es (-> (es/insert (editor-state (document false [(paragraph :h1 [(run "foo" #{:italic})
-                                                                           (run "bar" #{:bold :italic})
-                                                                           (run "bizz" #{:italic})
-                                                                           (run "buzz" #{:bold})])
-                                                           (paragraph [(run "aaa" #{})
-                                                                       (run "bbb" #{})
-                                                                       (run "ccc" #{})
-                                                                       (run "ddd" #{})])])
-                                          (selection [(big-dec 1) 0]))
-                            (p/fragment [(run "Hello!") (run "Goodbye!" #{:italic})])))]
-      (is (= es (map->EditorState {:doc (document [(paragraph :h1 [(run "Hello!" #{})
-                                                                   (run "Goodbye!foo" #{:italic})
-                                                                   (run "bar" #{:bold :italic})
-                                                                   (run "bizz" #{:italic})
-                                                                   (run "buzz" #{:bold})])
+  #_(testing "inserting runs at start of paragraph retains type"
+    (let [result (-> (es/insert (editor-state (document false [(paragraph :h1 [(run "foo" #{:italic})
+                                                                               (run "bar" #{:bold :italic})
+                                                                               (run "bizz" #{:italic})
+                                                                               (run "buzz" #{:bold})])
+                                                               (paragraph [(run "aaa" #{})
+                                                                           (run "bbb" #{})
+                                                                           (run "ccc" #{})
+                                                                           (run "ddd" #{})])])
+                                              (selection [(big-dec 1) 0]))
+                                (paragraph [(run "Hello!") (run "Goodbye!" #{:italic})])))]
+      (is (= result (map->EditorState {:doc (document [(paragraph :h1 [(run "Hello!" #{})
+                                                                       (run "Goodbye!foo" #{:italic})
+                                                                       (run "bar" #{:bold :italic})
+                                                                       (run "bizz" #{:italic})
+                                                                       (run "buzz" #{:bold})])
                                                    p2])
                                    :selection (selection [(big-dec 1) 14] :formats #{:italic})})))
-      (is (= (get-changelist es)
+      (is (= (get-changelist result)
              {:changed-indices #{(big-dec 1)}
               :inserted-indices #{}
               :deleted-indices #{}}))))
 
-  (testing "inserting paragraph at start of paragraph changes type to inserted paragraph"
+  ;; I have decided against this behavior for now, as I think it's not always user intuitive and a bit fiddly.
+  ;; Instead, the type is changed only when inserting into a blank paragraph. So if I insert an :h1 paragraph
+  ;; into a blank para, then the whole para will be an :h1...but if I insert an :h1 into the end of a :body paragraph
+  ;; with a bunch of text, it won't change the type. There's a test for this in the `paragraph_test.cljs` NS.
+  #_(testing "inserting paragraph at start of paragraph changes type to inserted paragraph"
     (let [es (es/insert (editor-state (document false [(paragraph :h1 [(run "foo" #{:italic})
                                                                        (run "bar" #{:bold :italic})
                                                                        (run "bizz" #{:italic})
@@ -201,8 +205,8 @@
       (is (= para3 p2))
       (is (= (-> es :selection) (selection [(big-dec 1.5) 9])))
       (is (= (get-changelist es) {:changed-indices #{(big-dec 1)}
-                              :inserted-indices #{(big-dec 1.5)}
-                              :deleted-indices #{}}))))
+                                  :inserted-indices #{(big-dec 1.5)}
+                                  :deleted-indices #{}}))))
 
   (testing "when given a range-selection, deletes before inserting"
     (is (= (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (run "(inserted!)" #{}))
@@ -213,20 +217,20 @@
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
 
-  (testing "Inserting a ParagraphFragment"
-    (is (= (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (p/fragment (r/run "inserted")))
+  (testing "Inserting a Paragraph"
+    (is (= (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (paragraph [(r/run "inserted")]))
            (map->EditorState {:doc (document [(paragraph [(run "f" #{:italic}), (run "insertedd")])])
                               :selection (selection [(big-dec 1) 9] [(big-dec 1) 9])})))
-    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (p/fragment (r/run "inserted"))))
+    (is (= (get-changelist (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11])) (paragraph [(r/run "inserted")])))
            {:changed-indices #{(big-dec 1)}
             :deleted-indices #{(big-dec 2)}
             :inserted-indices #{}})))
 
-  (testing "Inserting a DocumentFragment"
+  (testing "Inserting a Document"
     (let [es (es/insert (editor-state doc (selection [(big-dec 1) 1] [(big-dec 2) 11]))
-                        (doc/fragment [(paragraph [(r/run "inserted1")])
-                                       (paragraph [(r/run "inserted2")])
-                                       (paragraph [(r/run "inserted3")])]))]
+                        (document [(paragraph [(r/run "inserted1")])
+                                   (paragraph [(r/run "inserted2")])
+                                   (paragraph [(r/run "inserted3")])]))]
       (is (= es (map->EditorState {:doc (document [(paragraph [(run "f" #{:italic}), (run "inserted1")])
                                                    (paragraph [(r/run "inserted2")])
                                                    (paragraph [(r/run "inserted3d")])])

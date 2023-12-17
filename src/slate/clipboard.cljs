@@ -1,6 +1,6 @@
 (ns slate.clipboard
-  (:require [slate.filetypes.export.html :refer [fragment->html]]
-            [slate.filetypes.import.html :refer [html->fragment]]
+  (:require [slate.filetypes.export.html :refer [slate->html]]
+            [slate.filetypes.import.html :refer [html->slate]]
             [slate.model.common :as model :refer [selected-content
                                                   text]]
             [slate.model.editor-state :as es]
@@ -26,7 +26,7 @@
   (let [copy-id (str (random-uuid))]
     (set-clipboard-data event "slate-copy-id" copy-id)
     (set-clipboard-data event mime-plaintext (text content))
-    (set-clipboard-data event mime-html (fragment->html content))
+    (set-clipboard-data event mime-html (slate->html content))
     (reset! *clipboard {:content content
                         :copy-id copy-id})))
 
@@ -42,8 +42,8 @@
 (defn copy
   "Copies the currently selected content to the clipboard and returns an unchanged EditorState."
   [editor-state event]
-  (let [fragment (selected-content editor-state)]
-    (copy-to-clipboard! fragment event)
+  (let [content (selected-content editor-state)]
+    (copy-to-clipboard! content event)
     editor-state))
 
 (defn paste
@@ -55,7 +55,7 @@
         html? (.. event -clipboardData -types (includes mime-html))
         html-converted (when html?
                          (try
-                           (html->fragment (.. event -clipboardData (getData mime-html)))
+                           (html->slate (.. event -clipboardData (getData mime-html)))
                            (catch js/Error _e nil)))
         plain-text? (.. event -clipboardData -types (includes mime-plaintext))]
     (cond

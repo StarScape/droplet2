@@ -2,8 +2,8 @@
   (:require-macros [slate.utils :refer [slurp-file]])
   (:require [clojure.set :as set]
             [drop.utils :as drop-utils]
-            [slate.model.doc :as doc :refer [document]]
-            [slate.model.paragraph :as p :refer [paragraph]]
+            [slate.model.doc :as doc :refer [document Document]]
+            [slate.model.paragraph :as p :refer [paragraph Paragraph]]
             [slate.model.run :as r :refer [run]]))
 
 (def ^:private *iframe (atom nil))
@@ -273,8 +273,8 @@
 (defn convert-all-nodes [nodes]
   (filter some? (flatten (map convert-node nodes))))
 
-(defn html->fragment
-  "Converts an HTML string to a Droplet native format (either a DocumentFragment or ParagraphFragment)."
+(defn html->slate
+  "Converts an HTML string to a Slate data structure (either a Document or Paragraph)."
   [html-str]
   (let [dom (add-to-iframe! html-str)
         _ (remove-comment-nodes! (.-body dom))
@@ -283,18 +283,19 @@
                   (convert-all-nodes body-contents))]
     (cond
       (= (-> results first type) r/Run)
-      (p/fragment results)
+      (p/paragraph results)
 
       (= (-> results first type) p/Paragraph)
-      (doc/fragment results)
+      (document results)
 
       :else (throw (js/Error. "Unrecognized type of `results` when converting HTML.")))))
 
 (defn html->doc
   [html-doc-str]
-  ;; Just convert the DocumentFragment to a Document.
-  (let [paragraphs (:paragraphs (html->fragment html-doc-str))]
-    (document paragraphs)))
+  (let [converted (html->slate html-doc-str)]
+    (condp = (type converted)
+      Paragraph (document [converted])
+      Document converted)))
 
 (comment
   (.-styleSheets (str->document test-file))

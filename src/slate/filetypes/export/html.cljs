@@ -1,7 +1,7 @@
 (ns slate.filetypes.export.html
-  (:require [slate.model.common :refer [items fragment-type blank?]]
-            [slate.model.paragraph :as p :refer [ParagraphFragment]]
-            [slate.model.doc :refer [DocumentFragment]]
+  (:require [slate.model.common :refer [blank?]]
+            [slate.model.paragraph :as p :refer [Paragraph]]
+            [slate.model.doc :refer [Document]]
             [reagent.dom.server :refer [render-to-static-markup]]))
 
 (defn- list-paragraph? [paragraph]
@@ -73,11 +73,11 @@
                (render-paragraph p))])
       (render-paragraph document-chunk))))
 
-(defn fragment->html
-  [fragment]
-  (let [rendered-hiccup (case (fragment-type fragment)
-                          :document (render-paragraphs (items fragment))
-                          :paragraph (render-runs (items fragment)))]
+(defn slate->html
+  [slate-type]
+  (let [rendered-hiccup (condp = (type slate-type)
+                          Document (render-paragraphs (:children slate-type))
+                          Paragraph (render-runs (:runs slate-type)))]
     (render-to-static-markup rendered-hiccup)))
 
 (defn doc->html

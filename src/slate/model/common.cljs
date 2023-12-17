@@ -2,7 +2,8 @@
   "Protocols and multi-fns used across different model data types.")
 
 (defprotocol TextContainer
-  (text [s] "Returns the text within the container, as a string.")
+  (text [this] "Returns the text within the container, as a string.")
+  ;;(as-plain-text [s] "Returns the text within the container, as a string.")
   (len [this] "Returns the number of chars (UTF-16 codepoints) in the container.")
   (blank? [this] "Returns true if the text container is empty.")
   (graphemes [this] "Returns a seq of the graphemes in the TextContainer."))
@@ -44,8 +45,3 @@
    "Returns the set of all the formats shared by each run that is wholly or partially
     inside the selection. Will return an empty set if there are no formats shared.
     If not passed a selection, will return shared formats for the whole container."))
-
-(defprotocol Fragment
-  "Fragment of a Document or Paragraph"
-  (items [fragment] "Returns a seqable list of the items in the fragment")
-  (fragment-type [fragment] "Returns either :document (fragment is a series of paragraphs) or :paragraph (fragment is a series of runs)"))

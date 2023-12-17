@@ -59,12 +59,10 @@
 (defn active-formats [ui-state]
   (let [{:keys [selection doc] :as state} (history/current-state (:history ui-state))
         selected (m/selected-content state)
-        selected-items (m/items selected)
-        paragraph-type (if (or (sel/single? selection)
-                               (sel/single-paragraph? selection))
+        paragraph-type (if (sel/single-paragraph? selection)
                          (:type (get (:children doc) (sel/caret-para selection)))
-                         (when (apply = (map :type selected-items))
-                           (:type (first selected-items))))
+                         (when (apply = (map :type (:children selected)))
+                           (:type (first (:children selected)))))
         formats (:formats selection)]
     (if (some? paragraph-type)
       (conj formats paragraph-type)
@@ -688,7 +686,7 @@
   [& {:keys [*atom
              font-family
              theme
-             save-file-contents
+             ;; save-file-contents
              dom-elem
              on-ready
              on-new
@@ -734,7 +732,7 @@
                (reset! *atom {:id uuid
                               #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :dark-mode? dark-mode?
-                              :viewmodels (vm/from-doc current-doc available-width measure-fn)
+                              #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :history history
                               :word-count (word-count/init editor-state)
                               :input-history []

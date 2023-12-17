@@ -82,7 +82,18 @@
       (is (= p (paragraph [(run "foobar1" #{:bold})
                            (run "goobar2")
                            (run "hoobar3" #{:italic})
-                           (run "post" #{})]))))))
+                           (run "post" #{})])))))
+
+  (testing "inserting run does not change paragraph type"
+    (is (= (p/insert (paragraph :h1 [(r/run "Heading")]) (selection [nil 0]) (r/run "pre"))
+           (paragraph :h1 [(r/run "preHeading")])))
+    (is (= (p/insert (paragraph :h1 [(r/run "Heading")]) (selection [nil 7]) (r/run "post"))
+           (paragraph :h1 [(r/run "Headingpost")]))))
+
+  (testing "inserting whole paragraph into empty paragraph changes type to type inserted"
+    (is (= (p/insert (paragraph :body [(r/run "")]) (selection [nil 0])
+                     (paragraph :h1 [(r/run "Heading")]))
+           (paragraph :h1 [(r/run "Heading")])))))
 
 (deftest delete-single-test
   (testing "at beginning of paragraph"

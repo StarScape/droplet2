@@ -101,7 +101,7 @@
    [:.h2-format {:font-size "1.4em"}]
    [:.italic-format {:font-style "italic !important"}]
    [:.strikethrough-format {:text-decoration "line-through"}]
-   [:.bold-format {:font-weight "bold !important"}]
+   [:.bold-format {:font-weight "700 !important"}]
    #_[:.underline-format {:text-decoration "line-through !important"}]
    [:.highlight-format {:background-color "var(--find-highlight-color)"}]])
 

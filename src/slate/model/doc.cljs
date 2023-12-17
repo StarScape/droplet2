@@ -4,7 +4,6 @@
             [slate.model.dll :as dll :refer [dll]]
             [slate.model.common :as sl :refer [TextContainer
                                                Selectable
-                                               Fragment
                                                text
                                                len
                                                selected-content
@@ -28,16 +27,6 @@
   (len [doc] (reduce #(+ %1 (len %2)) 0 (:children doc)))
   (blank? [doc] (zero? (len doc))))
 
-(defrecord DocumentFragment [paragraphs]
-  Fragment
-  (items [document-fragment] (:paragraphs document-fragment))
-  (fragment-type [_] :document)
-
-  TextContainer
-  (text [f] (reduce str (map text (sl/items f))))
-  (len [f] (reduce #(+ %1 (len %2)) 0 (sl/items f)))
-  (blank? [f] (zero? (len f))))
-
 (defn document
   "Creates a new document."
   ([include-initial-children-in-changelist? children]
@@ -53,13 +42,6 @@
    (document true children))
   ([]
    (document true (dll (p/paragraph)))))
-
-(defn fragment
-  "Creates a new DocumentFragment."
-  [paragraph-or-paragraphs]
-  (if (sequential? paragraph-or-paragraphs)
-    (->DocumentFragment paragraph-or-paragraphs)
-    (->DocumentFragment [paragraph-or-paragraphs])))
 
 ;; Document helper functions
 (defn split-paragraph
@@ -82,7 +64,7 @@
         para (get children para-idx)
         prev-idx (dll/prev-index children para-idx)
         prev (dll/prev children para-idx)
-        merged (p/insert-end prev (p/fragment (:runs para)))
+        merged (p/insert-end prev para)
         new-children (-> children
                          (dissoc para-idx)
                          (assoc prev-idx merged))]
@@ -167,31 +149,23 @@
   (fn [& args] (type (last args))))
 
 (defmethod insert
-  p/ParagraphFragment
-  [doc sel fragment]
-  (if (sel/single? sel)
-    (insert-into-single-paragraph doc sel fragment)
-    (-> (delete doc sel)
-        (insert (sel/collapse-start sel) fragment))))
-
-(defmethod insert
-  DocumentFragment
-  [doc sel fragment]
-  (if (sel/single? sel)
-    (let [paragraphs (sl/items fragment)]
-      (if (= 1 (count paragraphs))
-        (insert-into-single-paragraph doc sel (first paragraphs))
-        (insert-paragraphs-into-doc doc sel paragraphs)))
-    (-> (delete doc sel)
-        (insert (sel/collapse-start sel) fragment))))
-
-(defmethod insert
   Paragraph
   [doc sel para]
   (if (sel/single? sel)
     (insert-into-single-paragraph doc sel para)
     (-> (delete doc sel)
         (insert (sel/collapse-start sel) para))))
+
+(defmethod insert
+  Document
+  [doc sel doc-to-insert]
+  (if (sel/range? sel)
+    (-> (delete doc sel)
+        (insert (sel/collapse-start sel) doc-to-insert))
+    (let [paragraphs (:children doc-to-insert)]
+      (if (= 1 (count paragraphs))
+        (insert-into-single-paragraph doc sel (first paragraphs))
+        (insert-paragraphs-into-doc doc sel paragraphs)))))
 
 (defmethod insert
   Run
@@ -232,14 +206,14 @@
         end-para ((:children doc) end-para-idx)]
     (if (sel/single-paragraph? sel)
       (if (p/whole-paragraph-selected? start-para sel)
-        (fragment start-para)
+        start-para
         (selected-content start-para sel))
       (let [start-offset (-> sel :start :offset)
             end-offset (-> sel :end :offset)
-            fragment-paragraphs (-> (dll/between (:children doc) start-para-idx end-para-idx)
-                                    (dll/prepend (p/delete-before start-para start-offset))
-                                    (conj (p/delete-after end-para end-offset)))]
-        (fragment fragment-paragraphs)))))
+            paragraphs (-> (dll/between (:children doc) start-para-idx end-para-idx)
+                           (dll/prepend (p/delete-before start-para start-offset))
+                           (conj (p/delete-after end-para end-offset)))]
+        (document paragraphs)))))
 
 (defn- set-intersection
   "Like set/intersection, but will return an empty set if supplied no arguments"
@@ -252,7 +226,7 @@
     (if (sel/single-paragraph? sel)
       (formatting caret-para sel)
       (->> (doc-selected-content doc sel)
-           (sl/items)
+           (:children)
            ;; Filter out empty paragraph from the selected paragraphs.
            ;; Why? Because an empty paragraph is either (a) inconsequential to formatting, e.g.
            ;; in the case of an empty paragraph between two content paragraphs or (b) the source

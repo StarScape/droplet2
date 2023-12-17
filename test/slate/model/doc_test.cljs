@@ -1,6 +1,6 @@
 (ns slate.model.doc-test
   (:require [cljs.test :include-macros true :refer [is deftest testing]]
-            [slate.model.dll :as dll :refer [dll big-dec]]
+            [slate.model.dll :as dll :refer [big-dec]]
             [slate.model.selection :as sel :refer [selection]]
             [slate.model.common :as sl]
             [slate.model.run :as r :refer [run]]
@@ -17,9 +17,9 @@
                     (run "ccc" #{})
                     (run "ddd" #{})]))
 
-(def to-insert (doc/fragment [(paragraph [(run "inserted paragraph 1")])
-                              (paragraph [(run "inserted paragraph 2")])
-                              (paragraph [(run "inserted paragraph 3")])]))
+(def to-insert (document [(paragraph [(run "inserted paragraph 1")])
+                          (paragraph [(run "inserted paragraph 2")])
+                          (paragraph [(run "inserted paragraph 3")])]))
 
 (def test-doc (document [p1 p2]))
 
@@ -30,7 +30,7 @@
 
 (deftest insert-test
   (testing "insert 2 runs in middle of a paragraph"
-    (is (= (doc/insert test-doc (selection [(big-dec 1) 3]) (p/fragment [(run "Hello" #{:italic}) (run "Goodbye!")]))
+    (is (= (doc/insert test-doc (selection [(big-dec 1) 3]) (paragraph [(run "Hello" #{:italic}) (run "Goodbye!")]))
            (document [(paragraph [(run "fooHello" #{:italic})
                                   (run "Goodbye!" #{})
                                   (run "bar" #{:bold :italic})
@@ -79,7 +79,7 @@
                       (paragraph [(run "inserted paragraph 3aaabbbcccddd")])]))))
 
   (testing "multi-paragraph insert"
-    (let [result (doc/insert test-doc (selection [(big-dec 2) 0]) (doc/fragment [p1 p2]))
+    (let [result (doc/insert test-doc (selection [(big-dec 2) 0]) (document [p1 p2]))
           children (:children result)]
       (is (= 3 (count children)))
       (is (= p1 (first children)))
@@ -100,19 +100,19 @@
   (testing "inserting a plain string"
     (is (= (doc/insert test-doc (selection [(big-dec 1) 3]) "inserted")
            (document [(paragraph [(run "foo" #{:italic})
-                                       (run "inserted")
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold})])
+                                  (run "inserted")
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "inserting a plain string when selection has a format"
     (is (= (doc/insert test-doc (selection [(big-dec 1) 3] [(big-dec 1) 3] :formats #{:underline}) "inserted")
            (document [(paragraph [(run "foo" #{:italic})
-                                       (run "inserted" #{:underline})
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold})])
+                                  (run "inserted" #{:underline})
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "when given a range selection, deletes before inserting"
@@ -131,17 +131,17 @@
   (testing "deletes single char in middle of paragraph"
     (is (= (doc/delete test-doc (selection [(big-dec 1) 1]))
            (document [(paragraph [(run "oo" #{:italic})
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold})])
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "deletes single char at end of paragraph"
     (is (= (doc/delete test-doc (selection [(big-dec 1) 14]))
            (document [(paragraph [(run "foo" #{:italic})
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buz" #{:bold})])
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buz" #{:bold})])
                       p2]))))
 
   (testing "merges paragraphs when backspacing from start of paragraph that is not first"
@@ -159,15 +159,15 @@
   (testing "deletes from start of paragraph"
     (is (= (doc/delete test-doc (selection [(big-dec 1) 0] [(big-dec 1) 3]))
            (document [(paragraph [(run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold})])
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "deletes from start of paragraph backwards"
     (is (= (doc/delete test-doc (selection [(big-dec 1) 0] [(big-dec 1) 3] :backwards? true))
            (document [(paragraph [(run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold})])
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "deletes up to end of paragraph"
@@ -194,49 +194,49 @@
            (document [(paragraph [(run)])])))))
 
 #_(deftest enter-test
-  (testing "works at start of paragraph"
-    (is (= (doc/enter test-doc (selection [(big-dec 1) 0]))
-           (document [(paragraph), p1, p2]))))
+    (testing "works at start of paragraph"
+      (is (= (doc/enter test-doc (selection [(big-dec 1) 0]))
+             (document [(paragraph), p1, p2]))))
 
-  (testing "works at end of paragraph"
-    (is (= (doc/enter test-doc (selection [(big-dec 1) 14]))
-           (document [p1, (paragraph [(run)]), p2]))))
+    (testing "works at end of paragraph"
+      (is (= (doc/enter test-doc (selection [(big-dec 1) 14]))
+             (document [p1, (paragraph [(run)]), p2]))))
 
-  (testing "works in middle of paragraph"
-    (is (= (doc/enter test-doc (selection [(big-dec 1) 3]))
-           (document [(paragraph [(run "foo" #{:italic})])
-                      (paragraph [(run "bar" #{:bold :italic})
-                                  (run "bizz" #{:italic})
-                                  (run "buzz" #{:bold})])
-                      p2]))))
+    (testing "works in middle of paragraph"
+      (is (= (doc/enter test-doc (selection [(big-dec 1) 3]))
+             (document [(paragraph [(run "foo" #{:italic})])
+                        (paragraph [(run "bar" #{:bold :italic})
+                                    (run "bizz" #{:italic})
+                                    (run "buzz" #{:bold})])
+                        p2]))))
 
-  (testing "works at end of doc"
-    (is (= (doc/enter test-doc (selection [(big-dec 2) 12]))
-           (document [p1 p2 (p/paragraph)])))))
+    (testing "works at end of doc"
+      (is (= (doc/enter test-doc (selection [(big-dec 2) 12]))
+             (document [p1 p2 (p/paragraph)])))))
 
 (deftest selected-content-test
-  (testing "returns paragraph fragment when passed selection within one paragraph"
-    (is (= (p/fragment [(run "bar" #{:bold :italic})
-                        (run "bizz" #{:italic})
-                        (run "buzz" #{:bold})])
+  (testing "returns paragraph when passed selection within one paragraph"
+    (is (= (paragraph [(run "bar" #{:bold :italic})
+                       (run "bizz" #{:italic})
+                       (run "buzz" #{:bold})])
            (sl/selected-content test-doc (selection [(big-dec 1) 3] [(big-dec 1) 14])))))
 
-  (testing "returns document fragment when passed selection across multiple paragraphs"
-    (is (= (doc/fragment [(paragraph [(run "bar" #{:bold :italic})
-                                           (run "bizz" #{:italic})
-                                           (run "buzz" #{:bold})])
-                          (paragraph [(run "aaa")])])
+  (testing "returns document when passed selection across multiple paragraphs"
+    (is (= (document [(paragraph [(run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold})])
+                      (paragraph [(run "aaa")])])
            (sl/selected-content test-doc (selection [(big-dec 1) 3] [(big-dec 2) 3])))))
 
-  (testing "returns document fragment when passed selection across multiple (> 3) paragraphs"
-    (is (= (doc/fragment [(paragraph [(run "foo1" #{:italic})])
-                          (paragraph [(run "foo2" #{:bold})])
-                          (paragraph [(run "foo3" #{:underline})])
-                          (paragraph [(run "foo" #{:strike})])])
+  (testing "returns document when passed selection across multiple (> 3) paragraphs"
+    (is (= (document [(paragraph [(run "foo1" #{:italic})])
+                      (paragraph [(run "foo2" #{:bold})])
+                      (paragraph [(run "foo3" #{:underline})])
+                      (paragraph [(run "foo" #{:strike})])])
            (sl/selected-content long-doc (selection [(big-dec 1) 0] [(big-dec 4) 3])))))
 
   (testing "returns just one paragraph (no empty next paragraph) when going from start of paragraph 1 to start of paragraph 2"
-    (is (= (doc/fragment [(paragraph [(run "foo1" #{:italic})]) (paragraph [])])
+    (is (= (document [(paragraph [(run "foo1" #{:italic})]) (paragraph [])])
            (sl/selected-content long-doc (selection [(big-dec 1) 0] [(big-dec 2) 0]))))))
 
 (deftest formatting-test
@@ -256,53 +256,53 @@
   (testing "toggling single run"
     (is (= (doc/toggle-format test-doc (selection [(big-dec 1) 0] [(big-dec 1) 3]) :italic)
            (document [(paragraph [(run "foo")
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold})])
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "toggling across runs WITH shared format"
     (is (= (doc/toggle-format test-doc (selection [(big-dec 1) 0] [(big-dec 1) 10]) :italic)
            (document [(paragraph [(run "foo")
-                                       (run "bar" #{:bold})
-                                       (run "bizz" #{})
-                                       (run "buzz" #{:bold})])
+                                  (run "bar" #{:bold})
+                                  (run "bizz" #{})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "toggling across runs WITH shared format, not on run boundaries"
     (is (= (doc/toggle-format test-doc (selection [(big-dec 1) 1] [(big-dec 1) 8]) :italic)
            (document [(paragraph [(run "f" #{:italic})
-                                       (run "oo")
-                                       (run "bar" #{:bold})
-                                       (run "bi" #{})
-                                       (run "zz" #{:italic})
-                                       (run "buzz" #{:bold})])
+                                  (run "oo")
+                                  (run "bar" #{:bold})
+                                  (run "bi" #{})
+                                  (run "zz" #{:italic})
+                                  (run "buzz" #{:bold})])
                       p2]))))
 
   (testing "toggling across runs WITHOUT shared format"
     (is (= (doc/toggle-format test-doc (selection [(big-dec 1) 0] [(big-dec 1) 14]) :italic)
            (document [(paragraph [(run "foo" #{:italic})
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold :italic})])
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold :italic})])
                       p2]))))
 
   (testing "toggling across paragraphs WITHOUT shared format"
     (is (= (doc/toggle-format test-doc (selection [(big-dec 1) 0] [(big-dec 2) 12]) :italic)
            (document [(paragraph [(run "foo" #{:italic})
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold :italic})])
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold :italic})])
                       (paragraph [(run "aaabbbcccddd" #{:italic})])]))))
 
   (testing "toggling across paragraphs WITHOUT shared format, and not landing on run boundaries"
     (is (= (doc/toggle-format test-doc (selection [(big-dec 1) 1] [(big-dec 2) 3]) :italic)
            (document [(paragraph [(run "foo" #{:italic})
-                                       (run "bar" #{:bold :italic})
-                                       (run "bizz" #{:italic})
-                                       (run "buzz" #{:bold :italic})])
+                                  (run "bar" #{:bold :italic})
+                                  (run "bizz" #{:italic})
+                                  (run "buzz" #{:bold :italic})])
                       (paragraph [(run "aaa" #{:italic})
-                                       (run "bbbcccddd")])]))))
+                                  (run "bbbcccddd")])]))))
 
   (testing "toggling across paragraphs WITH shared format"
     (let [modified (-> test-doc
@@ -310,9 +310,9 @@
                        (update-in [:children (big-dec 2) :runs 0 :formats] conj :italic))]
       (is (= (doc/toggle-format modified (selection [(big-dec 1) 10] [(big-dec 2) 12]) :italic)
              (document [(paragraph [(run "foo" #{:italic})
-                                         (run "bar" #{:bold :italic})
-                                         (run "bizz" #{:italic})
-                                         (run "buzz" #{:bold})])
+                                    (run "bar" #{:bold :italic})
+                                    (run "bizz" #{:italic})
+                                    (run "buzz" #{:bold})])
                         (paragraph [(run "aaabbbcccddd")])])))))
 
   (testing "toggling with selection end on beginning of paragraph"
