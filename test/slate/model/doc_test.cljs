@@ -368,3 +368,18 @@
     (is (= "d" (sl/char-before test-doc (selection [(big-dec 2) 11]))))
     (is (= "d" (sl/char-before test-doc (selection [(big-dec 2) 12]))))
     (is (thrown? js/Error (sl/char-before test-doc (selection ["[2]" 13]))))))
+
+(deftest as-plain-text-test
+  (is (= (sl/as-plain-text (document [(p/paragraph :h1 [(r/run "Heading 1")])
+                                      (p/paragraph :h2 [(r/run "Heading 2")])
+                                      (p/paragraph [(r/run "")])
+                                      (p/paragraph [(r/run "Body paragraph 1.")])
+                                      (p/paragraph [(r/run "")])
+                                      (p/paragraph :ol [(r/run "List 1")])
+                                      (p/paragraph :ol [(r/run "List 2")])
+                                      (p/paragraph :ol [(r/run "List 3")])
+                                      (p/paragraph [(r/run "")])
+                                      (p/paragraph :ul [(r/run "Bullet 1")])
+                                      (p/paragraph :ul [(r/run "Bullet 2")])
+                                      (p/paragraph :ul [(r/run "Bullet 3")])]))
+         "Heading 1\nHeading 2\n\nBody paragraph 1.\n\n1. List 1\n2. List 2\n3. List 3\n\n* Bullet 1\n* Bullet 2\n* Bullet 3\n")))

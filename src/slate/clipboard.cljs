@@ -1,8 +1,7 @@
 (ns slate.clipboard
   (:require [slate.filetypes.export.html :refer [slate->html]]
             [slate.filetypes.import.html :refer [html->slate]]
-            [slate.model.common :as model :refer [selected-content
-                                                  text]]
+            [slate.model.common :as model :refer [selected-content as-plain-text]]
             [slate.model.editor-state :as es]
             [slate.model.selection :as sel]))
 
@@ -25,25 +24,25 @@
   [content event]
   (let [copy-id (str (random-uuid))]
     (set-clipboard-data event "slate-copy-id" copy-id)
-    (set-clipboard-data event mime-plaintext (text content))
+    (set-clipboard-data event mime-plaintext (as-plain-text content))
     (set-clipboard-data event mime-html (slate->html content))
     (reset! *clipboard {:content content
                         :copy-id copy-id})))
-
-(defn cut
-  "Cuts the currently selected content to the clipboard and returns the new EditorState"
-  [{:keys [selection] :as editor-state} event]
-  (if (sel/range? selection)
-    (let [content (selected-content editor-state)]
-      (copy-to-clipboard! content event)
-      (es/delete editor-state))
-    editor-state))
 
 (defn copy
   "Copies the currently selected content to the clipboard and returns an unchanged EditorState."
   [editor-state event]
   (let [content (selected-content editor-state)]
     (copy-to-clipboard! content event)
+    editor-state))
+
+(defn cut
+  "Cuts the currently selected content to the clipboard and returns the new EditorState"
+  [{:keys [selection] :as editor-state} event]
+  (if (sel/range? selection)
+    (-> editor-state
+        (copy event)
+        (es/delete))
     editor-state))
 
 (defn paste

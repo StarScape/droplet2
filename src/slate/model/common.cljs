@@ -3,10 +3,12 @@
 
 (defprotocol TextContainer
   (text [this] "Returns the text within the container, as a string.")
-  ;;(as-plain-text [s] "Returns the text within the container, as a string.")
   (len [this] "Returns the number of chars (UTF-16 codepoints) in the container.")
   (blank? [this] "Returns true if the text container is empty.")
   (graphemes [this] "Returns a seq of the graphemes in the TextContainer."))
+
+(defprotocol PlainText
+  (as-plain-text [this] "Returns a representation of the container as plaintext, as it would be pasted to the clipboard."))
 
 (extend-type string
   TextContainer

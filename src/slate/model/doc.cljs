@@ -3,6 +3,8 @@
             [clojure.spec.alpha :as s]
             [slate.model.dll :as dll :refer [dll]]
             [slate.model.common :as sl :refer [TextContainer
+                                               PlainText
+                                               as-plain-text
                                                Selectable
                                                text
                                                len
@@ -25,7 +27,22 @@
   TextContainer
   (text [doc] (reduce str (map text (:children doc))))
   (len [doc] (reduce #(+ %1 (len %2)) 0 (:children doc)))
-  (blank? [doc] (zero? (len doc))))
+  (blank? [doc] (zero? (len doc)))
+  PlainText
+  (as-plain-text [{:keys [children]}]
+    (loop [paras (seq children)
+           plain-text ""
+           ol-number 1]
+      (if (empty? paras)
+        plain-text
+        (let [p (first paras)
+              ol? (= :ol (:type p))
+              ul? (= :ul (:type p))]
+          (recur (rest paras)
+                 (str plain-text (cond->> (as-plain-text p)
+                                   ol? (str ol-number ". ")
+                                   ul? (str "* ")))
+                 (if ol? (inc ol-number) 1)))))))
 
 (defn document
   "Creates a new document."

@@ -4,6 +4,7 @@
   (:require [clojure.set :as set]
             [clojure.spec.alpha :as s]
             [slate.model.common :refer [TextContainer
+                                        PlainText
                                         Selectable
                                         text
                                         len
@@ -40,7 +41,9 @@
                 offset-graphemes (map #(update % :offset (partial + segment-start-offset)) run-graphemes)]
             (recur (next runs)
                    (+ segment-start-offset (len run))
-                   (concat segments offset-graphemes))))))))
+                   (concat segments offset-graphemes)))))))
+  PlainText
+  (as-plain-text [p] (str (text p) "\n")))
 
 (defn paragraph
   "Creates a new paragraph.
