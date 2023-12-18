@@ -160,8 +160,8 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 
 ### 0.0.4 - In Development
 
+- Myriad UI improvements
+- "Open Recent" in File menu
 - Heavy changes to text editor internals
 - .drop file version v2 -> v3
-- "Open Recent" in File menu
-- Myriad UI improvements
-
+- Fix unexpected behavior when copying to plaintext

@@ -1,6 +1,6 @@
 (ns slate.clipboard
-  (:require [slate.filetypes.export.html :refer [slate->html]]
-            [slate.filetypes.import.html :refer [html->slate]]
+  (:require [slate.filetypes.html-export :refer [slate->html]]
+            [slate.filetypes.html-import :refer [html->slate]]
             [slate.model.common :as model :refer [selected-content as-plain-text]]
             [slate.model.editor-state :as es]
             [slate.model.selection :as sel]))

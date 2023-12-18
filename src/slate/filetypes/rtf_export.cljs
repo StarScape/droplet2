@@ -1,4 +1,4 @@
-(ns slate.filetypes.export.rtf
+(ns slate.filetypes.rtf-export
   (:require [clojure.string :as str]
             [slate.model.common :as m]
             [slate.model.run :as run :refer [run]]

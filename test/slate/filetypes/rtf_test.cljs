@@ -1,8 +1,8 @@
 (ns slate.filetypes.rtf-test
   (:require-macros [slate.utils :refer [slurp-file]])
   (:require [cljs.test :refer-macros [is deftest testing]]
-            [slate.filetypes.import.rtf :as rtf-import]
-            [slate.filetypes.export.rtf :as rtf-export]
+            [slate.filetypes.rtf-import :as rtf-import]
+            [slate.filetypes.rtf-export :as rtf-export]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.run :as r :refer [run]]))

@@ -1,4 +1,4 @@
-(ns slate.filetypes.import.rtf
+(ns slate.filetypes.rtf-import
   "Code for parsing and importing RTF documents.
    Internally, this import process is separated into two logical parts:
    First the raw RTF is parsed into a data structure easily readable by

@@ -1,4 +1,4 @@
-(ns slate.filetypes.export.html
+(ns slate.filetypes.html-export
   (:require [slate.model.common :refer [blank?]]
             [slate.model.paragraph :as p :refer [Paragraph]]
             [slate.model.doc :refer [Document]]

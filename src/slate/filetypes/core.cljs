@@ -1,9 +1,9 @@
 (ns slate.filetypes.core
   (:refer-clojure :exclude [import])
-  (:require [slate.filetypes.import.html :refer [html->doc]]
-            [slate.filetypes.import.rtf :refer [rtf->doc]]
-            [slate.filetypes.export.html :refer [doc->html]]
-            [slate.filetypes.export.rtf :refer [doc->rtf]]))
+  (:require [slate.filetypes.html-import :refer [html->doc]]
+            [slate.filetypes.rtf-import :refer [rtf->doc]]
+            [slate.filetypes.html-export :refer [doc->html]]
+            [slate.filetypes.rtf-export :refer [doc->rtf]]))
 
 (defmulti import
   "Imports the Document from the specified format. Returns a Document."
