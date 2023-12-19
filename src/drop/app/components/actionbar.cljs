@@ -47,7 +47,7 @@
         transition-none "transition-none"
         *transition (r/atom transition-hide)
         *transparent-mode? (subscribe [:actionbar-transparent?])]
-    
+
     ;; TODO: Is this comment out of date or still relevant?
     ;; Transition logic:
     ;; =================
@@ -97,13 +97,12 @@
                 :class "dark:invert"
                 :style {:width "15px"}}]]))))
 
-#_(defn- invisible-button []
-  [:div.invisible [format-button "icons/italic.svg" false false #()]])
-
 (defn word-count-display [num-words]
-  [:span {:class "flex text-slate-800 dark:text-slate-100 items-center text-sm mr-2"}
-   num-words
-   [:span {:class "text-xs text-slate-600 dark:text-slate-400 ml-1"} (if (= 1 num-words) "word" "words")]])
+  (let [num-words (or num-words 0)
+        num-words-with-commas (.toLocaleString num-words "en" #js {:useGrouping true})]
+    [:span {:class "flex text-slate-800 dark:text-slate-100 items-center text-sm mr-2"}
+     num-words-with-commas
+     [:span {:class "text-xs text-slate-600 dark:text-slate-400 ml-1"} (if (= 1 num-words) "word" "words")]]))
 
 (defn actionbar [{:keys [active-formats word-count on-format-toggle]}]
   (r/with-let [move-handler (fn [e]
@@ -172,20 +171,20 @@
                          :mouseover-text (str "Unordered List (" (shortcut-for :ul) ")")
                          :duration-ms show-hide-duration}]
           #_#_#_#_#_#_idx-first-active (find-first-index :active? buttons-info)
-          buttons-info (if idx-first-active
-                         (map-indexed (fn [idx info]
-                                        (if (< idx idx-first-active)
-                                          (assoc info :left-of-first-active? true)
-                                          info))
-                                      buttons-info)
-                         buttons-info)
-          buttons-info (into [] buttons-info)]
+                  buttons-info (if idx-first-active
+                                 (map-indexed (fn [idx info]
+                                                (if (< idx idx-first-active)
+                                                  (assoc info :left-of-first-active? true)
+                                                  info))
+                                              buttons-info)
+                                 buttons-info)
+              buttons-info (into [] buttons-info)]
       [:div {:class (twMerge base-classes (if transparent? transparent-classes visible-classes))
              :style {:transition-property "all"
                      :transition-duration (str show-hide-duration "ms")}}
        [:div.flex
         (for [info buttons-info]
-            ^{:key (:img-url info)} [format-button info])
+          ^{:key (:img-url info)} [format-button info])
 
         ;; Invisible button so that element maintains its height
         ;; Even when all the others are hidden in fullscreen mode
