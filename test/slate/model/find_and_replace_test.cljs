@@ -6,7 +6,7 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.model.doc :as doc :refer [document]]
             [slate.model.editor-state :as es :refer [editor-state get-changelist]]
-            [slate.model.find-and-replace :refer [find replace replace-all]]))
+            [slate.model.find-and-replace :refer [find paragraph-replace replace replace-all find-occurrences replace-all-occurrences]]))
 
 (def doc (document false (dll (paragraph [(run "foo") (run "bar" #{:italic})
                                           (run "goo") (run "bar" #{:bold})
@@ -98,3 +98,33 @@
                                          (paragraph [(run "one a one, and a foo, and a bar!")])])
                               (selection [(big-dec 1) 16]))))
       (is (= (get-changelist es) (create-changelist :changed-indices #{(big-dec 1)}))))))
+
+
+(deftest paragraph-replace-test
+  (testing "works correctly replacing with replacement text of different lengths (shorter and longer)"
+    (is (= (paragraph-replace (p/paragraph [(r/run "hello and hello and hello")])
+                              [(selection [nil 0] [nil 5])
+                               (selection [nil 10] [nil 15])
+                               (selection [nil 20] [nil 25])]
+                              "hello1")
+           (p/paragraph [(r/run "hello1 and hello1 and hello1")])))
+    (is (= (paragraph-replace (p/paragraph [(r/run "hello and hello and hello")])
+                              [(selection [nil 0] [nil 5])
+                               (selection [nil 10] [nil 15])
+                               (selection [nil 20] [nil 25])]
+                              "hello1")
+           (p/paragraph [(r/run "hello1 and hello1 and hello1")])))
+    (is (= (paragraph-replace (p/paragraph [(r/run "hello" #{:italic})
+                                            (r/run " and ")
+                                            (r/run "hello" #{:bold})
+                                            (r/run " and ")
+                                            (r/run "hello" #{:strikethrough})])
+                              [(selection [nil 0] [nil 5])
+                               (selection [nil 10] [nil 15])
+                               (selection [nil 20] [nil 25])]
+                              "goodbye")
+           (p/paragraph [(r/run "goodbye" #{:italic})
+                         (r/run " and ")
+                         (r/run "goodbye" #{:bold})
+                         (r/run " and ")
+                         (r/run "goodbye" #{:strikethrough})])))))

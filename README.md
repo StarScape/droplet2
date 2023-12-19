@@ -166,3 +166,4 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 - .drop file version v2 -> v3
 - Fix unexpected behavior when copying to plaintext
 - Add commas to word-count number when >999 (e.g. 200,000)
+- Fixed bug in find and replace

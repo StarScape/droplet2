@@ -7,7 +7,7 @@
             [slate.model.editor-state :as es])
   (:refer-clojure :exclude [find replace]))
 
-(defn- find-all-occurrences
+(defn- find-str-occurrences
   "Returns the starting indices of all occurrences of `substr` within `str`."
   [str substr ignore-case?]
   (let [str (if ignore-case? (.toLowerCase str) str)
@@ -20,7 +20,7 @@
                  (conj results idx))
           results)))))
 
-(defn- adjust-selection [sel n]
+(defn- slide-selection [sel n]
   (-> sel
       (update-in [:start :offset] + n)
       (update-in [:end :offset] + n)))
@@ -33,7 +33,7 @@
 
 (defn paragraph-find [paragraph paragraph-idx text ignore-case?]
   (let [paragraph-text (m/text paragraph)
-        offsets (find-all-occurrences paragraph-text text ignore-case?)]
+        offsets (find-str-occurrences paragraph-text text ignore-case?)]
     (map #(selection [paragraph-idx %] [paragraph-idx (+ % (.-length text))]) offsets)))
 
 (comment
@@ -61,30 +61,21 @@
   (find (editor-state doc) "bar")
   )
 
-(defn paragraph-replace [paragraph locations text]
+(defn paragraph-replace [paragraph locations replace-text]
   (loop [para paragraph
          offset-change 0
          [location & ls] locations]
     (if location
-      (let [sel (adjust-selection location offset-change)
-            prior-formatting (m/formatting paragraph sel)
-            selected-length (- (-> sel :end :offset) (-> sel :start :offset))
+      (let [sel (slide-selection location offset-change)
+            prior-formatting (m/formatting para sel)
+            existing-text-length (- (-> sel :end :offset) (-> sel :start :offset))
             ; shift future offsets by difference between oldtext and newtext
-            new-offset-change (- selected-length (.-length text))
+            new-offset-change (+ offset-change (- (.-length replace-text) existing-text-length))
             new-para (-> para
                          (p/delete sel)
-                         (p/insert (sel/collapse-start sel) (r/run text prior-formatting)))]
+                         (p/insert (sel/collapse-start sel) (r/run replace-text prior-formatting)))]
         (recur new-para new-offset-change ls))
       para)))
-
-(comment
-  (def p (paragraph "p1" [(run "foo") (run "bar" #{:italic})
-                          (run "goo") (run "bar" #{:bold})
-                          (run "hoo") (run "bar" #{:underline})]))
-  (paragraph-replace p [(selection ["p1" 3] ["p1" 6])
-                        (selection ["p1" 9] ["p1" 12])
-                        (selection ["p1" 15] ["p1" 18])] "FAR")
-  )
 
 (defn replace
   "Returns a new EditorState replacing the current selection with `text`."
@@ -148,7 +139,7 @@
   (replace editor-state replacement-text))
 
 (defn replace-all-occurrences
-  "Returns an EditorState replacing all occurrences with `replacement-text`."
+  "Returns an EditorState replacing all occurrences of current search term with `replacement-text`."
   [{:keys [occurrences] :as _find-and-replace-state} editor-state replacement-text]
   (replace-all editor-state occurrences replacement-text))
 
@@ -159,7 +150,7 @@
                                    :location-before (:selection editor-state)})))
 
 (defn find-occurrences
-  [{:keys [find-text ignore-case? occurrences location-before] :as find-and-replace-state} editor-state]
+  [{:keys [find-text occurrences ignore-case? location-before] :as find-and-replace-state} editor-state]
   (let [occurences (find editor-state find-text ignore-case?)]
     (assoc find-and-replace-state
            :current-occurrence-idx 0
