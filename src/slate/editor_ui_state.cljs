@@ -280,8 +280,8 @@
   [old-ui-state new-ui-state on-doc-changed on-selection-changed]
   (let [old-state (history/current-state (:history old-ui-state))
         new-state (history/current-state (:history new-ui-state))]
-    ;; Fire doc changed listener if new and old docs are not the same object
-    (when-not (identical? (:doc old-state) (:doc new-state))
+    ;; Fire doc changed listener if new and old docs are not the same object (apart from changelists)
+    (when-not (dll/entries-identical? (:children (:doc old-state)) (:children (:doc new-state)))
       (on-doc-changed))
     ;; Fire selection changed listener if new and old sels are not equal
     ;; (Selection is a much smaller object, so a full equality check isn't as expensive.)

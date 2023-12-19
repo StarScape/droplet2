@@ -68,7 +68,7 @@
    They are also decoupled from the rest of the code -- there's no reason you couldn't put something other than
    paragraphs inside a DLL, though it's doubtful one would need these incredibly specific set of properties for
    any other use."
-  (:refer-clojure :exclude [first last next remove range list])
+  (:refer-clojure :exclude [first last next remove range list ident])
   (:require [clojure.set :as set]
             ["decimal.js" :refer [Decimal]]
             [hashp.core]))
@@ -283,7 +283,7 @@
 
   IWithMeta
   (-with-meta [coll new-meta]
-    (if (identical? new-meta meta)
+    (if (clojure.core/identical? new-meta meta)
       coll
       (DoublyLinkedList. new-meta changelist entries-map first-index last-index)))
 
@@ -686,3 +686,8 @@
                      (.-entries-map list)
                      (.-first-index list)
                      (.-last-index list)))
+
+(defn entries-identical?
+  "Returns true if the entry maps of the two lists are the same object in memory. Does not take changelist into account."
+  [list1 list2]
+  (identical? (.-entries-map list1) (.-entries-map list2)))
