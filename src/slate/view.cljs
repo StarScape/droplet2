@@ -689,6 +689,7 @@
    - paragraph-dom-elem: DOM element of the paragraph clicked
    - measure-fn: measure-fn for the document at the current font and font-size"
   [client-x client-y paragraph {:keys [lines paragraph-index]} paragraph-dom-elem measure-fn]
+  (let [doc-range (js/document.caretRangeFromPoint client-x client-y)])
   (let [line-height (calc-line-height paragraph-dom-elem)
         dom-elem-rect (.getBoundingClientRect paragraph-dom-elem)
         px (- client-x (.-x dom-elem-rect))

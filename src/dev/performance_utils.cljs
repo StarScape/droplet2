@@ -1,10 +1,14 @@
 (ns dev.performance-utils)
 
+;; NOTE: there are some weird bugs in here, which I'm not sure it is worth my time to track down and fix.
+;; It might be worth just moving to using tufte (https://github.com/taoensso/tufte) instead.
+;; Some notes on tufte here: https://cuddly-octo-palm-tree.com/posts/2022-01-23-opt-clj-2/
+
 (def registry (atom {}))
 
 (defn update-total
   [{:keys [most-recent-start-time total] :as entry}]
-  (assoc entry :total (+ total (- (js/performance.now) most-recent-start-time))))
+  (assoc entry :total (+ (or total 0) (- (js/performance.now) most-recent-start-time))))
 
 (defn measurement-started?
   "Returns true if the measurement registered with `name` has been started. May or may not be paused."
@@ -31,6 +35,7 @@
                     entry)]
     (swap! registry assoc name new-entry)))
 
+;; BUG: this fails when entering a name that doesn't actually exist in the registry -- it just returns a number
 (defn stop-time-measurement! [name]
   (let [{:keys [paused? total] :as entry} (get @registry name)
         result (if-not paused?
@@ -67,4 +72,5 @@
   (print-time-since-last! "marker2")
   (clear-time-since-last!)
 
+  (inside-time-measurement! "Hello!" (+ 1 1))
   )

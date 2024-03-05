@@ -20,7 +20,7 @@
 
 (comment
   (macroexpand
-   '(inside-measurement! "get-words" (+ 1 1)))
+   '(inside-time-measurement! "get-words" (+ 1 1)))
   (macroexpand
    '(measure-time-and-print! "foo!" (+ 1 1)))
   )

@@ -126,6 +126,23 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 
 # Changelog
 
+### 0.0.4 - In Development
+
+- Myriad UI improvements
+- "Open Recent" in File menu
+- Heavy changes to text editor internals
+- .drop file version v2 -> v3
+- Fix unexpected behavior when copying to plaintext
+- Add commas to word-count number when >999 (e.g. 200,000)
+- Fixed bug in find and replace
+
+### 0.0.3 - ([Released](https://github.com/StarScape/droplet2/releases/tag/v0.0.3))
+
+- Fixed issue where undo/redo events could fire both for the find and replace inputs and the main editor pane simultaneously
+- All text is escaped before being entered into the document
+- Changes to fonts
+- Added ability to auto-record demo video
+
 ### 0.0.2 - ([Released](https://github.com/StarScape/droplet2/releases/tag/v0.0.2))
 
 - Added a confirmation dialog before saving file
@@ -149,21 +166,3 @@ This will launch a pupeteered version of Droplet, play through the demo script, 
 - Open file when passed in ARGV
 - Fixed bug where index in find and replace popup could become negative
 - Focus is no longer lost on editor pane when find and replace popup is selected
-
-### 0.0.3 - ([Released](https://github.com/StarScape/droplet2/releases/tag/v0.0.3))
-
-- Fixed issue where undo/redo events could fire both for the find and replace inputs and the main editor pane simultaneously
-- All text is escaped before being entered into the document
-- Changes to fonts
-- Added ability to auto-record demo video
-
-
-### 0.0.4 - In Development
-
-- Myriad UI improvements
-- "Open Recent" in File menu
-- Heavy changes to text editor internals
-- .drop file version v2 -> v3
-- Fix unexpected behavior when copying to plaintext
-- Add commas to word-count number when >999 (e.g. 200,000)
-- Fixed bug in find and replace

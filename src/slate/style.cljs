@@ -86,7 +86,7 @@
                         :width 0}
     [:&::after {:position "absolute"
                 :content "\" \""
-                :width "3px"
+                :width "2px"
                 ;;:border-radius "2px"
                 :background-color "var(--caret-color)"
                 :animation "blink-anim 1.2s infinite"
@@ -97,8 +97,10 @@
                              :margin-left "1.25em"}]
    [:.ul-format {:list-style-type "disc"}]
    [:.ol-format {:list-style-type "decimal"}]
-   [:.h1-format {:font-size "1.9em"}]
-   [:.h2-format {:font-size "1.4em"}]
+   [:.h1-format {:font-size "30px"}]
+  ;;  [:.h1-format {:font-size "1.9em"}]
+   [:.h2-format {:font-size "22px"}]
+  ;;  [:.h2-format {:font-size "1.4em"}]
    [:.italic-format {:font-style "italic !important"}]
    [:.strikethrough-format {:text-decoration "line-through"}]
    [:.bold-format {:font-weight "700 !important"}]

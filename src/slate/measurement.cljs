@@ -2,8 +2,7 @@
   "Functions for measuring the widths of text as they will appear in the actual DOM."
   (:require [clojure.string :as str]
             [slate.model.common :refer [graphemes]]
-            [slate.utils :refer [formats->css-classes paragraph-type->css-class]]
-            [dev.performance-utils :refer-macros [inside-time-measurement!]]))
+            [slate.utils :refer [formats->css-classes paragraph-type->css-class]]))
 
 (defn- create-elem!
   "Creates measurement element and adds it to the DOM."
@@ -35,35 +34,51 @@
     (.appendChild shadow-root outer-elem)
     elem))
 
+(defn create-ctx! []
+  (let [canvas (js/OffscreenCanvas. 0 0)
+        ctx (.getContext canvas "2d")]
+    (set! (.-fontKerning ctx) "none")
+    ctx))
+
 (defn- apply-css! [elem formats paragraph-type]
   (let [css-classes (-> (formats->css-classes formats)
                         (conj (paragraph-type->css-class paragraph-type)))]
     (set! (.-className elem) (str/join " " css-classes))))
 
+(defn- get-font-str
+  [font-size font-family formats paragraph-type]
+  (let [font-size (case paragraph-type
+                    :h1 "30px"
+                    :h2 "22px"
+                    font-size)]
+    (str (when (contains? formats :italic) "italic ")
+         (when (contains? formats :bold) "700 ")
+         font-size " " font-family)))
+
+(defn- apply-font-style!
+  [ctx font-size font-family formats paragraph-type]
+  (set! (.-font ctx) (get-font-str font-size font-family formats paragraph-type)))
+
 (defn measure
   "Helper function for `ruler`. Not private and __can__ be used directly, but generally should not be."
-  ([elem cache text]
-   (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
-   (measure elem cache text #{} :body))
-  ([_elem _cache _text _formats]
-   (throw (js/Error. "Invalid arity of measurement function!"))
-   #_(measure elem cache text formats nil))
-  ([elem cache text formats paragraph-type]
-   #_(when (nil? text)
-     (throw (js/Error. "wtf dawg")))
-   (set! js/window.measureFnCalls (inc js/window.measureFnCalls))
+  ([elem ctx font-size font-family tab-size cache text]
+   (measure elem ctx font-size font-family tab-size cache text #{} :body))
+  ([elem ctx font-size font-family tab-size cache text formats paragraph-type]
    (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
          measure-grapheme (fn [grapheme]
-                            (set! js/window.measureCharCalls (inc js/window.measureCharCalls))
                             (let [cache-key (str grapheme "-" formats-hash "-" type-hash)
                                   cache-val (aget cache cache-key)]
                               (if cache-val
                                 cache-val
-                                (do
-                                  (apply-css! elem formats paragraph-type)
-                                  (set! (.-innerHTML elem) grapheme)
-                                  (aset cache cache-key (.. elem (getBoundingClientRect) -width))))))
+                                ;; Canvas `measureText` collapses tabs.
+                                ;; See: https://stackoverflow.com/questions/37848455/measuretext-tab-character
+                                (let [canvas-width (if (= "\t" grapheme)
+                                                     tab-size
+                                                     (do
+                                                       (apply-font-style! ctx font-size font-family formats paragraph-type)
+                                                       (.-width (.measureText ctx grapheme))))]
+                                  (aset cache cache-key canvas-width)))))
          text-graphemes (if (= 1 (.-length text))
                           text
                           (->> text (graphemes) (map :grapheme)))]
@@ -85,11 +100,13 @@
    Measurements are made by capturing the width of a hidden DOM element, but
    a cache of these values is maintained in the background, so subsequent calls
    will be cheaper."
-  [shadow-root font-size font-family tab-size]
+  [shadow-root font-size font-family tab-size-css tab-size-px]
   (let [cache #js {}
-        elem (create-elem! shadow-root font-size font-family tab-size)]
+        elem (create-elem! shadow-root font-size font-family tab-size-css)
+        ctx (create-ctx!)]
+    (set! (.-fontKerning ctx) "none")
     (fn [& args]
-      (apply measure elem cache args))))
+      (apply measure elem ctx font-size font-family tab-size-px cache args))))
 
 (defn ruler-for-elem
   "Returns a measurement function for the given DOM element.
@@ -102,9 +119,10 @@
    And returns the width the text will take up, in pixels."
   [elem shadow-root]
   (let [style (js/getComputedStyle elem)
-        ;; I literally don't know why but when you query the tab-size it always returns double what it should
-        tab-size-adjusted (str "calc(" (.getPropertyValue style "tab-size") " / 2)")]
-    (ruler shadow-root (.getPropertyValue style "font-size") (.getPropertyValue style "font-family") tab-size-adjusted)))
+        ;; I literally don't know why, but when you query the tab-size it always returns double what it should
+        tab-size-adjusted-css (str "calc(" (.getPropertyValue style "tab-size") " / 2)")
+        tab-size-adjusted-px (/ (js/parseFloat (.slice (.getPropertyValue style "tab-size") 0 -2)) 2)]
+    (ruler shadow-root (.getPropertyValue style "font-size") (.getPropertyValue style "font-family") tab-size-adjusted-css tab-size-adjusted-px)))
 
 (defn fake-measure-fn
   "For testing, returns every char width as 10px.

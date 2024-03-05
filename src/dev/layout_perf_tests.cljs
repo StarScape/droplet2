@@ -6,7 +6,8 @@
             [slate.model.paragraph :as p :refer [paragraph]]
             [slate.viewmodel :as vm]
             [slate.measurement :as measurement]
-            [dev.performance-utils :as perf-utils :refer-macros [inside-time-measurement!]]))
+            [dev.performance-utils :as perf-utils :refer-macros [inside-time-measurement!]]
+            [re-frame.db]))
 
 (def long-str (slurp-file "test_files/performance_tests/long_str.txt"))
 (def short-str (slurp-file "test_files/performance_tests/short_str.txt"))
@@ -59,30 +60,6 @@
   (aget-vs-length-test 1000000)
   )
 
-(defn get-words-perf-test
-  [test-str sample-times]
-  (let [inner #(let [start-time (js/performance.now)]
-                 (vm/get-words test-str)
-                 (let [end-time (js/performance.now)]
-                   (- end-time start-time)))
-        runs (map (fn [_] (inner)) (range sample-times))
-        average (/ (reduce + runs) (count runs))]
-    (str "Average time was: " average "ms")))
-
-(defn measure-fn-perf-test [input n-samples profile?]
-  (let [measure-fn (doto (:measure-fn @js/window.globalSlateInstance)
-                     (when-not
-                      (throw (js/Error. "measure-fn not found, cannot run perf test."))))
-        runtimes (repeatedly n-samples
-                             (fn []
-                               (perf-utils/start-time-measurement! "measure-fn-perf-test")
-                               (when profile? (js/console.profile "measure-fn-perf-test"))
-                               (doseq [char input]
-                                 (measure-fn char #{} :body))
-                               (when profile? (js/console.profileEnd "measure-fn-perf-test"))
-                               (perf-utils/stop-time-measurement! "measure-fn-perf-test")))]
-    (/ (reduce + runtimes) n-samples)))
-
 (defn vm-perf-test
   ([n min-sentence-length max-sentence-length]
    (vm-perf-test (paragraph [(run (gen-sentences n min-sentence-length max-sentence-length))])))
@@ -111,7 +88,48 @@
             ", measure-fn time: " measure-fn-time "ms"
             ", get-words time: " get-words-time "ms")))))
 
+(defn get-words-perf-test
+  [test-str sample-times]
+  (let [inner #(let [start-time (js/performance.now)]
+                 (vm/get-words test-str)
+                 (let [end-time (js/performance.now)]
+                   (- end-time start-time)))
+        runs (map (fn [_] (inner)) (range sample-times))
+        average (/ (reduce + runs) (count runs))]
+    (str "Average time was: " average "ms")))
+
+(defn measure-fn-perf-test [input n-samples profile?]
+  ;; (let [measure-fn (doto (:measure-fn @(:*slate-instance @re-frame.db/app-db))
+  ;;                    (when-not
+  ;;                     (throw (js/Error. "measure-fn not found, cannot run perf test."))))
+  ;;       runtimes (repeatedly n-samples
+  ;;                            (fn []
+  ;;                              (js/console.profile "measure-fn-perf-test")
+  ;;                              (doseq [char input]
+  ;;                                (measure-fn char #{} :body))
+  ;;                              (js/console.profileEnd "measure-fn-perf-test")
+  ;;                              0))]
+  ;;   (/ (reduce + runtimes) n-samples))
+  (let [measure-fn (doto (:measure-fn @(:*slate-instance @re-frame.db/app-db))
+                     (when-not
+                      (throw (js/Error. "measure-fn not found, cannot run perf test."))))]
+    (js/console.profile "measure-fn-perf-test")
+    (doseq [char input]
+      (measure-fn char #{} :body))
+    (js/console.profileEnd "measure-fn-perf-test")))
+
+(defn standard-measure-fn-perf-test []
+  (let [time (measure-fn-perf-test long-str 1 false)]
+    time))
+
 (comment
+  (standard-measure-fn-perf-test)
+
+  (measure-fn-perf-test long-str 1 false)
+  (measure-fn-perf-test long-str 10 false)
+  (measure-fn-perf-test long-str 30 false)
+  (measure-fn-perf-test long-str 50 false)
+
   ;; 2000 will give a paragraph of roughly the same length as my big test document.
   (get-words-perf-test long-str 1000)
 
@@ -124,11 +142,6 @@
                 500
                 (:measure-fn @js/globalSlateInstance))
 
-  (measure-fn-perf-test long-str 1 false)
-  (measure-fn-perf-test long-str 10 false)
-  (measure-fn-perf-test long-str 30 false)
-  (measure-fn-perf-test long-str 50 false)
-
   (gen-sentences 1000 3 15)
   (gen-sentence 3 15)
   (random-word-capitalized)
@@ -136,3 +149,8 @@
   (capitalize "abc")
   )
 
+(comment
+  #_#_(inside-time-measurement! "h" (dotimes [_ 1000000] (+ 1 1)))
+  (perf-utils/stop-time-measurement! "h")
+
+  )

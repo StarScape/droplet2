@@ -10,6 +10,7 @@
             [re-frame.core :as rf]
             [re-frame.db :as db]
             [orchestra-cljs.spec.test :as st]
+            [dev.performance-utils :refer [stop-time-measurement!]]
             ["electron" :refer [ipcRenderer]]))
 
 ;; Globally print any errors with stacktrace.
