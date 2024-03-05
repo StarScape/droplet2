@@ -52,6 +52,8 @@
                     :width "0px"
                     :height "0px"
                     :pointer-events "none"}]
+   [:canvas {:width "100%"
+             :height "100%"}]
    [:.slate-editor {:white-space "pre"
                     :box-sizing "border-box"
                     :tab-size "25px"

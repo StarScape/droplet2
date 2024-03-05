@@ -103,12 +103,12 @@
                           (when-let [elem @*find-and-replace-ref]
                             (.focus elem)))]
     (fn []
-      [:div {:class "w-full flex flex-row justify-center"}
+      [:div {:class "w-full h-full flex flex-row justify-center"}
        ;; Find and replace outside of div with editor and actionbar bc it needs separate focus
        [find-and-replace *slate-instance *find-and-replace-ref focus-find-ref!]
 
        ;; Editor and actionbar
-       [:div {:class "w-full flex flex-row justify-center"
+       [:div {:class "w-full h-full flex flex-row justify-center"
               :on-focus #(when-let [instance @*slate-instance]
                            (ui-state/focus! instance))}
         [slate-editor {:*ui-state *slate-instance

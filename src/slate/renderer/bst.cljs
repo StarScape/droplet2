@@ -241,21 +241,22 @@
 (comment
   (init-node 1 (js-obj :foo 1, :bar 2)))
 
-(def my-tree (init-tree))
+(comment
+  (def my-tree (init-tree))
 
-(insert! my-tree 1 {:text "a" :px-height 10})
-(insert! my-tree 2 {:text "b" :px-height 10})
-(insert! my-tree 3 {:text "c" :px-height 10})
+  (insert! my-tree 1 {:text "a" :px-height 10})
+  (insert! my-tree 2 {:text "b" :px-height 10})
+  (insert! my-tree 3 {:text "c" :px-height 10})
 
-(.-viewmodel (at-y my-tree 5))
-(.-viewmodel (at-y my-tree 15))
-(.-viewmodel (at-y my-tree 25))
+  (.-viewmodel (at-y my-tree 5))
+  (.-viewmodel (at-y my-tree 15))
+  (.-viewmodel (at-y my-tree 25))
 
-(delete! my-tree 2)
-(insert! my-tree 2 {:text "b" :px-height 30})
-(.-viewmodel (at-y my-tree 5))
-(.-viewmodel (at-y my-tree 15))
-(.-viewmodel (at-y my-tree 25))
-(.-viewmodel (at-y my-tree 35))
-(.-viewmodel (at-y my-tree 45))
-
+  (delete! my-tree 2)
+  (insert! my-tree 2 {:text "b" :px-height 30})
+  (.-viewmodel (at-y my-tree 5))
+  (.-viewmodel (at-y my-tree 15))
+  (.-viewmodel (at-y my-tree 25))
+  (.-viewmodel (at-y my-tree 35))
+  (.-viewmodel (at-y my-tree 45))
+  )

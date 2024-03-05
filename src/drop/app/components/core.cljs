@@ -10,5 +10,4 @@
 (defn app
   "Main app component."
   []
-  [:div
-   [main-editor]])
+  [main-editor])

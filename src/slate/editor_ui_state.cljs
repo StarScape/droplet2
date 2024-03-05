@@ -16,12 +16,14 @@
             [slate.interceptors :as interceptors]
             [slate.default-interceptors :refer [default-interceptors]]
             [slate.measurement :refer [ruler-for-elem]]
+            [slate.renderer.core :as renderer]
             [slate.serialization :refer [serialize deserialize]]
             [slate.view :as view]
             [slate.viewmodel :as vm]
             [slate.style :as style]
             [slate.word-count :as word-count]
-            [slate.utils :as slate-utils]))
+            [slate.utils :as slate-utils]
+            [slate.model.run :as r]))
 
 (s/def ::id uuid?)
 (s/def ::history ::history/editor-state-history)
@@ -128,7 +130,7 @@
    (such as on application startup), as normally the interceptor system will handle rendering changed/inserted/deleted
    paragraphs selectively."
   [*ui-state]
-  (let [{:keys [dom-elem history measure-fn shadow-root hidden-input] :as ui-state} @*ui-state
+  #_(let [{:keys [dom-elem history measure-fn shadow-root hidden-input] :as ui-state} @*ui-state
         {:keys [doc] :as editor-state} (history/current-state history)
         dom-elem-width (.-width (.getBoundingClientRect dom-elem))
         viewmodels (vm/from-doc doc dom-elem-width measure-fn)
@@ -641,6 +643,7 @@
     (set! (.-className shadow-dom-wrapper) wrapper-elem-class)
     (set! (.-maxWidth shadow-dom-wrapper-style) "650px")
     (set! (.-minWidth shadow-dom-wrapper-style) "300px")
+    (set! (.-height shadow-dom-wrapper-style) "100%")
     (set! (.-margin shadow-dom-wrapper-style) "0 auto")
 
     (.appendChild slate-top-level-elem shadow-dom-wrapper)
@@ -652,10 +655,13 @@
     ;; There are some things you cannot do (like set outerHTML on elements, among other
     ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
     ;; so a top-level wrapper element is desirable over inserting straight into the shadow DOM.
-    (let [editor-elem (doto (js/document.createElement "div")
-                        (.. -classList (add "slate-editor")))]
-      (.. shadow-dom-wrapper -shadowRoot (appendChild editor-elem))
-      [editor-elem, (.-shadowRoot shadow-dom-wrapper)])))
+    #_(let [editor-elem (doto (js/document.createElement "div")
+                          (.. -classList (add "slate-editor")))]
+        (.. shadow-dom-wrapper -shadowRoot (appendChild editor-elem))
+        [editor-elem, (.-shadowRoot shadow-dom-wrapper)])
+    (let [canvas-elem (js/document.createElement "canvas")]
+      (.. shadow-dom-wrapper -shadowRoot (appendChild canvas-elem))
+      [canvas-elem, (.-shadowRoot shadow-dom-wrapper)])))
 
 (defn load-fonts!
   "Returns a Promise that resolves when the necessary fonts for rendering the document are loaded."
@@ -666,6 +672,8 @@
                        (js/document.fonts.load (str "bold italic 16px " font-family-name))]))
 
 (defn- nop [])
+
+(def sample-doc (slate.model.doc/document (dll/dll (slate.model.paragraph/paragraph [(r/run "Hello, world!")]))))
 
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
@@ -716,9 +724,9 @@
       (then #(let [uuid (random-uuid)
                    dark-mode? (= theme :dark)
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-                   [editor-elem, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
+                   [canvas-elem, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
                    #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
-                   measure-fn (ruler-for-elem editor-elem shadow-root)
+                   #_#_measure-fn (ruler-for-elem editor-elem shadow-root)
                    editor-state (es/editor-state)
                    history (history/init editor-state)
                    interceptors-map (-> (interceptors/interceptor-map)
@@ -741,10 +749,10 @@
                               :hidden-input hidden-input
                               :add-tip-to-backstack-timer-id nil
                               :outer-dom-elem dom-elem
-                              :dom-elem editor-elem
+                              ;; :dom-elem editor-elem
                               :font-family font-family
                               :shadow-root shadow-root
-                              :measure-fn measure-fn
+                              ;; :measure-fn measure-fn
                               :on-ready on-ready
                               :on-new on-new
                               :on-save on-save
@@ -756,8 +764,9 @@
                               :on-selection-changed on-selection-changed
                               :should-lose-focus? should-lose-focus?
                               :ready? false})
-               (init-event-handlers! *atom)
-               (full-dom-render! *atom)
+               (renderer/init! canvas-elem sample-doc font-family 16 25)
+               #_(init-event-handlers! *atom)
+               #_(full-dom-render! *atom)
                (swap! *atom assoc :ready? true)
                (on-ready))))
   *atom)
