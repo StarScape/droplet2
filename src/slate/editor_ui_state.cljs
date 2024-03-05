@@ -673,7 +673,8 @@
 
 (defn- nop [])
 
-(def sample-doc (slate.model.doc/document (dll/dll (slate.model.paragraph/paragraph [(r/run "Hello, world!")]))))
+(def long-str "Hello, world! This is some long, hopefully multi-line text, which will allow me to text what happens when the text overflows its line.")
+(def sample-doc (slate.model.doc/document (dll/dll (slate.model.paragraph/paragraph [(r/run long-str)]))))
 
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This
