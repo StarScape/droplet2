@@ -59,10 +59,9 @@
     (+ (.-actualBoundingBoxAscent metrics) (.-actualBoundingBoxDescent metrics))))
 
 (defn render-vm!
-  [ctx paragraph-vm font-family font-size]
-  (println paragraph-vm)
+  [ctx paragraph-vm paragraph-y font-family font-size]
   (loop [lines (:lines paragraph-vm)
-         line-y 50]
+         line-y paragraph-y]
     (when-let [line #p (first lines)]
       (doseq [span (:spans line)]
         (render-span! ctx span font-family font-size line-y))
@@ -77,7 +76,11 @@
         ctx (.getContext canvas "2d")
         width (.-width canvas)
         measure-fn (get-measure-fn font-family base-font-size tab-size-px)
-        first-vm (vm/from-para (first (:children doc)) (dll/first-index (:children doc)) width measure-fn)
-        _ #p (get-line-height ctx font-family base-font-size)]
+        line-height (get-line-height ctx font-family base-font-size)]
     (set-canvas-dimensions! ctx)
-    (render-vm! ctx first-vm font-family base-font-size)))
+    (loop [idxs (dll/all-indices (:children doc))
+           paragraph-y 50]
+      (when-let [idx (first idxs)]
+        (let [vm (vm/from-para (get (:children doc) idx) idx width measure-fn)]
+          (render-vm! ctx vm paragraph-y font-family base-font-size)
+          (recur (rest idxs) (+ paragraph-y (* (count (:lines vm)) line-height))))))))
