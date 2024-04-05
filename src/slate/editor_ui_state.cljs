@@ -675,8 +675,17 @@
 
 (def long-str "Hello, world! This is some long, hopefully multi-line text, which will allow me to text what happens when the text overflows its line.")
 (def long-str2 "\tAnd this is another paragraph that is also long.")
+(def lorem-ipsum "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 (def sample-doc (slate.model.doc/document (dll/dll (slate.model.paragraph/paragraph [(r/run long-str)])
-                                                   (slate.model.paragraph/paragraph [(r/run long-str2)]))))
+                                                   (slate.model.paragraph/paragraph [(r/run long-str2)])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph04. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph05. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph06. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph07. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph08. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph09. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph10. " lorem-ipsum))])
+                                                   )))
 
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This

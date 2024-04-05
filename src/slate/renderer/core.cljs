@@ -1,5 +1,6 @@
 (ns slate.renderer.core
-  (:require [shadow.cljs.modern :refer [defclass]]
+  (:require [clojure.string :as str]
+            [shadow.cljs.modern :refer [defclass]]
             [slate.model.dll :as dll]
             [slate.renderer.measurement :refer [get-measure-fn]]
             [slate.renderer.viewmodel :as vm]
@@ -17,6 +18,8 @@
 ;; viewport-y
 ;; topmost-paragraph
 ;; document-height
+
+(def tab-size-px 25) ;; TODO: move to single global constant, see viewmodel.cljs
 
 (defn init-bst
   [doc width measure-fn]
@@ -44,10 +47,26 @@
 (defn font-str [font-size font-family]
   (str font-size "px " font-family))
 
+
+(defn- split-on-tabs
+  [str]
+  (.split str #"(\t)"))
+
+(defn tab-aware-fill-text!
+  [ctx text x y]
+  (loop [substrings (split-on-tabs text)
+         current-x x]
+    (when-let [substring (first substrings)]
+      (if (= "\t" substring)
+        (recur (rest substrings) (+ current-x tab-size-px))
+        (let [text-metrics (.measureText ctx substring)]
+          (.fillText ctx substring current-x y)
+          (recur (rest substrings) (+ current-x (.-width text-metrics))))))))
+
 (defn render-span!
   [ctx span font-family font-size line-y]
   (aset ctx "font" (font-str font-size font-family))
-  (.fillText ctx (:text span) 0 line-y))
+  (tab-aware-fill-text! ctx (:text span) 0 line-y))
 
 (defn get-line-height
   [ctx font-family font-size]
@@ -62,7 +81,7 @@
   [ctx paragraph-vm paragraph-y font-family font-size]
   (loop [lines (:lines paragraph-vm)
          line-y paragraph-y]
-    (when-let [line #p (first lines)]
+    (when-let [line (first lines)]
       (doseq [span (:spans line)]
         (render-span! ctx span font-family font-size line-y))
       (recur (rest lines)

@@ -24,9 +24,9 @@
 
 (defn measure
   "Helper function for `ruler`. Not private and __can__ be used directly, but generally should not be."
-  ([ctx font-size font-family tab-size cache text]
-   (measure ctx font-size font-family tab-size cache text #{} :body))
-  ([ctx font-size font-family tab-size cache text formats paragraph-type]
+  ([ctx font-size font-family tab-size-px cache text]
+   (measure ctx font-size font-family tab-size-px cache text #{} :body))
+  ([ctx font-size font-family tab-size-px cache text formats paragraph-type]
    (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
          measure-grapheme (fn [grapheme]
@@ -36,12 +36,12 @@
                                 cache-val
                                 ;; Canvas `measureText` collapses tabs.
                                 ;; See: https://stackoverflow.com/questions/37848455/measuretext-tab-character
-                                (let [canvas-width (if (= "\t" grapheme)
-                                                     tab-size
-                                                     (do
-                                                       (apply-font-style! ctx font-size font-family formats paragraph-type)
-                                                       (.-width (.measureText ctx grapheme))))]
-                                  (aset cache cache-key canvas-width)))))
+                                (let [measured-width (if (= "\t" grapheme)
+                                                       tab-size-px
+                                                       (do
+                                                         (apply-font-style! ctx font-size font-family formats paragraph-type)
+                                                         (.-width (.measureText ctx grapheme))))]
+                                  (aset cache cache-key measured-width)))))
          text-graphemes (if (= 1 (.-length text))
                           text
                           (->> text (graphemes) (map :grapheme)))]
