@@ -131,13 +131,13 @@
    paragraphs selectively."
   [*ui-state]
   #_(let [{:keys [dom-elem history measure-fn shadow-root hidden-input] :as ui-state} @*ui-state
-        {:keys [doc] :as editor-state} (history/current-state history)
-        dom-elem-width (.-width (.getBoundingClientRect dom-elem))
-        viewmodels (vm/from-doc doc dom-elem-width measure-fn)
-        new-ui-state (assoc ui-state :viewmodels viewmodels)]
-    (view/insert-all! dom-elem viewmodels editor-state)
-    (view/relocate-hidden-input! shadow-root hidden-input)
-    (reset! *ui-state new-ui-state)))
+          {:keys [doc] :as editor-state} (history/current-state history)
+          dom-elem-width (.-width (.getBoundingClientRect dom-elem))
+          viewmodels (vm/from-doc doc dom-elem-width measure-fn)
+          new-ui-state (assoc ui-state :viewmodels viewmodels)]
+      (view/insert-all! dom-elem viewmodels editor-state)
+      (view/relocate-hidden-input! shadow-root hidden-input)
+      (reset! *ui-state new-ui-state)))
 
 (defn sync-dom!
   "Sync editor DOM element to provided changelist, updating
@@ -659,7 +659,15 @@
                           (.. -classList (add "slate-editor")))]
         (.. shadow-dom-wrapper -shadowRoot (appendChild editor-elem))
         [editor-elem, (.-shadowRoot shadow-dom-wrapper)])
-    (let [canvas-elem (js/document.createElement "canvas")]
+    (let [width 600
+          height 400
+          dpr js/window.devicePixelRatio
+          canvas-elem (doto (js/document.createElement "canvas")
+                        (aset "width" (* width dpr))
+                        (aset "height" (* height dpr))
+                        (aset "style" "width" (str width "px"))
+                        (aset "style" "height" (str height "px"))
+                        (.. -classList (add "slate-canvas")))]
       (.. shadow-dom-wrapper -shadowRoot (appendChild canvas-elem))
       [canvas-elem, (.-shadowRoot shadow-dom-wrapper)])))
 
@@ -673,7 +681,7 @@
 
 (defn- nop [])
 
-(def long-str "Hello, world! This is some long, hopefully multi-line text, which will allow me to text what happens when the text overflows its line.")
+(def long-str "Hello, world! This is some long, hopefully multi-line text, which will allow me to test what happens when the text overflows its line.")
 (def long-str2 "\tAnd this is another paragraph that is also long.")
 (def lorem-ipsum "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 (def sample-doc (slate.model.doc/document (dll/dll (slate.model.paragraph/paragraph [(r/run long-str)])
@@ -685,7 +693,16 @@
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph08. " lorem-ipsum))])
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph09. " lorem-ipsum))])
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph10. " lorem-ipsum))])
-                                                   )))
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph11. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph12. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph13. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph14. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph15. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph16. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph17. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph18. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph19. " lorem-ipsum))])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph20. " lorem-ipsum))]))))
 
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This

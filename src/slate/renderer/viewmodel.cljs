@@ -30,7 +30,7 @@
 ;; The good news is the nastiness is __largely__ contained here.
 
 ;; (defrecord DocumentViewModel [paragraphs container-width])
-(defrecord ParagraphViewModel [lines length paragraph-type paragraph-index container-width])
+(defrecord ParagraphViewModel [lines length height-px paragraph-type paragraph-index container-width])
 
 (defrecord Line [spans ;; vector of spans contained in line
                  ;; TODO: can I remove start-offset? Isn't it always 0?
@@ -199,18 +199,20 @@
 
 (defn from-para
   "Converts a [[Paragraph]] to a ParagraphViewModel."
-  [paragraph paragraph-idx width measure-fn]
-  (map->ParagraphViewModel {:lines (lineify (:runs paragraph) (:type paragraph) width measure-fn)
-                            :length (m/len paragraph)
-                            :paragraph-type (:type paragraph)
-                            :paragraph-index paragraph-idx
-                            :container-width width}))
+  [paragraph paragraph-idx width measure-fn line-heights]
+  (let [lines (lineify (:runs paragraph) (:type paragraph) width measure-fn)]
+    (map->ParagraphViewModel {:lines lines
+                              :length (m/len paragraph)
+                              :height-px (* (count lines) (get line-heights (:type paragraph)))
+                              :paragraph-type (:type paragraph)
+                              :paragraph-index paragraph-idx
+                              :container-width width})))
 
 ;; TODO: testme
 (defn from-doc
   "Takes a `Document`, converts each of its `Paragraph`s to `ParagraphViewModel`s,
    and returns a map of indices -> `ParagraphViewModel`s."
-  [doc width measure-fn]
+  [doc width measure-fn line-heights]
   (let [paragraphs (:children doc)]
     (loop [indices (dll/all-indices paragraphs)
            indices->vms {}]
@@ -218,11 +220,11 @@
         indices->vms
         (let [idx (first indices)
               paragraph (get paragraphs idx)
-              vm-paragraph (from-para paragraph idx width measure-fn)]
+              vm-paragraph (from-para paragraph idx width measure-fn line-heights)]
           (recur (rest indices) (assoc indices->vms idx vm-paragraph)))))))
 
 (defn update-viewmodels
-  [viewmodels doc elem-width measure-fn changelist]
+  [viewmodels doc elem-width measure-fn line-heights changelist]
   (let [{:keys [changed-indices inserted-indices deleted-indices]} changelist
         get-para (partial get (:children doc))
         updated-vms (as-> viewmodels vms
@@ -231,7 +233,8 @@
                                 (assoc new-vms idx-to-update (from-para (get-para idx-to-update)
                                                                         idx-to-update
                                                                         elem-width
-                                                                        measure-fn)))
+                                                                        measure-fn
+                                                                        line-heights)))
                               vms (concat inserted-indices changed-indices)))]
     updated-vms))
 

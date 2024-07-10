@@ -4,7 +4,9 @@
 
 (defn create-ctx! []
   (let [canvas (js/OffscreenCanvas. 0 0)
-        ctx (.getContext canvas "2d")]
+        ctx (.getContext canvas "2d")
+        dpr js/window.devicePixelRatio]
+    (.scale ctx dpr dpr)
     (set! (.-fontKerning ctx) "none")
     ctx))
 
@@ -29,6 +31,7 @@
   ([ctx font-size font-family tab-size-px cache text formats paragraph-type]
    (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
+         dpr js/window.devicePixelRatio
          measure-grapheme (fn [grapheme]
                             (let [cache-key (str grapheme "-" formats-hash "-" type-hash)
                                   cache-val (aget cache cache-key)]
@@ -40,7 +43,7 @@
                                                        tab-size-px
                                                        (do
                                                          (apply-font-style! ctx font-size font-family formats paragraph-type)
-                                                         (.-width (.measureText ctx grapheme))))]
+                                                         (* dpr (.-width (.measureText ctx grapheme)))))]
                                   (aset cache cache-key measured-width)))))
          text-graphemes (if (= 1 (.-length text))
                           text

@@ -10,8 +10,7 @@
             [drop.app.utils :as app-utils]
             [drop.app.demo :as demo]
             [promesa.core :as p]
-            ["electron" :refer [ipcRenderer]]
-            [slate.editor-ui-state :as ui-state])
+            ["electron" :refer [ipcRenderer]])
   (:require-macros [promesa.core :as p]))
 
 (defn get-theme-sync []

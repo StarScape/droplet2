@@ -26,7 +26,7 @@
                   ^:mutable left
                   ^:mutable right
                   ^:mutable height
-                  ^:mutable left-px-height]
+                  ^:mutable left-height-px]
   IPrintWithWriter
   (-pr-writer [this writer opts] (-write writer (js/JSON.stringify this nil 2))))
 
@@ -46,16 +46,16 @@
     (- (height (.-left node)) (height (.-right node)))
     0))
 
-(defn px-height [node]
-  (:px-height (.. node -viewmodel)))
+(defn height-px [node]
+  (:height-px (.. node -viewmodel)))
 
-(defn left-px-height [node]
-  (if node (.-left-px-height node) 0))
+(defn left-height-px [node]
+  (if node (.-left-height-px node) 0))
 
-(defn total-px-height
+(defn total-height-px
   [node]
   (if node
-    (+ (.-left-px-height node) (.. node -viewmodel -px-height))
+    (+ (.-left-height-px node) (.. node -viewmodel -height-px))
     0))
 
 (defn find-min-node
@@ -73,7 +73,7 @@
     ;; leftNode.right = node;
     (set! (.-right left-node) node)
     ;; node.leftPxHeight -= (leftPxHeight(leftNode) + heightPx(leftNode));
-    (set! (.-left-px-height node) (- (.-left-px-height node) (left-px-height left-node) (px-height left-node)))
+    (set! (.-left-height-px node) (- (.-left-height-px node) (left-height-px left-node) (height-px left-node)))
     ;; node.height = Math.max(height(node.left), height(node.right)) + 1;
     (set! (.-height node) (max (height (.-left node)) (inc (height (.-right node)))))
     ;; leftNode.height = Math.max(height(leftNode.left), height(leftNode.right)) + 1;
@@ -90,7 +90,7 @@
     ;; rightNode.left = node;
     (set! (.-left right-node) node)
     ;; rightNode.leftPxHeight += (leftPxHeight(node) + pxHeight(node))
-    (set! (.-left-px-height right-node) (+ (left-px-height right-node) (left-px-height node) (px-height node)))
+    (set! (.-left-height-px right-node) (+ (left-height-px right-node) (left-height-px node) (height-px node)))
     ;; node.height = Math.max(height(node.left), height(node.right)) + 1;
     (set! (.-height node) (inc (max (height (.-left node)) (height (.-right node)))))
     ;; rightNode.height = Math.max(height(rightNode.left), height(rightNode.right)) + 1;
@@ -111,7 +111,7 @@
         (lt index (.-index node))
         (do
           (set! (.-left node) (node-insert! (.-left node) index viewmodel))
-          (set! (.-left-px-height node) (+ (left-px-height node) (:px-height viewmodel))))
+          (set! (.-left-height-px node) (+ (left-height-px node) (:height-px viewmodel))))
 
         (gt index (.-index node))
         (set! (.-right node) (node-insert! (.-right node) index viewmodel)))
@@ -151,7 +151,7 @@
                      (lt index (.-index node))
                      (doto node
                        (aset "left" (node-delete! (.-left node) index))
-                       (aset "left-px-height" (left-px-height (.-left node)) (px-height (.-left node))))
+                       (aset "left-height-px" (left-height-px (.-left node)) (height-px (.-left node))))
 
                      (gt index (.-index node))
                      (doto node
@@ -201,20 +201,21 @@
 
 (defn node-at-y
   [node target-y running-count]
-  (let [height-above (+ (left-px-height node) running-count)]
-    (cond
-      ;; target-y overlaps with node -- hit
-      (and (<= height-above target-y)
-           (< target-y (+ height-above (px-height node))))
-      node
+  (when node
+    (let [height-above (+ (left-height-px node) running-count)]
+      (cond
+        ;; target-y overlaps with node -- hit
+        (and (<= height-above target-y)
+             (< target-y (+ height-above (height-px node))))
+        node
 
-      ;; target-y in node before this, ie left in BST
-      (< target-y height-above)
-      (recur (.-left node) target-y running-count)
+        ;; target-y in node before this, ie left in BST
+        (< target-y height-above)
+        (recur (.-left node) target-y running-count)
 
-      ;; node in node after this, ie right in BST
-      (> target-y height-above)
-      (recur (.-right node) target-y (+ running-count (left-px-height node) (px-height node))))))
+        ;; node in node after this, ie right in BST
+        (> target-y height-above)
+        (recur (.-right node) target-y (+ running-count (left-height-px node) (height-px node)))))))
 
 (deftype AVLTree [^:mutable root])
 
@@ -228,7 +229,7 @@
 
 (defn search
   [tree index]
-  (node-search (.-root tree) index))
+  (.-viewmodel (node-search (.-root tree) index)))
 
 (defn delete!
   [tree index]
@@ -244,19 +245,20 @@
 (comment
   (def my-tree (init-tree))
 
-  (insert! my-tree 1 {:text "a" :px-height 10})
-  (insert! my-tree 2 {:text "b" :px-height 10})
-  (insert! my-tree 3 {:text "c" :px-height 10})
+  (insert! my-tree 1 {:text "a" :height-px 10})
+  (insert! my-tree 2 {:text "b" :height-px 10})
+  (insert! my-tree 3 {:text "c" :height-px 10})
+
+  (search my-tree 1)
 
   (.-viewmodel (at-y my-tree 5))
   (.-viewmodel (at-y my-tree 15))
   (.-viewmodel (at-y my-tree 25))
 
   (delete! my-tree 2)
-  (insert! my-tree 2 {:text "b" :px-height 30})
+  (insert! my-tree 2 {:text "b" :height-px 30})
   (.-viewmodel (at-y my-tree 5))
   (.-viewmodel (at-y my-tree 15))
   (.-viewmodel (at-y my-tree 25))
   (.-viewmodel (at-y my-tree 35))
-  (.-viewmodel (at-y my-tree 45))
-  )
+  (.-viewmodel (at-y my-tree 45)))

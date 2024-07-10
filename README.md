@@ -2,20 +2,6 @@
 
 Source code for the Droplet app.
 
-<!-- TODO: would be good to update the below with a feature-list, or better yet a list of what makes Droplet a technically interesting project. -->
-<!-- # Status
-
-- Rich text formatting: _italics_, __bold__, `h1` and `h2` headings, bulleted and numbered lists. In place but not yet implemented: <ins>underlining</ins>, ~~strikethrough~~.
-- Common text editing shortcuts: ⌥+→ / ⌥+← to jump between words, ⌘+→ / ⌘+← to jump to start/end of line, etc.
-- Full undo and redo
-- Copy and paste (plain text supported to and from Droplet to other apps; rich text currently only supported Droplet-to-Droplet)
-- Find and replace
-- A rich "interceptor" system for handling shortcuts and editor actions in an easily-extensible manner
-- A fully-immutable document model, which means __tests__! Rich text editors are finnicky and full of edges cases, and being able to trivially unit test any editor action in isolation is a life saver.
-- Some fancy-pants completions, like completing -- to an em dash and auto-surrounding parens and quotations.
-
-More details on the structure of the editor in `src/slate/README.md`. -->
-
 # Development
 
 **Start shadow-cljs builds:**
@@ -38,19 +24,19 @@ In order to help the tests run as fast as possible, tests which are not dependen
 
 > Note: in order for the browser tests to run correctly you will need to have the CHROME_BIN environment variable set, see [here](https://github.com/karma-runner/karma-chrome-launcher/issues/62).
 
-__To run both suites of tests, run:__
+**To run both suites of tests, run:**
 
 ```bash
 npm run test
 ```
 
-__To run just the Node tests:__
+**To run just the Node tests:**
 
 ```bash
 npm run node-test
 ```
 
-__To run just the Karma tests:__
+**To run just the Karma tests:**
 
 ```bash
 npm run browser-test
@@ -66,8 +52,8 @@ That build is set to autorun `:autorun true`, so there is no need for any additi
 
 # Release
 
-
 ## Building
+
 Build installers for all platforms:
 
 ```bash
@@ -92,13 +78,14 @@ This will skip signing and notarizing the app.
 
 ## Signing Mac Apps
 
-If a valid Developer ID Application certificate and a Developer ID Installer certificate are both present in Keychain, `electron-builder` should automatically detect them and sign the binary. 
+If a valid Developer ID Application certificate and a Developer ID Installer certificate are both present in Keychain, `electron-builder` should automatically detect them and sign the binary.
 
 ## Notarizing Mac Apps
 
 An `afterSign` script is registered with `electron-builder` to notarize the macOS releases. The env variables `APPLE_ID` (Apple ID email) and `APPLE_ID_PASSWORD` (app-specific password tied to my Apple ID for Droplet) need to be set, and can be done by creating a `.env` file as the `dotenv` package is installed.
 
 ## Deploying to S3 and Cloudfront
+
 __After building the installers, they can be deployed with__ `npm run deploy-installers`, which will upload them to their S3 bucket, generate a JSON file with their URLs, and then copy that file to the `../droplet-website` folder. The website will then have to be redeployed from its own repo in order for the change to take affect.
 
 The AWS CLI must be installed and configured in order for this to work.

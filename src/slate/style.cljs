@@ -52,8 +52,6 @@
                     :width "0px"
                     :height "0px"
                     :pointer-events "none"}]
-   [:canvas {:width "100%"
-             :height "100%"}]
    [:.slate-editor {:white-space "pre"
                     :box-sizing "border-box"
                     :tab-size "25px"
@@ -64,6 +62,17 @@
                     :font-family (str font-family ", serif")
                     :line-height "30px"
                     ;; :letter-spacing "0.5px"
+                    :user-select "none"
+                    :color "var(--text-color)"}
+    [:&:hover {:cursor "text"}]]
+   [:.slate-canvas {:white-space "pre"
+                    :box-sizing "border-box"
+                    :tab-size "25px"
+                    :margin 0
+                    :margin-top 20
+                    :border "1px solid lightblue"
+                    ;; :padding-top "20px"
+                    ;; :padding-bottom "70vh"
                     :user-select "none"
                     :color "var(--text-color)"}
     [:&:hover {:cursor "text"}]]
@@ -110,8 +119,7 @@
    [:.highlight-format {:background-color "var(--find-highlight-color)"}]])
 
 (comment
-  (println (apply css shadow-elem-style))
-  )
+  (println (apply css shadow-elem-style)))
 
 (defn get-rendered-shadow-elem-css
   [font-family dark-mode?]
