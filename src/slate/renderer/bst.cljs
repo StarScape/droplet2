@@ -1,5 +1,10 @@
 (ns slate.renderer.bst)
 
+;; This is a BST (AVL tree) where each node is balanced based on its `index` value,
+;; but also augmented with its own height and the height of its entire left subtree.
+;; This makes it possible to do both lookups based on index and based on y-offset in
+;; logarithmic time.
+
 ;; The astute observer will notice this is very un-Clojure-y ClojureScript.
 ;; More like JS with parens, in fact. The reason are various:
 ;;
@@ -217,6 +222,13 @@
         (> target-y height-above)
         (recur (.-right node) target-y (+ running-count (left-height-px node) (height-px node)))))))
 
+(defn traverse-in-order
+  [root f]
+  (when root
+    (traverse-in-order (.-left root) f)
+    (f root)
+    (traverse-in-order (.-right root) f)))
+
 (deftype AVLTree [^:mutable root])
 
 (defn init-tree []
@@ -235,9 +247,10 @@
   [tree index]
   (set! (.-root tree) (node-delete! (.-root tree) index)))
 
-(defn at-y
+(defn vm-at-y
   [tree target-y-offset]
-  (node-at-y (.-root tree) target-y-offset 0))
+  (when-let [node (node-at-y (.-root tree) target-y-offset 0)]
+    (.-viewmodel node)))
 
 (comment
   (init-node 1 (js-obj :foo 1, :bar 2)))

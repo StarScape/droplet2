@@ -95,31 +95,20 @@
     (js/console.log "scroll"))
 
   ;; Renders only what's currently in the viewport
-  (render! [this doc]
+  (render! [_ doc]
     (let [bottom-y (+ scroll-y viewport-height-px)
-          first-visible-paragraph (bst/node-at-y (.-root bst) 0 0)
-          last-visible-paragraph (bst/node-at-y (.-root bst) #p bottom-y 0)]
+          first-visible-vm (bst/vm-at-y bst 0)
+          last-visible-vm (bst/vm-at-y bst bottom-y)]
       (loop [idxs (dll/indices-range (:children doc)
-                                     (.-index first-visible-paragraph)
-                                     (if last-visible-paragraph
-                                       (.-index last-visible-paragraph)
+                                     (:paragraph-index first-visible-vm)
+                                     (if last-visible-vm
+                                       (:paragraph-index last-visible-vm)
                                        (dll/last-index (:children doc))))
              paragraph-y (:body line-heights)]
         (when-let [idx (first idxs)]
           (let [vm (bst/search bst idx)]
             (render-vm! text-layer-ctx vm paragraph-y font-family base-font-size)
             (recur (rest idxs) (+ paragraph-y (* (count (:lines vm)) (:body line-heights))))))))))
-
-#_(defn- set-canvas-dimensions!
-    [ctx]
-    (let [canvas (.-canvas ctx)
-          dpr js/window.devicePixelRatio
-          rect (.getBoundingClientRect canvas)]
-      (doto canvas
-        #_(aset "width" (* dpr (.-width rect)))
-        #_(aset "height" (* dpr (.-height rect)))
-        (aset "style" "border: 1px solid lightblue"))
-      (.scale ctx dpr dpr)))
 
 (defn init!
   "Initializes the Slate canvas renderer and does the initial render."
@@ -135,6 +124,11 @@
         bst (init-bst doc width measure-fn line-heights)
         renderer (Renderer. bst 0 width height line-heights tab-size-px font-family base-font-size ctx)]
     (.addEventListener js/document "wheel" (fn [e] (scroll! renderer (.-deltaY e))))
+    ;; #p line-heights
+    ;; #p (bst/vm-at-y bst 65.32)
+
+    ;; showing incorrect insert order, write SVG utility or something to debug this
+    (bst/traverse-in-order (.-root bst) #(identity #p (.-index %)))
 
     ;; (.fillRect ctx 1100 700 100 100)
     (render! renderer doc)
