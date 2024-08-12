@@ -1,10 +1,9 @@
 (ns slate.renderer.core
-  (:require [clojure.string :as str]
-            [shadow.cljs.modern :refer [defclass]]
-            [slate.model.dll :as dll]
+  (:require [slate.model.dll :as dll]
+            [slate.renderer.bst :as bst]
+            [slate.renderer.debug-tree :as debug-tree]
             [slate.renderer.measurement :refer [get-measure-fn]]
-            [slate.renderer.viewmodel :as vm]
-            [slate.renderer.bst :as bst]))
+            [slate.renderer.viewmodel :as vm]))
 
 ;; renderer operations:
 ;; insert
@@ -129,8 +128,9 @@
 
     ;; showing incorrect insert order, write SVG utility or something to debug this
     (bst/traverse-in-order (.-root bst) #(identity #p (.-index %)))
+    (debug-tree/debug (.-root bst))
 
-    ;; (.fillRect ctx 1100 700 100 100)
+;; (.fillRect ctx 1100 700 100 100)
     (render! renderer doc)
     renderer))
 

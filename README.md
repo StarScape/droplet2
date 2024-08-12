@@ -6,13 +6,13 @@ Source code for the Droplet app.
 
 **Start shadow-cljs builds:**
 
-```
+```bash
 npm run dev-watch
 ```
 
 Then, **start up Electron**. Normally this should be done in a separate terminal so that the main Electron process can be restarted as needed.
 
-```
+```bash
 electron .
 ```
 
