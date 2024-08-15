@@ -23,8 +23,8 @@
 
 (set! *warn-on-infer* false)
 
-(defn lt [a b] (< a b))
-(defn gt [a b] (> a b))
+(defn lt [a b] (.lt a b))
+(defn gt [a b] (.gt a b))
 
 (deftype AVLNode [^:mutable index
                   ^:mutable viewmodel
@@ -103,45 +103,45 @@
     ;; return rightNode;
     right-node))
 
-(defn node-insert! [node index viewmodel]
+(defn node-insert! [root-node index viewmodel]
   (cond
-    (not node) (init-node index viewmodel)
+    (not root-node) (init-node index viewmodel)
 
     ;; duplicate indices are not allowed, return node unchanged
-    (= node index) node
+    (= root-node index) root-node
 
     :else
     (do
       (cond
-        (lt index (.-index node))
+        (lt index (.-index root-node))
         (do
-          (set! (.-left node) (node-insert! (.-left node) index viewmodel))
-          (set! (.-left-height-px node) (+ (left-height-px node) (:height-px viewmodel))))
+          (set! (.-left root-node) (node-insert! (.-left root-node) index viewmodel))
+          (set! (.-left-height-px root-node) (+ (left-height-px root-node) (:height-px viewmodel))))
 
-        (gt index (.-index node))
-        (set! (.-right node) (node-insert! (.-right node) index viewmodel)))
-      (set! (.-height node) (inc (max (height (.-left node)) (height (.-right node)))))
+        (gt index (.-index root-node))
+        (set! (.-right root-node) (node-insert! (.-right root-node) index viewmodel)))
+      (set! (.-height root-node) (inc (max (height (.-left root-node)) (height (.-right root-node)))))
 
       ;; Rebalance
-      (let [balance (balance-factor node)]
+      (let [balance (balance-factor root-node)]
         (cond
-          (and (< 1 balance) (lt index (.. node -left -index)))
-          (rotate-right! node)
+          (and (< 1 balance) (lt index (.. root-node -left -index)))
+          (rotate-right! root-node)
 
-          (and (< 1 balance) (gt index (.. node -left -index)))
+          (and (< 1 balance) (gt index (.. root-node -left -index)))
           (do
-            (set! (.-left node) (rotate-left! (.-left node)))
-            (rotate-right! node))
+            (set! (.-left root-node) (rotate-left! (.-left root-node)))
+            (rotate-right! root-node))
 
-          (and (< balance -1) (gt index (.. node -right -index)))
-          (rotate-left! node)
+          (and (< balance -1) (gt index (.. root-node -right -index)))
+          (rotate-left! root-node)
 
-          (and (< balance -1) (gt index (.. node -right -index)))
+          (and (< balance -1) (gt index (.. root-node -right -index)))
           (do
-            (set! (.-right node) (rotate-right! (.-right node)))
-            (rotate-left! node))
+            (set! (.-right root-node) (rotate-right! (.-right root-node)))
+            (rotate-left! root-node))
 
-          :else node)))))
+          :else root-node)))))
 
 (defn node-search [node index]
   (when node

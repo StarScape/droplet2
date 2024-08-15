@@ -1,5 +1,6 @@
 (ns slate.renderer.debug-tree
   (:require [reagent.dom :as rdom]
+            [slate.renderer.bst :as bst]
             ["react-svg-pan-zoom" :refer [UncontrolledReactSVGPanZoom]]))
 
 ;; L = length of line between nodes
@@ -22,9 +23,13 @@
   (if (nil? n)
     circles-vec
     (let [circle-svg [:circle {:cx x :cy y :r r :fill "green"}]
-          text-svg [:text {:x x :y y :font-size 12 :text-anchor "middle" :fill "black"}
-                    (str "index: " (.-index n) ", "
-                         "height: " (.-height n))]
+          text-svg [:<>
+                    [:text {:x x :y (- y 15) :font-size 12 :text-anchor "middle" :fill "black"}
+                     (str "index: " (.-index n) ", ")]
+                    [:text {:x x :y y :font-size 12 :text-anchor "middle" :fill "black"}
+                     (str "height-px: " (:height-px (.-viewmodel n)) ", ")]
+                    [:text {:x x :y (+ y 15) :font-size 12 :text-anchor "middle" :fill "black"}
+                     (str "left-height-px: " (.-left-height-px n))]]
           child-y (+ y (* L (cos theta)))
           delta-x (/ (* L (sin theta)) (js/Math.pow 2 level))
           left-x (- x delta-x)
@@ -46,27 +51,13 @@
           :height height
           :xmlns "http://www.w3.org/2000/svg"
           :style {:border "1px solid blue"}}
-    [:rect {:width "100" :height "100" :fill "red"}]
-
-    ;; TODO: render circles for nodes
-
-    [:<>
-     [:circle {:cx (/ width 2) :cy (/ height 2) :r "80" :fill "green"}]
-     [:text {:x "150" :y "125" :font-size "60" :text-anchor "middle" :fill "black"} "SVG"]]
-    
-    #p (-> (node-render root-node (/ width 2) (/ height 2) [] 0)
-           (conj :<>)
-           (vec))
-    
-
-    ;; <circle cx="150" cy="100" r="80" fill="green" />
-
-    ;; <text x="150" y="125" font-size="60" text-anchor="middle" fill="white">SVG</text>
-    ]])
+    (-> (node-render root-node (/ width 2) (/ height 2) [] 0)
+        (conj :<>)
+        (vec))]])
 
 (defn debug [root-node]
-  (let [width 1000
-        height 600
+  (let [width 1500
+        height 1000
         new-window (.open js/window "" "" (str "width=" width ",height=" height))
         document (doto (.. new-window -document)
                    (.open)

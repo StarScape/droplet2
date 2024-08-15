@@ -127,8 +127,8 @@
     ;; #p (bst/vm-at-y bst 65.32)
 
     ;; showing incorrect insert order, write SVG utility or something to debug this
-    (bst/traverse-in-order (.-root bst) #(identity #p (.-index %)))
-    (debug-tree/debug (.-root bst))
+    ;; (bst/traverse-in-order (.-root bst) #(identity #p (.-index %)))
+    ;; (debug-tree/debug (.-root bst))
 
 ;; (.fillRect ctx 1100 700 100 100)
     (render! renderer doc)

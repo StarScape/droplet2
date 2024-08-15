@@ -203,7 +203,7 @@
   (let [lines (lineify (:runs paragraph) (:type paragraph) width measure-fn)]
     (map->ParagraphViewModel {:lines lines
                               :length (m/len paragraph)
-                              :height-px #p (* (count lines) (get line-heights (:type paragraph)))
+                              :height-px (* (count lines) (get line-heights (:type paragraph)))
                               :paragraph-type (:type paragraph)
                               :paragraph-index paragraph-idx
                               :container-width width})))
