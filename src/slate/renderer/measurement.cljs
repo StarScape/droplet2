@@ -1,6 +1,7 @@
 (ns slate.renderer.measurement
   "Functions for measuring the widths of text as they will appear in the actual DOM."
-  (:require [slate.model.common :refer [graphemes]]))
+  (:require [slate.model.common :refer [graphemes]]
+            [slate.renderer.utils :refer [font-str]]))
 
 (defn create-ctx! []
   (let [canvas (js/OffscreenCanvas. 0 0)
@@ -10,19 +11,9 @@
     (set! (.-fontKerning ctx) "none")
     ctx))
 
-(defn- get-font-str
-  [font-size font-family formats paragraph-type]
-  (let [font-size (case paragraph-type
-                    :h1 "30px"
-                    :h2 "22px"
-                    font-size)]
-    (str (when (contains? formats :italic) "italic ")
-         (when (contains? formats :bold) "700 ")
-         font-size " " font-family)))
-
 (defn- apply-font-style!
   [ctx font-size font-family formats paragraph-type]
-  (set! (.-font ctx) (get-font-str font-size font-family formats paragraph-type)))
+  (set! (.-font ctx) (font-str font-size font-family formats paragraph-type)))
 
 (defn measure
   "Helper function for `ruler`. Not private and __can__ be used directly, but generally should not be."
@@ -43,7 +34,7 @@
                                                        tab-size-px
                                                        (do
                                                          (apply-font-style! ctx font-size font-family formats paragraph-type)
-                                                         (* dpr (.-width (.measureText ctx grapheme)))))]
+                                                         (.-width (.measureText ctx grapheme))))]
                                   (aset cache cache-key measured-width)))))
          text-graphemes (if (= 1 (.-length text))
                           text

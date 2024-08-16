@@ -1,8 +1,8 @@
 (ns slate.renderer.core
   (:require [slate.model.dll :as dll]
             [slate.renderer.bst :as bst]
-            [slate.renderer.debug-tree :as debug-tree]
             [slate.renderer.measurement :refer [get-measure-fn]]
+            [slate.renderer.utils :refer [font-str]]
             [slate.renderer.viewmodel :as vm]))
 
 ;; renderer operations:
@@ -19,10 +19,6 @@
 ;; document-height
 
 (def tab-size-px 25) ;; TODO: move to single global constant, see viewmodel.cljs
-(def dpr js/window.devicePixelRatio)
-
-(defn font-str [font-size font-family]
-  (str (* dpr font-size) "px " font-family))
 
 (defn- split-on-tabs
   [str]
@@ -113,8 +109,8 @@
   "Initializes the Slate canvas renderer and does the initial render."
   [canvas doc font-family base-font-size tab-size-px]
   (let [dpr js/window.devicePixelRatio
-        width (/ (.-width canvas) dpr) ;; get width and height before adjusting for DPR
-        height (/ (.-height canvas) dpr)
+        width (.-width canvas)
+        height (* dpr (.-height canvas))
         ctx (doto (.getContext canvas "2d")
               #_(set-canvas-dimensions!))
         body-line-height (get-line-height ctx font-family base-font-size)
@@ -123,14 +119,14 @@
         bst (init-bst doc width measure-fn line-heights)
         renderer (Renderer. bst 0 width height line-heights tab-size-px font-family base-font-size ctx)]
     (.addEventListener js/document "wheel" (fn [e] (scroll! renderer (.-deltaY e))))
-    ;; #p line-heights
-    ;; #p (bst/vm-at-y bst 65.32)
 
-    ;; showing incorrect insert order, write SVG utility or something to debug this
-    ;; (bst/traverse-in-order (.-root bst) #(identity #p (.-index %)))
+    ;; #p (bst/vm-at-y bst 64)
     ;; (debug-tree/debug (.-root bst))
-
-;; (.fillRect ctx 1100 700 100 100)
+    ;; (bst/traverse-in-order (.-root bst) (fn [n]
+    ;;                                      (js/console.log  (str (.-index n) " : " (bst/height-px n)))))
+    ;; (let [hello-width (measure-fn "Hello" #{} :body)]
+    ;;   (.fillRect ctx hello-width 0 100 100)
+    ;;   (.fillRect ctx 1173 0 100 100))
     (render! renderer doc)
     renderer))
 

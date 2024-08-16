@@ -686,6 +686,7 @@
 (def lorem-ipsum "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 (def sample-doc (slate.model.doc/document (dll/dll (slate.model.paragraph/paragraph [(r/run long-str)])
                                                    (slate.model.paragraph/paragraph [(r/run long-str2)])
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph03. " lorem-ipsum))])
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph04. " lorem-ipsum))])
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph05. " lorem-ipsum))])
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph06. " lorem-ipsum))])
@@ -701,8 +702,7 @@
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph16. " lorem-ipsum))])
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph17. " lorem-ipsum))])
                                                    (slate.model.paragraph/paragraph [(r/run (str "\tparagraph18. " lorem-ipsum))])
-                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph19. " lorem-ipsum))])
-                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph20. " lorem-ipsum))]))))
+                                                   (slate.model.paragraph/paragraph [(r/run (str "\tparagraph19. " lorem-ipsum))]))))
 
 (defn init!
   "Initializes the editor surface, and returns an atom containing the EditorUIState. This

@@ -92,7 +92,7 @@
         (recur (next chars-left) new-chars-fit)))))
 
 (defn max-words
-  "Takes the maximum number of words from string `src` without exceeding `width-left`,
+  "Takes the maximum number of words from string `src` without exceeding `initial-width-left`,
    as measured by function `measure-fn`. Returns two strings: all the text added,
    and all the text that would not fit (which is an empty string if everything fit)."
   [words formats paragraph-type initial-width-left line-width measure-fn]
