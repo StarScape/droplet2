@@ -212,7 +212,9 @@
         ;; target-y overlaps with node -- hit
         (and (<= height-above target-y)
              (< target-y (+ height-above (height-px node))))
-        node
+        (do
+          (set! (.-height-above node) height-above)
+          node)
 
         ;; target-y in node before this, ie left in BST
         (< target-y height-above)
@@ -250,7 +252,13 @@
 (defn vm-at-y
   [tree target-y-offset]
   (when-let [node (node-at-y (.-root tree) target-y-offset 0)]
-    (.-viewmodel node)))
+    ;; TODO: this works via a hack. Make sumn more elegant
+    (assoc (.-viewmodel node) :y (.-height-above node))))
+
+(defn first-vm
+  [tree]
+  (when-let [node (find-min-node (.-root tree))]
+    (assoc (.-viewmodel node) :y 0)))
 
 (comment
   (init-node 1 (js-obj :foo 1, :bar 2)))

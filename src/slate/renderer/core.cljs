@@ -72,6 +72,11 @@
           (bst/insert! paragraphs-bst idx vm-paragraph)
           (recur (rest indices)))))))
 
+(defn first-visible-viewmodel
+  [bst scroll-y]
+  (or (bst/vm-at-y bst scroll-y)
+      (bst/first-vm bst)))
+
 (defprotocol IRenderer
   (scroll! [this delta-y])
   (render! [this doc]))
@@ -87,19 +92,21 @@
                    text-layer-ctx]
   IRenderer
   (scroll! [this delta-y]
-    (js/console.log "scroll"))
+    (set! (.-scroll-y this) (max 0 (+ scroll-y delta-y))))
 
   ;; Renders only what's currently in the viewport
   (render! [_ doc]
+    (.clearRect text-layer-ctx 0 0 viewport-width-px viewport-height-px)
     (let [bottom-y (+ scroll-y viewport-height-px)
-          first-visible-vm (bst/vm-at-y bst 0)
+          first-visible-vm (first-visible-viewmodel bst scroll-y)
+          first-visible-vm-offset (- scroll-y (:y first-visible-vm))
           last-visible-vm (bst/vm-at-y bst bottom-y)]
       (loop [idxs (dll/indices-range (:children doc)
                                      (:paragraph-index first-visible-vm)
                                      (if last-visible-vm
                                        (:paragraph-index last-visible-vm)
                                        (dll/last-index (:children doc))))
-             paragraph-y (:body line-heights)]
+             paragraph-y (- (:body line-heights) first-visible-vm-offset)]
         (when-let [idx (first idxs)]
           (let [vm (bst/search bst idx)]
             (render-vm! text-layer-ctx vm paragraph-y font-family base-font-size)
@@ -117,8 +124,13 @@
         line-heights {:body body-line-height}
         measure-fn (get-measure-fn font-family base-font-size tab-size-px)
         bst (init-bst doc width measure-fn line-heights)
+        ;; TODO: there is a sudden big jump from 480 -> 490
+        ;; y of first visible vm at 480: 290
+        ;; y of first visible vm at 490: 0
         renderer (Renderer. bst 0 width height line-heights tab-size-px font-family base-font-size ctx)]
-    (.addEventListener js/document "wheel" (fn [e] (scroll! renderer (.-deltaY e))))
+    (.addEventListener js/document "wheel" (fn [e]
+                                             (scroll! renderer (.-deltaY e))
+                                             (render! renderer doc)))
 
     ;; #p (bst/vm-at-y bst 64)
     ;; (debug-tree/debug (.-root bst))
