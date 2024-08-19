@@ -231,14 +231,16 @@
     (f root)
     (traverse-in-order (.-right root) f)))
 
-(deftype AVLTree [^:mutable root])
+(deftype AVLTree [^:mutable root
+                  ^:mutable total-height-px])
 
 (defn init-tree []
-  (AVLTree. nil))
+  (AVLTree. nil 0))
 
 (defn insert!
   [tree index viewmodel]
   (set! (.-root tree) (node-insert! (.-root tree) index viewmodel))
+  (set! (.-total-height-px tree) (+ (.-total-height-px tree) (:height-px viewmodel)))
   tree)
 
 (defn search
@@ -247,6 +249,8 @@
 
 (defn delete!
   [tree index]
+  (let [height (:height-px (.-viewmodel (node-search tree index)))]
+    (set! (.-total-height-px tree) (- (.-total-height-px tree) height)))
   (set! (.-root tree) (node-delete! (.-root tree) index)))
 
 (defn vm-at-y

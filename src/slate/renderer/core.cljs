@@ -92,7 +92,7 @@
                    text-layer-ctx]
   IRenderer
   (scroll! [this delta-y]
-    (set! (.-scroll-y this) (max 0 (+ scroll-y delta-y))))
+    (set! (.-scroll-y this) (min (max 0 (+ scroll-y delta-y)) (.-total-height-px bst))))
 
   ;; Renders only what's currently in the viewport
   (render! [_ doc]
@@ -124,9 +124,6 @@
         line-heights {:body body-line-height}
         measure-fn (get-measure-fn font-family base-font-size tab-size-px)
         bst (init-bst doc width measure-fn line-heights)
-        ;; TODO: there is a sudden big jump from 480 -> 490
-        ;; y of first visible vm at 480: 290
-        ;; y of first visible vm at 490: 0
         renderer (Renderer. bst 0 width height line-heights tab-size-px font-family base-font-size ctx)]
     (.addEventListener js/document "wheel" (fn [e]
                                              (scroll! renderer (.-deltaY e))
