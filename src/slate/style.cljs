@@ -65,7 +65,8 @@
                     :user-select "none"
                     :color "var(--text-color)"}
     [:&:hover {:cursor "text"}]]
-   [:.slate-canvas {:white-space "pre"
+   [:.slate-canvas {:position "absolute"
+                    :white-space "pre"
                     :box-sizing "border-box"
                     :tab-size "25px"
                     :margin 0

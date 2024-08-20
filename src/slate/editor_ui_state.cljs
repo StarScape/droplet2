@@ -1,29 +1,29 @@
 (ns slate.editor-ui-state
   (:require-macros [slate.interceptors :refer [definterceptor]])
   (:require [clojure.set :as set]
-            [clojure.string :as str]
             [clojure.spec.alpha :as s]
+            [clojure.string :as str]
             [drop.utils :as utils]
-            [slate.model.dll :as dll]
+            [slate.default-interceptors :refer [default-interceptors]]
+            [slate.interceptors :as interceptors]
+            [slate.measurement :refer [ruler-for-elem]]
             [slate.model.common :as m]
+            [slate.model.dll :as dll :refer [big-dec]]
+            [slate.model.doc]
+            [slate.model.editor-state :as es]
             [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
-            [slate.model.editor-state :as es]
-            [slate.model.doc]
             [slate.model.paragraph]
             [slate.model.run]
+            [slate.model.run :as r]
             [slate.model.selection :as sel]
-            [slate.interceptors :as interceptors]
-            [slate.default-interceptors :refer [default-interceptors]]
-            [slate.measurement :refer [ruler-for-elem]]
             [slate.renderer.core :as renderer]
-            [slate.serialization :refer [serialize deserialize]]
+            [slate.serialization :refer [deserialize serialize]]
+            [slate.style :as style]
+            [slate.utils :as slate-utils]
             [slate.view :as view]
             [slate.viewmodel :as vm]
-            [slate.style :as style]
-            [slate.word-count :as word-count]
-            [slate.utils :as slate-utils]
-            [slate.model.run :as r]))
+            [slate.word-count :as word-count]))
 
 (s/def ::id uuid?)
 (s/def ::history ::history/editor-state-history)
@@ -652,24 +652,27 @@
     (set! (.. shadow-dom-wrapper -shadowRoot -innerHTML)
           (str "<style id='" style-elem-id "'>" (style/get-rendered-shadow-elem-css font-family dark-mode?) "</style>"))
 
-    ;; There are some things you cannot do (like set outerHTML on elements, among other
-    ;; general weirdness) if an element is the immediate child of a <html> or ShadowRoot,
-    ;; so a top-level wrapper element is desirable over inserting straight into the shadow DOM.
-    #_(let [editor-elem (doto (js/document.createElement "div")
-                          (.. -classList (add "slate-editor")))]
-        (.. shadow-dom-wrapper -shadowRoot (appendChild editor-elem))
-        [editor-elem, (.-shadowRoot shadow-dom-wrapper)])
-    (let [width 600
+    (let [layers (doto (js/document.createElement "div")
+                   (aset "class" "layers"))
+          width 600
           height 400
           dpr js/window.devicePixelRatio
-          canvas-elem (doto (js/document.createElement "canvas")
-                        (aset "width" (* width dpr))
-                        (aset "height" (* height dpr))
-                        (aset "style" "width" (str width "px"))
-                        (aset "style" "height" (str height "px"))
-                        (.. -classList (add "slate-canvas")))]
-      (.. shadow-dom-wrapper -shadowRoot (appendChild canvas-elem))
-      [canvas-elem, (.-shadowRoot shadow-dom-wrapper)])))
+          text-layer-canvas (doto (js/document.createElement "canvas")
+                              (aset "width" (* width dpr))
+                              (aset "height" (* height dpr))
+                              (aset "style" "width" (str width "px"))
+                              (aset "style" "height" (str height "px"))
+                              (.. -classList (add "slate-canvas" "text-layer")))
+          caret-layer-canvas (doto (js/document.createElement "canvas")
+                               (aset "width" (* width dpr))
+                               (aset "height" (* height dpr))
+                               (aset "style" "width" (str width "px"))
+                               (aset "style" "height" (str height "px"))
+                               (.. -classList (add "slate-canvas" "caret-layer")))]
+      (.appendChild layers text-layer-canvas)
+      (.appendChild layers caret-layer-canvas)
+      (.. shadow-dom-wrapper -shadowRoot (appendChild layers))
+      [{:text text-layer-canvas, :caret caret-layer-canvas}, (.-shadowRoot shadow-dom-wrapper)])))
 
 (defn load-fonts!
   "Returns a Promise that resolves when the necessary fonts for rendering the document are loaded."
@@ -753,10 +756,11 @@
       (then #(let [uuid (random-uuid)
                    dark-mode? (= theme :dark)
                    ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-                   [canvas-elem, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
+                   [canvases, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
                    #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    #_#_measure-fn (ruler-for-elem editor-elem shadow-root)
-                   editor-state (es/editor-state)
+                   ;; editor-state (es/editor-state)
+                   editor-state (es/editor-state sample-doc (sel/selection [(big-dec 1) 82]))
                    history (history/init editor-state)
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
@@ -793,7 +797,7 @@
                               :on-selection-changed on-selection-changed
                               :should-lose-focus? should-lose-focus?
                               :ready? false})
-               (renderer/init! canvas-elem sample-doc font-family 16 25)
+               (renderer/init! canvases editor-state font-family 16 25)
                #_(init-event-handlers! *atom)
                #_(full-dom-render! *atom)
                (swap! *atom assoc :ready? true)

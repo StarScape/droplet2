@@ -23,8 +23,8 @@
 
 (set! *warn-on-infer* false)
 
-(defn lt [a b] (.lt a b))
-(defn gt [a b] (.gt a b))
+(defn lt [a b] (if b (.lt a b) false))
+(defn gt [a b] (if b (.gt a b) false))
 
 (deftype AVLNode [^:mutable index
                   ^:mutable viewmodel
@@ -245,7 +245,9 @@
 
 (defn search
   [tree index]
-  (.-viewmodel (node-search (.-root tree) index)))
+  (when-let [node (node-search (.-root tree) index)]
+    ;; TODO: this is a hack. See also vm-at-y.
+    (assoc (.-viewmodel node) :y (.-height-above node))))
 
 (defn delete!
   [tree index]
@@ -256,7 +258,7 @@
 (defn vm-at-y
   [tree target-y-offset]
   (when-let [node (node-at-y (.-root tree) target-y-offset 0)]
-    ;; TODO: this works via a hack. Make sumn more elegant
+    ;; TODO: this is a hack. Could be more elegant?
     (assoc (.-viewmodel node) :y (.-height-above node))))
 
 (defn first-vm
