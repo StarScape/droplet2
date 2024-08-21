@@ -43,7 +43,8 @@
 
   (.on ipcRenderer "load-file"
        (fn [_e, file-path, file-contents]
-         (try
+         ;; TODO: restore this functionality
+         #_(try
            (dispatch [:open-file file-path file-contents])
            (catch :default e
              (app-utils/show-error-dialog! "Failed to open file" "File failed to open")

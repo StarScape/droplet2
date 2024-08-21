@@ -52,7 +52,7 @@
     0))
 
 (defn height-px [node]
-  (:height-px (.. node -viewmodel)))
+  (if node (:height-px (.. node -viewmodel)) 0))
 
 (defn left-height-px [node]
   (if node (.-left-height-px node) 0))
@@ -156,7 +156,7 @@
                      (lt index (.-index node))
                      (doto node
                        (aset "left" (node-delete! (.-left node) index))
-                       (aset "left-height-px" (left-height-px (.-left node)) (height-px (.-left node))))
+                       (aset "left-height-px" (+ (left-height-px (.-left node)) (height-px (.-left node)))))
 
                      (gt index (.-index node))
                      (doto node

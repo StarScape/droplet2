@@ -296,16 +296,17 @@
    Arg opts: {:include-in-history? :add-to-history-immediately?}."
   ([*ui-state new-editor-state event {:keys [include-in-history? add-to-history-immediately? focus? scroll-to-caret?]
                                       :or {focus? true}, :as opts}]
-   (let [ui-state @*ui-state ; only deref once a cycle
+   (let [{:keys [renderer] :as ui-state} @*ui-state ; only deref once a cycle
          changelist (es/get-changelist new-editor-state)
          new-editor-state (es/clear-changelist new-editor-state)
          current-editor-state (history/current-state (:history ui-state))
          new-ui-state (-> ui-state
                           (update :history update-history new-editor-state changelist opts)
                           (update :word-count word-count/update current-editor-state new-editor-state changelist)
-                          (update :input-history #(if event (interceptors/add-to-input-history % opts event) %))
-                          (update-viewmodels new-editor-state changelist))]
-     (sync-dom! :shadow-root (:shadow-root new-ui-state)
+                          (update :input-history #(if event (interceptors/add-to-input-history % opts event) %)))
+         #_(update-viewmodels new-editor-state changelist)]
+     (renderer/update! renderer new-editor-state changelist)
+     #_(sync-dom! :shadow-root (:shadow-root new-ui-state)
                 :dom-elem (:dom-elem new-ui-state)
                 :hidden-input (:hidden-input new-ui-state)
                 :editor-state new-editor-state
@@ -334,7 +335,7 @@
   "This is the core of Slate's main data loop.
    Any time an event happens which finds a matching interceptor, fire-interceptor!
    is called, which handles updating the state stored in the UIState atom and re-rendering
-   elements in the DOM.
+   the canvas.
 
    Arguments:
    - `*ui-state`: Atom containing EditorUIState
@@ -509,7 +510,7 @@
                                       ;; TODO: should this instead by integrated into the custom implementation of (-invoke) for interceptors?
                                       ((:should-fire? matching-interceptor) current-editor-state))
                              matching-interceptor)))
-        {editor-elem :dom-elem
+        {editor-elem :canvas-layers-div
          ; outer-dom-elem :outer-dom-elem
          hidden-input :hidden-input} @*ui-state
         *editor-surface-clicked? (atom false :validator boolean?)
@@ -672,7 +673,10 @@
       (.appendChild layers text-layer-canvas)
       (.appendChild layers caret-layer-canvas)
       (.. shadow-dom-wrapper -shadowRoot (appendChild layers))
-      [{:text text-layer-canvas, :caret caret-layer-canvas}, (.-shadowRoot shadow-dom-wrapper)])))
+
+      [{:text text-layer-canvas, :caret caret-layer-canvas},
+       layers,
+       (.-shadowRoot shadow-dom-wrapper)])))
 
 (defn load-fonts!
   "Returns a Promise that resolves when the necessary fonts for rendering the document are loaded."
@@ -755,25 +759,27 @@
   (.. (load-fonts! font-family)
       (then #(let [uuid (random-uuid)
                    dark-mode? (= theme :dark)
-                   ;; Slate operates inside a shadow DOM to prevent global styles from interfering
-                   [canvases, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
+                   ;; Slate operates inside a shadow DOM
+                   [canvases, canvas-layers-div, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
                    #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    #_#_measure-fn (ruler-for-elem editor-elem shadow-root)
                    ;; editor-state (es/editor-state)
-                   editor-state (es/editor-state sample-doc (sel/selection [(big-dec 1) 82]))
+                   editor-state (es/editor-state sample-doc #_(sel/selection [(big-dec 1) 0]))
                    history (history/init editor-state)
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
                                         (interceptors/reg-interceptors manual-interceptors))
                    hidden-input (view/create-hidden-input! shadow-root)
                    #_#_current-state (history/current-state history)
-                   #_#_current-doc (:doc current-state)]
+                   #_#_current-doc (:doc current-state)
+                   renderer (renderer/init! canvases editor-state font-family 16 25)]
                ;; Focus hidden input without scrolling to it (it will be at the bottom)
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
                               #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :dark-mode? dark-mode?
                               #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
+                              :renderer renderer
                               :history history
                               :word-count (word-count/init editor-state)
                               :input-history []
@@ -782,6 +788,7 @@
                               :hidden-input hidden-input
                               :add-tip-to-backstack-timer-id nil
                               :outer-dom-elem dom-elem
+                              :canvas-layers-div canvas-layers-div
                               ;; :dom-elem editor-elem
                               :font-family font-family
                               :shadow-root shadow-root
@@ -797,8 +804,7 @@
                               :on-selection-changed on-selection-changed
                               :should-lose-focus? should-lose-focus?
                               :ready? false})
-               (renderer/init! canvases editor-state font-family 16 25)
-               #_(init-event-handlers! *atom)
+               (init-event-handlers! *atom)
                #_(full-dom-render! *atom)
                (swap! *atom assoc :ready? true)
                (on-ready))))

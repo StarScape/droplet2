@@ -1,10 +1,12 @@
 (ns slate.renderer.core
-  (:require [slate.model.dll :as dll]
+  (:require [clojure.set :as set]
+            [slate.model.dll :as dll]
+            [slate.model.selection :as sel]
             [slate.renderer.bst :as bst]
+            [slate.renderer.debug-tree :as debug-tree]
             [slate.renderer.measurement :refer [get-measure-fn]]
             [slate.renderer.utils :refer [font-str]]
-            [slate.renderer.viewmodel :as vm]
-            [slate.model.selection :as sel]))
+            [slate.renderer.viewmodel :as vm]))
 
 ;; renderer operations:
 ;; insert
@@ -86,7 +88,8 @@
   (scroll! [this delta-y])
   (render-caret! [this editor-state])
   (render-doc! [this doc])
-  (render! [this editor-state]))
+  (render! [this editor-state])
+  (update! [this new-editor-state changelist]))
 
 (defn split-span
   "Splits the span into two at the paragraph offset, and return a vector of [before, after]."
@@ -148,7 +151,7 @@
                            0 spans)]
       (draw-caret! caret-layer-ctx screen-x screen-y (:body line-heights))))
 
-;; Renders only what's currently in the viewport
+  ;; Renders only what's currently in the viewport
   (render-doc! [_ doc]
     (.clearRect text-layer-ctx 0 0 viewport-width-px viewport-height-px)
     (let [bottom-y (+ scroll-y viewport-height-px)
@@ -168,7 +171,20 @@
 
   (render! [this editor-state]
     (render-doc! this (:doc editor-state))
-    (render-caret! this editor-state)))
+    (render-caret! this editor-state))
+
+  (update! [this editor-state changelist]
+    (let [{:keys [deleted-indices changed-indices inserted-indices]} changelist]
+      (doseq [idx (set/union deleted-indices changed-indices)]
+        (bst/delete! bst idx))
+      (doseq [idx (set/union inserted-indices changed-indices)]
+        (bst/insert! bst idx (vm/from-para (-> editor-state :doc :children (get idx))
+                                           idx
+                                           viewport-width-px
+                                           measure-fn
+                                           line-heights)))
+
+      (render! this editor-state))))
 
 (defn init!
   "Initializes the Slate canvas renderer and does the initial render."
