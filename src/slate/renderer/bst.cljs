@@ -1,4 +1,5 @@
-(ns slate.renderer.bst)
+(ns slate.renderer.bst 
+  (:require [slate.model.dll :refer [big-dec]]))
 
 ;; This is a BST (AVL tree) where each node is balanced based on its `index` value,
 ;; but also augmented with its own height and the height of its entire left subtree.
@@ -150,59 +151,67 @@
       (gt index (.-index node)) (recur (.-right node) index)
       :else node)))
 
-(defn node-delete! [node index]
+(defn node-delete!
+  "Deletes node from tree, and returns a vector [new-root-node, remove-node-height]."
+  [node index]
   (when node
-    (let [new-node (cond
-                     (lt index (.-index node))
-                     (doto node
-                       (aset "left" (node-delete! (.-left node) index))
-                       (aset "left-height-px" (+ (left-height-px (.-left node)) (height-px (.-left node)))))
-
-                     (gt index (.-index node))
-                     (doto node
-                       (aset "right" (node-delete! (.-right node) index)))
-
-                     :else
-                     (cond
-                       ;; Node to be deleted has two children
-                       (and (.-left node) (.-right node))
-                       (let [min-node (find-min-node (.-right node))]
-                         (doto node
-                           (aset "index" (.-index min-node))
-                           (aset "viewmodel" (.-viewmodel min-node))
-                           (aset "right" (node-delete! (.-right node) (.-index min-node)))))
-
-                       ;; Node to be deleted has only left child
-                       (.-left node) (.-left node)
-
-                       ;; Node to be deleted has only right child
-                       (.-right node) (.-right node)
-
-                       ;; Node to be deleted has no children
-                       :else nil))]
-      (when new-node
-        (let [balance (balance-factor (doto new-node
-                                        (aset "height" (inc (max (height (.-left new-node)) (height (.-right new-node)))))))
-              left-balance (balance-factor (.-left new-node))
-              right-balance (balance-factor (.-right new-node))]
+    (let [[new-node, removed-node-height]
           (cond
-            (and (< 1 balance) (>= left-balance 0))
-            (rotate-right! new-node)
+            (lt index (.-index node))
+            (let [[new-left, removed-height-lt] (node-delete! (.-left node) index)]
+              (set! (.-left node) new-left)
+              (set! (.-left-height-px node) (- (left-height-px node) removed-height-lt))
+              
+              [node, removed-height-lt])
 
-            (and (< 1 balance) (< left-balance 0))
-            (doto new-node
-              (aset "left" (rotate-left! (.-left new-node)))
-              (rotate-right!))
+            (gt index (.-index node))
+            (let [[new-right, removed-height-gt] (node-delete! (.-right node) index)]
+              (set! (.-right node) new-right)
+              [node, removed-height-gt])
 
-            (and (< balance -1) (<= right-balance 0))
-            (rotate-left! new-node)
+            :else
+            (let [new-node (cond
+                             ;; Node to be deleted has two children
+                             (and (.-left node) (.-right node))
+                             (let [min-node (find-min-node (.-right node))]
+                               (doto node
+                                 (aset "index" (.-index min-node))
+                                 (aset "viewmodel" (.-viewmodel min-node))
+                                 (aset "right" (first (node-delete! (.-right node) (.-index min-node))))))
 
-            (and (< balance -1) (> right-balance 0))
-            (doto new-node
-              (aset "right" (rotate-right! (.-right new-node)))
-              (rotate-left!))
+                             ;; Node to be deleted has only left child
+                             (.-left node) (.-left node)
 
-            :else new-node))))))
+                             ;; Node to be deleted has only right child
+                             (.-right node) (.-right node)
+
+                             ;; Node to be deleted has no children
+                             :else nil)]
+              [new-node, (height-px node)]))]
+      [(when new-node
+         (let [balance (balance-factor (doto new-node
+                                         (aset "height" (inc (max (height (.-left new-node)) (height (.-right new-node)))))))
+               left-balance (balance-factor (.-left new-node))
+               right-balance (balance-factor (.-right new-node))]
+           (cond
+             (and (< 1 balance) (>= left-balance 0))
+             (rotate-right! new-node)
+
+             (and (< 1 balance) (< left-balance 0))
+             (doto new-node
+               (aset "left" (rotate-left! (.-left new-node)))
+               (rotate-right!))
+
+             (and (< balance -1) (<= right-balance 0))
+             (rotate-left! new-node)
+
+             (and (< balance -1) (> right-balance 0))
+             (doto new-node
+               (aset "right" (rotate-right! (.-right new-node)))
+               (rotate-left!))
+
+             :else new-node))),
+       removed-node-height])))
 
 (defn node-at-y
   [node target-y running-count]
@@ -251,9 +260,9 @@
 
 (defn delete!
   [tree index]
-  (let [height (:height-px (.-viewmodel (node-search tree index)))]
-    (set! (.-total-height-px tree) (- (.-total-height-px tree) height)))
-  (set! (.-root tree) (node-delete! (.-root tree) index)))
+  (let [[new-root, removed-height] (node-delete! (.-root tree) index)]
+    (set! (.-total-height-px tree) (- (.-total-height-px tree) removed-height))
+    (set! (.-root tree) new-root)))
 
 (defn vm-at-y
   [tree target-y-offset]

@@ -1,6 +1,6 @@
 (ns slate.renderer.core
   (:require [clojure.set :as set]
-            [slate.model.dll :as dll]
+            [slate.model.dll :as dll :refer [big-dec]]
             [slate.model.selection :as sel]
             [slate.renderer.bst :as bst]
             [slate.renderer.debug-tree :as debug-tree]
@@ -144,7 +144,8 @@
                          (recur (inc i)))))
           line (nth lines line-idx)
           line-height (get line-heights (:paragraph-type vm))
-          screen-y (+ (- scroll-y (:y vm)) (* line-idx line-height))
+          paragraph-y (- (:y vm) scroll-y)
+          screen-y (+ paragraph-y (* line-idx line-height))
           spans (spans-before-offset line caret-offset)
           screen-x (reduce (fn [x {:keys [text formats]}]
                              (+ x (measure-fn text formats (:paragraph-type vm))))
@@ -156,7 +157,7 @@
     (.clearRect text-layer-ctx 0 0 viewport-width-px viewport-height-px)
     (let [bottom-y (+ scroll-y viewport-height-px)
           first-visible-vm (first-visible-viewmodel bst scroll-y)
-          first-visible-vm-offset (- scroll-y (:y first-visible-vm))
+          first-visible-vm-offset (- (:y first-visible-vm) scroll-y )
           last-visible-vm (bst/vm-at-y bst bottom-y)]
       (loop [idxs (dll/indices-range (:children doc)
                                      (:paragraph-index first-visible-vm)
@@ -211,6 +212,7 @@
                             measure-fn
                             text-ctx
                             caret-ctx)]
+    ;; TODO: this should probably be in the event handling code, it's not getting the latest editor state
     (.addEventListener js/document "wheel" (fn [e]
                                              (scroll! renderer (.-deltaY e))
                                              (render! renderer editor-state)))

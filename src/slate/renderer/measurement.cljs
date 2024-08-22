@@ -22,7 +22,6 @@
   ([ctx font-size font-family tab-size-px cache text formats paragraph-type]
    (let [formats-hash (hash formats)
          type-hash (hash paragraph-type)
-         dpr js/window.devicePixelRatio
          measure-grapheme (fn [grapheme]
                             (let [cache-key (str grapheme "-" formats-hash "-" type-hash)
                                   cache-val (aget cache cache-key)]
