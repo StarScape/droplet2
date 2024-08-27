@@ -47,6 +47,16 @@
           (.fillText ctx substring current-x y)
           (recur (rest substrings) (+ current-x (.-width text-metrics))))))))
 
+;; TODO: multi-line handling for this
+(defn draw-selection-rect! [ctx start-x start-y end-x end-y line-height]
+  (let [saved-global-alpha (.-globalAlpha ctx)]
+    (set! (.-fillStyle ctx) "#0085f2")
+    (set! (.-globalAlpha ctx) 0.5)
+    (let [width (- end-x start-x)
+          height (- end-y start-y)]
+      (.fillRect ctx start-x start-y width line-height))
+    (set! (.-globalAlpha ctx) saved-global-alpha)))
+
 (defn draw-caret! [ctx x y line-height]
   (set! (.-fillStyle ctx) "#0085f2")
   (.fillRect ctx x y 4 line-height))
@@ -84,13 +94,6 @@
   (or (bst/vm-at-y bst scroll-y)
       (bst/first-vm bst)))
 
-(defprotocol IRenderer
-  (scroll! [this delta-y])
-  (render-caret! [this editor-state])
-  (render-doc! [this doc])
-  (render! [this editor-state])
-  (update! [this new-editor-state changelist]))
-
 (defn split-span
   "Splits the span into two at the paragraph offset, and return a vector of [before, after]."
   [span offset]
@@ -115,6 +118,49 @@
                 (reduced spans-before))))
           [] (:spans line)))
 
+(defn vm-line-number-of [vm single-selection]
+  (let [caret-offset (sel/caret single-selection)]
+    (loop [i 0]
+      (let [{:keys [start-offset end-offset]} (nth (:lines vm) i)]
+        (if (and (<= start-offset caret-offset)
+                 (> end-offset caret-offset))
+          i
+          (recur (inc i)))))))
+
+(defprotocol IRenderer
+  (screen-coords-of [this single-selection])
+  (scroll! [this delta-y])
+  (render-selection! [this editor-state])
+  (render-doc! [this doc])
+  (render! [this editor-state])
+  (update! [this new-editor-state changelist]))
+
+(defn draw-selection-for-line!
+  [renderer line line-y range-selection]
+  (let [[_, sel-start-y :as sel-start-coords] (screen-coords-of renderer (sel/collapse-start range-selection))
+        [block-start-x, block-start-y] (if (= line-y sel-start-y)
+                                         sel-start-coords
+                                         [0, sel-start-y])
+        [_, sel-end-y :as sel-end-coords] (screen-coords-of renderer (sel/collapse-end range-selection))
+        [block-end-x, block-end-y] (if (= sel-end-y line-y)
+                                     sel-end-coords
+                                     (screen-coords-of renderer (sel/selection [(:paragraph-index line), (:end-offset line)])))]
+    (draw-selection-rect! (.-caret-layer-ctx renderer) block-start-x block-start-y block-end-x block-end-y (:body (.-line-heights renderer)))))
+
+(defn visible-vms-in-selection
+  [renderer doc selection]
+  (let [bottom-y (+ (.-scroll-y renderer) (.-viewport-height-px renderer))
+         first-visible-idx (:paragraph-index (first-visible-viewmodel (.-bst renderer) (.-scroll-y renderer)))
+         last-visible-idx (bst/vm-at-y (.-bst renderer) bottom-y)
+         first-idx (if (.lt (sel/start-para selection) first-visible-idx)
+                     first-visible-idx
+                     (sel/caret-para selection))
+         last-idx (if (.gt (sel/end-para selection) last-visible-idx)
+                    last-visible-idx
+                    (sel/end-para selection))
+         idxs (dll/indices-range (:children doc) first-idx last-idx)]
+    (map #(bst/search (.-bst renderer) %) idxs)))
+
 (deftype Renderer [bst
                    scroll-y
                    viewport-width-px
@@ -129,27 +175,58 @@
   IRenderer
   (scroll! [this delta-y]
     (set! (.-scroll-y this) (min (max 0 (+ scroll-y delta-y)) (.-total-height-px bst))))
-
-  (render-caret! [_ editor-state]
-    (.clearRect caret-layer-ctx 0 0 viewport-width-px viewport-height-px)
-    (let [vm (bst/search bst (sel/caret-para (:selection editor-state)))
-          selection (:selection editor-state)
-          lines (vec (:lines vm))
-          caret-offset (sel/caret selection)
-          line-idx (loop [i 0]
-                     (let [{:keys [start-offset end-offset]} (nth lines i)]
-                       (if (and (<= start-offset caret-offset)
-                                (> end-offset caret-offset))
-                         i
-                         (recur (inc i)))))
-          line (nth lines line-idx)
+  
+  (screen-coords-of [_ single-selection]
+    (let [vm (bst/search bst (sel/caret-para single-selection))
+          line-idx (vm-line-number-of vm single-selection)
+          line (nth (:lines vm) line-idx)
           line-height (get line-heights (:paragraph-type vm))
           paragraph-y (- (:y vm) scroll-y)
           screen-y (+ paragraph-y (* line-idx line-height))
-          spans (spans-before-offset line caret-offset)
+          spans (spans-before-offset line (sel/caret single-selection))
           screen-x (reduce (fn [x {:keys [text formats]}]
                              (+ x (measure-fn text formats (:paragraph-type vm))))
                            0 spans)]
+      [screen-x, screen-y]))
+
+  (render-selection! [this editor-state]
+    (.clearRect caret-layer-ctx 0 0 viewport-width-px viewport-height-px)
+    (let [selection (:selection editor-state)
+          start-selection (sel/collapse-start selection)
+          end-selection (sel/collapse-end selection)
+          [screen-x, screen-y] (screen-coords-of this (sel/smart-collapse selection))]
+      (when (sel/range? selection)
+        ;; TODO: rework this.
+        ;; Make func: draw-selection-for-paragraph! that takes paragraph and draws the selection for
+        ;; ALL lines in that paragraph. Above draw-selection-for-line! can probably be made an internal
+        ;; function to that function.
+        ;;
+        ;; Then, make a function get-viewmodels-in-selection that returns all the viewmodels between
+        ;; the start and end of the selection (inclusive both ends), with an optional toggle (defaulting
+        ;; to true) to exclude any VM not currently visible.
+        ;;
+        ;; Then get the selected paragraphs using get-viewmodels-in-selection, iterate and call draw-selection-for-paragraph!
+        ;; on each one of them.
+        (let [vm (bst/search bst (sel/caret-para selection))
+              [start-x, start-y] (screen-coords-of this start-selection)
+              [end-x, end-y] (screen-coords-of this end-selection)
+              line-idx (vm-line-number-of vm (sel/collapse-start selection))
+              line (nth (:lines vm) line-idx)
+              line-y (+ (* line-idx (get line-heights (:paragraph-type vm))))]
+          (if (= start-y end-y)
+            (draw-selection-for-line! this line line-y selection)
+            #_(draw-selection-rect! caret-layer-ctx start-x start-y end-x end-y (:body line-heights))
+            (let [selection-start-vm (bst/search bst (sel/caret-para start-selection))
+                  last-visible-vm (bst/vm-at-y bst (+ scroll-y viewport-height-px))
+                  selection-end-vm (bst/search bst (sel/caret-para start-selection))
+                  end-vm (if (> (:paragraph-index selection-end-vm) (:paragraph-index last-visible-vm))
+                           last-visible-vm
+                           selection-end-vm)
+                  start-line-idx (vm-line-number-of selection-start-vm start-selection)
+                  end-line-idx (vm-line-number-of end-vm start-selection)
+                  visible-selected-lines (subvec (:lines selection-start-vm) start-line-idx (inc end-line-idx))]
+              (doseq [line visible-selected-lines]
+                (draw-selection-rect! caret-layer-ctx start-x start-y end-x end-y (:body line-heights)))))))
       (draw-caret! caret-layer-ctx screen-x screen-y (:body line-heights))))
 
   ;; Renders only what's currently in the viewport
@@ -172,7 +249,7 @@
 
   (render! [this editor-state]
     (render-doc! this (:doc editor-state))
-    (render-caret! this editor-state))
+    (render-selection! this editor-state))
 
   (update! [this editor-state changelist]
     (let [{:keys [deleted-indices changed-indices inserted-indices]} changelist]

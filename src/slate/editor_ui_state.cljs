@@ -14,7 +14,6 @@
             [slate.model.find-and-replace :as f+r]
             [slate.model.history :as history]
             [slate.model.paragraph]
-            [slate.model.run]
             [slate.model.run :as r]
             [slate.model.selection :as sel]
             [slate.renderer.core :as renderer]
@@ -764,7 +763,7 @@
                    #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
                    #_#_measure-fn (ruler-for-elem editor-elem shadow-root)
                    ;; editor-state (es/editor-state)
-                   editor-state (es/editor-state sample-doc #_(sel/selection [(big-dec 1) 0]))
+                   editor-state (es/editor-state sample-doc (sel/selection [(big-dec 1) 0] [(big-dec 1) 15]))
                    history (history/init editor-state)
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
