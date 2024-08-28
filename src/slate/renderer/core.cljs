@@ -147,19 +147,21 @@
                                      (screen-coords-of renderer (sel/selection [(:paragraph-index line), (:end-offset line)])))]
     (draw-selection-rect! (.-caret-layer-ctx renderer) block-start-x block-start-y block-end-x block-end-y (:body (.-line-heights renderer)))))
 
-(defn visible-vms-in-selection
-  [renderer doc selection]
-  (let [bottom-y (+ (.-scroll-y renderer) (.-viewport-height-px renderer))
+(defn vms-in-selection
+  ([renderer doc selection limit-to-visible?]
+   (let [bottom-y (+ (.-scroll-y renderer) (.-viewport-height-px renderer))
          first-visible-idx (:paragraph-index (first-visible-viewmodel (.-bst renderer) (.-scroll-y renderer)))
          last-visible-idx (bst/vm-at-y (.-bst renderer) bottom-y)
-         first-idx (if (.lt (sel/start-para selection) first-visible-idx)
+         first-idx (if (and limit-to-visible? (.lt (sel/start-para selection) first-visible-idx))
                      first-visible-idx
                      (sel/caret-para selection))
-         last-idx (if (.gt (sel/end-para selection) last-visible-idx)
+         last-idx (if (and limit-to-visible? (.gt (sel/end-para selection) last-visible-idx))
                     last-visible-idx
                     (sel/end-para selection))
          idxs (dll/indices-range (:children doc) first-idx last-idx)]
-    (map #(bst/search (.-bst renderer) %) idxs)))
+     (map #(bst/search (.-bst renderer) %) idxs)))
+  ([renderer doc selection]
+   (vms-in-selection renderer doc selection true)))
 
 (deftype Renderer [bst
                    scroll-y
