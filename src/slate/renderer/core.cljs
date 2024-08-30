@@ -118,15 +118,6 @@
                 (reduced spans-before))))
           [] (:spans line)))
 
-(defn vm-line-number-of [vm single-selection]
-  (let [caret-offset (sel/caret single-selection)]
-    (loop [i 0]
-      (let [{:keys [start-offset end-offset]} (nth (:lines vm) i)]
-        (if (and (<= start-offset caret-offset)
-                 (> end-offset caret-offset))
-          i
-          (recur (inc i)))))))
-
 (defprotocol IRenderer
   (screen-coords-of [this single-selection])
   (scroll! [this delta-y])
@@ -139,7 +130,7 @@
   ([renderer doc selection limit-to-visible?]
    (let [bottom-y (+ (.-scroll-y renderer) (.-viewport-height-px renderer))
          first-visible-idx (:paragraph-index (first-visible-viewmodel (.-bst renderer) (.-scroll-y renderer)))
-         last-visible-idx (bst/vm-at-y (.-bst renderer) bottom-y)
+         last-visible-idx (:paragraph-index (bst/vm-at-y (.-bst renderer) bottom-y))
          first-idx (if (and limit-to-visible? (.lt (sel/start-para selection) first-visible-idx))
                      first-visible-idx
                      (sel/caret-para selection))
@@ -151,43 +142,29 @@
   ([renderer doc selection]
    (vms-in-selection renderer doc selection true)))
 
-(defn draw-selection-for-line!
-  [renderer line line-y range-selection]
-  (let [[_, sel-start-y :as sel-start-coords] (screen-coords-of renderer (sel/collapse-start range-selection))
-        [block-start-x, block-start-y] (if (= line-y sel-start-y)
-                                         sel-start-coords
-                                         [0, sel-start-y])
-        [_, sel-end-y :as sel-end-coords] (screen-coords-of renderer (sel/collapse-end range-selection))
-        [block-end-x, block-end-y] (if (= sel-end-y line-y)
-                                     sel-end-coords
-                                     (screen-coords-of renderer (sel/selection [(:paragraph-index line), (:end-offset line)])))]
-    (draw-selection-rect! (.-caret-layer-ctx renderer)
-                          block-start-x
-                          block-start-y
-                          block-end-x
-                          block-end-y
-                          (:body (.-line-heights renderer)))))
-
 (defn draw-selection-for-paragraph!
   [renderer vm selection]
   (let [[_, sel-start-y :as sel-start-coords] (screen-coords-of renderer (sel/collapse-start selection))
         [_, sel-end-y :as sel-end-coords] (screen-coords-of renderer (sel/collapse-end selection))
         line-height (get (.-line-heights renderer) (:paragraph-type vm))]
-    (loop [line (:lines vm), line-y 0]
-      (when line
-        (let [[block-start-x, block-start-y] (if (= line-y sel-start-y) ; this line is beginning of selection
-                                               sel-start-coords
-                                               [0, sel-start-y])
-              [block-end-x, block-end-y] (if (= sel-end-y line-y) ; this line is end of selection
-                                           sel-end-coords
-                                           (screen-coords-of renderer (sel/selection [(:paragraph-index line), (:end-offset line)])))]
-          (draw-selection-rect! (.-caret-layer-ctx renderer)
-                                block-start-x
-                                block-start-y
-                                block-end-x
-                                block-end-y
-                                (:body (.-line-heights renderer)))
-          (recur (next line) (+ line-height line-y)))))))
+    (loop [lines (:lines vm), line-y 0]
+      ;; Line must be within the selected area
+      (when (and (<= sel-start-y line-y)
+                 (>= sel-end-y line-y))
+        (when-let [line (first lines)]
+          (let [[block-start-x, block-start-y] (if (= line-y sel-start-y) ; this line is beginning of selection
+                                                 sel-start-coords
+                                                 [0, line-y])
+                [block-end-x, block-end-y] (if (= sel-end-y line-y) ; this line is end of selection
+                                             sel-end-coords
+                                             (screen-coords-of renderer (sel/selection [(:paragraph-index vm), (dec (:end-offset line))])))]
+            (draw-selection-rect! (.-caret-layer-ctx renderer)
+                                  block-start-x
+                                  block-start-y
+                                  block-end-x
+                                  block-end-y
+                                  (:body (.-line-heights renderer)))
+            (recur (next lines) (+ line-height line-y))))))))
 
 ;; TODO: make selection-to-bounding-boxes function
 ;; This would be useful also for doing things like drawing
@@ -210,7 +187,14 @@
   
   (screen-coords-of [_ single-selection]
     (let [vm (bst/search bst (sel/caret-para single-selection))
-          line-idx (vm-line-number-of vm single-selection)
+          ;; this was previously a separate function called 'vm-line-number-of' but I'm not sure I need it separate?
+          line-idx (let [caret-offset (sel/caret single-selection)]
+                     (loop [i 0]
+                       (let [{:keys [start-offset end-offset]} (nth (:lines vm) i)]
+                         (if (and (<= start-offset caret-offset)
+                                  (> end-offset caret-offset))
+                           i
+                           (recur (inc i))))))
           line (nth (:lines vm) line-idx)
           line-height (get line-heights (:paragraph-type vm))
           paragraph-y (- (:y vm) scroll-y)
@@ -224,43 +208,10 @@
   (render-selection! [this editor-state]
     (.clearRect caret-layer-ctx 0 0 viewport-width-px viewport-height-px)
     (let [selection (:selection editor-state)
-          start-selection (sel/collapse-start selection)
-          end-selection (sel/collapse-end selection)
           [screen-x, screen-y] (screen-coords-of this (sel/smart-collapse selection))]
       (when (sel/range? selection)
-        ;; TODO: rework this.
-        ;; Make func: draw-selection-for-paragraph! that takes paragraph and draws the selection for
-        ;; ALL lines in that paragraph. Above draw-selection-for-line! can probably be made an internal
-        ;; function to that function.
-        ;;
-        ;; Then, make a function get-viewmodels-in-selection that returns all the viewmodels between
-        ;; the start and end of the selection (inclusive both ends), with an optional toggle (defaulting
-        ;; to true) to exclude any VM not currently visible.
-        ;;
-        ;; Then get the selected paragraphs using get-viewmodels-in-selection, iterate and call draw-selection-for-paragraph!
-        ;; on each one of them.
         (doseq [vm (vms-in-selection this (:doc editor-state) selection)]
-          (draw-selection-for-paragraph! this vm selection))
-        (let [vm (bst/search bst (sel/caret-para selection))
-              [start-x, start-y] (screen-coords-of this start-selection)
-              [end-x, end-y] (screen-coords-of this end-selection)
-              line-idx (vm-line-number-of vm (sel/collapse-start selection))
-              line (nth (:lines vm) line-idx)
-              line-y (+ (* line-idx (get line-heights (:paragraph-type vm))))]
-          (if (= start-y end-y)
-            (draw-selection-for-line! this line line-y selection)
-            #_(draw-selection-rect! caret-layer-ctx start-x start-y end-x end-y (:body line-heights))
-            (let [selection-start-vm (bst/search bst (sel/caret-para start-selection))
-                  last-visible-vm (bst/vm-at-y bst (+ scroll-y viewport-height-px))
-                  selection-end-vm (bst/search bst (sel/caret-para start-selection))
-                  end-vm (if (> (:paragraph-index selection-end-vm) (:paragraph-index last-visible-vm))
-                           last-visible-vm
-                           selection-end-vm)
-                  start-line-idx (vm-line-number-of selection-start-vm start-selection)
-                  end-line-idx (vm-line-number-of end-vm start-selection)
-                  visible-selected-lines (subvec (:lines selection-start-vm) start-line-idx (inc end-line-idx))]
-              (doseq [line visible-selected-lines]
-                (draw-selection-rect! caret-layer-ctx start-x start-y end-x end-y (:body line-heights)))))))
+          (draw-selection-for-paragraph! this vm selection)))
       (draw-caret! caret-layer-ctx screen-x screen-y (:body line-heights))))
 
   ;; Renders only what's currently in the viewport

@@ -24,8 +24,8 @@
 
 (set! *warn-on-infer* false)
 
-(defn lt [a b] (if b (.lt a b) false))
-(defn gt [a b] (if b (.gt a b) false))
+(defn lt [a b] (if (and a b) (.lt a b) false))
+(defn gt [a b] (if (and a b) (.gt a b) false))
 
 (deftype AVLNode [^:mutable index
                   ^:mutable viewmodel

@@ -760,10 +760,7 @@
                    dark-mode? (= theme :dark)
                    ;; Slate operates inside a shadow DOM
                    [canvases, canvas-layers-div, shadow-root] (init-shadow-dom! dom-elem font-family dark-mode?)
-                   #_#_available-width (.-width (.getBoundingClientRect (.-host shadow-root)))
-                   #_#_measure-fn (ruler-for-elem editor-elem shadow-root)
-                   ;; editor-state (es/editor-state)
-                   editor-state (es/editor-state sample-doc (sel/selection [(big-dec 1) 0] [(big-dec 1) 15]))
+                   editor-state (es/editor-state sample-doc (sel/selection [(big-dec 1) 0] [(big-dec 1) 120]))
                    history (history/init editor-state)
                    interceptors-map (-> (interceptors/interceptor-map)
                                         (interceptors/reg-interceptors default-interceptors)
@@ -775,9 +772,7 @@
                ;; Focus hidden input without scrolling to it (it will be at the bottom)
                (.focus hidden-input #js {:preventScroll true})
                (reset! *atom {:id uuid
-                              #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :dark-mode? dark-mode?
-                              #_#_:viewmodels (vm/from-doc current-doc available-width measure-fn)
                               :renderer renderer
                               :history history
                               :word-count (word-count/init editor-state)
