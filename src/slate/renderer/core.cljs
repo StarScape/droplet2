@@ -135,18 +135,6 @@
   (render! [this editor-state])
   (update! [this new-editor-state changelist]))
 
-(defn draw-selection-for-line!
-  [renderer line line-y range-selection]
-  (let [[_, sel-start-y :as sel-start-coords] (screen-coords-of renderer (sel/collapse-start range-selection))
-        [block-start-x, block-start-y] (if (= line-y sel-start-y)
-                                         sel-start-coords
-                                         [0, sel-start-y])
-        [_, sel-end-y :as sel-end-coords] (screen-coords-of renderer (sel/collapse-end range-selection))
-        [block-end-x, block-end-y] (if (= sel-end-y line-y)
-                                     sel-end-coords
-                                     (screen-coords-of renderer (sel/selection [(:paragraph-index line), (:end-offset line)])))]
-    (draw-selection-rect! (.-caret-layer-ctx renderer) block-start-x block-start-y block-end-x block-end-y (:body (.-line-heights renderer)))))
-
 (defn vms-in-selection
   ([renderer doc selection limit-to-visible?]
    (let [bottom-y (+ (.-scroll-y renderer) (.-viewport-height-px renderer))
@@ -162,6 +150,48 @@
      (map #(bst/search (.-bst renderer) %) idxs)))
   ([renderer doc selection]
    (vms-in-selection renderer doc selection true)))
+
+(defn draw-selection-for-line!
+  [renderer line line-y range-selection]
+  (let [[_, sel-start-y :as sel-start-coords] (screen-coords-of renderer (sel/collapse-start range-selection))
+        [block-start-x, block-start-y] (if (= line-y sel-start-y)
+                                         sel-start-coords
+                                         [0, sel-start-y])
+        [_, sel-end-y :as sel-end-coords] (screen-coords-of renderer (sel/collapse-end range-selection))
+        [block-end-x, block-end-y] (if (= sel-end-y line-y)
+                                     sel-end-coords
+                                     (screen-coords-of renderer (sel/selection [(:paragraph-index line), (:end-offset line)])))]
+    (draw-selection-rect! (.-caret-layer-ctx renderer)
+                          block-start-x
+                          block-start-y
+                          block-end-x
+                          block-end-y
+                          (:body (.-line-heights renderer)))))
+
+(defn draw-selection-for-paragraph!
+  [renderer vm selection]
+  (let [[_, sel-start-y :as sel-start-coords] (screen-coords-of renderer (sel/collapse-start selection))
+        [_, sel-end-y :as sel-end-coords] (screen-coords-of renderer (sel/collapse-end selection))
+        line-height (get (.-line-heights renderer) (:paragraph-type vm))]
+    (loop [line (:lines vm), line-y 0]
+      (when line
+        (let [[block-start-x, block-start-y] (if (= line-y sel-start-y) ; this line is beginning of selection
+                                               sel-start-coords
+                                               [0, sel-start-y])
+              [block-end-x, block-end-y] (if (= sel-end-y line-y) ; this line is end of selection
+                                           sel-end-coords
+                                           (screen-coords-of renderer (sel/selection [(:paragraph-index line), (:end-offset line)])))]
+          (draw-selection-rect! (.-caret-layer-ctx renderer)
+                                block-start-x
+                                block-start-y
+                                block-end-x
+                                block-end-y
+                                (:body (.-line-heights renderer)))
+          (recur (next line) (+ line-height line-y)))))))
+
+;; TODO: make selection-to-bounding-boxes function
+;; This would be useful also for doing things like drawing
+;; underlines, or squiggly red lines for spellcheck, etc.
 
 (deftype Renderer [bst
                    scroll-y
@@ -209,6 +239,8 @@
         ;;
         ;; Then get the selected paragraphs using get-viewmodels-in-selection, iterate and call draw-selection-for-paragraph!
         ;; on each one of them.
+        (doseq [vm (vms-in-selection this (:doc editor-state) selection)]
+          (draw-selection-for-paragraph! this vm selection))
         (let [vm (bst/search bst (sel/caret-para selection))
               [start-x, start-y] (screen-coords-of this start-selection)
               [end-x, end-y] (screen-coords-of this end-selection)
